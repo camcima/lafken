@@ -1,77 +1,320 @@
-import React from "react";
+import {
+  Check,
+  ChevronRight,
+  Copy,
+  Download,
+  ExternalLink,
+  Info,
+  Layers,
+  Lock,
+  Search,
+  Settings,
+  Shield,
+  X,
+} from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Badge } from "@/components/common/Badge";
 import { Button } from "@/components/common/Button";
-import { EmptyState } from "@/components/common/EmptyState";
-import { useAuditEntries } from "@/features/audit/hooks/useAudit";
+import { Card } from "@/components/common/Card";
+import { DEMO_AUDIT, fmtMinAgo } from "@/lib/demo/lafken-demo-data";
+import type { DemoAuditEntry } from "@/lib/demo/lafken-demo-data";
+import { cn } from "@/lib/utils";
+
+// Slice 0: BE returns empty arrays; rendering against typed demo data
+const DISPLAY_LIMIT = 60;
+
+// Icon sizes
+const TYPE_ICON_DEFAULT_SIZE = 12;
+const TYPE_ICON_DRAWER_SIZE = 14;
+const CHEVRON_SIZE = 12;
+const BTN_ICON_SIZE = 13;
+const COPY_ICON_SIZE = 11;
+const X_ICON_SIZE = 16;
+
+// Drawer JSON hour arithmetic
+const DEMO_HOUR_BASE = 8;
+const MINUTES_PER_HOUR = 60;
+const ID_SLICE_REQ_START = 4;
+const ID_SLICE_REQ_END = 18;
+const ID_SLICE_TRACE_END = 32;
+
+type ITypeIconProps = {
+  type: string;
+  size?: number;
+};
+
+function TypeIcon({ type, size = TYPE_ICON_DEFAULT_SIZE }: ITypeIconProps): React.JSX.Element {
+  const cls = `flex-none`;
+  if (type.startsWith("legal_hold")) return <Lock size={size} className={cn(cls, "text-warn")} />;
+  if (type.includes("quarantined")) return <Shield size={size} className={cn(cls, "text-alert")} />;
+  if (type.includes("ready") || type.includes("approved"))
+    return <Check size={size} className={cn(cls, "text-ok")} />;
+  if (type.includes("failed") || type.includes("rejected"))
+    return <X size={size} className={cn(cls, "text-danger")} />;
+  if (type.includes("policy") || type.includes("namespace"))
+    return <Layers size={size} className={cn(cls, "text-latam-indigo")} />;
+  if (type.includes("api_key") || type.includes("user"))
+    return <Settings size={size} className={cn(cls, "text-latam-indigo")} />;
+  if (type.includes("export"))
+    return <Download size={size} className={cn(cls, "text-latam-indigo")} />;
+  return <Info size={size} className={cn(cls, "text-muted-foreground")} />;
+}
+
+interface IAuditDrawerProps {
+  entry: DemoAuditEntry;
+  onClose: () => void;
+}
+
+function AuditDrawer({ entry, onClose }: IAuditDrawerProps): React.JSX.Element {
+  const { t } = useTranslation();
+  const hourStr = String(
+    Math.max(0, DEMO_HOUR_BASE - Math.floor(entry.minutesAgo / MINUTES_PER_HOUR)),
+  ).padStart(2, "0");
+  const jsonText = `{
+  "event_id":   "${entry.id}",
+  "type":       "${entry.type}",
+  "result":     "${entry.result}",
+  "occurred_at": "2026-05-03T${hourStr}:14:22Z",
+  "actor": {
+    "principal": "${entry.actor}",
+    "ip":        "${entry.ip}",
+    "user_agent": "Lafken Console/2.4.1"
+  },
+  "target": {
+    "kind":       "${entry.type.split(".")[0]}",
+    "id":         "${entry.target}",
+    "namespace":  "${entry.namespace}"
+  },
+  "request_id": "rq_${entry.id.slice(ID_SLICE_REQ_START, ID_SLICE_REQ_END)}",
+  "trace_id":   "tr_${entry.id.slice(ID_SLICE_REQ_START, ID_SLICE_TRACE_END)}"
+}`;
+
+  return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- backdrop dismiss is supplemental; Escape key handled in dialog
+    <div
+      className="bg-foreground/30 fixed inset-0 z-40 flex justify-end backdrop-blur-sm"
+      onClick={onClose}
+    >
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- dialog role is interactive; stopPropagation prevents backdrop dismiss */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+        className="bg-card h-full w-full max-w-[480px] overflow-y-auto shadow-2xl"
+        onClick={(ev: React.MouseEvent) => {
+          ev.stopPropagation();
+        }}
+        onKeyDown={(ev: React.KeyboardEvent) => {
+          if (ev.key === "Escape") onClose();
+        }}
+      >
+        <div className="border-border bg-card sticky top-0 flex items-center justify-between border-b px-5 py-3">
+          <div className="flex items-center gap-2">
+            <TypeIcon type={entry.type} size={TYPE_ICON_DRAWER_SIZE} />
+            <span className="font-mono text-[14px] font-semibold">{entry.type}</span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground"
+            aria-label="Close drawer"
+          >
+            <X size={X_ICON_SIZE} />
+          </button>
+        </div>
+        <div className="px-5 py-5">
+          <div className="border-border bg-secondary/30 rounded border p-3 font-mono text-[11px] leading-relaxed whitespace-pre">
+            {jsonText}
+          </div>
+          <div className="mt-3 flex justify-end gap-2">
+            <Button variant="outline" size="sm">
+              <Copy size={COPY_ICON_SIZE} />
+              {t("pages.audit.drawer.copyJson")}
+            </Button>
+            <Button variant="outline" size="sm">
+              <ExternalLink size={COPY_ICON_SIZE} />
+              {t("pages.audit.drawer.openTarget")}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const SELECT_CLASS =
+  "h-9 appearance-none rounded-md border border-input bg-card pl-3 pr-8 text-[12.5px]";
 
 export function AuditPage(): React.JSX.Element {
   const { t } = useTranslation();
-  const { data } = useAuditEntries();
-  const rows = data?.data ?? [];
+  const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [resultFilter, setResultFilter] = useState("all");
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const filtered: DemoAuditEntry[] = DEMO_AUDIT.filter((entry) => {
+    if (resultFilter !== "all" && entry.result !== resultFilter) return false;
+    if (typeFilter !== "all" && !entry.type.startsWith(typeFilter)) return false;
+    if (query) {
+      const lq = query.toLowerCase();
+      if (
+        !entry.actor.toLowerCase().includes(lq) &&
+        !entry.target.toLowerCase().includes(lq) &&
+        !entry.type.includes(lq) &&
+        !entry.namespace.includes(lq)
+      )
+        return false;
+    }
+    return true;
+  });
+
+  const openEntry: DemoAuditEntry | undefined = DEMO_AUDIT.find((entry) => entry.id === openId);
 
   return (
     <div className="space-y-4">
-      <header className="flex items-center justify-between">
-        <h1 className="text-[22px] font-bold tracking-tight text-neutral-900">
-          {t("pages.audit.title")}
-        </h1>
-        <Button disabled title={t("nav.comingInSlice1")}>
-          {t("pages.audit.export")}
-        </Button>
-      </header>
+      {/* Header */}
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="m-0 text-[22px] font-bold tracking-tight">{t("pages.audit.title")}</h1>
+          <div className="text-muted-foreground mt-1 text-[12.5px]">
+            {t("pages.audit.subtitle", { retention: "10y", anchor: "2m ago" })}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline">
+            <Download size={BTN_ICON_SIZE} />
+            {t("pages.audit.actions.exportCsv")}
+          </Button>
+        </div>
+      </div>
 
-      {/* Filter form — uncontrolled in Slice 0 */}
-      <section className="flex flex-wrap items-end gap-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
-        <label className="flex flex-col gap-1 text-xs text-neutral-600">
-          {t("pages.audit.filters.principal")}
-          <input
-            type="text"
-            disabled
-            placeholder="—"
-            className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 text-sm text-neutral-400"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-neutral-600">
-          {t("pages.audit.filters.action")}
-          <input
-            type="text"
-            disabled
-            placeholder="—"
-            className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 text-sm text-neutral-400"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-neutral-600">
-          {t("pages.audit.filters.entity")}
-          <input
-            type="text"
-            disabled
-            placeholder="—"
-            className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 text-sm text-neutral-400"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-neutral-600">
-          {t("pages.audit.filters.from")}
-          <input
-            type="date"
-            disabled
-            className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 text-sm text-neutral-400"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-neutral-600">
-          {t("pages.audit.filters.to")}
-          <input
-            type="date"
-            disabled
-            className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 text-sm text-neutral-400"
-          />
-        </label>
-      </section>
+      {/* Filter card */}
+      <Card className="mb-4 p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[260px] flex-1">
+            <Search
+              size={BTN_ICON_SIZE}
+              className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2"
+            />
+            <input
+              type="text"
+              placeholder={t("pages.audit.searchPlaceholder")}
+              value={query}
+              onChange={(ev: React.ChangeEvent<HTMLInputElement>) => {
+                setQuery(ev.target.value);
+              }}
+              className="border-input bg-card focus:ring-ring h-9 w-full rounded-md border pr-3 pl-9 text-[12.5px] outline-none focus:ring-1"
+            />
+          </div>
+          <select
+            value={typeFilter}
+            onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
+              setTypeFilter(ev.target.value);
+            }}
+            className={SELECT_CLASS}
+          >
+            <option value="all">{t("pages.audit.filters.allTypes")}</option>
+            <option value="asset">asset.*</option>
+            <option value="legal_hold">legal_hold.*</option>
+            <option value="policy">policy.*</option>
+            <option value="namespace">namespace.*</option>
+            <option value="api_key">api_key.*</option>
+            <option value="user">user.*</option>
+            <option value="review">review.*</option>
+            <option value="export">export.*</option>
+          </select>
+          <select
+            value={resultFilter}
+            onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
+              setResultFilter(ev.target.value);
+            }}
+            className={SELECT_CLASS}
+          >
+            <option value="all">{t("pages.audit.filters.allResults")}</option>
+            <option value="ok">{t("pages.audit.filters.results.ok")}</option>
+            <option value="fail">{t("pages.audit.filters.results.fail")}</option>
+          </select>
+        </div>
+      </Card>
 
-      {/* Results */}
-      <section className="rounded-lg border border-neutral-200 bg-white shadow-sm">
-        {rows.length === 0 ? <EmptyState title={t("pages.audit.empty.title")} /> : null}
-      </section>
+      {/* Table card */}
+      <Card className="overflow-x-auto">
+        <div className="min-w-[920px]">
+          <div className="border-border bg-secondary/40 text-muted-foreground grid grid-cols-[110px_minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,1.4fr)_120px_70px_34px] items-center gap-3 border-b px-4 py-2 text-[10.5px] font-medium tracking-wider uppercase">
+            <span>{t("pages.audit.table.time")}</span>
+            <span>{t("pages.audit.table.type")}</span>
+            <span>{t("pages.audit.table.actor")}</span>
+            <span>{t("pages.audit.table.target")}</span>
+            <span>{t("pages.audit.table.ip")}</span>
+            <span>{t("pages.audit.table.result")}</span>
+            <span />
+          </div>
+          {filtered.slice(0, DISPLAY_LIMIT).map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => {
+                setOpenId(entry.id);
+              }}
+              className="border-border/40 hover:bg-secondary/30 grid w-full grid-cols-[110px_minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,1.4fr)_120px_70px_34px] items-center gap-3 border-b px-4 py-2 text-left text-[12px] last:border-b-0"
+            >
+              <div className="text-muted-foreground font-mono text-[11px] tabular-nums">
+                {fmtMinAgo(entry.minutesAgo)}
+              </div>
+              <div className="inline-flex min-w-0 items-center gap-1.5">
+                <TypeIcon type={entry.type} />
+                <span className="truncate font-mono text-[11.5px]">{entry.type}</span>
+              </div>
+              <div className="text-muted-foreground truncate font-mono text-[11.5px]">
+                {entry.actor}
+              </div>
+              <div className="min-w-0">
+                <div className="truncate font-mono text-[11.5px]">{entry.target}</div>
+                <div className="text-muted-foreground truncate font-mono text-[10.5px]">
+                  {entry.namespace}
+                </div>
+              </div>
+              <div className="text-muted-foreground font-mono text-[10.5px] tabular-nums">
+                {entry.ip}
+              </div>
+              <div>
+                {entry.result === "ok" ? (
+                  <Badge variant="ok">
+                    <span className="bg-ok size-1 rounded-full" />
+                    {t("pages.audit.result.ok")}
+                  </Badge>
+                ) : (
+                  <Badge variant="danger">
+                    <span className="bg-danger size-1 rounded-full" />
+                    {t("pages.audit.result.fail")}
+                  </Badge>
+                )}
+              </div>
+              <ChevronRight size={CHEVRON_SIZE} className="text-muted-foreground" />
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {/* Footer */}
+      <div className="text-muted-foreground mt-3 text-[11.5px]">
+        {t("pages.audit.footer.showing", {
+          shown: Math.min(DISPLAY_LIMIT, filtered.length),
+          total: filtered.length,
+        })}
+      </div>
+
+      {/* Detail drawer */}
+      {openEntry !== undefined && (
+        <AuditDrawer
+          entry={openEntry}
+          onClose={() => {
+            setOpenId(null);
+          }}
+        />
+      )}
     </div>
   );
 }

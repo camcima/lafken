@@ -472,25 +472,127 @@
       }
     },
     "legalHolds": {
-      "title": "",
-      "place": "",
+      "title": "Retenções legais",
+      "subtitle": "{{filtered}} retenções cobrindo {{assets}} ativos · 1 liberação pendente",
+      "place": "Aplicar retenção",
+      "searchPlaceholder": "Buscar por referência do caso, escopo ou ID da retenção…",
+      "actions": {
+        "export": "Exportar registro de retenções",
+        "place": "Aplicar retenção…"
+      },
+      "stats": {
+        "activeHolds": {
+          "label": "Retenções ativas",
+          "sub": "atualmente aplicadas"
+        },
+        "pendingRelease": {
+          "label": "Aguardando liberação",
+          "sub": "aguardando aprovação jurídica"
+        },
+        "assetsUnderHold": {
+          "label": "Ativos sob retenção",
+          "sub": "em todos os escopos"
+        },
+        "oldestHold": {
+          "label": "Retenção mais antiga",
+          "sub": "CHL-2025-AVN-099"
+        }
+      },
+      "filters": {
+        "allScopes": "Todos os escopos",
+        "allStatuses": "Todos os status"
+      },
+      "scopes": {
+        "asset": "Ativo único",
+        "workOrder": "Ordem de serviço",
+        "namespace": "Namespace",
+        "uploaderWindow": "Uploader × tempo"
+      },
+      "statuses": {
+        "active": "Ativo",
+        "pendingRelease": "Aguardando liberação",
+        "pending": "Pendente"
+      },
+      "table": {
+        "caseRef": "Ref. do caso",
+        "scope": "Escopo",
+        "target": "Alvo",
+        "assets": "Ativos",
+        "placedBy": "Aplicado por",
+        "lastReviewed": "Última revisão",
+        "status": "Status"
+      },
+      "footer": "Retenções impedem exclusão e expiração de retenção. Liberar uma retenção requer aprovação jurídica e é registrado na trilha de auditoria.",
+      "drawer": {
+        "caption": "Retenção legal",
+        "holdId": "ID da retenção",
+        "scope": "Escopo",
+        "reason": "Motivo / nota jurídica",
+        "assetsCovered": "Ativos cobertos",
+        "status": "Status",
+        "placedBy": "Aplicado por",
+        "lastReviewed": "Última revisão",
+        "reviewCadence": "Cadência de 90 dias",
+        "recentActivity": "Atividade recente",
+        "legalBot": "legal-bot",
+        "activity": {
+          "quarterlyReviewConfirmed": "Revisão trimestral confirmada",
+          "counselConfirmedScope": "Escopo da retenção confirmado por advogado",
+          "holdPlaced": "Retenção aplicada"
+        },
+        "actions": {
+          "viewAssets": "Ver ativos cobertos",
+          "export": "Exportar pacote",
+          "requestLift": "Solicitar liberação…"
+        }
+      },
       "empty": {
-        "title": "",
-        "description": ""
+        "title": "Nenhuma retenção legal ativa",
+        "description": "As retenções que você aplicar aparecerão aqui."
       }
     },
     "audit": {
-      "title": "",
-      "export": "",
+      "title": "Registro de auditoria",
+      "subtitle": "Somente anexo · retido {{retention}} · encadeado criptograficamente · última âncora {{anchor}}",
+      "export": "Exportar",
+      "searchPlaceholder": "Filtrar por ator, alvo, tipo, namespace…",
       "filters": {
-        "principal": "",
-        "action": "",
-        "entity": "",
-        "from": "",
-        "to": ""
+        "principal": "Principal",
+        "action": "Ação",
+        "entity": "Entidade",
+        "from": "De",
+        "to": "Até",
+        "allTypes": "Todos os tipos de evento",
+        "allResults": "Todos os resultados",
+        "results": {
+          "ok": "OK",
+          "fail": "Falhou"
+        }
+      },
+      "table": {
+        "time": "Hora",
+        "type": "Tipo",
+        "actor": "Ator",
+        "target": "Alvo / namespace",
+        "ip": "IP",
+        "result": "Resultado"
+      },
+      "result": {
+        "ok": "ok",
+        "fail": "falhou"
+      },
+      "footer": {
+        "showing": "Exibindo {{shown}} de {{total}} eventos correspondentes. Use exportar para recuperar intervalos completos."
+      },
+      "actions": {
+        "exportCsv": "Exportar CSV"
+      },
+      "drawer": {
+        "copyJson": "Copiar JSON",
+        "openTarget": "Abrir alvo"
       },
       "empty": {
-        "title": ""
+        "title": "Nenhuma entrada de auditoria corresponde"
       }
     },
     "system": {
@@ -506,12 +608,105 @@
       }
     },
     "settings": {
-      "title": "",
-      "comingSoon": "",
+      "title": "Configurações",
+      "subtitle": "Workspace LATAM Lafken (prod) · sa-east-1",
+      "comingSoon": "Configurações persistentes disponíveis em um próximo slice",
       "labels": {
-        "theme": "",
-        "language": "",
-        "dateFormat": ""
+        "theme": "Tema",
+        "language": "Idioma",
+        "dateFormat": "Formato de data"
+      },
+      "tabs": {
+        "workspace": "Workspace",
+        "members": "Membros e funções",
+        "api": "Chaves de API",
+        "policies": "Políticas e padrões",
+        "danger": "Zona de risco"
+      },
+      "workspace": {
+        "fields": {
+          "name": { "label": "Nome do workspace", "value": "LATAM Lafken (prod)" },
+          "slug": { "label": "Slug do workspace", "value": "latam-lafken-prod" },
+          "region": { "label": "Região", "value": "sa-east-1 (São Paulo, primária)" },
+          "replica": { "label": "Réplica", "value": "sa-east-1c (morna)" },
+          "defaultNamespace": { "label": "Namespace padrão", "value": "aircraft-photos" },
+          "reviewerSlo": { "label": "SLO do revisor padrão", "value": "4 horas" },
+          "created": { "label": "Criado", "value": "2024-08-12 por p.estrada@latam.com" },
+          "plan": { "label": "Plano" }
+        },
+        "plan": {
+          "label": "Enterprise · personalizado"
+        }
+      },
+      "branding": {
+        "title": "Identidade visual",
+        "description": "Favicon do console, fundo do login e cabeçalho de e-mail são obtidos deste kit de marca.",
+        "lastEdited": "Última edição há 38 dias por p.estrada@latam.com.",
+        "replaceLogo": "Substituir logotipo",
+        "reset": "Redefinir para padrão"
+      },
+      "members": {
+        "title": "Membros",
+        "inviteMember": "Convidar membro",
+        "table": {
+          "person": "Pessoa",
+          "role": "Função",
+          "scope": "Escopo",
+          "mfa": "MFA",
+          "lastActive": "Última atividade"
+        },
+        "mfa": {
+          "on": "ativo",
+          "off": "inativo"
+        }
+      },
+      "api": {
+        "title": "Chaves de API",
+        "createKey": "Criar chave",
+        "table": {
+          "label": "Rótulo",
+          "scopes": "Escopos",
+          "lastUsed": "Último uso",
+          "rotates": "Rotação automática",
+          "createdBy": "Criado por",
+          "status": "Status"
+        },
+        "status": {
+          "active": "ativo",
+          "revoked": "revogado"
+        }
+      },
+      "policies": {
+        "title": "Padrões aplicados a novos namespaces",
+        "defaults": {
+          "retention": { "label": "Retenção padrão", "value": "7 anos", "note": "Substituível por namespace na YAML de política." },
+          "maxUpload": { "label": "Tamanho máximo de upload padrão", "value": "26 MB", "note": "Teto absoluto 200 MB." },
+          "allowedMimes": { "label": "Tipos MIME permitidos", "value": "image/jpeg, image/png, image/heic, application/pdf", "note": "" },
+          "moderation": { "label": "Moderação", "value": "habilitada (v2)", "note": "Limite 0,65 em todas as categorias." },
+          "exif": { "label": "Política EXIF", "value": "remover dos bytes; preservar GPS em capture_context", "note": "" },
+          "retentionWarning": { "label": "Aviso prévio de retenção", "value": "60 dias", "note": "E-mail + banner do console antes da expiração." }
+        },
+        "edit": "Editar"
+      },
+      "danger": {
+        "title": "Zona de risco",
+        "actions": {
+          "pauseUploads": {
+            "label": "Pausar todos os uploads",
+            "note": "Para os uploaders sem derrubar o pipeline; ativos prontos continuam disponíveis.",
+            "btn": "Pausar"
+          },
+          "rotateKey": {
+            "label": "Rotacionar chave de assinatura do workspace",
+            "note": "Reassina a cadeia de auditoria. Apenas novas âncoras.",
+            "btn": "Rotacionar…"
+          },
+          "disableConsole": {
+            "label": "Desabilitar acesso ao console",
+            "note": "Modo somente leitura em todo o workspace. Chaves de API não afetadas.",
+            "btn": "Desabilitar…"
+          }
+        }
       }
     }
   }

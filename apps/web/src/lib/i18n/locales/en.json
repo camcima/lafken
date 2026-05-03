@@ -473,21 +473,123 @@
     },
     "legalHolds": {
       "title": "Legal holds",
+      "subtitle": "{{filtered}} holds covering {{assets}} assets · 1 pending lift",
       "place": "Place hold",
+      "searchPlaceholder": "Search by case reference, scope, or hold ID…",
+      "actions": {
+        "export": "Export holds register",
+        "place": "Place hold…"
+      },
+      "stats": {
+        "activeHolds": {
+          "label": "Active holds",
+          "sub": "currently enforced"
+        },
+        "pendingRelease": {
+          "label": "Pending release",
+          "sub": "awaiting counsel sign-off"
+        },
+        "assetsUnderHold": {
+          "label": "Assets under hold",
+          "sub": "across all scopes"
+        },
+        "oldestHold": {
+          "label": "Oldest hold",
+          "sub": "CHL-2025-AVN-099"
+        }
+      },
+      "filters": {
+        "allScopes": "All scopes",
+        "allStatuses": "All statuses"
+      },
+      "scopes": {
+        "asset": "Single asset",
+        "workOrder": "Work order",
+        "namespace": "Namespace",
+        "uploaderWindow": "Uploader × time"
+      },
+      "statuses": {
+        "active": "Active",
+        "pendingRelease": "Pending release",
+        "pending": "Pending"
+      },
+      "table": {
+        "caseRef": "Case ref",
+        "scope": "Scope",
+        "target": "Target",
+        "assets": "Assets",
+        "placedBy": "Placed by",
+        "lastReviewed": "Last reviewed",
+        "status": "Status"
+      },
+      "footer": "Holds prevent deletion and retention expiry. Lifting a hold requires counsel sign-off and is logged to the audit trail.",
+      "drawer": {
+        "caption": "Legal hold",
+        "holdId": "Hold ID",
+        "scope": "Scope",
+        "reason": "Reason / counsel note",
+        "assetsCovered": "Assets covered",
+        "status": "Status",
+        "placedBy": "Placed by",
+        "lastReviewed": "Last reviewed",
+        "reviewCadence": "90-day cadence",
+        "recentActivity": "Recent activity",
+        "legalBot": "legal-bot",
+        "activity": {
+          "quarterlyReviewConfirmed": "Quarterly review confirmed",
+          "counselConfirmedScope": "Hold scope confirmed by counsel",
+          "holdPlaced": "Hold placed"
+        },
+        "actions": {
+          "viewAssets": "View covered assets",
+          "export": "Export bundle",
+          "requestLift": "Request lift…"
+        }
+      },
       "empty": {
         "title": "No active legal holds",
         "description": "Holds you place will appear here."
       }
     },
     "audit": {
-      "title": "Audit",
+      "title": "Audit log",
+      "subtitle": "Append-only · retained {{retention}} · cryptographically chained · last anchor {{anchor}}",
       "export": "Export",
+      "searchPlaceholder": "Filter by actor, target, type, namespace…",
       "filters": {
         "principal": "Principal",
         "action": "Action",
         "entity": "Entity",
         "from": "From",
-        "to": "To"
+        "to": "To",
+        "allTypes": "All event types",
+        "allResults": "All results",
+        "results": {
+          "ok": "OK",
+          "fail": "Failed"
+        }
+      },
+      "table": {
+        "time": "Time",
+        "type": "Type",
+        "actor": "Actor",
+        "target": "Target / namespace",
+        "ip": "IP",
+        "result": "Result"
+      },
+      "result": {
+        "ok": "ok",
+        "fail": "fail"
+      },
+      "footer": {
+        "showing": "Showing {{shown}} of {{total}} matching events. Use export to retrieve full ranges."
+      },
+      "actions": {
+        "exportCsv": "Export CSV"
+      },
+      "drawer": {
+        "copyJson": "Copy JSON",
+        "openTarget": "Open target"
       },
       "empty": {
         "title": "No audit entries match"
@@ -507,11 +609,104 @@
     },
     "settings": {
       "title": "Settings",
+      "subtitle": "Workspace LATAM Lafken (prod) · sa-east-1",
       "comingSoon": "Persistent settings come in a later slice",
       "labels": {
         "theme": "Theme",
         "language": "Language",
         "dateFormat": "Date format"
+      },
+      "tabs": {
+        "workspace": "Workspace",
+        "members": "Members & roles",
+        "api": "API keys",
+        "policies": "Policies & defaults",
+        "danger": "Danger zone"
+      },
+      "workspace": {
+        "fields": {
+          "name": { "label": "Workspace name", "value": "LATAM Lafken (prod)" },
+          "slug": { "label": "Workspace slug", "value": "latam-lafken-prod" },
+          "region": { "label": "Region", "value": "sa-east-1 (São Paulo, primary)" },
+          "replica": { "label": "Replica", "value": "sa-east-1c (warm)" },
+          "defaultNamespace": { "label": "Default namespace", "value": "aircraft-photos" },
+          "reviewerSlo": { "label": "Default reviewer SLO", "value": "4 hours" },
+          "created": { "label": "Created", "value": "2024-08-12 by p.estrada@latam.com" },
+          "plan": { "label": "Plan" }
+        },
+        "plan": {
+          "label": "Enterprise · custom"
+        }
+      },
+      "branding": {
+        "title": "Branding",
+        "description": "Console favicon, login background, and email header are pulled from this brand kit.",
+        "lastEdited": "Last edited 38 days ago by p.estrada@latam.com.",
+        "replaceLogo": "Replace logo",
+        "reset": "Reset to default"
+      },
+      "members": {
+        "title": "Members",
+        "inviteMember": "Invite member",
+        "table": {
+          "person": "Person",
+          "role": "Role",
+          "scope": "Scope",
+          "mfa": "MFA",
+          "lastActive": "Last active"
+        },
+        "mfa": {
+          "on": "on",
+          "off": "off"
+        }
+      },
+      "api": {
+        "title": "API keys",
+        "createKey": "Create key",
+        "table": {
+          "label": "Label",
+          "scopes": "Scopes",
+          "lastUsed": "Last used",
+          "rotates": "Auto-rotate",
+          "createdBy": "Created by",
+          "status": "Status"
+        },
+        "status": {
+          "active": "active",
+          "revoked": "revoked"
+        }
+      },
+      "policies": {
+        "title": "Defaults applied to new namespaces",
+        "defaults": {
+          "retention": { "label": "Default retention", "value": "7 years", "note": "Override per-namespace in policy YAML." },
+          "maxUpload": { "label": "Default max upload size", "value": "26 MB", "note": "Hard ceiling 200 MB." },
+          "allowedMimes": { "label": "Allowed MIME types", "value": "image/jpeg, image/png, image/heic, application/pdf", "note": "" },
+          "moderation": { "label": "Moderation", "value": "enabled (v2)", "note": "Threshold 0.65 across all categories." },
+          "exif": { "label": "EXIF policy", "value": "strip from bytes; preserve GPS in capture_context", "note": "" },
+          "retentionWarning": { "label": "Retention warning lead", "value": "60 days", "note": "Email + console banner before expiry." }
+        },
+        "edit": "Edit"
+      },
+      "danger": {
+        "title": "Danger zone",
+        "actions": {
+          "pauseUploads": {
+            "label": "Pause all uploads",
+            "note": "Stops uploaders without dropping pipeline; ready assets keep serving.",
+            "btn": "Pause"
+          },
+          "rotateKey": {
+            "label": "Rotate workspace signing key",
+            "note": "Re-signs the audit chain. New anchors only.",
+            "btn": "Rotate…"
+          },
+          "disableConsole": {
+            "label": "Disable console access",
+            "note": "Read-only mode workspace-wide. API keys unaffected.",
+            "btn": "Disable…"
+          }
+        }
       }
     }
   }

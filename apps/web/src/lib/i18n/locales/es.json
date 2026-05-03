@@ -472,25 +472,127 @@
       }
     },
     "legalHolds": {
-      "title": "",
-      "place": "",
+      "title": "Retenciones legales",
+      "subtitle": "{{filtered}} retenciones que cubren {{assets}} activos · 1 liberación pendiente",
+      "place": "Aplicar retención",
+      "searchPlaceholder": "Buscar por referencia del caso, alcance o ID de retención…",
+      "actions": {
+        "export": "Exportar registro de retenciones",
+        "place": "Aplicar retención…"
+      },
+      "stats": {
+        "activeHolds": {
+          "label": "Retenciones activas",
+          "sub": "actualmente aplicadas"
+        },
+        "pendingRelease": {
+          "label": "Pendiente de liberación",
+          "sub": "esperando aprobación legal"
+        },
+        "assetsUnderHold": {
+          "label": "Activos bajo retención",
+          "sub": "en todos los alcances"
+        },
+        "oldestHold": {
+          "label": "Retención más antigua",
+          "sub": "CHL-2025-AVN-099"
+        }
+      },
+      "filters": {
+        "allScopes": "Todos los alcances",
+        "allStatuses": "Todos los estados"
+      },
+      "scopes": {
+        "asset": "Activo único",
+        "workOrder": "Orden de trabajo",
+        "namespace": "Namespace",
+        "uploaderWindow": "Cargador × tiempo"
+      },
+      "statuses": {
+        "active": "Activo",
+        "pendingRelease": "Pendiente de liberación",
+        "pending": "Pendiente"
+      },
+      "table": {
+        "caseRef": "Ref. del caso",
+        "scope": "Alcance",
+        "target": "Objetivo",
+        "assets": "Activos",
+        "placedBy": "Aplicado por",
+        "lastReviewed": "Última revisión",
+        "status": "Estado"
+      },
+      "footer": "Las retenciones impiden la eliminación y la expiración de retención. Liberar una retención requiere aprobación legal y se registra en la pista de auditoría.",
+      "drawer": {
+        "caption": "Retención legal",
+        "holdId": "ID de retención",
+        "scope": "Alcance",
+        "reason": "Motivo / nota legal",
+        "assetsCovered": "Activos cubiertos",
+        "status": "Estado",
+        "placedBy": "Aplicado por",
+        "lastReviewed": "Última revisión",
+        "reviewCadence": "Cadencia de 90 días",
+        "recentActivity": "Actividad reciente",
+        "legalBot": "legal-bot",
+        "activity": {
+          "quarterlyReviewConfirmed": "Revisión trimestral confirmada",
+          "counselConfirmedScope": "Alcance de retención confirmado por asesor legal",
+          "holdPlaced": "Retención aplicada"
+        },
+        "actions": {
+          "viewAssets": "Ver activos cubiertos",
+          "export": "Exportar paquete",
+          "requestLift": "Solicitar liberación…"
+        }
+      },
       "empty": {
-        "title": "",
-        "description": ""
+        "title": "No hay retenciones legales activas",
+        "description": "Las retenciones que apliques aparecerán aquí."
       }
     },
     "audit": {
-      "title": "",
-      "export": "",
+      "title": "Registro de auditoría",
+      "subtitle": "Solo anexo · retenido {{retention}} · encadenado criptográficamente · último anclaje {{anchor}}",
+      "export": "Exportar",
+      "searchPlaceholder": "Filtrar por actor, objetivo, tipo, namespace…",
       "filters": {
-        "principal": "",
-        "action": "",
-        "entity": "",
-        "from": "",
-        "to": ""
+        "principal": "Principal",
+        "action": "Acción",
+        "entity": "Entidad",
+        "from": "Desde",
+        "to": "Hasta",
+        "allTypes": "Todos los tipos de evento",
+        "allResults": "Todos los resultados",
+        "results": {
+          "ok": "OK",
+          "fail": "Falló"
+        }
+      },
+      "table": {
+        "time": "Hora",
+        "type": "Tipo",
+        "actor": "Actor",
+        "target": "Objetivo / namespace",
+        "ip": "IP",
+        "result": "Resultado"
+      },
+      "result": {
+        "ok": "ok",
+        "fail": "falló"
+      },
+      "footer": {
+        "showing": "Mostrando {{shown}} de {{total}} eventos coincidentes. Usa exportar para recuperar rangos completos."
+      },
+      "actions": {
+        "exportCsv": "Exportar CSV"
+      },
+      "drawer": {
+        "copyJson": "Copiar JSON",
+        "openTarget": "Abrir objetivo"
       },
       "empty": {
-        "title": ""
+        "title": "Ninguna entrada de auditoría coincide"
       }
     },
     "system": {
@@ -506,12 +608,105 @@
       }
     },
     "settings": {
-      "title": "",
-      "comingSoon": "",
+      "title": "Configuración",
+      "subtitle": "Workspace LATAM Lafken (prod) · sa-east-1",
+      "comingSoon": "La configuración persistente estará disponible en un slice posterior",
       "labels": {
-        "theme": "",
-        "language": "",
-        "dateFormat": ""
+        "theme": "Tema",
+        "language": "Idioma",
+        "dateFormat": "Formato de fecha"
+      },
+      "tabs": {
+        "workspace": "Workspace",
+        "members": "Miembros y roles",
+        "api": "Claves de API",
+        "policies": "Políticas y valores predeterminados",
+        "danger": "Zona de peligro"
+      },
+      "workspace": {
+        "fields": {
+          "name": { "label": "Nombre del workspace", "value": "LATAM Lafken (prod)" },
+          "slug": { "label": "Slug del workspace", "value": "latam-lafken-prod" },
+          "region": { "label": "Región", "value": "sa-east-1 (São Paulo, primaria)" },
+          "replica": { "label": "Réplica", "value": "sa-east-1c (tibia)" },
+          "defaultNamespace": { "label": "Namespace predeterminado", "value": "aircraft-photos" },
+          "reviewerSlo": { "label": "SLO del revisor predeterminado", "value": "4 horas" },
+          "created": { "label": "Creado", "value": "2024-08-12 por p.estrada@latam.com" },
+          "plan": { "label": "Plan" }
+        },
+        "plan": {
+          "label": "Enterprise · personalizado"
+        }
+      },
+      "branding": {
+        "title": "Identidad visual",
+        "description": "El favicon del consola, el fondo del login y el encabezado del correo se toman de este kit de marca.",
+        "lastEdited": "Última edición hace 38 días por p.estrada@latam.com.",
+        "replaceLogo": "Reemplazar logotipo",
+        "reset": "Restablecer valores predeterminados"
+      },
+      "members": {
+        "title": "Miembros",
+        "inviteMember": "Invitar miembro",
+        "table": {
+          "person": "Persona",
+          "role": "Rol",
+          "scope": "Alcance",
+          "mfa": "MFA",
+          "lastActive": "Última actividad"
+        },
+        "mfa": {
+          "on": "activo",
+          "off": "inactivo"
+        }
+      },
+      "api": {
+        "title": "Claves de API",
+        "createKey": "Crear clave",
+        "table": {
+          "label": "Etiqueta",
+          "scopes": "Alcances",
+          "lastUsed": "Último uso",
+          "rotates": "Rotación automática",
+          "createdBy": "Creado por",
+          "status": "Estado"
+        },
+        "status": {
+          "active": "activo",
+          "revoked": "revocado"
+        }
+      },
+      "policies": {
+        "title": "Valores predeterminados para nuevos namespaces",
+        "defaults": {
+          "retention": { "label": "Retención predeterminada", "value": "7 años", "note": "Anulable por namespace en YAML de política." },
+          "maxUpload": { "label": "Tamaño máximo de carga predeterminado", "value": "26 MB", "note": "Techo absoluto 200 MB." },
+          "allowedMimes": { "label": "Tipos MIME permitidos", "value": "image/jpeg, image/png, image/heic, application/pdf", "note": "" },
+          "moderation": { "label": "Moderación", "value": "habilitada (v2)", "note": "Umbral 0,65 en todas las categorías." },
+          "exif": { "label": "Política EXIF", "value": "eliminar de los bytes; preservar GPS en capture_context", "note": "" },
+          "retentionWarning": { "label": "Aviso previo de retención", "value": "60 días", "note": "Correo + banner del consola antes de la expiración." }
+        },
+        "edit": "Editar"
+      },
+      "danger": {
+        "title": "Zona de peligro",
+        "actions": {
+          "pauseUploads": {
+            "label": "Pausar todas las cargas",
+            "note": "Detiene los cargadores sin interrumpir el pipeline; los activos listos siguen disponibles.",
+            "btn": "Pausar"
+          },
+          "rotateKey": {
+            "label": "Rotar clave de firma del workspace",
+            "note": "Vuelve a firmar la cadena de auditoría. Solo nuevos anclajes.",
+            "btn": "Rotar…"
+          },
+          "disableConsole": {
+            "label": "Deshabilitar acceso al consola",
+            "note": "Modo de solo lectura en todo el workspace. Las claves de API no se ven afectadas.",
+            "btn": "Deshabilitar…"
+          }
+        }
       }
     }
   }
