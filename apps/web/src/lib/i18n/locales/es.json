@@ -174,14 +174,41 @@
         "quarantine": "",
         "legalHolds": ""
       },
-      "pipelineHealth": "",
-      "checking": "",
-      "needsAttention": "",
-      "needsAttentionEmpty": "",
-      "topNamespaces": "",
-      "topNamespacesEmpty": "",
-      "liveEvents": "",
-      "liveEventsEmpty": ""
+      "pipelineHealth": "Salud del pipeline",
+      "pipelineHealthMeta": "últimos 12 minutos · intervalos de 30s",
+      "checking": "verificando…",
+      "needsAttention": "Necesita atención",
+      "needsAttentionCount": "elementos",
+      "needsAttentionEmpty": "Nada necesita atención ahora",
+      "topNamespaces": "Principales namespaces",
+      "topNamespacesMeta": "actividad en las últimas 24h",
+      "topNamespacesEmpty": "Sin actividad de namespace aún",
+      "liveEvents": "Eventos en vivo",
+      "liveEventsEmpty": "Sin eventos recientes",
+      "liveEventsStreaming": "transmitiendo",
+      "liveEventsViewAll": "Ver registro de auditoría completo →",
+      "attentionBanner": {
+        "alert": "1 etapa del pipeline degradada · la cola de transformación se está acumulando",
+        "warn": "Algunas etapas del pipeline necesitan atención",
+        "ok": "Todos los sistemas normales",
+        "detail": "transform p95 = 2,63s (objetivo < 1,50s) · profundidad 4.811 y creciendo · processor-12 caído (pool Memphis)"
+      },
+      "attention": {
+        "quarantineTitle": "Cola de cuarentena · {{count}} elementos",
+        "quarantineDetail": "Los 5 más antiguos tienen > 24h. SLO del revisor: 4h.",
+        "workerDownTitle": "Worker {{id}} no responde",
+        "workerDownDetail": "Visto por última vez hace 3m · pool: default",
+        "holdPendingTitle": "1 retención pendiente de liberación",
+        "holdPendingDetail": "{{caseRef}} · esperando aprobación legal"
+      },
+      "kpi": {
+        "totalAssets": "2,42M",
+        "totalAssetsHint": "+18,3K en las últimas 24h",
+        "inFlightHint": "en {{stages}} etapas",
+        "queueDepthHint": "moderate + transform están al 99%",
+        "quarantineHint": "+5 hoy · más antiguo hace 36h",
+        "legalHoldsHint": "11 activas · 1 liberación pendiente"
+      }
     },
     "assets": {
       "title": "",

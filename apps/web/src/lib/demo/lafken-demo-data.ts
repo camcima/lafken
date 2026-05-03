@@ -101,6 +101,21 @@ export const DEMO_NAMESPACES: DemoNamespace[] = [
   },
 ];
 
+// ── Pipeline sparkline data (Home page) ──────────────────
+
+// Sparkline constants: 12 data points per queue, representing 30s buckets over
+// the last 12 minutes. Values are raw sampled queue depths — treating them as
+// individually named constants would obscure the data shape rather than clarify it.
+/* eslint-disable no-magic-numbers */
+export const DEMO_QUEUE_SPARKS: Record<string, number[]> = {
+  validate: [120, 90, 110, 80, 90, 100, 60, 70, 90, 100, 110, 90],
+  "av-scan": [10, 14, 12, 8, 10, 9, 7, 8, 10, 12, 8, 7],
+  "exif-strip": [5, 4, 6, 5, 3, 4, 5, 5, 4, 5, 4, 3],
+  moderate: [80, 110, 200, 320, 280, 312, 290, 312, 312, 312, 312, 312],
+  transform: [800, 1200, 2400, 3800, 4500, 4800, 4811, 4810, 4811, 4811, 4811, 4811],
+};
+/* eslint-enable no-magic-numbers */
+
 // ── Pipeline / queue health (Home + System) ───────────────
 
 export interface DemoQueue {

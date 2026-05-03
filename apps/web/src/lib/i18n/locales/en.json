@@ -175,13 +175,40 @@
         "legalHolds": "Legal holds"
       },
       "pipelineHealth": "Pipeline health",
+      "pipelineHealthMeta": "last 12 minutes · 30s buckets",
       "checking": "checking…",
-      "needsAttention": "Things needing attention",
+      "needsAttention": "Needs attention",
+      "needsAttentionCount": "items",
       "needsAttentionEmpty": "Nothing needs attention right now",
       "topNamespaces": "Top namespaces",
+      "topNamespacesMeta": "last 24h activity",
       "topNamespacesEmpty": "No namespace activity yet",
       "liveEvents": "Live events",
-      "liveEventsEmpty": "No recent events"
+      "liveEventsEmpty": "No recent events",
+      "liveEventsStreaming": "streaming",
+      "liveEventsViewAll": "View full audit log →",
+      "attentionBanner": {
+        "alert": "1 pipeline stage degraded · transform queue is backing up",
+        "warn": "Some pipeline stages need attention",
+        "ok": "All systems nominal",
+        "detail": "transform p95 = 2.63s (target < 1.50s) · depth 4,811 and growing · processor-12 down (Memphis pool)"
+      },
+      "attention": {
+        "quarantineTitle": "Quarantine queue · {{count}} items",
+        "quarantineDetail": "5 oldest are > 24h. Reviewer SLO: 4h.",
+        "workerDownTitle": "Worker {{id}} not responding",
+        "workerDownDetail": "Last seen 3m ago · pool: default",
+        "holdPendingTitle": "1 hold pending release",
+        "holdPendingDetail": "{{caseRef}} · awaiting counsel sign-off"
+      },
+      "kpi": {
+        "totalAssets": "2.42M",
+        "totalAssetsHint": "+18.3K in last 24h",
+        "inFlightHint": "across {{stages}} stages",
+        "queueDepthHint": "moderate + transform are 99%",
+        "quarantineHint": "+5 today · oldest 36h",
+        "legalHoldsHint": "11 active · 1 pending lift"
+      }
     },
     "assets": {
       "title": "Assets",

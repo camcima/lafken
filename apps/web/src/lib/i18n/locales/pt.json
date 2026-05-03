@@ -174,14 +174,41 @@
         "quarantine": "",
         "legalHolds": ""
       },
-      "pipelineHealth": "",
-      "checking": "",
-      "needsAttention": "",
-      "needsAttentionEmpty": "",
-      "topNamespaces": "",
-      "topNamespacesEmpty": "",
-      "liveEvents": "",
-      "liveEventsEmpty": ""
+      "pipelineHealth": "Saúde do pipeline",
+      "pipelineHealthMeta": "últimos 12 minutos · intervalos de 30s",
+      "checking": "verificando…",
+      "needsAttention": "Precisa de atenção",
+      "needsAttentionCount": "itens",
+      "needsAttentionEmpty": "Nada precisa de atenção agora",
+      "topNamespaces": "Principais namespaces",
+      "topNamespacesMeta": "atividade nas últimas 24h",
+      "topNamespacesEmpty": "Sem atividade de namespace ainda",
+      "liveEvents": "Eventos ao vivo",
+      "liveEventsEmpty": "Sem eventos recentes",
+      "liveEventsStreaming": "transmitindo",
+      "liveEventsViewAll": "Ver log de auditoria completo →",
+      "attentionBanner": {
+        "alert": "1 estágio do pipeline degradado · fila de transformação acumulando",
+        "warn": "Alguns estágios do pipeline precisam de atenção",
+        "ok": "Todos os sistemas normais",
+        "detail": "transform p95 = 2,63s (meta < 1,50s) · profundidade 4.811 e crescendo · processor-12 fora (pool Memphis)"
+      },
+      "attention": {
+        "quarantineTitle": "Fila de quarentena · {{count}} itens",
+        "quarantineDetail": "5 mais antigos têm > 24h. SLO do revisor: 4h.",
+        "workerDownTitle": "Worker {{id}} sem resposta",
+        "workerDownDetail": "Visto por último há 3m · pool: default",
+        "holdPendingTitle": "1 retenção pendente de liberação",
+        "holdPendingDetail": "{{caseRef}} · aguardando aprovação jurídica"
+      },
+      "kpi": {
+        "totalAssets": "2,42M",
+        "totalAssetsHint": "+18,3K nas últimas 24h",
+        "inFlightHint": "em {{stages}} estágios",
+        "queueDepthHint": "moderate + transform estão a 99%",
+        "quarantineHint": "+5 hoje · mais antigo há 36h",
+        "legalHoldsHint": "11 ativas · 1 liberação pendente"
+      }
     },
     "assets": {
       "title": "",
