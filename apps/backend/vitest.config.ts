@@ -57,8 +57,8 @@ export default defineConfig({
             groupOrder: 1,
           },
 
-          dir: "test/unit",
-          include: ["**/*.spec.ts"],
+          dir: ".",
+          include: ["test/unit/**/*.spec.ts", "src/**/*.spec.ts"],
           setupFiles: ["./test/unit/setup.ts"],
         },
       },
