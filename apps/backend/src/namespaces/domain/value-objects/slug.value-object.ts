@@ -1,3 +1,5 @@
+import { InvalidSlugError } from "../errors/invalid-slug.error";
+
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MAX_LENGTH = 64;
 
@@ -6,12 +8,16 @@ export class Slug {
 
   constructor(input: string) {
     if (typeof input !== "string" || input.length === 0 || input.length > MAX_LENGTH) {
-      throw new Error(`Invalid namespace slug: ${JSON.stringify(input)}`);
+      throw new InvalidSlugError({
+        input,
+        reason: `must be a non-empty string of at most ${MAX_LENGTH} characters`,
+      });
     }
     if (!SLUG_PATTERN.test(input)) {
-      throw new Error(
-        `Invalid namespace slug: ${input}. Must be lowercase letters, digits, and single dashes.`,
-      );
+      throw new InvalidSlugError({
+        input,
+        reason: "must be lowercase letters, digits, and single dashes",
+      });
     }
     this.value = input;
   }
