@@ -1,0 +1,58 @@
+{
+  "signingKey": {
+    "kid": "lafken-dev-key-1",
+    "alg": "RS256",
+    "source": "file:/data/signing-key.pem"
+  },
+  "clients": [
+    {
+      "clientId": "lafken-web",
+      "redirectUris": [
+        "http://localhost:5173/auth/callback"
+      ],
+      "postLogoutRedirectUris": [
+        "http://localhost:5173/login"
+      ],
+      "audience": "lafken-api"
+    }
+  ],
+  "subjectClaim": "sub",
+  "tokenTtlSeconds": 900,
+  "refreshTokenTtlSeconds": 28800,
+  "branding": {
+    "title": "Lafken — Dev Login",
+    "accentColor": "#1B0088"
+  },
+  "profiles": [
+    {
+      "id": "carlos.cima",
+      "displayName": "Carlos Cima",
+      "email": "carlos.cima@latam.com",
+      "claims": {
+        "name": "Carlos Cima",
+        "preferred_username": "carlos.cima@latam.com",
+        "roles": ["platform_operator", "namespace_admin"]
+      }
+    },
+    {
+      "id": "p.estrada",
+      "displayName": "P. Estrada",
+      "email": "p.estrada@latam.com",
+      "claims": {
+        "name": "P. Estrada",
+        "preferred_username": "p.estrada@latam.com",
+        "roles": ["operator"]
+      }
+    },
+    {
+      "id": "j.almeida",
+      "displayName": "J. Almeida (read-only)",
+      "email": "j.almeida@latam.com",
+      "claims": {
+        "name": "J. Almeida",
+        "preferred_username": "j.almeida@latam.com",
+        "roles": ["viewer"]
+      }
+    }
+  ]
+}
