@@ -100,16 +100,43 @@ describe("HomePage", () => {
     expect(screen.getByText("Live events")).toBeInTheDocument();
   });
 
-  it("falls back to demo data when API returns empty counts", () => {
+  it("renders KPI counts from API when present, otherwise from demo data", () => {
     render(
       <I18nProvider>
         <HomePage />
       </I18nProvider>,
     );
-    // Demo total assets value
+    // API returns zero counts → falls back to demo values for totalAssets and quarantine
     expect(screen.getByText("2.42M")).toBeInTheDocument();
-    // Demo quarantine count
     expect(screen.getByText("47")).toBeInTheDocument();
+  });
+
+  it("renders queue rows from demo data", () => {
+    render(
+      <I18nProvider>
+        <HomePage />
+      </I18nProvider>,
+    );
+    expect(screen.getByText("validate")).toBeInTheDocument();
+    expect(screen.getByText("transform")).toBeInTheDocument();
+  });
+
+  it("renders namespace rows from demo data", () => {
+    render(
+      <I18nProvider>
+        <HomePage />
+      </I18nProvider>,
+    );
+    expect(screen.getByText("aircraft-photos")).toBeInTheDocument();
+  });
+
+  it("renders live events from demo data", () => {
+    render(
+      <I18nProvider>
+        <HomePage />
+      </I18nProvider>,
+    );
+    expect(screen.getByText("View full audit log →")).toBeInTheDocument();
   });
 
   it("shows the attention banner with alert tone when transform queue is degraded", () => {
@@ -121,24 +148,5 @@ describe("HomePage", () => {
     expect(
       screen.getByText("1 pipeline stage degraded · transform queue is backing up"),
     ).toBeInTheDocument();
-  });
-
-  it("shows queue names in the pipeline health section", () => {
-    render(
-      <I18nProvider>
-        <HomePage />
-      </I18nProvider>,
-    );
-    expect(screen.getByText("validate")).toBeInTheDocument();
-    expect(screen.getByText("transform")).toBeInTheDocument();
-  });
-
-  it("shows the view full audit log link", () => {
-    render(
-      <I18nProvider>
-        <HomePage />
-      </I18nProvider>,
-    );
-    expect(screen.getByText("View full audit log →")).toBeInTheDocument();
   });
 });

@@ -162,17 +162,17 @@
   },
   "pages": {
     "home": {
-      "title": "",
-      "subtitle": "",
-      "welcomeBack": "",
-      "lastRefreshed": "",
-      "justNow": "",
+      "title": "Inicio",
+      "subtitle": "Panel del operador",
+      "welcomeBack": "Bienvenido de nuevo, {{name}}.",
+      "lastRefreshed": "Última actualización",
+      "justNow": "justo ahora",
       "stats": {
-        "totalAssets": "",
-        "inFlight": "",
-        "queueDepth": "",
-        "quarantine": "",
-        "legalHolds": ""
+        "totalAssets": "Activos totales",
+        "inFlight": "En vuelo",
+        "queueDepth": "Profundidad de cola",
+        "quarantine": "Cuarentena",
+        "legalHolds": "Retenciones legales"
       },
       "pipelineHealth": "Salud del pipeline",
       "pipelineHealthMeta": "últimos 12 minutos · intervalos de 30s",

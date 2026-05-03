@@ -11,6 +11,7 @@ import {
   DEMO_AUDIT,
   DEMO_NAMESPACES,
   DEMO_PENDING_HOLD_CASE_REF,
+  DEMO_QUARANTINE,
   DEMO_QUEUE_SPARKS,
   DEMO_QUEUES,
   DEMO_WORKERS,
@@ -33,8 +34,7 @@ const NAMESPACE_UPLOAD_MULTIPLIER = 0.0003;
 const NAMESPACE_UPLOAD_BASE = 41;
 
 // Demo fallback values for KPI strip
-const DEMO_QUARANTINE_COUNT = 47;
-const DEMO_QUARANTINE_DISPLAY = "47";
+const DEMO_QUARANTINE_DISPLAY = String(DEMO_QUARANTINE.length);
 const DEMO_LEGAL_HOLDS_DISPLAY = "12";
 
 // Number of attention items in the "Needs attention" card
@@ -162,6 +162,7 @@ export function HomePage() {
   const { user } = useAuth();
   const { data } = useDashboardOverview();
 
+  // Slice 0: BE returns empty arrays for these; rendering against typed demo data
   const queues = DEMO_QUEUES;
 
   const totalDepth = queues.reduce((acc, queue) => acc + queue.depth, 0);
@@ -182,6 +183,7 @@ export function HomePage() {
         ? t("pages.home.attentionBanner.warn")
         : t("pages.home.attentionBanner.ok");
 
+  // Slice 0: BE returns empty arrays for these; rendering against typed demo data
   const recentEvents = DEMO_AUDIT.slice(0, LIVE_EVENTS_DISPLAY_COUNT);
 
   const apiTotalAssets = data?.counts?.totalAssets ?? 0;
@@ -326,7 +328,7 @@ export function HomePage() {
               </span>
               <div className="min-w-0 flex-1">
                 <div className="text-[12.5px] font-medium">
-                  {t("pages.home.attention.quarantineTitle", { count: DEMO_QUARANTINE_COUNT })}
+                  {t("pages.home.attention.quarantineTitle", { count: DEMO_QUARANTINE.length })}
                 </div>
                 <div className="text-muted-foreground text-[11.5px]">
                   {t("pages.home.attention.quarantineDetail")}
@@ -382,13 +384,14 @@ export function HomePage() {
             <CardMeta>{t("pages.home.topNamespacesMeta")}</CardMeta>
           </CardHeader>
           <div className="px-5 py-3">
+            {/* Slice 0: BE returns empty arrays for these; rendering against typed demo data */}
             {DEMO_NAMESPACES.slice(0, TOP_NAMESPACES_COUNT).map((namespace) => {
               const upload24 = Math.floor(
                 namespace.assetCount * NAMESPACE_UPLOAD_MULTIPLIER + NAMESPACE_UPLOAD_BASE,
               );
               const pct =
                 (namespace.assetCount / NAMESPACE_TOTAL_ASSETS) * NAMESPACE_PCT_MULTIPLIER;
-              const pctStr = String(pct) + "%";
+              const pctStr = pct.toFixed(2) + "%";
               return (
                 <Link
                   key={namespace.slug}
