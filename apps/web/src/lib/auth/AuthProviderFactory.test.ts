@@ -46,3 +46,28 @@ describe("createAuthProvider - mock guard", () => {
     expect(provider.getProviderName()).toBe("mock");
   });
 });
+
+describe("createAuthProvider - oidc", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("creates an OIDCAuthAdapter when providerType is oidc", async () => {
+    const { createAuthProvider } = await import("./AuthProviderFactory");
+    const provider = await createAuthProvider({ providerType: "oidc" });
+    expect(provider.getProviderName()).toBe("oidc");
+  });
+
+  it("creates an OIDCAuthAdapter when providerType is undefined (default)", async () => {
+    const { createAuthProvider } = await import("./AuthProviderFactory");
+    const provider = await createAuthProvider({ providerType: undefined });
+    expect(provider.getProviderName()).toBe("oidc");
+  });
+
+  it("throws for an unknown provider type", async () => {
+    const { createAuthProvider } = await import("./AuthProviderFactory");
+    await expect(createAuthProvider({ providerType: "unknown-provider" })).rejects.toThrow(
+      /Unknown auth provider type/i,
+    );
+  });
+});

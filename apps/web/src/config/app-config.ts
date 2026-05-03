@@ -11,11 +11,13 @@ import { z } from "zod";
  */
 const AppConfigSchema = z.object({
   ENVIRONMENT: z.enum(["intg", "prod"]),
-  AUTH_PROVIDER: z.enum(["mock", "msal"]),
-  AZURE_CLIENT_ID: z.union([z.uuid(), z.literal("")]),
-  AZURE_REDIRECT_URI: z.union([z.url(), z.literal("")]),
-  AZURE_TENANT_ID: z.union([z.uuid(), z.literal("")]),
-  AZURE_POST_LOGOUT_REDIRECT_URI: z.union([z.url(), z.literal("")]),
+  AUTH_PROVIDER: z.enum(["mock", "oidc"]),
+  OIDC_AUTHORITY: z.union([z.url(), z.literal("")]),
+  OIDC_CLIENT_ID: z.union([z.string(), z.literal("")]),
+  OIDC_AUDIENCE: z.union([z.string(), z.literal("")]),
+  OIDC_REDIRECT_URI: z.union([z.url(), z.literal("")]),
+  OIDC_POST_LOGOUT_REDIRECT_URI: z.union([z.url(), z.literal("")]),
+  OIDC_SCOPES: z.string().default("openid profile email"),
   API_URL: z.url(),
   MONITORING_URL: z.union([z.url(), z.literal("")]),
 });

@@ -1,21 +1,21 @@
 /**
  * Auth Provider Factory
- * Creates the appropriate auth provider based on configuration
+ * Creates the appropriate auth provider based on configuration.
  */
 import { getRuntimeValue } from "@/config/app-config";
 import { logger } from "@/lib/logger";
 
-import { MSALAuthAdapter } from "./adapters/MSALAuthAdapter";
-import { getMSALConfig } from "./config/msal-config";
+import { OIDCAuthAdapter } from "./adapters/OIDCAuthAdapter";
+import { getOIDCConfig } from "./config/oidc-config";
 import type { IAuthProvider } from "./interface/IAuthProvider";
 
 /**
- * Supported authentication providers
+ * Supported authentication provider identifiers.
  */
-export type AuthProviderType = "msal" | "mock" | undefined | (string & {});
+export type AuthProviderType = "oidc" | "mock" | undefined | (string & {});
 
 /**
- * Auth provider factory configuration
+ * Auth provider factory configuration.
  */
 export interface AuthProviderFactoryConfig {
   /** The type of auth provider to create */
@@ -32,7 +32,7 @@ export interface AuthProviderFactoryConfig {
 let authProviderPromise: Promise<IAuthProvider> | null = null;
 
 /**
- * Creates an auth provider based on configuration
+ * Creates an auth provider based on configuration.
  * @param config Factory configuration
  * @returns The configured auth provider instance
  */
@@ -43,9 +43,9 @@ export const createAuthProvider = async (
 
   logger.info(`Creating auth provider: ${providerType}`);
 
-  if (providerType === "msal" || !providerType) {
-    const msalConfig = getMSALConfig();
-    return new MSALAuthAdapter(msalConfig);
+  if (providerType === "oidc" || !providerType) {
+    const oidcConfig = getOIDCConfig();
+    return new OIDCAuthAdapter(oidcConfig);
   }
 
   if (providerType === "mock") {
@@ -63,7 +63,7 @@ export const createAuthProvider = async (
 };
 
 /**
- * Gets or creates the singleton auth provider instance
+ * Gets or creates the singleton auth provider instance.
  * @returns The auth provider instance
  */
 export const getAuthProvider = async (): Promise<IAuthProvider> => {
@@ -80,8 +80,8 @@ export const getAuthProvider = async (): Promise<IAuthProvider> => {
 };
 
 /**
- * Resets the auth provider instance
- * Useful for testing or when switching providers at runtime
+ * Resets the auth provider instance.
+ * Useful for testing or when switching providers at runtime.
  */
 export const resetAuthProvider = (): void => {
   logger.warn("Resetting auth provider instance");
@@ -89,8 +89,8 @@ export const resetAuthProvider = (): void => {
 };
 
 /**
- * Sets a custom auth provider instance
- * Useful for testing or custom implementations
+ * Sets a custom auth provider instance.
+ * Useful for testing or custom implementations.
  * @param provider The auth provider instance to use
  */
 export const setAuthProvider = (provider: IAuthProvider): void => {
