@@ -294,12 +294,105 @@
         "description": "This asset does not exist or you do not have permission to view it.",
         "action": "Back to Assets"
       },
+      "actions": {
+        "reProcess": "Re-process",
+        "placeLegalHold": "Place legal hold",
+        "evidentiaryExport": "Evidentiary export",
+        "more": "More"
+      },
+      "stateHero": {
+        "ready": {
+          "title": "Ready",
+          "subtitle": "Healthy · serving since {{since}}"
+        },
+        "processing": {
+          "title": "Processing",
+          "subtitle": "Step {{step}} of {{total}} · {{stage}} · {{elapsed}}s elapsed"
+        },
+        "processingFailed": {
+          "title": "Processing failed",
+          "subtitle": "Step: {{stage}} · {{retries}} retries exhausted"
+        },
+        "quarantinedModeration": {
+          "title": "Quarantined · moderation",
+          "subtitle": "Awaiting reviewer · flagged {{flagSec}}s into pipeline"
+        },
+        "fields": {
+          "pipeline": "Pipeline",
+          "worker": "Worker",
+          "attempts": "Attempts",
+          "nextStep": "Next step",
+          "lastError": "Last error",
+          "nextRetry": "Next retry",
+          "run": "Run",
+          "flaggedBy": "Flagged by",
+          "topCategory": "Top category",
+          "threshold": "Threshold",
+          "inQueue": "In queue",
+          "retention": "Retention",
+          "legalHold": "Legal hold",
+          "serving": "Serving"
+        }
+      },
       "sections": {
         "identity": "Identity and lineage",
+        "identityLineage": "Identity & lineage",
         "fileProperties": "File properties",
         "timeline": "Timeline",
+        "timelineMeta": "Chain of custody · {{count}} events",
         "analyses": "Analyses",
-        "presets": "Presets"
+        "analysesMeta": "{{count}} ran · all clean",
+        "presets": "Presets",
+        "customMetadata": "Custom metadata",
+        "customMetadataMeta": "schema validated · {{count}} fields",
+        "captureContext": "Capture context",
+        "captureContextMeta": "structured · separate from EXIF",
+        "captureLocationNote": "Location stored in capture_context per namespace policy. EXIF GPS stripped from bytes.",
+        "availableUrls": "Available URLs",
+        "availableUrlsMeta": "{{count}} presets · signed · 5m TTL"
+      },
+      "dl": {
+        "publicId": "Public ID",
+        "namespace": "Namespace",
+        "policyVersion": "Policy version",
+        "storageBinding": "Storage binding",
+        "owningRecord": "Owning record",
+        "uploadedBy": "Uploaded by",
+        "uploadedAt": "Uploaded at",
+        "filename": "Filename",
+        "dimensions": "Dimensions",
+        "format": "Format",
+        "size": "Size",
+        "mime": "MIME",
+        "contentHash": "Content hash",
+        "capturedAt": "Captured at",
+        "device": "Device",
+        "app": "App",
+        "network": "Network"
+      },
+      "mime": {
+        "detectedEqualsDeclared": "detected = declared",
+        "declaredOther": "declared {{declared}}",
+        "req": "REQ",
+        "governing": "governing"
+      },
+      "presets": {
+        "hits": "{{count}} hits",
+        "ready": "ready",
+        "preview": "Preview",
+        "copyUrl": "Copy URL"
+      },
+      "siblings": {
+        "altLabel": "Alternative angle {{label}}"
+      },
+      "visual": {
+        "fullSize": "Full size",
+        "original": "Original"
+      },
+      "toasts": {
+        "idCopied": "Public ID copied",
+        "hashCopied": "Hash copied",
+        "urlCopied": "URL copied: {{name}}"
       }
     },
     "namespaces": {
@@ -367,7 +460,9 @@
         "from": "From",
         "to": "To"
       },
-      "empty": { "title": "No audit entries match" }
+      "empty": {
+        "title": "No audit entries match"
+      }
     },
     "system": {
       "title": "System",

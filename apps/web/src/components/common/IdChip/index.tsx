@@ -9,9 +9,10 @@ const ID_DISPLAY_LENGTH = 8;
 interface IIdChipProps {
   id: string;
   className?: string;
+  variant?: "default" | "indigo";
 }
 
-export function IdChip({ id, className }: IIdChipProps) {
+export function IdChip({ id, className, variant = "default" }: IIdChipProps) {
   const { t } = useTranslation();
   const { copied, copy } = useCopy();
 
@@ -26,7 +27,14 @@ export function IdChip({ id, className }: IIdChipProps) {
       aria-label={isCopied ? t("idChip.copied") : t("idChip.copyToClipboard")}
       onClick={() => void copy(id)}
       className={cn(
-        "inline-flex cursor-pointer items-center gap-1 rounded border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 font-mono text-xs text-neutral-600 transition-colors hover:bg-neutral-200",
+        "inline-flex cursor-pointer items-center gap-1 rounded border px-1.5 py-0.5 font-mono text-xs transition-colors",
+        variant === "indigo" && !isCopied
+          ? "text-latam-indigo-deep border-[#C9C2EC] bg-[#ECE9FA] hover:bg-[#DDD5F5]"
+          : variant === "indigo" && isCopied
+            ? "border-ok-line bg-ok-soft text-ok"
+            : !isCopied
+              ? "border-neutral-200 bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+              : "border-ok-line bg-ok-soft text-ok",
         className,
       )}
     >

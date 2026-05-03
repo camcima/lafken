@@ -894,6 +894,349 @@ export const DEMO_API_KEYS: DemoApiKey[] = [
   },
 ];
 
+// ── Asset detail ─────────────────────────────────────────
+
+export interface IDemoAssetDetailTimeline {
+  kind: "uploaded" | "processing" | "analysis" | "ready" | "failure";
+  label: string;
+  at: string;
+  actor: string;
+  detail: string;
+}
+
+export interface IDemoAssetDetailAnalysis {
+  id: string;
+  name: string;
+  verdict: "passed" | "info" | "failed" | "warning";
+  at: string;
+  summary: string;
+  raw: Record<string, unknown>;
+}
+
+export interface IDemoAssetDetailSibling {
+  id: string;
+  label: string;
+  thumbHue: number;
+  state: string;
+  note?: string;
+}
+
+export interface IDemoAssetDetailPreset {
+  name: string;
+  spec: string;
+  hits: number;
+  status: "ready";
+}
+
+export interface IDemoAssetDetail {
+  publicId: string;
+  shortId: string;
+  state:
+    | "ready"
+    | "processing"
+    | "processing_failed"
+    | "quarantined_moderation"
+    | "quarantined_virus"
+    | "pending"
+    | "uploaded"
+    | "rejected"
+    | "expired"
+    | "deleted";
+  namespace: { slug: string; displayName: string };
+  policyVersion: number;
+  storageBinding: string;
+  owningRecord: { type: string; id: string; label: string };
+  uploadedBy: { principal: string; displayName: string; role: string };
+  uploadedAt: string;
+  uploadedAtLocal: string;
+  filename: string;
+  declaredMime: string;
+  detectedMime: string;
+  fileSize: number;
+  dimensions: { width: number; height: number };
+  contentHash: string;
+  legalHold: boolean;
+  timeline: IDemoAssetDetailTimeline[];
+  analyses: IDemoAssetDetailAnalysis[];
+  customMetadata: Record<string, string | number>;
+  metadataSchema: { required: string[]; optional: string[] };
+  captureContext: {
+    captured_at: string;
+    capture_location: { lat: number; lng: number; redacted: boolean; accuracy_m: number };
+    device: { make: string; model: string; os: string };
+    app: { id: string; version: string; build: string };
+    network: string;
+  };
+  processingJob: null | Record<string, unknown>;
+  presets: IDemoAssetDetailPreset[];
+  siblingAssets: IDemoAssetDetailSibling[];
+  cdnHost: string;
+}
+
+export const DEMO_ASSET_DETAIL: IDemoAssetDetail = {
+  publicId: "01HXJ8K3QF7T2ZN9V6BQWPDXM4",
+  shortId: "01HXJ8K3QF",
+  state: "ready",
+  namespace: {
+    slug: "aircraft-photos",
+    displayName: "Aircraft Photos",
+  },
+  policyVersion: 7,
+  storageBinding: "gcs-prod-aircraft-evidence",
+  owningRecord: {
+    type: "work_order",
+    id: "wo-2026-04-29-N12345-018",
+    label: "WO-2026-04-29-N12345-018",
+  },
+  uploadedBy: {
+    principal: "user:m.fernandez@latam.com",
+    displayName: "Mariana Fernández",
+    role: "Aircraft Mechanic, MEL Base",
+  },
+  uploadedAt: "2026-05-03T08:14:22Z",
+  uploadedAtLocal: "2026-05-03 05:14:22 UTC-3",
+  filename: "IMG_2026_05_03_N12345_landing_gear_03.jpg",
+  declaredMime: "image/jpeg",
+  detectedMime: "image/jpeg",
+  fileSize: 4_287_614,
+  dimensions: { width: 4032, height: 3024 },
+  contentHash: "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  legalHold: false,
+  timeline: [
+    {
+      kind: "uploaded",
+      label: "Uploaded",
+      at: "2026-05-03T08:14:22Z",
+      actor: "user:m.fernandez@latam.com",
+      detail:
+        "Multi-part upload completed (4.09 MB, sha256 verified) via mobile SDK v2.4.1 (iOS 17.4)",
+    },
+    {
+      kind: "processing",
+      label: "Processing started",
+      at: "2026-05-03T08:14:23Z",
+      actor: "worker:processor-7",
+      detail:
+        "Pipeline run id rn_01HXJ8K48S — steps queued: validate, av-scan, exif-strip, moderate, transform",
+    },
+    {
+      kind: "analysis",
+      label: "Validation passed",
+      at: "2026-05-03T08:14:24Z",
+      actor: "analyzer:validator",
+      detail: "MIME, magic bytes, dimensions, declared metadata schema all matched policy v7",
+    },
+    {
+      kind: "analysis",
+      label: "Virus scan clean",
+      at: "2026-05-03T08:14:27Z",
+      actor: "analyzer:clamav",
+      detail: "ClamAV 1.3.1, signatures 27294/2026-05-03",
+    },
+    {
+      kind: "analysis",
+      label: "EXIF stripped",
+      at: "2026-05-03T08:14:28Z",
+      actor: "worker:processor-7",
+      detail: "62 EXIF tags removed; GPS preserved in capture_context per namespace policy",
+    },
+    {
+      kind: "analysis",
+      label: "Moderation passed",
+      at: "2026-05-03T08:14:31Z",
+      actor: "analyzer:moderation-v2",
+      detail: "All categories below threshold (max 0.04 / threshold 0.65)",
+    },
+    {
+      kind: "ready",
+      label: "Marked ready",
+      at: "2026-05-03T08:14:33Z",
+      actor: "worker:processor-7",
+      detail: "All required presets pre-generated (thumb, detail_main, print, console_thumb)",
+    },
+  ],
+  analyses: [
+    {
+      id: "validator",
+      name: "Validator",
+      verdict: "passed",
+      at: "2026-05-03T08:14:24Z",
+      summary: "MIME, magic bytes, dimensions all within policy v7",
+      raw: {
+        declared_mime: "image/jpeg",
+        detected_mime: "image/jpeg",
+        magic_bytes_match: true,
+        width_px: 4032,
+        height_px: 3024,
+        max_dimension_policy: 8000,
+        size_bytes: 4287614,
+        max_size_policy_bytes: 26214400,
+        required_metadata_present: ["aircraft_tail", "wo_id", "captured_at"],
+      },
+    },
+    {
+      id: "clamav",
+      name: "ClamAV virus scan",
+      verdict: "passed",
+      at: "2026-05-03T08:14:27Z",
+      summary: "Clean. Signatures 27294 (2026-05-03).",
+      raw: {
+        engine: "clamav",
+        engine_version: "1.3.1",
+        signature_set: "27294",
+        signature_date: "2026-05-03",
+        scan_duration_ms: 312,
+        infected: false,
+        threats: [],
+      },
+    },
+    {
+      id: "exif",
+      name: "EXIF extraction",
+      verdict: "info",
+      at: "2026-05-03T08:14:28Z",
+      summary: "62 tags extracted; GPS preserved in capture_context.",
+      raw: {
+        tags_found: 62,
+        camera_make: "Apple",
+        camera_model: "iPhone 15 Pro",
+        gps_present: true,
+        gps_action: "preserved-in-capture-context",
+        stripped_from_bytes: true,
+      },
+    },
+    {
+      id: "moderation",
+      name: "Content moderation",
+      verdict: "passed",
+      at: "2026-05-03T08:14:31Z",
+      summary: "All categories well below thresholds.",
+      raw: {
+        provider: "moderation-v2",
+        categories: {
+          adult: 0.001,
+          violence: 0.04,
+          racy: 0.012,
+          medical: 0.18,
+          gore: 0.0,
+        },
+        threshold: 0.65,
+        decision: "release",
+      },
+    },
+  ],
+  customMetadata: {
+    aircraft_tail: "N12345",
+    aircraft_type: "Boeing 787-9",
+    fleet: "LATAM-INTL-LH-12",
+    wo_id: "WO-2026-04-29-N12345-018",
+    inspection_type: "pre-flight",
+    defect_category: "landing-gear",
+    defect_severity: "minor",
+    submitted_by_role: "Aircraft Mechanic",
+    base_iata: "MEL",
+    shift: "early",
+  },
+  metadataSchema: {
+    required: ["aircraft_tail", "wo_id", "inspection_type"],
+    optional: [
+      "aircraft_type",
+      "fleet",
+      "defect_category",
+      "defect_severity",
+      "base_iata",
+      "shift",
+      "submitted_by_role",
+    ],
+  },
+  captureContext: {
+    captured_at: "2026-05-03T08:11:48Z",
+    capture_location: { lat: -37.6733, lng: 144.8434, redacted: false, accuracy_m: 8 },
+    device: { make: "Apple", model: "iPhone 15 Pro", os: "iOS 17.4" },
+    app: { id: "latam.maintenance.workorders", version: "4.12.0", build: "4120-3a8b2c" },
+    network: "wifi-tarmac-mel-7",
+  },
+  processingJob: null,
+  presets: [
+    { name: "thumb", spec: "200×200, JPEG, q80", hits: 1843, status: "ready" },
+    { name: "console_thumb", spec: "96×96, WEBP, q70", hits: 412, status: "ready" },
+    { name: "detail_main", spec: "1200w, AVIF, q85", hits: 219, status: "ready" },
+    { name: "print", spec: "full, JPEG, q95", hits: 4, status: "ready" },
+    { name: "supervisor_review", spec: "1600w, AVIF, q88", hits: 7, status: "ready" },
+  ],
+  siblingAssets: [
+    { id: "01HXJ8K3QF", label: "01", thumbHue: 28, state: "ready", note: "current" },
+    { id: "01HXJ8K3QG", label: "02", thumbHue: 32, state: "ready" },
+    { id: "01HXJ8K3QH", label: "03", thumbHue: 18, state: "ready" },
+    { id: "01HXJ8K3QJ", label: "04", thumbHue: 22, state: "processing" },
+    { id: "01HXJ8K3QK", label: "05", thumbHue: 36, state: "ready" },
+    { id: "01HXJ8K3QM", label: "06", thumbHue: 14, state: "ready" },
+    { id: "01HXJ8K3QN", label: "07", thumbHue: 40, state: "ready" },
+  ],
+  cdnHost: "cdn.lafken.latam.com",
+};
+
+// ── State definitions with descriptions ─────────────────
+
+export interface IDemoStateDefFull {
+  label: string;
+  short?: string;
+  tone: StateTone;
+  dot: string;
+  desc: string;
+}
+
+export const DEMO_STATE_DEFS_FULL: Record<string, IDemoStateDefFull> = {
+  pending: {
+    label: "Pending",
+    tone: "muted",
+    dot: "#94a3b8",
+    desc: "Upload requested, awaiting bytes",
+  },
+  uploaded: {
+    label: "Uploaded",
+    tone: "muted",
+    dot: "#94a3b8",
+    desc: "Bytes received, processing not started",
+  },
+  processing: { label: "Processing", tone: "info", dot: "#0e7ea8", desc: "Pipeline running" },
+  ready: { label: "Ready", tone: "ok", dot: "#1f7a4f", desc: "Healthy. Available for serving." },
+  rejected: {
+    label: "Rejected",
+    tone: "warn",
+    dot: "#a16207",
+    desc: "Failed validation. Terminal.",
+  },
+  quarantined_virus: {
+    label: "Virus",
+    short: "Virus",
+    tone: "alert",
+    dot: "#8A4209",
+    desc: "AV engine flagged. Reviewable.",
+  },
+  quarantined_moderation: {
+    label: "Moderation",
+    short: "Moderation",
+    tone: "alert",
+    dot: "#8A4209",
+    desc: "Content moderation flagged. Reviewable.",
+  },
+  processing_failed: {
+    label: "Failed",
+    short: "Failed",
+    tone: "danger",
+    dot: "#8B271A",
+    desc: "System error. Recoverable.",
+  },
+  expired: {
+    label: "Expired",
+    tone: "ghost",
+    dot: "#cbd5e1",
+    desc: "Past retention. Awaiting deletion.",
+  },
+  deleted: { label: "Deleted", tone: "ghost", dot: "#cbd5e1", desc: "Soft-deleted." },
+};
+
 // ── State definitions ─────────────────────────────────────
 
 export type StateTone = "muted" | "info" | "ok" | "warn" | "alert" | "danger" | "ghost";

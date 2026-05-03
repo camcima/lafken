@@ -287,19 +287,112 @@
       }
     },
     "assetDetail": {
-      "title": "",
-      "loading": "",
+      "title": "Activo",
+      "loading": "Cargando…",
       "notFound": {
-        "title": "",
-        "description": "",
-        "action": ""
+        "title": "Activo no encontrado",
+        "description": "Este activo no existe o no tiene permiso para verlo.",
+        "action": "Volver a Activos"
+      },
+      "actions": {
+        "reProcess": "Reprocesar",
+        "placeLegalHold": "Aplicar retención legal",
+        "evidentiaryExport": "Exportación probatoria",
+        "more": "Más"
+      },
+      "stateHero": {
+        "ready": {
+          "title": "Listo",
+          "subtitle": "Saludable · en servicio desde {{since}}"
+        },
+        "processing": {
+          "title": "Procesando",
+          "subtitle": "Paso {{step}} de {{total}} · {{stage}} · {{elapsed}}s transcurridos"
+        },
+        "processingFailed": {
+          "title": "Fallo en el procesamiento",
+          "subtitle": "Paso: {{stage}} · {{retries}} intentos agotados"
+        },
+        "quarantinedModeration": {
+          "title": "Cuarentena · moderación",
+          "subtitle": "Esperando revisor · marcado {{flagSec}}s en el pipeline"
+        },
+        "fields": {
+          "pipeline": "Pipeline",
+          "worker": "Worker",
+          "attempts": "Intentos",
+          "nextStep": "Siguiente paso",
+          "lastError": "Último error",
+          "nextRetry": "Próximo intento",
+          "run": "Ejecución",
+          "flaggedBy": "Marcado por",
+          "topCategory": "Categoría principal",
+          "threshold": "Umbral",
+          "inQueue": "En cola",
+          "retention": "Retención",
+          "legalHold": "Retención legal",
+          "serving": "En servicio"
+        }
       },
       "sections": {
-        "identity": "",
-        "fileProperties": "",
-        "timeline": "",
-        "analyses": "",
-        "presets": ""
+        "identity": "Identidad y linaje",
+        "identityLineage": "Identidad & linaje",
+        "fileProperties": "Propiedades del archivo",
+        "timeline": "Línea de tiempo",
+        "timelineMeta": "Cadena de custodia · {{count}} eventos",
+        "analyses": "Análisis",
+        "analysesMeta": "{{count}} ejecutados · todos limpios",
+        "presets": "Presets",
+        "customMetadata": "Metadatos personalizados",
+        "customMetadataMeta": "validado por esquema · {{count}} campos",
+        "captureContext": "Contexto de captura",
+        "captureContextMeta": "estructurado · separado del EXIF",
+        "captureLocationNote": "Ubicación almacenada en capture_context según la política del namespace. GPS EXIF eliminado de los bytes.",
+        "availableUrls": "URLs disponibles",
+        "availableUrlsMeta": "{{count}} presets · firmadas · TTL 5m"
+      },
+      "dl": {
+        "publicId": "ID público",
+        "namespace": "Namespace",
+        "policyVersion": "Versión de política",
+        "storageBinding": "Enlace de almacenamiento",
+        "owningRecord": "Registro propietario",
+        "uploadedBy": "Subido por",
+        "uploadedAt": "Subido el",
+        "filename": "Nombre de archivo",
+        "dimensions": "Dimensiones",
+        "format": "Formato",
+        "size": "Tamaño",
+        "mime": "MIME",
+        "contentHash": "Hash del contenido",
+        "capturedAt": "Capturado el",
+        "device": "Dispositivo",
+        "app": "Aplicación",
+        "network": "Red"
+      },
+      "mime": {
+        "detectedEqualsDeclared": "detectado = declarado",
+        "declaredOther": "declarado {{declared}}",
+        "req": "REQ",
+        "governing": "regulante"
+      },
+      "presets": {
+        "hits": "{{count}} accesos",
+        "ready": "listo",
+        "preview": "Vista previa",
+        "copyUrl": "Copiar URL"
+      },
+      "siblings": {
+        "altLabel": "Ángulo alternativo {{label}}"
+      },
+      "visual": {
+        "fullSize": "Tamaño completo",
+        "original": "Original"
+      },
+      "toasts": {
+        "idCopied": "ID público copiado",
+        "hashCopied": "Hash copiado",
+        "urlCopied": "URL copiada: {{name}}"
       }
     },
     "namespaces": {
@@ -367,7 +460,9 @@
         "from": "",
         "to": ""
       },
-      "empty": { "title": "" }
+      "empty": {
+        "title": ""
+      }
     },
     "system": {
       "title": "",
