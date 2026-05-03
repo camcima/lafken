@@ -1,6 +1,6 @@
-import {
+import { AuthorizationPort } from "@/shared/application/authorization.port";
+import type {
   AuthorizationAction,
-  AuthorizationPort,
   AuthorizationPrincipal,
   AuthorizationResource,
 } from "@/shared/application/authorization.port";
@@ -15,11 +15,11 @@ export class AllowAllAuthorizationAdapter extends AuthorizationPort {
     }
   }
 
-  async can(
+  can(
     _principal: AuthorizationPrincipal,
     _action: AuthorizationAction,
     _resource: AuthorizationResource,
   ): Promise<boolean> {
-    return true;
+    return Promise.resolve(true);
   }
 }
