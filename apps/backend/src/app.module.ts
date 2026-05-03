@@ -4,6 +4,7 @@ import { APP_FILTER, APP_PIPE } from "@nestjs/core";
 import { AssetsModule } from "./assets/assets.module";
 import { HealthModule } from "./health/health.module";
 import { NamespacesModule } from "./namespaces/namespaces.module";
+import { QuarantineModule } from "./quarantine/quarantine.module";
 import { LoggerModule } from "./shared/infrastructure/logger/logger.module";
 import { TelemetryModule } from "./shared/infrastructure/telemetry/telemetry.module";
 import { ApiInputValidationPipe } from "./shared/presentation/api-input-validation.pipe";
@@ -20,6 +21,7 @@ import { UrlEncodedParserMiddleware } from "./shared/presentation/middlewares/ur
     AuthModule,
     NamespacesModule,
     AssetsModule,
+    QuarantineModule,
   ],
   providers: [
     {
