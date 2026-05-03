@@ -12,6 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as ProtectedIndexRouteImport } from './routes/_protected/index'
 import { Route as ProtectedAssetsIndexRouteImport } from './routes/_protected/assets/index'
+import { Route as ProtectedAssetsPublicIdRouteImport } from './routes/_protected/assets/$publicId'
+import { Route as ProtectedNamespacesIndexRouteImport } from './routes/_protected/namespaces/index'
+import { Route as ProtectedNamespacesSlugRouteImport } from './routes/_protected/namespaces/$slug'
+import { Route as ProtectedQuarantineRouteImport } from './routes/_protected/quarantine'
+import { Route as ProtectedLegalHoldsRouteImport } from './routes/_protected/legal-holds'
+import { Route as ProtectedAuditRouteImport } from './routes/_protected/audit'
+import { Route as ProtectedSystemRouteImport } from './routes/_protected/system'
+import { Route as ProtectedSettingsRouteImport } from './routes/_protected/settings'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 
 const ProtectedRoute = ProtectedRouteImport.update({
@@ -23,26 +31,81 @@ const ProtectedIndexRoute = ProtectedIndexRouteImport.update({
 const ProtectedAssetsIndexRoute = ProtectedAssetsIndexRouteImport.update({
             id: '/assets/',path: '/assets/',getParentRoute: () => ProtectedRoute
           }as any)
+const ProtectedAssetsPublicIdRoute = ProtectedAssetsPublicIdRouteImport.update({
+            id: '/assets/$publicId',path: '/assets/$publicId',getParentRoute: () => ProtectedRoute
+          }as any)
+const ProtectedNamespacesIndexRoute = ProtectedNamespacesIndexRouteImport.update({
+            id: '/namespaces/',path: '/namespaces/',getParentRoute: () => ProtectedRoute
+          }as any)
+const ProtectedNamespacesSlugRoute = ProtectedNamespacesSlugRouteImport.update({
+            id: '/namespaces/$slug',path: '/namespaces/$slug',getParentRoute: () => ProtectedRoute
+          }as any)
+const ProtectedQuarantineRoute = ProtectedQuarantineRouteImport.update({
+            id: '/quarantine',path: '/quarantine',getParentRoute: () => ProtectedRoute
+          }as any)
+const ProtectedLegalHoldsRoute = ProtectedLegalHoldsRouteImport.update({
+            id: '/legal-holds',path: '/legal-holds',getParentRoute: () => ProtectedRoute
+          }as any)
+const ProtectedAuditRoute = ProtectedAuditRouteImport.update({
+            id: '/audit',path: '/audit',getParentRoute: () => ProtectedRoute
+          }as any)
+const ProtectedSystemRoute = ProtectedSystemRouteImport.update({
+            id: '/system',path: '/system',getParentRoute: () => ProtectedRoute
+          }as any)
+const ProtectedSettingsRoute = ProtectedSettingsRouteImport.update({
+            id: '/settings',path: '/settings',getParentRoute: () => ProtectedRoute
+          }as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
             id: '/auth/login',path: '/auth/login',getParentRoute: () => rootRouteImport
           }as any)
 
 export interface FileRoutesByFullPath {
-'/': typeof ProtectedIndexRoute,'/assets/': typeof ProtectedAssetsIndexRoute,'/auth/login': typeof AuthLoginRoute
+'/': typeof ProtectedIndexRoute,
+'/assets/': typeof ProtectedAssetsIndexRoute,
+'/assets/$publicId': typeof ProtectedAssetsPublicIdRoute,
+'/namespaces/': typeof ProtectedNamespacesIndexRoute,
+'/namespaces/$slug': typeof ProtectedNamespacesSlugRoute,
+'/quarantine': typeof ProtectedQuarantineRoute,
+'/legal-holds': typeof ProtectedLegalHoldsRoute,
+'/audit': typeof ProtectedAuditRoute,
+'/system': typeof ProtectedSystemRoute,
+'/settings': typeof ProtectedSettingsRoute,
+'/auth/login': typeof AuthLoginRoute
 }
 export interface FileRoutesByTo {
-'/auth/login': typeof AuthLoginRoute,'/': typeof ProtectedIndexRoute,'/assets/': typeof ProtectedAssetsIndexRoute
+'/auth/login': typeof AuthLoginRoute,
+'/': typeof ProtectedIndexRoute,
+'/assets/': typeof ProtectedAssetsIndexRoute,
+'/assets/$publicId': typeof ProtectedAssetsPublicIdRoute,
+'/namespaces/': typeof ProtectedNamespacesIndexRoute,
+'/namespaces/$slug': typeof ProtectedNamespacesSlugRoute,
+'/quarantine': typeof ProtectedQuarantineRoute,
+'/legal-holds': typeof ProtectedLegalHoldsRoute,
+'/audit': typeof ProtectedAuditRoute,
+'/system': typeof ProtectedSystemRoute,
+'/settings': typeof ProtectedSettingsRoute
 }
 export interface FileRoutesById {
 '__root__': typeof rootRouteImport,
-'/_protected': typeof ProtectedRouteWithChildren,'/auth/login': typeof AuthLoginRoute,'/_protected/': typeof ProtectedIndexRoute,'/_protected/assets/': typeof ProtectedAssetsIndexRoute
+'/_protected': typeof ProtectedRouteWithChildren,
+'/auth/login': typeof AuthLoginRoute,
+'/_protected/': typeof ProtectedIndexRoute,
+'/_protected/assets/': typeof ProtectedAssetsIndexRoute,
+'/_protected/assets/$publicId': typeof ProtectedAssetsPublicIdRoute,
+'/_protected/namespaces/': typeof ProtectedNamespacesIndexRoute,
+'/_protected/namespaces/$slug': typeof ProtectedNamespacesSlugRoute,
+'/_protected/quarantine': typeof ProtectedQuarantineRoute,
+'/_protected/legal-holds': typeof ProtectedLegalHoldsRoute,
+'/_protected/audit': typeof ProtectedAuditRoute,
+'/_protected/system': typeof ProtectedSystemRoute,
+'/_protected/settings': typeof ProtectedSettingsRoute
 }
 export interface FileRouteTypes {
 fileRoutesByFullPath: FileRoutesByFullPath
-fullPaths: '/'|'/assets/'|'/auth/login'
+fullPaths: '/'|'/assets/'|'/assets/$publicId'|'/namespaces/'|'/namespaces/$slug'|'/quarantine'|'/legal-holds'|'/audit'|'/system'|'/settings'|'/auth/login'
 fileRoutesByTo: FileRoutesByTo
-to: '/auth/login'|'/'|'/assets/'
-id: '__root__'|'/_protected'|'/auth/login'|'/_protected/'|'/_protected/assets/'
+to: '/auth/login'|'/'|'/assets/'|'/assets/$publicId'|'/namespaces/'|'/namespaces/$slug'|'/quarantine'|'/legal-holds'|'/audit'|'/system'|'/settings'
+id: '__root__'|'/_protected'|'/auth/login'|'/_protected/'|'/_protected/assets/'|'/_protected/assets/$publicId'|'/_protected/namespaces/'|'/_protected/namespaces/$slug'|'/_protected/quarantine'|'/_protected/legal-holds'|'/_protected/audit'|'/_protected/system'|'/_protected/settings'
 fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -72,6 +135,62 @@ declare module '@tanstack/react-router' {
           preLoaderRoute: typeof ProtectedAssetsIndexRouteImport
           parentRoute: typeof ProtectedRoute
         }
+'/_protected/assets/$publicId': {
+          id: '/_protected/assets/$publicId'
+          path: '/assets/$publicId'
+          fullPath: '/assets/$publicId'
+          preLoaderRoute: typeof ProtectedAssetsPublicIdRouteImport
+          parentRoute: typeof ProtectedRoute
+        }
+'/_protected/namespaces/': {
+          id: '/_protected/namespaces/'
+          path: '/namespaces/'
+          fullPath: '/namespaces/'
+          preLoaderRoute: typeof ProtectedNamespacesIndexRouteImport
+          parentRoute: typeof ProtectedRoute
+        }
+'/_protected/namespaces/$slug': {
+          id: '/_protected/namespaces/$slug'
+          path: '/namespaces/$slug'
+          fullPath: '/namespaces/$slug'
+          preLoaderRoute: typeof ProtectedNamespacesSlugRouteImport
+          parentRoute: typeof ProtectedRoute
+        }
+'/_protected/quarantine': {
+          id: '/_protected/quarantine'
+          path: '/quarantine'
+          fullPath: '/quarantine'
+          preLoaderRoute: typeof ProtectedQuarantineRouteImport
+          parentRoute: typeof ProtectedRoute
+        }
+'/_protected/legal-holds': {
+          id: '/_protected/legal-holds'
+          path: '/legal-holds'
+          fullPath: '/legal-holds'
+          preLoaderRoute: typeof ProtectedLegalHoldsRouteImport
+          parentRoute: typeof ProtectedRoute
+        }
+'/_protected/audit': {
+          id: '/_protected/audit'
+          path: '/audit'
+          fullPath: '/audit'
+          preLoaderRoute: typeof ProtectedAuditRouteImport
+          parentRoute: typeof ProtectedRoute
+        }
+'/_protected/system': {
+          id: '/_protected/system'
+          path: '/system'
+          fullPath: '/system'
+          preLoaderRoute: typeof ProtectedSystemRouteImport
+          parentRoute: typeof ProtectedRoute
+        }
+'/_protected/settings': {
+          id: '/_protected/settings'
+          path: '/settings'
+          fullPath: '/settings'
+          preLoaderRoute: typeof ProtectedSettingsRouteImport
+          parentRoute: typeof ProtectedRoute
+        }
 '/auth/login': {
           id: '/auth/login'
           path: '/auth/login'
@@ -87,11 +206,27 @@ declare module '@tanstack/react-router' {
 interface ProtectedRouteChildren {
   ProtectedIndexRoute: typeof ProtectedIndexRoute
   ProtectedAssetsIndexRoute: typeof ProtectedAssetsIndexRoute
+  ProtectedAssetsPublicIdRoute: typeof ProtectedAssetsPublicIdRoute
+  ProtectedNamespacesIndexRoute: typeof ProtectedNamespacesIndexRoute
+  ProtectedNamespacesSlugRoute: typeof ProtectedNamespacesSlugRoute
+  ProtectedQuarantineRoute: typeof ProtectedQuarantineRoute
+  ProtectedLegalHoldsRoute: typeof ProtectedLegalHoldsRoute
+  ProtectedAuditRoute: typeof ProtectedAuditRoute
+  ProtectedSystemRoute: typeof ProtectedSystemRoute
+  ProtectedSettingsRoute: typeof ProtectedSettingsRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedIndexRoute: ProtectedIndexRoute,
-  ProtectedAssetsIndexRoute: ProtectedAssetsIndexRoute
+  ProtectedAssetsIndexRoute: ProtectedAssetsIndexRoute,
+  ProtectedAssetsPublicIdRoute: ProtectedAssetsPublicIdRoute,
+  ProtectedNamespacesIndexRoute: ProtectedNamespacesIndexRoute,
+  ProtectedNamespacesSlugRoute: ProtectedNamespacesSlugRoute,
+  ProtectedQuarantineRoute: ProtectedQuarantineRoute,
+  ProtectedLegalHoldsRoute: ProtectedLegalHoldsRoute,
+  ProtectedAuditRoute: ProtectedAuditRoute,
+  ProtectedSystemRoute: ProtectedSystemRoute,
+  ProtectedSettingsRoute: ProtectedSettingsRoute
 }
 
 const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(ProtectedRouteChildren)

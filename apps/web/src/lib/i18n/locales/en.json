@@ -148,7 +148,8 @@
     "audit": "Audit",
     "system": "System",
     "settings": "Settings",
-    "envBadge": "{{env}}"
+    "envBadge": "{{env}}",
+    "comingInSlice1": "Coming in a later slice"
   },
   "topBar": {
     "refresh": "Refresh",
@@ -205,11 +206,109 @@
         "comingSoon": "Bulk actions come in a later slice"
       }
     },
-    "namespaces": { "title": "Namespaces" },
-    "quarantine": { "title": "Quarantine" },
-    "legalHolds": { "title": "Legal holds" },
-    "audit": { "title": "Audit" },
-    "system": { "title": "System" },
-    "settings": { "title": "Settings" }
+    "assetDetail": {
+      "title": "Asset",
+      "loading": "Loading…",
+      "notFound": {
+        "title": "Asset not found",
+        "description": "This asset does not exist or you do not have permission to view it.",
+        "action": "Back to Assets"
+      },
+      "sections": {
+        "identity": "Identity and lineage",
+        "fileProperties": "File properties",
+        "timeline": "Timeline",
+        "analyses": "Analyses",
+        "presets": "Presets"
+      }
+    },
+    "namespaces": {
+      "title": "Namespaces",
+      "create": "Create namespace",
+      "table": {
+        "slug": "Slug",
+        "displayName": "Display name",
+        "storage": "Storage",
+        "policyVersion": "Policy version",
+        "assetCount": "Asset count"
+      },
+      "empty": {
+        "title": "No namespaces yet",
+        "description": "Create the first namespace to get started."
+      }
+    },
+    "namespaceDetail": {
+      "title": "Namespace",
+      "loading": "Loading…",
+      "notFound": {
+        "title": "Namespace not found",
+        "description": "This namespace does not exist.",
+        "action": "Back to Namespaces"
+      },
+      "tabs": {
+        "overview": "Overview",
+        "policy": "Policy",
+        "presets": "Presets",
+        "assets": "Assets",
+        "webhooks": "Webhooks",
+        "quotas": "Quotas"
+      },
+      "empty": {
+        "overview": "Overview details will appear here once data is available.",
+        "policy": "No policies yet.",
+        "presets": "No presets yet.",
+        "assets": "No assets in this namespace.",
+        "webhooks": "Webhooks come in a later slice.",
+        "quotas": "Quotas come in a later slice."
+      }
+    },
+    "quarantine": {
+      "title": "Quarantine",
+      "empty": {
+        "title": "Nothing to review right now",
+        "description": "Flagged assets will appear here."
+      }
+    },
+    "legalHolds": {
+      "title": "Legal holds",
+      "place": "Place hold",
+      "empty": {
+        "title": "No active legal holds",
+        "description": "Holds you place will appear here."
+      }
+    },
+    "audit": {
+      "title": "Audit",
+      "export": "Export",
+      "filters": {
+        "principal": "Principal",
+        "action": "Action",
+        "entity": "Entity",
+        "from": "From",
+        "to": "To"
+      },
+      "empty": { "title": "No audit entries match" }
+    },
+    "system": {
+      "title": "System",
+      "storageBindings": "Storage bindings",
+      "integrations": "Integrations",
+      "health": "System health",
+      "noStorageBindings": "No storage bindings configured",
+      "noIndicators": "No health indicators yet",
+      "integrationStatus": {
+        "configured": "Configured",
+        "not_configured": "Not configured"
+      }
+    },
+    "settings": {
+      "title": "Settings",
+      "comingSoon": "Persistent settings come in a later slice",
+      "labels": {
+        "theme": "Theme",
+        "language": "Language",
+        "dateFormat": "Date format"
+      }
+    }
   }
 }
