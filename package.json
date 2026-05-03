@@ -1,0 +1,93 @@
+{
+  "name": "template-emantto-project",
+  "private": true,
+  "description": "",
+  "license": "PROPRIETARY",
+  "version": "0.0.0",
+  "author": "eMantto",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.com/latamairlines/oper/emx/emx-tmpl/template-emantto-project.git"
+  },
+  "publish": false,
+  "scripts": {
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "turbo run format",
+    "test": "turbo run test",
+    "type-check": "turbo run type-check",
+    "syncpack:check": "syncpack lint",
+    "syncpack:fix": "syncpack fix",
+    "find-dead-code": "knip -c ./knip.jsonc --production --no-exit-code --use-tsconfig-files",
+    "// ====================== commands for CI/CD ====================== //": "",
+    "build": "turbo run build",
+    "test:cov": "turbo run test:cov",
+    "coverage": "turbo run coverage",
+    "lint:check": "turbo run lint",
+    "format:check": "turbo run format-check"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "onFail": "error"
+    },
+    "packageManager": {
+      "name": "pnpm",
+      "onFail": "warn"
+    }
+  },
+  "dependencies": {
+    "@nestjs/swagger": "^11.2.6",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "dayjs": "^1.11.20",
+    "knip": "^6.3.0",
+    "reflect-metadata": "^0.2.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "@darraghor/eslint-plugin-nestjs-typed": "^7.1.31",
+    "@eslint/js": "^10.0.1",
+    "@nestjs/cli": "^11.0.17",
+    "@trivago/prettier-plugin-sort-imports": "^6",
+    "@types/node": "^22",
+    "@typescript-eslint/parser": "^8.58.0",
+    "@vitest/coverage-v8": "4.1.2",
+    "@vitest/eslint-plugin": "^1.6.14",
+    "@vitest/ui": "^4.1.2",
+    "eslint": "^10.0.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "globals": "^17.4.0",
+    "lefthook": "^2.1.2",
+    "prettier": "^3.8.1",
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "syncpack": "^14.3.0",
+    "tsx": "^4.21.0",
+    "turbo": "^2.9.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.58.0",
+    "vitest": "^4.1.2"
+  },
+  "packageManager": "pnpm@10.30.3",
+  "pnpm": {
+    "overrides": {
+      "flatted": ">=3.4.2",
+      "lodash": ">=4.18.0",
+      "lodash-es": ">=4.18.0",
+      "path-to-regexp": ">=8.4.0",
+      "picomatch": ">=4.0.4",
+      "yaml": ">=2.8.3",
+      "file-type": ">=21.3.2",
+      "hono": ">=4.12.14",
+      "follow-redirects": ">=1.16.0",
+      "@hono/node-server": ">=1.19.13",
+      "protobufjs": ">=8.0.1"
+    }
+  }
+}

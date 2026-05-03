@@ -1,0 +1,112 @@
+---
+globs: apps/web/**/*
+alwaysApply: false
+description: Quality, internationalization, testing, security, and performance guidelines
+---
+
+# Quality & Testing Guidelines
+
+## Accessibility
+
+- Use semantic HTML elements
+- Implement proper ARIA attributes
+- Ensure keyboard navigation works
+- Maintain proper color contrast ratios
+- Test with screen readers
+
+## Internationalization
+
+- Use i18next for translations
+- Support Spanish, Portuguese, and English
+- Use translation keys consistently: `t('common.buttons.save')`
+- Avoid hardcoded strings in components
+
+## Security
+
+- Sanitize user inputs
+- Use proper authentication with Azure AD MSAL
+- Implement CSRF protection
+- Never commit sensitive data (use environment variables)
+
+## Performance
+
+- Lazy load heavy components with `React.lazy()`
+- Use proper caching strategies (React Query, browser caching)
+- Minimize re-renders with proper dependency arrays in hooks
+- Optimize images (WebP format when possible)
+- Implement virtual scrolling for large lists
+- Debounce expensive operations (search, API calls)
+- **Bundle Optimization**: Avoid barrel files, direct imports, analyze regularly
+
+## Testing
+
+### Test File Organization
+
+- **Unit Tests (Component Tests)**: Co-located with components in `src/` directory, named `ComponentName.test.tsx` or `ComponentName.test.ts`
+- **Integration Tests**: Located in `tests/integration/` directory, organized by feature or workflow
+- **E2E Tests**: Located in `shared/web-tests/` (Playwright), covering full user journeys
+
+### Testing Libraries
+
+- **Vitest**: Test runner and assertion library
+- **React Testing Library**: Component rendering and queries
+- **@testing-library/user-event**: User interaction simulation
+- **MSW (Mock Service Worker)**: API mocking for tests
+
+### Testing Best Practices
+
+- **Query Elements by Role**: Prefer role-based queries (most accessible)
+- **Use User Event**: Use `userEvent` for interactions instead of `fireEvent`
+- **Test User-Centric Behavior**: Test what users see and do, not implementation details
+- **Use waitFor for Async Operations**: Don't use arbitrary timeouts
+- **Clean Up After Tests**: Always cleanup and clear mocks in `afterEach`
+
+### What to Test
+
+- Component rendering (default props, custom props, conditional rendering)
+- User interactions (clicks, form inputs, keyboard navigation, accessibility)
+- Component logic (state changes, callbacks, side effects, error states)
+- Integration points (API calls, loading/error/success states)
+
+### Test Coverage Requirements
+
+- **Minimum Coverage**: 80% for statements, branches, functions, and lines
+- **Focus Areas**: Business logic, user interactions, error handling
+- **Exclude from Coverage**: Generated files, test files, Storybook files, type definitions, configuration files
+
+### Anti-Patterns to Avoid
+
+- ❌ Don't test implementation details
+- ❌ Don't use test IDs as primary selectors
+- ❌ Don't test third-party libraries
+- ❌ Don't make tests dependent on each other
+
+## Git & Deployment
+- Use Conventional Commits format
+- Create meaningful commit messages
+- Use feature branches and pull requests
+- Run pre-commit hooks (linting, type-checking, tests)
+- Follow semantic versioning
+
+## Code Quality Rules
+- No `any` types - use proper TypeScript types
+- No unused imports or variables
+- Always prefer const over let, avoid var
+- **Never modify objects/arrays by reference** - use immutable patterns
+- Use meaningful variable and function names
+- Keep functions small and focused (single responsibility)
+- Comment complex business logic
+
+## SOLID Principles
+See `typescript-react.mdc` for detailed SOLID principles with React examples.
+
+## Questions to Ask When Reviewing Code
+1. Is this code type-safe?
+2. Is it accessible?
+3. Is it performant?
+4. Is it testable?
+5. Does it follow our conventions?
+6. Is it secure?
+7. Is it maintainable?
+
+Remember: This template will be used across multiple LATAM Airlines projects, so prioritize consistency, maintainability, and developer experience.

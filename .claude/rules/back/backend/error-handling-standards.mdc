@@ -1,0 +1,54 @@
+---
+description: Error Handling Standards — RFC7807 Problem Details with nest-problem-details-filter
+alwaysApply: false
+---
+
+### Error Handling Standards
+
+- **RFC7807 Problem Details**: The enforcement of the standard is done at `CatchAllExceptionsForHttp`
+- **Exception Hierarchy**:
+  - The are defined common base error types in the core:
+    - `DomainError` for business rule/aggregate invariants errors
+    - `Validation` for use-case validation invariants errors or entity invariants validation errors
+    - `ApplicationError` for use-case orchestration/coordination failures
+  - Throw and catch the most specific type; avoid using generic `Error` in core logic.
+
+All the non 2xx HTTP responses will be formated as defined by RFC 7807 Problem Details.  
+To achieve that, the `CatchAllExceptionsForHttp` exception filter is globally applied.
+
+All domain errors (ie, exceptions that inherits from `DomainError`) are mapped into 422 HTTP response by default.
+All validation errors (ie, exceptions that inherits from `ValidationError`) are mapped into 400 HTTP response by default.
+
+In order to change the default HTTP status, you must wrap the code in a try-catch block like this:
+
+<details>
+
+```ts
+// some controller file (presentation layer)
+@Controller("users")
+class UserQueryController {
+  async getUserInfo(
+    @Param() paramsDto: GetUserInfoPathParamsDTO,
+  ): Promise<UserInformationResponseDTO> {
+    try {
+      const result = await this.retrieveUserInformationsUseCase.execute({
+        userEmailAddress: paramsDto.user_email,
+      });
+
+      return UserResponseMapper.fromDomain(result.user);
+    } catch (err) {
+      if (err instanceof UserNotFoundError) {
+        // ✅ performing the mapping HERE
+        throw new NotFoundException(err.message, {
+          cause: err,
+        });
+      }
+      throw err; // rethrowing for others errors
+    }
+  }
+}
+```
+
+</details>
+
+With that approach only the files at presentation layer are aware of the HTTP related exceptions.

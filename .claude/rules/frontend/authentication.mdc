@@ -1,0 +1,454 @@
+---
+globs: apps/web/src/**/*
+alwaysApply: false
+description: Authentication patterns, authorization, and protected routes
+---
+
+# Authentication & Authorization
+
+## Authentication Context Pattern
+
+### AuthProvider Implementation
+
+Use React Context for authentication state:
+
+```typescript
+// contexts/AuthContext.tsx
+interface AuthContextType {
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (redirectPath?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  getAccessToken: () => Promise<string | undefined>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(null);
+
+  // Initialize auth on mount
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        const authProvider = await getAuthProvider();
+        await authProvider.initialize();
+        await authProvider.handleRedirectCallback();
+
+        const currentUser = await authProvider.getUser();
+        if (currentUser) {
+          setUser(currentUser);
+          logger.setUser({
+            id: currentUser.id,
+            email: currentUser.email,
+            name: currentUser.name,
+          });
+        }
+      } catch (error) {
+        logger.error("Authentication initialization failed", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void initializeAuth();
+  }, []);
+
+  // Subscribe to auth state changes
+  useEffect(() => {
+    const setupSubscription = async () => {
+      const authProvider = await getAuthProvider();
+      const unsubscribe = authProvider.onAuthStateChanged((newUser) => {
+        setUser(newUser);
+        if (newUser) {
+          logger.setUser({ id: newUser.id, email: newUser.email, name: newUser.name });
+        } else {
+          logger.clearUser();
+        }
+        setIsLoading(false);
+      });
+      return unsubscribe;
+    };
+
+    void setupSubscription();
+  }, []);
+
+  const value: AuthContextType = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    login: async (redirectPath) => {
+      const authProvider = await getAuthProvider();
+      await authProvider.login({ redirectPath });
+    },
+    logout: async () => {
+      logger.clearUser();
+      const authProvider = await getAuthProvider();
+      await authProvider.logout({ postLogoutRedirectUri: window.location.origin });
+    },
+    getAccessToken: async () => {
+      const authProvider = await getAuthProvider();
+      return await authProvider.getAccessToken();
+    },
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+```
+
+### useAuth Hook
+
+Create a custom hook for accessing auth context:
+
+```typescript
+// hooks/useAuth.ts
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}
+```
+
+## Authorization Patterns
+
+### Role-Based Access Control (RBAC)
+
+```typescript
+// hooks/useAuth.ts
+export function useHasRole(requiredRoles: string[]): boolean {
+  const { user, isAuthenticated } = useAuth();
+
+  if (!isAuthenticated || !user) {
+    return false;
+  }
+
+  const userRoles = user.roles ?? [];
+  return requiredRoles.some((role) => userRoles.includes(role));
+}
+
+// Usage
+function AdminPanel() {
+  const hasAdminRole = useHasRole(['admin', 'super-admin']);
+
+  if (!hasAdminRole) {
+    return <Unauthorized />;
+  }
+
+  return <AdminContent />;
+}
+```
+
+### Group-Based Access Control
+
+```typescript
+// hooks/useAuth.ts
+export function useHasGroup(requiredGroups: string[]): boolean {
+  const { user, isAuthenticated } = useAuth();
+
+  if (!isAuthenticated || !user) {
+    return false;
+  }
+
+  const userGroups = user.groups ?? [];
+  return requiredGroups.some((group) => userGroups.includes(group));
+}
+```
+
+### Permission-Based Access Control
+
+```typescript
+// hooks/useAuth.ts
+export function usePermissions() {
+  const { user, isAuthenticated } = useAuth();
+
+  if (!isAuthenticated || !user) {
+    return {
+      roles: [],
+      groups: [],
+      hasPermission: () => false,
+    };
+  }
+
+  const roles = user.roles ?? [];
+  const groups = user.groups ?? [];
+
+  const hasPermission = (permission: string): boolean => {
+    return roles.includes(permission) || groups.includes(permission);
+  };
+
+  return {
+    roles,
+    groups,
+    hasPermission,
+  };
+}
+
+// Usage
+function EditButton() {
+  const { hasPermission } = usePermissions();
+
+  if (!hasPermission('users:edit')) {
+    return null;
+  }
+
+  return <Button>Edit</Button>;
+}
+```
+
+## Protected Routes
+
+### Route-Level Protection
+
+```typescript
+// routes/dashboard.tsx
+import { createFileRoute, redirect } from '@tanstack/react-router';
+import { useAuth } from '@/hooks/useAuth';
+
+export const Route = createFileRoute('/dashboard')({
+  beforeLoad: ({ context }) => {
+    const { isAuthenticated } = context.auth;
+
+    if (!isAuthenticated) {
+      throw redirect({
+        to: '/auth/login',
+        search: {
+          redirect: '/dashboard',
+        },
+      });
+    }
+  },
+  component: DashboardPage,
+});
+```
+
+### Component-Level Protection
+
+```typescript
+// components/common/ProtectedRoute/index.tsx
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requiredRoles?: string[];
+  requiredGroups?: string[];
+  fallback?: React.ReactNode;
+}
+
+export function ProtectedRoute({
+  children,
+  requiredRoles,
+  requiredGroups,
+  fallback = <Unauthorized />,
+}: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const hasRole = useHasRole(requiredRoles ?? []);
+  const hasGroup = useHasGroup(requiredGroups ?? []);
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth/login" />;
+  }
+
+  if (requiredRoles && !hasRole) {
+    return fallback;
+  }
+
+  if (requiredGroups && !hasGroup) {
+    return fallback;
+  }
+
+  return <>{children}</>;
+}
+```
+
+## Access Token Management
+
+### Token Injection in API Calls
+
+```typescript
+// lib/api/client.ts
+export async function apiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const authProvider = await getAuthProvider();
+  const token = await authProvider.getAccessToken();
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      ...options.headers,
+      Authorization: token ? `Bearer ${token}` : '',
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (response.status === 401) {
+    // Token expired or invalid - redirect to login
+    await authProvider.logout();
+    window.location.href = '/auth/login';
+    throw new Error('Unauthorized');
+  }
+
+  if (!response.ok) {
+    throw new ApiError(response.status, await response.json());
+  }
+
+  return response.json();
+}
+```
+
+### Token Refresh
+
+Handle token refresh automatically in the auth provider:
+
+```typescript
+// lib/auth/adapters/MSALAuthAdapter.ts
+async getAccessToken(): Promise<string | undefined> {
+  try {
+    const account = this.msalInstance.getActiveAccount();
+    if (!account) return undefined;
+
+    const response = await this.msalInstance.acquireTokenSilent({
+      scopes: this.config.scopes,
+      account,
+    });
+
+    return response.accessToken;
+  } catch (error) {
+    // Token refresh failed - user needs to re-authenticate
+    logger.error('Token acquisition failed', error);
+    await this.logout();
+    throw error;
+  }
+}
+```
+
+## Best Practices
+
+### 1. Always Check Loading State
+
+```typescript
+// ✅ GOOD - Handle loading state
+function ProtectedComponent() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  return <ProtectedContent />;
+}
+
+// ❌ BAD - No loading check
+function ProtectedComponent() {
+  const { isAuthenticated } = useAuth();
+  // May show wrong UI during initialization
+  return isAuthenticated ? <Content /> : <Login />;
+}
+```
+
+### 2. Log Authentication Events
+
+```typescript
+// ✅ GOOD - Log auth events for security monitoring
+logger.auth("User login attempt", { method: "MSAL" });
+logger.auth("User authenticated successfully", { userId: user.id });
+logger.auth("User logout", { userId: user.id });
+```
+
+### 3. Store Redirect Path
+
+```typescript
+// ✅ GOOD - Remember where user wanted to go
+const login = async (redirectPath?: string) => {
+  if (redirectPath) {
+    sessionStorage.setItem('auth_redirect_path', redirectPath);
+  }
+  await authProvider.login();
+};
+
+// After successful login
+const storedPath = sessionStorage.getItem('auth_redirect_path');
+if (storedPath) {
+  sessionStorage.removeItem('auth_redirect_path');
+  navigate(storedPath);
+}
+```
+
+### 4. Handle Auth Errors Gracefully
+
+```typescript
+// ✅ GOOD - Handle auth errors
+try {
+  await login();
+} catch (error) {
+  if (error instanceof AuthError) {
+    toast.error('Login failed. Please try again.');
+    logger.error('Login failed', error);
+  }
+}
+```
+
+## Anti-Patterns to Avoid
+
+### ❌ Don't Store Sensitive Data in State
+
+```typescript
+// ❌ BAD - Storing tokens in component state
+const [token, setToken] = useState<string>();
+
+// ✅ GOOD - Use auth provider to get tokens
+const getAccessToken = async () => {
+  const authProvider = await getAuthProvider();
+  return await authProvider.getAccessToken();
+};
+```
+
+### ❌ Don't Check Auth in Every Component
+
+```typescript
+// ❌ BAD - Repeated auth checks
+function Component1() {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <Login />;
+  // ...
+}
+
+function Component2() {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <Login />;
+  // ...
+}
+
+// ✅ GOOD - Protect at route level
+export const Route = createFileRoute('/protected')({
+  beforeLoad: ({ context }) => {
+    if (!context.auth.isAuthenticated) {
+      throw redirect({ to: '/login' });
+    }
+  },
+});
+```
+
+### ❌ Don't Expose User Data Unnecessarily
+
+```typescript
+// ❌ BAD - Exposing entire user object
+const { user } = useAuth();
+return <div>{user.email}</div>; // Only need email
+
+// ✅ GOOD - Select only what's needed
+const { user } = useAuth();
+const email = user?.email;
+return <div>{email}</div>;
+```

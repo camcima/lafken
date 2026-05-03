@@ -1,0 +1,204 @@
+---
+description: End-to-End (E2E) Testing Standards — structure, env, boundaries, CI code coverage
+alwaysApply: false
+---
+
+### E2E tests
+
+End-To-End testing is a software testing method that validates entire software from starting to end along with its integration with external interfaces.  
+**But** in the context of this app - where a single web server REST-like API will be expose for Backend applications, the E2E will be written for:
+- ensure that the database connection is established - by testing the endpoints exposed by the module `HealthModule`
+- ensure that external dependencies (used through ports) are invoked as expected depending
+  + using mocks for external dependencies
+  + not using the real external dependency, as we will only test their API contract
+- ensure that critical behavior that rely on responses from external dependencies (used through ports) will work as expect
+  + using mocks for external dependencies
+- ensure that all endpoints that should be private are actually private—that is, they return 403 Forbidden when an invalid Bearer token is provided
+- ensure that all controllers (implemented in `/presentation/`) have test coverage
+- ensure that database changes occur as expected when each endpoint is correctly called
+- ensure that all features (implemented in `/application/use-cases/`) have test coverage
+
+To run all the unit tests, execute, inside the `apps/backend` folder: `pnpm e2e/test`
+
+When writting such tests, **you must**:
+- ✅ respect the following file naming conventions:
+  + for a controller class name `FooController` there should be a directory called `{feature}/presentation/foo-controller`
+  + for each method in the controller class `FooController` there should be a dedicated file called `{feature}/presentation/foo-controller/{method-name}.e2e-spec.ts`
+- ✅ all the test suite files under the `backend/test/e2e/` directory, mirroring the file structure defined at `backend/src/` directory; with the suffix `.e2e-spec.ts`
+- ✅ use the `supertest` lib to simulate HTTP requests so that we don't need to initiate a real server
+- ✅ follow the BDD approach by using the `describe()` to define the feature under test and to the scenario being evaluated; use `it()`/`test()` to implement the expectation
+- ✅ organize tests with nested `describe()` blocks: outer for the endpoint/feature, inner for scenarios like "When the given input is valid"
+- ✅ use `beforeAll` to bootstrap the NestJS app using the `createAppModuleForE2ETest()` utility
+- ✅ use `afterAll` to close the app gracefully with try-catch to prevent test failures during cleanup
+- ✅ obtain the database connection via `getDatabaseClient().connection` and the HTTP server via `app.getHttpServer()`
+- ✅ use `request(underlyingHttpServer)` from `supertest` to make HTTP requests (never use `fetch` or `axios`)
+- ✅ use raw SQL queries via `db.execute(sql`...`)` from `drizzle-orm` for database setup, verification, and cleanup
+- ✅ organize test code with `#region` comments: `[db-setup]`, `[db-cleanup]`, `[db-checking]`, `[external-services-setup]` for better readability
+- ✅ follow the AAA pattern (Arrange-Act-Assert) with clear separation using comments or blank lines
+- ✅ always verify BOTH `statusCode` AND `type` (content-type) in assertions, not just the status code
+- ✅ use `expect.soft()` for multiple assertions to see all failures, not just the first one
+- ✅ test both success and error scenarios for each endpoint (e.g., 200 OK, 404 Not Found, 400 Bad Request)
+- ✅ use TypeScript types for DTOs in test arrangements (e.g., `const bodyDto: RegisterNewUserDTO = { ... }`)
+- ✅ use factories from `test/e2e/common/factories/` to generate test data (e.g., `makeNewUser()`, `resolveRandomEmailAddress()`)
+- ✅ ensure database isolation by cleaning up test data in `[db-setup]` before the test and in `[db-cleanup]` after assertions
+- ✅ verify database state changes using `[db-checking]` region after operations that modify data
+- ✅ mock external services by getting them via `app.get<DeepMockProxy<Port>>(Port)` and configuring mock behavior
+- ✅ use descriptive test names that explain the scenario and expected outcome (e.g., "and there is no user with the given email address, it should reply with a 404 status code...")
+- ✅ when testing error responses, verify the exact structure of the Problem Details JSON (type, title, status, detail)
+- ✅ declare variables at suite level (`let app`, `let db`, `let underlyingHttpServer`) and initialize them in `beforeAll`
+
+And **do not**:  
+- ❌ spawn a real web server (use `app.getHttpServer()` with supertest instead)
+- ❌ validate input payloads schemas (query, path parameters, body) — this should be tested in integration tests
+- ❌ interact with real external services (always mock ports/adapters for external dependencies)
+- ❌ use `fetch()` or `axios` for HTTP requests (use `supertest` exclusively)
+- ❌ leave database test data behind after tests complete (always clean up in `[db-cleanup]` regions)
+- ❌ share mutable state between tests without proper isolation
+- ❌ use hardcoded IDs or emails (use factories to generate random test data)
+- ❌ test multiple endpoints in a single test case (one endpoint behavior per test)
+- ❌ skip checking the response content-type header (always verify both status and type)
+- ❌ use `expect().toBe()` for object comparisons (use `toEqual()` or `toStrictEqual()` instead)
+- ❌ forget to type your DTOs and response bodies in assertions
+- ❌ make assumptions about database state (always set up the exact state you need in `[db-setup]`)
+- ❌ use `app.listen()` or start a real HTTP server (the app is initialized but not listening)
+- ❌ test implementation details of services or repositories (focus on HTTP contract and database effects)
+- ❌ ignore cleanup in `afterAll` even if it might fail (wrap in try-catch to prevent cascading failures)
+
+Example of a ✅ GOOD file structure organization to place E2E test suites:
+
+```txt
+...
+test/
+└── e2e/
+    ├── __fixtures__
+    ├── common/
+    │   └── factories/
+    │       ├── user.factory.ts
+    │       └── ...
+    ├── user-profile/
+    │   └── presentation/
+    │       └── user-controller/
+    │           ├── endpoint-get-user-info.e2e-spec.ts
+    │           └── endpoint-register-new-user.e2e-spec.ts
+    └── ...
+```
+for the above structure, we can assume that the project have:
+- a NestJS controller class in a file called `/user-profile/presentation/user.controller.ts`
+- in that controller class there are 2 methods: `getUserInfo()` and `registerNewUser()`
+- a domain entity called 'user' (and so a factory utility to help on creating new instances of that entity with random data)
+
+#### E2E Test Structure Pattern
+
+Here's a complete example showing the expected structure and patterns for E2E tests:
+
+```typescript
+// ..
+describe("Feature description - HTTP_METHOD /api/path", () => {
+  let app: NestExpressApplication;
+  let db: DatabaseClient["connection"];
+  let underlyingHttpServer: Server;
+
+  beforeAll(async () => {
+    const { appFixture, getDatabaseClient } = await createAppModuleForE2ETest();
+    
+    app = appFixture;
+    await app.init();
+    
+    db = getDatabaseClient().connection;
+    underlyingHttpServer = app.getHttpServer();
+  });
+
+  afterAll(async () => {
+    try {
+      await app.close();
+    } catch {
+      // do nothing
+    }
+  });
+
+  describe("When the given input is valid", () => {
+    test("and [specific scenario], it should [expected behavior with status code]", async () => {
+      // Arrange
+      const requestData: RequestDTO = {
+        field: "value",
+      };
+
+      // #region [db-setup] ensuring database state for this test
+      await db.execute(sql`DELETE FROM "table" WHERE "field" = ${requestData.field}`);
+      await db.execute(sql`INSERT INTO "table" ("field") VALUES (${requestData.field})`);
+      // #endregion
+
+      // #region [external-services-setup]
+      const externalService = app.get<DeepMockProxy<ExternalServicePort>>(ExternalServicePort);
+      externalService.someMethod.mockResolvedValue("mocked result");
+      // #endregion
+
+      // Act
+      const res = await request(underlyingHttpServer)
+        .post("/api/path")
+        .send(requestData)
+        .set("Content-Type", "application/json");
+
+      // Assert
+      expect.soft(res.statusCode).toBe(HttpStatus.CREATED);
+      expect.soft(res.type).toBe("application/json");
+      expect.soft(res.body).toStrictEqual<ResponseDTO>({
+        id: expect.any(String),
+        field: requestData.field,
+        createdAt: expect.any(String),
+      });
+
+      // #region [db-checking] verify database changes
+      const dbResult = await db.execute(
+        sql`SELECT * FROM "table" WHERE "field" = ${requestData.field}`
+      );
+      expect.soft(dbResult.rows).toHaveLength(1);
+      expect.soft(dbResult.rows[0]["field"]).toEqual(requestData.field);
+      // #endregion
+
+      // #region [db-cleanup]
+      await db.execute(sql`DELETE FROM "table" WHERE "field" = ${requestData.field}`);
+      // #endregion
+    });
+
+    test("and [error scenario], it should reply with [error status] and problem details", async () => {
+      // Arrange
+      const invalidData: RequestDTO = {
+        field: "invalid-value",
+      };
+
+      // #region [db-setup] ensure the condition that causes the error
+      await db.execute(sql`DELETE FROM "table" WHERE "field" = ${invalidData.field}`);
+      // #endregion
+
+      // Act
+      const res = await request(underlyingHttpServer)
+        .get(`/api/path/${invalidData.field}`);
+
+      // Assert
+      expect(res.statusCode).toBe(HttpStatus.NOT_FOUND);
+      expect(res.type).toBe("application/problem+json");
+      expect(res.body).toEqual({
+        type: "ResourceNotFoundError",
+        title: "ResourceNotFoundError",
+        status: 404,
+        detail: `Resource with field "${invalidData.field}" was not found`,
+      });
+    });
+  });
+});
+```
+
+Key patterns demonstrated:
+- Suite-level variables with proper types
+- `beforeAll`/`afterAll` lifecycle hooks to control app's lifecycle
+- Nested `describe()` for scenarios
+- `// #region` comments for code organization
+- AAA pattern (Arrange-Act-Assert)
+- `expect.soft(...)` for multiple assertions in a test that will run a cleanup even on failures
+- Both success and error case testing; but avoiding dummy tests such as DTO input validation
+- Database setup, verification, and cleanup
+- External service mocking
+- Type-safe DTOs in assertions
+
+

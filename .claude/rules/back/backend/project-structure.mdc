@@ -1,0 +1,89 @@
+---
+description: Project Structure and code architecture — NestJS modules + Hexagonal folders + centralized tests
+alwaysApply: false
+---
+
+### Project Structure Standards
+
+#### 1) Modules per Domain Entity (NestJS default)
+- Create **one NestJS module per bounded context**.
+- Each module must have a `<entity>.module.ts` that wires providers and controllers.
+- Cross-cutting code (shared types, utils, base classes) lives under `src/shared`.
+
+#### 2) Hexagonal Architecture Folders (inside each module)
+Use the following **folder layout per bounded context** (driving adapters under `presentation/`, not `infrastructure/`):
+
+apps/backend/src/
+└── <bounded-context>/
+    ├── <bounded-context>.module.ts
+    ├── domain/ # Pure domain (framework-agnostic)
+    │   ├── entities/
+    │   │   └── <entity>.entity.ts
+    │   ├── value-objects/
+    │   ├── errors/
+    │   │   └── ...
+    │   └── repositories/ # Repository interfaces (ports)
+    │       └── ...
+    ├── application/ # Use cases (framework-agnostic)
+    │   ├── services/
+    │   │   └── <entity>-query.service.ts
+    │   └── use-cases/
+    │       └── some-feature.use-case.ts
+    ├── infrastructure/ # Driven adapters (external implementations)
+    │   ├── clients/ # HTTP/gRPC/sdk client adapters
+    │   │   └── ...
+    │   └── persistence/
+    │       ├── mappers/ # Mapping between database models to domain
+    │       │   └── ...
+    │       ├── schemas/
+    │       │   └── <db-table>.db.ts
+    │       └── repositories/
+    │           └── postgresql/ # Repository implementations (adapters)
+    └── presentation/ # Driving adapters (entrypoints)
+        ├── mappers/
+        │   └── <entity>-response.mapper.ts
+        └── controllers/ # REST API controllers
+            └── <entity>.controller.ts
+
+
+**Rules:**
+- **Domain** and **Application** must be **framework-agnostic** (no Nest imports/decorators). The exception is the `@Injectable()` annotation in the class.
+- **Repositories** in `domain/repositories` define **interfaces**; concrete implementations go in `infrastructure/repositories`.
+- External dependencies (DB, cache, auth, filesystem, 3rd-party APIs) are **adapters** under `infrastructure/` or `presentation/` (per direction).
+- Driving adapters (e.g. HTTP controllers) belong to **`presentation/`**.
+- Data access, external client code, and SDK wrappers belong to **`infrastructure/`**.
+    + Do not leak SDK's APIs to domain
+- **Adapters must implement explicit contracts defined under `ports/`**. Core code depends on the port interfaces; adapters provide concrete implementations wired via providers.
+- **Request Flow Definition**:  
+    + Requests arrive at an **endpoint** in a **controller** (`presentation/` layer).  
+    + The controller calls a **method** in an **application service** or **use-case** (`application/` layer).  
+    + The service calls a **port interface** implemented by an **adapter** or **repository** (`infrastructure/` layer) to access external resources (e.g., DB, cache, APIs).  
+    + The adapter or repository interacts with the external dependency and returns domain objects or DTOs back up the chain.
+
+#### 3) Centralized Tests and Colocated for unit test
+All tests that are not 'unit' lives under `<root>/test` (not in `src/`). Organized by **type → module → subfolders** mirroring `src/modules/<bounded-context>`:
+
+apps/backend/test/
+├── integration/
+│   └── <bounded-context>/
+│       └── ...
+└── e2e/
+    └── <bounded-context>/
+        └── ...
+
+**Rules:**
+- Test files must be placed in the **corresponding folder** under `test/<type>/modules/<entity>/...` that mirrors the path of the class/file under test.
+- Recommended naming: `*.spec.ts` for unit/integration and `*.e2e-spec.ts` for e2e.
+
+#### 4) Boundaries & Imports
+- `presentation` may depend on `application` and DTOs, **never** on `infrastructure` directly.
+- `application` may depend on `domain` and **ports** (interfaces), **never** on `infrastructure` or `presentation`.
+- `infrastructure` implements ports and depends on `domain` types/ports and `application` DTOs (**only if necessary** for mapping).
+- Enforce with dependency-cruiser by running `pnpm dep-check` to check it
+
+#### 5) Providers & DI
+- Use NestJS `@Injectable()` annotation to auto-wire dependencies into classes
+- Use NestJS modules’ `providers` with `useClass`/`useFactory` to inject **ports → adapters** while keeping domain/application framework-agnostic.
+- Use NestJS `useExisting` when binding a port to some adapter
+- Export only the **ports** or **use-cases** needed by other modules; avoid leaking infrastructure details.
+

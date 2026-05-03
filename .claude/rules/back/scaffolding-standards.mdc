@@ -1,0 +1,15 @@
+---
+description: Scaffolding Standards — Extend existing structure, do not create alternatives
+alwaysApply: true
+---
+
+### Project Structure and Scaffolding
+
+- **Template-Based Project**:
+  - This project was created from our standard template and already includes the full folder structure, base configuration, and example modules.
+
+- **Extend Existing Structure**:
+  - Always extend the existing structure. Do not introduce alternative root folders, duplicate app setups, or new "starter" projects inside this repo.
+
+- **Pattern Reuse**:
+  - When adding features, first look for an existing module or pattern that is similar and mirror that approach.

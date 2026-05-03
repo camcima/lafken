@@ -1,0 +1,46 @@
+---
+description: How to deprecated public REST APIs
+alwaysApply: false
+---
+
+### API Deprecation
+
+When deprecating APIs at the `presentation` layer, follow RFC 9745 (Deprecation header) and RFC 8594 (Sunset header).
+
+**Required headers:**
+- `Deprecation`: RFC 9745 date-time in Unix epoch timestamp when the endpoint was deprecated (e.g.) (e.g., `"@1688169599"` for June 30, 2023 at 23:59:59 UTC)
+- `Sunset`: RFC 8594 date-time when the endpoint will be removed (e.g. `Sun, 30 Jun 2024 23:59:59 UTC` for Sunday 30, 2024 at 23:59:59 UTC)
+
+**Implementation:**
+- Use `@Header()` from `@nestjs/common` for HTTP headers
+- Use `@ApiOperation({ deprecated: true })` from `@nestjs/swagger` for OpenAPI documentation
+
+```ts
+// /presentation/foobar.controller.ts
+@Controller("foobars")
+export class FooBarController {
+  // ✅ GOOD - RFC 9745 Deprecation header + RFC 8594 Sunset header + OpenAPI deprecated flag
+  @Get('foo')
+  @Header("Deprecation", "@1688169599") // RFC 9745 format: when this endpoint was deprecated
+  @Header("Sunset", "Sun, 30 Jun 2024 23:59:59 UTC") // RFC 8594 format: when this endpoint will removed
+  @ApiOperation({
+    summary: "List all foo bar qux",
+    deprecated: true, // <- flag
+  })
+  @ApiOkResponse({ type: PaginatedWorkCenterResponseDTO })
+  async getFoobar() {
+    // ...
+  }
+
+  // ❌ BAD - missing RFC headers, only OpenAPI deprecated flag
+  @Get('bar')
+  @ApiOperation({
+    summary: "List all foo bar qux",
+    deprecated: true,
+  })
+  @ApiOkResponse({ type: PaginatedWorkCenterResponseDTO })
+  async getFoobar() {
+    // ...
+  }
+}
+```

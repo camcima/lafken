@@ -1,0 +1,46 @@
+stages:
+  - setup:pnpm
+  - lint
+  - test
+  - web_e2e_test
+  - quality
+  - build:pnpm
+  - package
+  - deploy
+
+include:
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/setup@0.4.1
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/lint-and-format@0.4.1
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/test@0.4.1
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/web-e2e-test@0.4.1
+    inputs:
+      job_name: .web_e2e_test
+      job_stage: web_e2e_test
+      api_base_url: "http://localhost:3000"
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/build@0.4.1
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/quality@0.4.1
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/package@0.4.1
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/cd/deploy-cloud-run@2.11.3
+    inputs:
+      environment: intg
+      cmdb_id: $CMDB_ID
+      jira_project: $JIRA_PROJECT
+      gcp_project_id: emx-intg-ab3d
+      gcp_region: us-east1
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/cd/deploy-cloud-run@2.11.3
+    inputs:
+      environment: prod
+      cmdb_id: $CMDB_ID
+      jira_project: $JIRA_PROJECT
+      gcp_project_id: emx-prod-63eb
+      gcp_region: us-east1
+
+# Adding mandatory application env vars so that the `pnpm test:e2e` can be executed successfully
+web_e2e_test:
+  extends: .web_e2e_test
+  needs: [setup, test]
+  variables:
+    ENVIRONMENT: "prod"
+    WEB_E2E_BASE_URL: "http://localhost:4173"
+    AUTH_PROVIDER: "mock" # Not using the real auth flow
+    API_URL: "http://localhost:3000"

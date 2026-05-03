@@ -1,0 +1,22 @@
+---
+description: Integration Testing Standards — structure, env, boundaries, CI code coverage
+alwaysApply: false
+---
+
+### Integration tests
+
+Integration focuses on verifying that different modules, components, or services within an application interact correctly and function as a cohesive unit.
+
+useful when testing use cases (**application** layer) that rely on various external dependencies so that you could control their behavior.
+
+To run all the integration tests, execute, inside the `apps/backend` folder: `pnpm integration/test`
+
+When writting such tests, **you must**:
+- ✅ all the test suite files under the `apps/backend/test/integration/` directory, mirroring the same file structure defined at `backend/src/` directory but adding the suffix `.spec.ts` to the filename.
+- ✅ all the modules must have a equivalent test suite only to ensure that they don't have a 'dependency error'. Note that for this we will ignore the `DatabaseModule` by replacing it with a No-op module because we can't rely on a real database connection
+And **do not**:
+- ❌ spawn a real web server
+- ❌ relies on a real database connection
+- ❌ have integration tests for `controllers` (**presentation** layer) as they must be tested at E2E stage
+- ❌ have unit tests for `repositories` (**infrastructure** layer) as they are useless unless we have a real database connection in place
+- ❌ tests that are very volatile, ie., that are testing the implementation instead of the behavior

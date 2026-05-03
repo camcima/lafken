@@ -1,0 +1,44 @@
+---
+globs: apps/web/**/*
+alwaysApply: false
+description: Guidelines for forms, validation, and input handling
+---
+
+# Forms & Validation
+
+## Core Libraries
+- **Form State**: `react-hook-form`
+- **Validation**: `zod` with `@hookform/resolvers/zod`
+
+## Best Practices
+
+### Schema Definition
+- Define Zod schemas **outside** the component to prevent recreation on render.
+- Use explicit error messages in Zod validators.
+- Derive TypeScript types directly from the Zod schema.
+
+```typescript
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+```
+
+### Component Implementation
+- Use the `useForm` hook with the `zodResolver`.
+- Use `formState.isSubmitting` to disable buttons during submission.
+- Wrap inputs in accessible `Label` components.
+
+### Error Handling
+- Display field-level errors immediately below the input using `FormMessage`.
+- Handle submission errors (e.g., API failures) with `sonner` toasts or global alerts.
+
+```tsx
+<div className="space-y-2">
+  <Label htmlFor="email">Email</Label>
+  <Input id="email" {...register("email")} />
+  <FormMessage>{errors.email?.message}</FormMessage>
+</div>
+```

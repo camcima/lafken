@@ -1,0 +1,64 @@
+---
+description: Database Standards — PostgreSQL + Drizzle + raw SQL + dbmate migrations
+alwaysApply: false
+---
+
+### Database Standards
+
+- **Database Engine**: Use **PostgreSQL** for all persistence needs.
+
+- **Access Library**: Use **Drizzle** for DB access.
+  - Queries must be written as **raw, parameterized SQL** with **type safety** (e.g., Drizzle’s `sql`-tagged templates with bound params).
+  - Do **not** leak Drizzle-specific exceptions beyond the **repository** layer. Map/catch and rethrow as **domain exceptions**, per hexagonal architecture.
+  - A query that returns **no rows** must **not** throw at the repository level; return `null` or an empty array for multi-row queries.
+
+- **Migrations**: Use **dbmate** for schema migrations.
+  - Migrations files should live under the `./db/migrations` folder.
+  - Each migration file must contain:
+    - An **`-- migrate:up`** section with **raw SQL**.
+    - An **`-- migrate:down`** section with **raw SQL** rollback.
+
+- **Dbmate Configuration & Commands**:
+  - Dbmate **must read configuration from environment variables** (prefer `DATABASE_URL`) loaded via the **dotenv CLI**.
+  - Local uses `.env`; or `.env.ts` for E2E Tests
+    + `pnpm migrate`
+    + `pnpm migrate:rollback`
+
+- **Table Conventions**:
+  - **Names**: plural, **snake_case** (e.g., `users`, `order_items`).
+  - **Columns** (all tables):
+    - `id BIGSERIAL PRIMARY KEY` — internal use only, never exposed externally
+    - `uuid UUID NOT NULL UNIQUE` — external reference identifier, used in all APIs and public interfaces
+    - `created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP`
+    - `updated_at TIMESTAMPTZ NULL DEFAULT NULL`
+  - **UUID Requirements**:
+    - All tables must have a `uuid` field of type `UUID` with `NOT NULL` and `UNIQUE` constraints.
+    - The `uuid` follows the **UUIDv7 format** and is generated in the **application layer** using the uuidv7 package (PostgreSQL does not natively support UUIDv7).
+    - The `uuid` field is the **external reference** for the entity and must be used in all public APIs, endpoints, and external integrations.
+    - The `id` field is for **internal use only** (e.g., foreign keys, joins, internal queries) and must **never be exposed** in API responses or accepted in API requests.
+    - Example: A DELETE endpoint would be `DELETE /items/{uuid}`, not `DELETE /items/{id}`.
+    - Create an index on the `uuid` column for efficient lookups: `CREATE INDEX idx_<table>_uuid ON <table>(uuid);`
+  - **Updated-at trigger**:
+    - Use a **single shared trigger function** (e.g., `set_updated_at()`) applied to each table via a **per-table trigger** (e.g., `set_updated_at_<table>_trg`) that sets `updated_at = CURRENT_TIMESTAMP` on `UPDATE`.
+  - **Foreign Keys & Indexes**:
+    - Define **FOREIGN KEY** constraints for relationships using the internal `id` field.
+    - Create **supporting indexes** for FK columns and other frequently filtered/joined fields to optimize queries.
+
+- **Architecture & Boundaries**:
+  - Repositories live under **`infrastructure/`** and implement **ports** declared in `application/` or `domain/`.
+  - **Domain/Application** layers remain **framework-agnostic** and must not import Drizzle or DB-specific types.
+  - Only **repositories** execute SQL. **Controllers/use-cases** call repositories via **interfaces**.
+
+- **Error & Nullability Policy**:
+  - Translate DB/constraint errors into **domain-level exceptions** with actionable messages.
+  - Use `null` (or typed `Option`-like wrapper, if adopted) to represent **missing rows** rather than throwing.
+
+- **Style & Safety**:
+  - All SQL must be **parameterized** (no string concatenation).
+  - Prefer **explicit column lists** over `SELECT *`.
+  - Keep migrations **idempotent** on re-apply via proper `down` sections; avoid destructive ops without rollbacks.
+
+- **Deletion & State Modeling**:
+  - **Hard Delete by Default**: Unless explicitly stated otherwise, delete records permanently.
+  - **Nullable Timestamps over Booleans**: Prefer nullable timestamp columns to model states/events over boolean flags (e.g., use `published_at TIMESTAMPTZ NULL` instead of `is_published BOOLEAN`).
+  - **Soft Delete Convention**: When soft-delete is explicitly required, use `deleted_at TIMESTAMPTZ NULL` as the column name.

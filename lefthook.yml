@@ -1,0 +1,48 @@
+output:
+  - summary
+  - skips
+
+pre-commit:
+  parallel: false
+  commands:
+    format:
+      glob: '*.{js,ts,jsx,tsx,json,md}'
+      stage_fixed: true
+      run: pnpx prettier --write {staged_files}
+    lint-web:
+      root: apps/web
+      glob: 'apps/web/**/*.{js,ts,jsx,tsx,json,md}'
+      stage_fixed: true
+      run: pnpx eslint --fix {staged_files}
+    lint-backend:
+      root: apps/backend
+      glob: 'apps/backend/**/*.{js,ts,jsx,tsx,json,md}'
+      stage_fixed: true
+      run: pnpx eslint --fix {staged_files}
+    lint-shared-backend-api:
+      root: shared/backend-api
+      glob: 'shared/backend-api/**/*.{js,ts}'
+      stage_fixed: true
+      run: pnpx eslint --fix {staged_files}
+    lint-shared-web-tests:
+      root: shared/web-tests
+      glob: 'shared/web-tests/**/*.{js,ts,tsx}'
+      stage_fixed: true
+      run: pnpx eslint --fix {staged_files}
+
+pre-push:
+  parallel: false
+  piped: true
+  commands:
+    test:
+      run: pnpx turbo run test
+    type-check:
+      glob: '*.{js,ts,jsx,tsx}'
+      run: pnpx turbo run type-check
+    syncpack:
+      run: pnpx syncpack lint --dependency-types prod,dev
+
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpx commitlint --edit {1}

@@ -1,0 +1,105 @@
+---
+globs: apps/web/**/*
+alwaysApply: false
+description: API integration, services, and DTO usage
+---
+
+# API Layer & Services
+
+## Architecture
+
+### 1. Service Layer (`src/services/`)
+- Encapsulate all HTTP calls in Service classes.
+- Extend `BaseService` to inherit configuration (native `fetch`-based API client, Base URLs).
+- **Singleton Pattern**: Export a single instance of the service.
+- **Request Cancellation**: Accept optional `AbortSignal` parameter to support request cancellation.
+
+```typescript
+// src/services/UserService.ts
+class UserService extends BaseService {
+  async getUsers(signal?: AbortSignal): Promise<UserDTO[]> {
+    return this.getApiClient().get(this.getServiceUrl('users'), { signal });
+  }
+}
+export const userService = new UserService();
+```
+
+> `BaseService` exposes only two protected helpers:
+> - `getServiceUrl(path, version?)` — builds the full Backend URL
+> - `getApiClient()` — returns the shared `apiClient` (handles auth headers, error normalisation, Zod validation, and logging)
+>
+> Never call `fetch` directly inside a service — always go through `this.getApiClient()`.
+
+### 2. React Query Hooks (`src/hooks/`)
+- **Do not use services directly in components.**
+- Wrap service calls in `useQuery` or `useMutation` hooks.
+- Manage query keys globally or in the hook file to ensure proper cache invalidation.
+- **Request Cancellation**: Always pass the `signal` from React Query's `queryFn` context to service methods. React Query automatically provides an `AbortSignal` that cancels requests when queries are invalidated, components unmount, or query keys change.
+
+```typescript
+// src/hooks/useUserService.ts
+export const useUsers = () => {
+  return useQuery({
+    queryKey: ['users'],
+    queryFn: async ({ signal }) => {
+      return await userService.getUsers(signal);
+    },
+  });
+};
+```
+
+**Why use AbortSignal?**
+- Prevents memory leaks from pending requests
+- Automatically cancels requests when no longer needed
+- Improves performance by avoiding unnecessary network calls
+- React Query manages the signal lifecycle automatically
+
+### 3. DTOs
+- **Shared DTOs**: strictly import types/interfaces from `@shared/backend-api` when integrating with the internal Backend app. Always use `import type` when importing from that internal package.
+  + Do not touch the `@shared/backend-api` package unless when changing the implementation for the Backend app.
+- **Avoid Duplication**: Do not manually redefine API response types in the frontend unless extending them for UI-specific properties.
+
+## Request Cancellation
+
+### AbortSignal Flow
+
+1. **React Query** automatically creates an `AbortSignal` for each query
+2. **Hooks** receive `signal` in the `queryFn` context parameter
+3. **Services** accept optional `AbortSignal` and pass it to `apiClient`
+4. **API Client** passes `signal` to the native `fetch()` API
+
+```typescript
+// Complete flow example
+// ✅ GOOD 1. Hook receives signal from React Query
+export const useUsers = () => {
+  return useQuery({
+    queryKey: ['users'],
+    queryFn: async ({ signal }) => {  // ← React Query provides signal
+      return await userService.getUsers(signal);  // ← Pass to service
+    },
+  });
+};
+
+// ✅ GOOD 2. Service accepts and passes signal
+class UserService extends BaseService {
+  async getUsers(signal?: AbortSignal) {
+    return this.getApiClient().get('/users', { signal });  // ← Pass to API client
+  }
+}
+
+// ✅ GOOD 3. API client passes to fetch
+const response = await fetch(url, { headers, signal });  // ← Native fetch cancellation
+```
+
+### When Requests Are Cancelled
+
+React Query automatically cancels requests when:
+- Component unmounts
+- Query key changes
+- Query is invalidated
+- New fetch starts while previous is pending (if `cancelRefetch` enabled)
+
+## Error Handling
+- Services should throw standardized errors.
+- React Query hooks should intercept errors or pass them to the UI via the `error` object.
+- Cancelled requests (AbortError) are handled automatically by React Query and don't trigger error handlers.

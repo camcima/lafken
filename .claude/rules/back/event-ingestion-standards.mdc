@@ -1,0 +1,16 @@
+---
+description: Event Ingestion Standards — HTTP endpoints via sinks instead of broker clients
+alwaysApply: false
+---
+
+### Event Ingestion Standards
+
+- **No Direct Broker Clients**: Do not include client libraries for message brokers (Kafka, Google Pub/Sub, etc.) in application code.
+- **HTTP-based Ingestion via Sinks**: Ingest events through HTTP endpoints exposed by the application. Delivery to these endpoints is handled by sinks such as:
+  - Kafka Connect / Redpanda Connect (sink connectors)
+  - Datadog Vector (HTTP sink)
+- **Endpoint Design**:
+  - Treat sink deliveries like any other REST request: validate payloads with DTOs and return appropriate HTTP status codes.
+  - Ensure idempotency (e.g., via message keys, deduplication headers, or payload IDs) where required.
+  - Document these ingestion endpoints in OpenAPI.
+

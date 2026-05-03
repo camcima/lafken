@@ -1,0 +1,54 @@
+---
+description: How to implement a file uploading - the implemention on the Backend side
+alwaysApply: false
+---
+
+- **Goal:** Keep file contents and framework-specific types out of the domain/core layer; domain only receives safe, minimal file metadata/opaque reference.
+
+- **Boundary Rule:** The only thing crossing into domain/service layer is an immutable DTO named `FileMeta` with no raw bytes, streams, or Express/Multer types.
+
+```ts
+interface FileMeta {
+  originalName: string
+  mimeType: string
+  size: number
+  content: () => Buffer
+}
+```
+
+- **Adapter responsibility:** Implement an infra adapter (e.g., `FileUploadAdapter`) in infrastructure layer:
+  - Accept framework file (e.g., `Express.Multer.File` or a `Readable` stream) and perform storage + scanning.
+  - Return a `FileMeta` only. Never return buffer/stream or framework types.
+  - Perform filename sanitization, content-type sniffing, checksum calculation, and optional virus scanning here.
+
+- **Controller responsibility (NestJS layer):**
+  - Use `@UseInterceptors(FileInterceptor('file'))` or `@UploadedFile()` to capture file.
+  - Validate size/type and reject early with proper HTTP codes.
+  - Call infra `FileUploadAdapter`, await `FileMeta`, then pass `FileMeta` to application service.
+  - Do not call domain services with `Express.Multer.File` or `Buffer`.
+
+- **Domain/service responsibility:**
+  - Accept only `FileMeta` or an application-level `FileReference` (no storage details).
+  - Use `storageKey` as opaque ID if domain needs to reference file later.
+  - Domain logic must not implement or assume storage mechanics.
+
+- **Error handling:**
+  - Map infra/storage errors to application-friendly errors (HTTP 500/503), with sanitized messages.
+  - Do not propagate low-level storage stack traces into domain or to clients.
+
+- **Testing rules:**
+  - Unit test: adapter maps `Express.Multer.File` -> `FileMeta` and never exposes buffers.
+  - Integration test: controller -> adapter -> storage; assert domain service receives only `FileMeta`.
+  - Security tests: enforce rejection of disallowed types and oversized files.
+
+- **LLM prompt constraints (for code generation):**
+  - Always instruct: "Return only `FileMeta` to the application/domain layer."
+  - Do not generate domain code that imports `Express` or `multer` types.
+  - Require adapter tests that assert no `Buffer`/`Express.Multer.File` flows into domain.
+
+- **Quick flow summary (call sequence):**
+  1. Client POST -> NestJS Controller (`@UploadedFile`) + validation.
+  2. Controller -> `FileUploadAdapter` (infra) with framework file/stream.
+  3. `FileUploadAdapter` runs scanning, stores file via `StorageService`, returns `FileMeta`.
+  4. Controller calls domain/application service with `FileMeta` only.
+  5. Domain reacts using `FileMeta` as opaque reference.

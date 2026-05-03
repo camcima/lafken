@@ -1,0 +1,52 @@
+---
+description: Dependency Injection — constructor injection, framework-agnostic core, config-driven implementation selection
+alwaysApply: false
+---
+
+### Dependency Injection Standards
+
+- **Constructor Injection Only**  
+  - Every dependency (objects, configs, gateways, repositories) **must be injected via the class constructor** at instantiation time.
+  - ❌ No property/setter injection
+  - ❌ No service locator
+  - ❌ No static/global singletons in core code
+
+- **Never Use the Service Locator**  
+  - Do **not** inject or pass around the NestJS `ModuleRef`, or any other DI container/service locator.
+  - Classes must declare explicit dependencies and receive them directly through their constructors.
+
+- **Framework-Agnostic Core**  
+  - **Domain** and **Application** layers **must not use NestJS annotations/decorators** to receive dependencies.
+  - These layers define **interfaces (ports)** and accept **concrete implementations (adapters)** via constructors.
+
+- **NestJS as a Wiring Layer**  
+  - Use Nest modules’ `providers` with `useExisting` / `useFactory` to construct and bind the port with some implementation (adapters) **from the outside**.
+
+- **Multiple Implementations of an Interface**  
+  - When multiple classes implement the same interface, choose the active implementation via a **configuration parameter** (env-driven; exposed through the config service).
+  - The selection is performed **in the provider factory**, not in core code.
+  - Example tokening: define a abstract class to use it as the provider's token  
+   ```ts
+   abstract class FooServicePort {}
+   // ...
+   {
+      provide: FooServicePort
+      useClass: MyAdapter
+   }
+   ```
+
+- **Configuration as Dependencies**  
+  - Classes that require configuration (URLs, credentials, timeouts, feature flags, etc.) receive a **typed config object** via the constructor.
+  - Do **not** read `process.env` directly in classes. The environment must be read from the `environmentConfiguration` object instead.
+
+- **Testability**  
+  - Unit tests must be able to instantiate classes by **passing fakes/mocks** into constructors without any NestJS container.
+
+- **Boundaries**  
+  - Controllers (presentation) depend on **application services** via interfaces.
+  - Application services depend on **ports** (interfaces), not concrete adapters.
+  - Adapters (infrastructure) implement ports and can depend on external SDKs/clients; they are selected and injected by the wiring layer.
+
+- **Compliance**  
+  - Enforce boundaries with **dependency-cruiser** (`pnpm dep-check`).
+  - Violations (framework annotations in core, direct env access, service locators, or DI container injection) are not allowed.

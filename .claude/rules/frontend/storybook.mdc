@@ -1,0 +1,35 @@
+---
+globs: apps/web/**/*
+alwaysApply: false
+description: Storybook usage and component documentation
+---
+
+# Storybook Guidelines
+
+## When to Write Stories
+- **Required**: All reusable UI components in `src/components/common/`.
+- **Recommended**: Business components in `src/components/business/` that have complex states.
+
+## File Location
+- Co-locate the story file with the component but with the suffix `.stories.tsx`, for example:
+  - `src/components/common/Button/index.tsx`
+  - `src/components/common/Button/Button.stories.tsx`
+
+## Story Structure
+- **Default**: The base state of the component.
+- **Variants**: Create stories for different props (e.g., `Primary`, `Secondary`, `Disabled`, `Loading`).
+- **Mocking**: Use `msw` (Mock Service Worker) handlers in Storybook preview if the component makes network requests.
+
+```tsx
+const meta: Meta<typeof Button> = {
+  component: Button,
+  title: 'Common/Button',
+};
+
+export const Primary: Story = {
+  args: {
+    variant: 'default',
+    children: 'Click me',
+  },
+};
+```

@@ -1,0 +1,37 @@
+{
+  "extends": [
+    "@stylistic/stylelint-config",
+    "stylelint-config-tailwindcss"
+  ],
+  "plugins": [
+    "stylelint-order",
+    "@stylistic/stylelint-plugin"
+  ],
+  "rules": {
+    "order/properties-alphabetical-order": null,
+    "at-rule-no-unknown": [
+      true,
+      {
+        "ignoreAtRules": [
+          "tailwind",
+          "apply",
+          "variants",
+          "responsive",
+          "screen",
+          "layer",
+          "theme",
+          "custom-variant"
+        ]
+      }
+    ],
+    "color-function-notation": null,
+    "hue-degree-notation": null,
+    "lightness-notation": null,
+    "font-family-name-quotes": "always-where-recommended",
+    "no-empty-source": true,
+    "declaration-empty-line-before": null,
+    "rule-empty-line-before": null,
+    "at-rule-empty-line-before": null,
+    "@stylistic/max-line-length": 160
+  }
+}

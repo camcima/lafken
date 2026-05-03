@@ -1,0 +1,19 @@
+{
+  "name": "web-tests",
+  "author": "eMantto team",
+  "private": true,
+  "license": "PROPRIETARY",
+  "scripts": {
+    "test:dev": "DEV=true playwright test --ui",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "web": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "eslint-plugin-playwright": "^2.10.1"
+  },
+  "keywords": [],
+  "packageManager": "pnpm@10.21.0"
+}

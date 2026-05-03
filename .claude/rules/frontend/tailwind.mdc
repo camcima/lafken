@@ -1,0 +1,156 @@
+---
+globs: apps/web/**/*
+alwaysApply: false
+description: Tailwind CSS v4 configuration, changes, and best practices
+---
+
+# Tailwind CSS Guidelines
+
+## Core Configuration (v4)
+
+- **CSS-First Config**: Use `@theme` directive instead of `tailwind.config.js`.
+- **Import Syntax**: Use `@import "tailwindcss"` instead of `@tailwind` directives.
+- **Package Names**: Use `@tailwindcss/postcss`, `@tailwindcss/cli`, and `@tailwindcss/vite`.
+
+### Example Configuration
+```css
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Satoshi", "sans-serif";
+  --breakpoint-3xl: 1920px;
+  --color-avocado-500: oklch(0.84 0.18 117.33);
+  --ease-fluid: cubic-bezier(0.3, 0, 0, 1);
+
+  /* Override defaults */
+  --font-*: initial;
+}
+```
+
+## Best Practices
+
+### 1. Utility-First Workflow
+- **Avoid custom CSS** whenever possible. Use Tailwind utilities for almost everything.
+- **Don't mix styles**: Avoid using `style={{ ... }}` attributes unless for dynamic values that can't be classes (like specific coordinates).
+
+### 2. Mobile-First Design
+- Write styles for mobile first, then add breakpoints for larger screens.
+- Avoid `max-w` breakpoints unless absolutely necessary.
+
+```html
+<!-- ❌ BAD: Desktop first -->
+<div class="w-1/2 max-md:w-full">
+
+<!-- ✅ GOOD: Mobile first -->
+<div class="w-full md:w-1/2">
+```
+
+### 3. Dynamic Classes
+- **NEVER construct class names dynamically**. Tailwind's scanner cannot detect them.
+
+```tsx
+// ❌ BAD
+const color = "red";
+<div className={`bg-${color}-500`} /> // Tailwind won't generate bg-red-500
+
+// ✅ GOOD
+const colorClasses = {
+  red: "bg-red-500",
+  blue: "bg-blue-500",
+};
+<div className={colorClasses[color]} />
+```
+
+### 4. Class Merging
+- Use `clsx` and `tailwind-merge` (via the `cn` utility) to conditionally apply and merge classes.
+- This handles conflicts correctly (e.g., `p-4` vs `p-8`).
+
+```tsx
+import { cn } from "@/lib/utils";
+
+// ✅ GOOD
+<div className={cn("p-4 bg-red-500", isActive && "bg-blue-500", className)} />
+```
+
+### 5. Component Reusability vs @apply
+- **Prefer React Components** over `@apply` for reusability.
+- Use `@apply` *only* when you need to override 3rd party styles or targeting specific sub-elements not accessible via props.
+
+```css
+/* ❌ Avoid overuse of @apply */
+.btn {
+  @apply px-4 py-2 bg-blue-500 rounded;
+}
+```
+
+```tsx
+/* ✅ Prefer Component Composition */
+function Button({ className, ...props }) {
+  return <button className={cn("px-4 py-2 bg-blue-500 rounded", className)} {...props} />;
+}
+```
+
+### 6. Accessibility (a11y)
+- Use `sr-only` for text that should be visible only to screen readers.
+- Use `focus-visible:*` utilities for keyboard navigation focus states.
+
+```html
+<button class="focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none">
+  <span class="sr-only">Close menu</span>
+  <XIcon />
+</button>
+```
+
+### 7. Ordering & Organization
+- Use `prettier-plugin-tailwindcss` to automatically sort classes.
+- Group related variants (e.g., keep all `hover:` classes together if manual sorting is needed, but rely on the plugin).
+
+## New Features (v4)
+
+### Container Queries
+Use `@container` to style elements based on their parent's size.
+
+```html
+<div class="@container">
+  <div class="@sm:text-lg @md:text-xl">
+    Responsive to container
+  </div>
+</div>
+```
+
+### 3D Transforms
+Use native 3D transform utilities.
+
+```html
+<div class="transform-3d rotate-x-12 rotate-y-6 perspective-distant">
+  3D Element
+</div>
+```
+
+### Enhanced Gradients
+New syntax for linear gradients.
+
+```html
+<div class="bg-linear-45 from-blue-500 to-purple-500">
+  45-degree gradient
+</div>
+```
+
+### Composable Variants
+Chain variants for complex logic.
+
+```html
+<div class="group">
+  <span class="group-has-data-active:group-hover:opacity-100">
+    Visible when parent has data-active AND is hovered
+  </span>
+</div>
+```
+
+### CSS Variables in Arbitrary Values
+New syntax uses parenthesis `()` instead of brackets `[]`.
+
+```html
+<!-- v4 Syntax -->
+<div class="bg-(--brand-color)">
+```

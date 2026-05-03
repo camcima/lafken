@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": ".",
+    "outDir": "dist",
+    "strict": true
+  },
+  "include": ["e2e/**/*.ts", "e2e/**/*.tsx", "playwright.config.mjs", "eslint.config.mjs"],
+  "exclude": ["node_modules", "dist", "build", "coverage"]
+}

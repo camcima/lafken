@@ -1,0 +1,116 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "pnpm": true,
+  "vitest": true,
+  "typescript": true,
+  "storybook": true,
+  "prettier": true,
+  "eslint": true,
+  "rules": {
+    "unlisted": "off"
+  },
+  "ignoreBinaries": [
+    "turbo"
+  ],
+  "ignoreDependencies": [
+    "globals",
+    "@typescript-eslint/parser"
+  ],
+  "ignore": [
+    "scripts/*.mjs",
+    // Config files
+    "**/vite.config.ts",
+    "**/vitest.config.ts",
+    "**/eslint.config.mjs"
+  ],
+  "workspaces": {
+    "apps/backend": {
+      "entry": [
+        "src/main.ts",
+        "src/scripts/generate-openapi-spec.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "pino-pretty",
+        "tslib",
+        // The three below are used by the `display-vault-secrets.mjs` script
+        // that runs at container startup, outside the bundled NestJS app.
+        "axios",
+        "axios-retry",
+        "google-auth-library"
+      ],
+      "ignore": [
+        // Files useful for test suites
+        "test/**/*setup*.ts",
+        "test/e2e/__fixtures__/**",
+        "test/__mocks__/**",
+        // Files expected for a base template setup that might not be used in the project
+        "**/base-repository.ts",
+        // EndpointRequiredRoles + Azure JWT payload type are scaffolding for
+        // role-protected endpoints and azure_ad strategy customization.
+        "src/shared/presentation/auth/decorators/endpoint-required-roles.decorator.ts",
+        "src/shared/presentation/auth/azure-ad/azure-ad-bearer-authn.strategy.ts"
+      ]
+    },
+    "apps/web": {
+      "entry": [
+        "index.html"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}"
+      ],
+      "ignoreDependencies": [
+        // These dependencies are expected to be used in the project but might not be directly imported in the entry files
+        "tw-animate-css",
+        "@babel/plugin-proposal-decorators",
+        "shadcn"
+      ],
+      "ignore": [
+        ".storybook/**",
+        "**/app-config.ts",
+        // template scaffolding — intentionally exported for derived projects
+        // Storybook stories are discovered by Storybook config, not by app code
+        "**/*.stories.tsx",
+        // Auth role-gating helpers; derived projects use them per-feature
+        "src/hooks/useAuth.ts",
+        // Alternate layout teams may swap in for the login experience
+        "src/layouts/AuthLayout.tsx",
+        // Auth factory test utilities + public type surface
+        "src/lib/auth/AuthProviderFactory.ts",
+        "src/lib/auth/index.ts",
+        // Form error helper available for derived projects
+        "src/components/forms/ErrorMessage/index.tsx",
+        // Radix UI primitive re-exports — full surface kept for derived projects
+        "src/components/common/Icon/avatar.tsx",
+        "src/components/common/Modal/DropdownMenu/index.tsx",
+        // CVA variant export for design-system extension
+        "src/components/common/Button/index.tsx"
+      ]
+    },
+    "shared/backend-api": {
+      "entry": [
+        "index.ts"
+      ],
+      "project": [
+        "**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "tslib",
+        "@shared/typescript-config"
+      ],
+      "ignore": [
+        "**/*-dto-factories*",
+        // Public auth error contract DTOs — exposed for projects that protect
+        // routes with @AuthenticatedEndpoint() but not consumed by every app.
+        "presentation/auth/*.dto.ts"
+      ]
+    }
+  },
+  "ignoreWorkspaces": [
+    "shared/style-config",
+    "shared/typescript-config",
+    "shared/web-tests"
+  ]
+}

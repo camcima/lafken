@@ -1,0 +1,57 @@
+---
+description: Testing Standards — Pyramid, structure, env, boundaries, CI code coverage
+alwaysApply: false
+---
+
+### Testing Standards
+
+- **Testing Pyramid**: Write a lot of unit tests (that are not too volatile), complement with integration tests, and reserve E2E for critical flows.
+- **Test Runner & Mocking**:
+  - Use *vitest* lib for writing and running automated tests. The commands are:
+      + `pnpm unit/test` for unit tests
+      + `pnpm integration/test` for integration tests
+      + `pnpm e2e/test` for E2E tests
+  - Use *vitest-mock-extended* lib when need fake utilities like mocks and stubs. eg: `mock<MyService>()`
+- **Fixtures Strategy (Integration/E2E)**:
+  - If fixtures are required across many integration/e2e tests, define them in a `test/e2e/__fixtures__` or `test/integration/__fixtures__` folders.
+  - If fixtures are needed for all tests in a specific class/test suite, share them at that suite level only.
+  - If a fixture is needed only for a single test, create it within that test suite file.
+  - Prefer using **data factories** to create fixtures/mocks consistently and reduce duplication.
+- **Mocking & Test Boundaries**:
+  - for Unit tests: mock ports and adapters at boundaries; not the database.
+  - for Integration tests: real adapters for the scope under test.
+  - for E2E tests: bootstrap the app and hit HTTP endpoints; uses the real DB (a test instance); not test real interactions with external services (real adapters) that can be controlled by the test suite.
+  - Shared mocks must live at the `test/e2e/__mocks__` or `test/integration/__mocks__` folder.
+
+### Test Coverage
+
+- To run code coverage tests, execute, inside the `apps/backend` folder: `pnpm test:cov`
+  + It will run all the tests and generate artifact for the report result in a folder called `apps/backend/coverage`.
+
+### Overview on what to test
+
+The following glob patterns are for files that generally should have an **unit test**:
+- `**/presentation/**/*.guard.ts`
+- `**/presentation/middlewares/*.filter.ts`
+- `**/domain/entities/**.entity.ts`
+- `**/utils/*.util.ts`
+
+The following glob patterns are for files that generally should have a **integration test**:
+- `**/*.module.ts` - except the `database.module.ts` (`DatabaseModule`)
+- `**/shared/infrastructure/**`
+- `**/domain/services/**` - not including real interactions with database (`DatabaseModule`)
+- `**/application/services/**` - not including real interactions with database (`DatabaseModule`)
+
+The following glob patterns are for files that generally should have a **E2E test**:
+- `**/presentation/controllers/**`
+- `**/middlewares/**`
+
+There are code componets that **do not** require any sort of automated tests and may not even require test coverage because they don't hold any business logic nor anything else worth to test; namely:
+- utilities at the `test/**/*` directory
+- files with the suffix `.port.ts`
+- files for the glob pattern `/presentation/mappers/**/*.mapper.ts`
+- files for the glob pattern `/presentation/middlewares/**/*.middlewares.ts` that just use some 3rd-party lib
+- the file `/shared/infrastructure/environment.configuration.ts`
+- the directory `/shared/infrastructure/logger`
+- the directory `/shared/infrastructure/telemetry`
+- the file `/shared/infrastructure/logger/logger.module.ts`

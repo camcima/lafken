@@ -1,0 +1,18 @@
+{
+  "extends": "@shared/typescript-config/nest.json",
+  "include": [
+    "./src",
+    "./test",
+    "./src/**/.spec.ts",
+    "vitest.config.ts"
+  ],
+  "references": [
+    { "path": "../../shared/backend-api" }
+  ],
+  "compilerOptions": {
+    "rootDir": ".",
+    "baseUrl": ".",
+    "outDir": "./dist",
+    "noEmit": false,
+  }
+}

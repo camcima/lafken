@@ -1,0 +1,55 @@
+---
+description: Architectural Requirements — Hexagonal Architecture to organizate the files and their file dependencies
+alwaysApply: false
+---
+
+### Architectural Requirements
+
+The application will strictly follow Hexagonal Architecture (also known as Ports and Adapters) to ensure a clear separation of concerns and maintain a framework-independent core.
+
+#### Hexagonal Architecture
+
+- Framework-independent core (framework-agnostic): The domain and application layers will contain pure logic focused on business. No classes in these layers should depend on NestJS exception classes, as they are typically written for a specific type of application and would therefore make it difficult to reuse business rules and communicate domain-related problems.
+- Dependency Injection via custom providers: The NestJS module system will be used exclusively as a binding layer. We will use custom providers to build and inject framework-independent services, repositories, and adapters into the application. All of this will be centralized in NestJS modules.
+  - We will usually use `useFactory` providers at the 'infrastructure' layer as we need to define a adpater for ports
+  - We will use `useExisting` providers when registering that a port must be bound to an existing adapter that is imported from some other module
+  - For controllers, we must register as usual
+  - For use cases provider classes, we will register as usual
+- Adapters for external interactions: All interactions with external systems (databases, caches, external web APIs, message brokers, auth providers and backing services) must be encapsulated within adapters. These adapters will implement abstract classes (ports) defined in the application or domain layers. This ensures that the core logic depends on abstractions, not concrete external implementations, making the system more stable, testable and maintainable.
+  + Follow this formula: high cohesion + controlled coupling = maintainability
+  + Do not abuse on ports: Avoid useless indirections so that if the degree of coupling is low, it should not be a port.
+
+#### General rules about naming a new bounded context
+- Name by domain, not by technology.
+  ❌ Services, Data, Gateway
+  ✅ Billing, Checkout, Pricing
+- Use nouns, not verbs.
+  ❌ ShortenUrl
+  ✅ UrlShortening
+- Avoid naming overlaps (if two names look the same, they probably are).
+- Bounded context is not a technical module — it's based on the domain, not the architecture.
+
+#### Dependency Direction
+
+Must respect the following layer dependency rules:
+- ✅ Use case depends on Domain Services
+- ✅ Use case depends on generic Application Services (e.g.: DateTime, Logger, Telemetry)
+- ✅ Use case depends on Repositories (via ports)
+
+Must avoid as it will violates the isolation on aggregate roots:
+- ❌ Domain repositories calling other repositories
+- ❌ Entities accessing repositories
+- ❌ Circular dependencies between aggregates
+- ❌ Domain/Application layers relying on the presentation layer (e.g.: references to DTO classes; references to HTTP-exceptions such as `BadRequestException`)
+
+✅ Rule of thumb: The composition of data from multiple aggregates is never the responsibility of a repository — it is the responsibility of a service (application, domain, or infrastructure).
+
+Should be avoided but can be tolerated in exceptional cases:
+- Use case depends on Use case
+
+Should always be avoided:
+- ❌ Use case depending on Presentation (Controller, DTOs, CLI, etc)
+- ❌ Use case depending on Infra (DB, HTTP client, etc)
+- ❌ Domain depending on Infra without being via ports
+- ❌ Domain importing Infra models (e.g.: a domain entity `domain/entities/{}.entity.ts` referencing a field from a DB schema model - file `{}.db.ts`)
+

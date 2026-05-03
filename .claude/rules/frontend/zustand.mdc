@@ -1,0 +1,450 @@
+---
+globs: apps/web/src/stores/**/*
+alwaysApply: false
+description: Zustand state management patterns and best practices
+---
+
+# Zustand State Management
+
+## When to Use React Context vs Zustand
+
+### When to Use React Context
+
+**Use React Context for:**
+
+- ✅ **Simple global state** that changes infrequently
+  - Theme provider (light/dark mode)
+  - Authentication context (user info, login status)
+  - Language/locale settings
+  - Feature flags that rarely change
+
+- ✅ **Small to medium applications** where performance isn't critical
+
+- ✅ **Zero dependencies** - Built into React, no external libraries
+
+- ✅ **Read-only or mostly read-only state** that doesn't update often
+
+**Characteristics:**
+
+| Aspect             | Details
+|:-------------------|:-----------------------------------------------------------------------------------------|
+| **Performance**    | ❌ Can cause unnecessary re-renders - all consumers re-render when context value changes |
+| **Setup**          | ✅ Minimal - Built into React, simple Provider pattern                                   |
+| **State Updates**  | ❌ All consumers re-render on any change - must split contexts to optimize               |
+| **Persistence**    | ❌ Manual implementation required - must use localStorage manually                       |
+| **DevTools**       | ❌ Limited debugging - React DevTools only, no time-travel                               |
+| **Middleware**     | ❌ No middleware support - must implement manually                                       |
+| **TypeScript**     | ⚠️ Manual type definitions - context type inference can be tricky                        |
+| **Bundle Size**    | ✅ 0 KB (built-in)                                                                       |
+| **Learning Curve** | ✅ Low - Part of React core                                                              |
+|:-------------------|:-----------------------------------------------------------------------------------------|
+
+**Example:**
+```typescript
+// Simple theme context - perfect for Context
+const ThemeContext = createContext<'light' | 'dark'>('light');
+
+// Auth context with user info (rarely changes)
+const AuthContext = createContext<User | null>(null);
+```
+
+### When to Use Zustand
+
+**Use Zustand for:**
+
+- ✅ **Complex state** with frequent updates
+  - UI preferences (sidebar, modals, notifications)
+  - Form state that needs to be shared across components
+  - Multi-step wizards
+  - Shopping cart state
+
+- ✅ **Medium to large applications** where performance matters
+
+- ✅ **State that needs persistence** (localStorage/sessionStorage)
+
+- ✅ **Multiple slices of related state** that benefit from organization
+
+- ✅ **Performance-critical scenarios** requiring selective re-renders
+
+**Characteristics:**
+
+| Aspect             | Details
+|:-------------------|:-------------------------------------------------------------------------------------|
+| **Performance**    | ✅ Optimized re-renders - only components selecting changed state re-render          |
+| **Setup**          | ⚠️ Requires external library - minimal boilerplate, slice pattern for organization   |
+| **State Updates**  | ✅ Selective re-renders - use selectors to subscribe to specific state               |
+| **Persistence**    | ✅ Built-in `persist` middleware - easy localStorage/sessionStorage integration      |
+| **DevTools**       | ✅ Redux DevTools integration - time-travel debugging, action tracking               |
+| **Middleware**     | ✅ Rich middleware ecosystem - `immer`, `subscribeWithSelector`, etc.                |
+| **TypeScript**     | ✅ Excellent TypeScript support - type-safe selectors, infer types from store        |
+| **Bundle Size**    | ⚠️ ~1 KB (small library)                                                             |
+| **Learning Curve** | ⚠️ Moderate - Additional API to learn                                                |
+|:-------------------|:-------------------------------------------------------------------------------------|
+
+**Example:**
+```typescript
+// Complex UI state with frequent updates - perfect for Zustand
+const useUIStore = create((set) => ({
+  sidebarOpen: false,
+  modals: {},
+  notifications: [],
+  // ... many state properties
+}));
+
+// User preferences (needs persistence)
+const usePreferencesStore = create(
+  persist((set) => ({ /* ... */ }), { name: 'preferences' })
+);
+```
+
+### Important: NOT for Server State
+
+- ❌ **Both Context and Zustand should NOT be used for server data**
+- ✅ **Use TanStack Query** for API data, caching, and server state management
+
+## Store Architecture
+
+### Slice Pattern
+
+Organize stores using the slice pattern for better maintainability. Each slice is a separate `StateCreator` that can access and modify the full store state:
+
+```typescript
+// stores/slices/ui-slice.ts
+import type { StateCreator } from "zustand";
+
+interface UISlice {
+  sidebarOpen: boolean;
+  toggleSidebar: () => void;
+}
+
+interface ThemeSlice {
+  theme: "light" | "dark";
+  setTheme: (theme: "light" | "dark") => void;
+}
+
+interface SharedSlice {
+  resetUI: () => void;
+}
+
+// UI slice can access and modify UI state
+const createUISlice: StateCreator<
+  UISlice & ThemeSlice,
+  [["zustand/immer", never]],
+  [],
+  UISlice
+> = (set) => ({
+  sidebarOpen: false,
+  toggleSidebar: () =>
+    set((state) => {
+      state.sidebarOpen = !state.sidebarOpen;
+    }),
+});
+
+// Theme slice can access and modify theme state
+const createThemeSlice: StateCreator<
+  UISlice & ThemeSlice,
+  [["zustand/immer", never]],
+  [],
+  ThemeSlice
+> = (set) => ({
+  theme: "light",
+  setTheme: (theme) =>
+    set((state) => {
+      state.theme = theme;
+    }),
+});
+
+// Shared slice can access methods from other slices using `get()`
+const createSharedSlice: StateCreator<
+  UISlice & ThemeSlice,
+  [["zustand/immer", never]],
+  [],
+  SharedSlice
+> = (set, get) => ({
+  resetUI: () => {
+    // You can reuse previous methods
+    get().toggleSidebar();
+    get().setTheme("light");
+    // Or set directly
+    set((state) => {
+      state.sidebarOpen = false;
+      state.theme = "light";
+    });
+  },
+});
+```
+
+### Store Composition
+
+Combine slices in the main store using `devtools(immer(...))` as recommended by Zustand:
+
+```typescript
+// stores/index.ts
+import { create } from "zustand";
+import { devtools } from "zustand/middleware";
+import { immer } from "zustand/middleware/immer";
+
+export const useUIStore = create<UISlice & ThemeSlice & SharedSlice>()(
+  devtools(
+    immer((...a) => ({
+      ...createUISlice(...a),
+      ...createThemeSlice(...a),
+      ...createSharedSlice(...a),
+    })),
+    { name: "UIStore", enabled: import.meta.env.DEV },
+  ),
+);
+```
+
+## Middleware Usage
+
+### Immer Middleware
+
+Use `immer` middleware for cleaner immutable updates:
+
+```typescript
+// ✅ GOOD - With immer
+set((state) => {
+  state.userPreferences.theme = theme;
+});
+
+// ❌ BAD - Without immer (more verbose)
+set((state) => ({
+  ...state,
+  userPreferences: {
+    ...state.userPreferences,
+    theme: theme,
+  },
+}));
+```
+
+### Persist Middleware
+
+Use `persist` for state that should survive page refreshes:
+
+```typescript
+persist(
+  (set) => ({ /* store */ }),
+  {
+    name: 'user-preferences-storage',
+    partialize: (state) => ({ userPreferences: state.userPreferences }),
+  }
+)
+```
+
+### Devtools Middleware
+
+Always use `devtools` in development for debugging. Use the `enabled` flag to conditionally enable devtools:
+
+```typescript
+devtools(
+  (set) => ({ /* store */ }),
+  {
+    name: 'UserPreferencesStore',
+    enabled: import.meta.env.DEV, // Only enable in development
+  }
+)
+```
+
+## Component Usage Patterns
+
+### Selector Optimization
+
+**Always use selectors** to prevent unnecessary re-renders:
+
+```typescript
+// ❌ BAD - Subscribes to entire store, causes re-renders on any change
+const { userPreferences, otherState } = useStore();
+
+// ✅ GOOD - Only subscribes to specific slice
+const userPreferences = useStore((state) => state.userPreferences);
+
+// ✅ GOOD - Multiple selectors for different slices
+const theme = useStore((state) => state.userPreferences.theme);
+const language = useStore((state) => state.userPreferences.language);
+```
+
+### Action Separation
+
+Separate actions to prevent re-renders when actions change:
+
+```typescript
+// ✅ GOOD - Actions don't cause re-renders
+const setTheme = useStore((state) => state.setTheme);
+const theme = useStore((state) => state.userPreferences.theme);
+
+// Or access actions directly from store (no re-render)
+const handleThemeChange = () => {
+  useStore.getState().setTheme('dark');
+};
+```
+
+### Shallow Comparison for Objects
+
+Use `useShallow` when selecting multiple properties:
+
+```typescript
+import { useShallow } from "zustand/react/shallow";
+
+// ✅ GOOD - Prevents re-renders when object reference changes but values don't
+const { theme, language } = useStore(
+  useShallow((state) => ({
+    theme: state.userPreferences.theme,
+    language: state.userPreferences.language,
+  }))
+);
+```
+
+## Type Safety
+
+### Store Types
+
+Define store types explicitly:
+
+```typescript
+// stores/types.ts
+export interface Store {
+  userPreferences: UserPreferences;
+}
+
+export interface UserPreferencesActions {
+  setTheme: (theme: Theme) => void;
+  setLanguage: (language: Language) => void;
+}
+
+export type StoreActions = UserPreferencesActions & {
+  resetStore: () => void;
+};
+```
+
+### StateCreator Types
+
+Use proper `StateCreator` types for slices:
+
+```typescript
+import type { StateCreator } from "zustand";
+
+// StateCreator<StoreType, MiddlewareTypes, AdditionalMiddleware, SliceType>
+const createUISlice: StateCreator<
+  UISlice & ThemeSlice,           // Full store type (what this slice can access)
+  [["zustand/immer", never]],    // Middleware types (immer in this case)
+  [],                             // Additional middleware (empty array)
+  UISlice                         // What this slice returns
+> = (set) => ({ /* ... */ });
+```
+
+**Type Parameters Explained:**
+- **First parameter**: The complete store type (all slices combined) - allows the slice to access other slices' state
+- **Second parameter**: Middleware types tuple - `[["zustand/immer", never]]` for immer middleware
+- **Third parameter**: Additional middleware (usually empty `[]`)
+- **Fourth parameter**: The return type of this specific slice
+
+## Best Practices
+
+### 1. Keep Stores Focused
+
+Each slice should handle a single domain concern:
+
+```typescript
+// ✅ GOOD - Single responsibility
+createUserPreferencesSlice
+createUISlice
+createAuthSlice
+
+// ❌ BAD - Mixed concerns
+createMixedSlice // Handles both UI and user preferences
+```
+
+### 2. Use Default State
+
+Define default state separately for reusability:
+
+```typescript
+// stores/default-state.ts
+export const defaultUserPreferences: UserPreferences = {
+  theme: 'light',
+  language: 'en',
+  dateFormat: 'YYYY-MM-DD',
+};
+
+export const defaultStoreState: Store = {
+  userPreferences: defaultUserPreferences,
+};
+```
+
+### 3. Subscribe to Changes
+
+Use `subscribeWithSelector` for side effects:
+
+```typescript
+import { subscribeWithSelector } from "zustand/middleware";
+
+useStore.subscribe(
+  (state) => state.userPreferences.theme,
+  (theme) => {
+    // Side effect when theme changes
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+);
+```
+
+### 4. Reset Store
+
+Provide a reset function for testing and logout scenarios:
+
+```typescript
+resetStore() {
+  set(defaultStoreState);
+}
+```
+
+## Anti-Patterns to Avoid
+
+### ❌ Don't Store Server State
+
+```typescript
+// ❌ BAD - Server state in Zustand
+const useStore = create((set) => ({
+  users: [], // Should be in React Query
+  fetchUsers: async () => {
+    const users = await api.getUsers();
+    set({ users });
+  },
+}));
+
+// ✅ GOOD - Server state in React Query
+const useUsers = () => {
+  return useQuery({
+    queryKey: ['users'],
+    queryFn: () => userService.getUsers(),
+  });
+};
+```
+
+### ❌ Don't Subscribe to Entire Store
+
+```typescript
+// ❌ BAD - Causes unnecessary re-renders
+const store = useStore();
+
+// ✅ GOOD - Select specific state
+const theme = useStore((state) => state.userPreferences.theme);
+```
+
+### ❌ Don't Mutate State Directly (Without Immer)
+
+```typescript
+// ❌ BAD - Direct mutation without immer
+const increment = () => {
+  const state = useStore.getState();
+  state.count++; // Mutates state directly
+  useStore.setState(state);
+};
+
+// ✅ GOOD - With immer middleware
+const increment = () => {
+  set((state) => {
+    state.count++; // Immer handles immutability
+  });
+};
+```

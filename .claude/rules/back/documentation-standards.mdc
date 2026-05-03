@@ -1,0 +1,110 @@
+---
+description: Documentation Standards — writting README, code inline docs and changelogs
+alwaysApply: false
+---
+
+### Documentation Standards
+
+- **README.md Requirements**: Maintain an up-to-date **README.md** file in the project root.
+  + **Application Overview**: Brief description of what the application does and its purpose.
+  + **Architecture Overview**: High-level architecture diagram or description (reference to detailed docs if needed).
+  + **Technology Stack**: List of main technologies, frameworks, and libraries used.
+  + **Prerequisites**: Required tools and versions (Node.js, pnpm, Docker, etc.).
+  + **Development Environment Setup**:
+    - How to clone the repository.
+    - How to install dependencies (`pnpm install`).
+    - How to set up environment variables (`.env` file).
+    - How to run database migrations.
+  + **Running Locally**:
+    - Commands to start the application in development mode.
+    - How to run tests (unit, integration, e2e).
+    - How to run linting and formatting.
+  + **Project Structure**: Brief overview of the folder structure and key directories.
+  + **Contributing**: Link to contribution guidelines (if applicable).
+  + **License**: License information.
+  + **Deep Dives**: Link to a dedicated `/docs` directory for deeper architecture documents, diagrams (e.g., Mermaid), and ADRs (Architecture Decision Records).
+
+- **Code Documentation**:
+  - Use **JSDoc/TSDoc** comments for public APIs, interfaces, and complex functions.
+  - Document parameters, return types, and exceptions.
+  - Keep inline comments minimal and focused on "why", not "what".
+
+- **API Documentation**:
+  - Maintain OpenAPI/Swagger documentation for all endpoints.
+  - Keep API documentation in sync with implementation.
+
+- **/docs Directory**:
+  - Store deeper architectural documentation, Mermaid diagrams, and ADRs in `/docs`.
+  - Use ADRs to record architectural decisions with context and consequences.
+  - Reference diagrams and ADRs from the README for discoverability.
+
+
+#### API Documentation
+
+We are following a code-first approach to generate OpenAPI v3 specification of the web server's APIs.
+
+To do that, we must use the `@Api*` decorator factories. For example:
+
+```ts
+// ... some controller file
+  @Get(":user_email")
+  @ApiOperation({ summary: "Get informations about a given user" })
+  @ApiOkResponse({ type: UserInformationResponseDTO })
+  @ApiExtraModels(UserNotFoundErrorResponseDTO)
+  @ApiNotFoundResponse({
+    content: {
+      "application/problem+json": {
+        schema: {
+          $ref: getSchemaPath(UserNotFoundErrorResponseDTO),
+        },
+      },
+    },
+  })
+  async getUserInfo(
+    @Param() paramsDto: GetUserInfoPathParamsDTO,
+  ): Promise<UserInformationResponseDTO> {
+    ...
+  }
+```
+
+Since the error handling (ie, when the API reply with a status code other than 2xx) enforces the usage of the Problem Details RFC 7807, when registering error response we must write the `"application/problem+json"` just because the default is always `"application/json"`.
+
+When running the application, a Swagger UI page will be available at `/openapi` route;  
+while the JSON version of the OpenAPI specification is available at `/openapi.json` page and the YAML version will be available at `/openapi.yaml`
+
+#### API request & response DTO definitions
+
+- **Naming convention**:
+  + for request (ie, input) DTOs, use the suffix `DTO` in the class that defines the shape of the request's payload or request path parameter or request query string
+  + for response (ie, output) DTOs, use the suffix `ResponseDTO`
+
+- **Style**: When using the decorators `@Api*` always make them to be the last one in the list of the decorators being used in a class/method/class property because they don't add any behavior to the code - just documentation
+  + for response DTOs, never use decorators for validation or transformation
+  + for request DTOs (used in `@Param()`, `@Query()` and `@Body()`), always add validation and transformation using `class-validator` and `class-transform` libs 
+
+```ts
+import { ApiProperty } from "@nestjs/swagger";
+import { Transform } from "class-transformer";
+import { IsNotEmpty } from "class-validator";
+
+export class MyResourceResponseDTO {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+  
+  // ... other fields
+}
+
+export class RegisterMyResourceDTO {
+  @IsNotEmpty()
+  @Transform(
+    ({ value }): unknown => (typeof value === "string" ? value.trim() : value) || undefined,
+  )
+  @ApiProperty()
+  name: string;
+
+  // ... other fields
+}
+```

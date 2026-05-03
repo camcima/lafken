@@ -1,0 +1,287 @@
+---
+globs: apps/web/**/*
+alwaysApply: false
+description: TypeScript conventions for React Apps, React patterns, and component organization
+---
+
+# TypeScript & React Guidelines
+
+## SOLID Principles in React
+
+### Single Responsibility Principle (SRP)
+A component should do one thing and do it well. Separate concerns like data fetching, logic, and UI.
+
+```typescript
+// ❌ BAD: Component does everything
+function UserProfile() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/user').then(res => res.json()).then(setUser);
+  }, []);
+
+  if (!user) return <div>Loading...</div>;
+  return <div>{user.name}</div>;
+}
+
+// ✅ GOOD: Separation of concerns
+// 1. Custom hook for data
+function useUser() {
+  return useQuery({ queryKey: ['user'], queryFn: fetchUser });
+}
+
+// 2. Presentation component
+function UserProfileDisplay({ user }: { user: User }) {
+  return <div>{user.name}</div>;
+}
+
+// 3. Container component
+function UserProfile() {
+  const { data: user, isLoading } = useUser();
+  if (isLoading) return <div>Loading...</div>;
+  return <UserProfileDisplay user={user} />;
+}
+```
+
+### Open/Closed Principle (OCP)
+Components should be open for extension but closed for modification. Use props (especially children and render props) to allow variation without changing source code.
+
+```typescript
+// ❌ BAD: Modifying component for every new variant
+function Button({ variant }: { variant: 'primary' | 'secondary' | 'icon' }) {
+  if (variant === 'icon') return <button className="icon-btn">...</button>;
+  // ...
+}
+
+// ✅ GOOD: Composition allows extension
+function Button({ children, icon, ...props }) {
+  return (
+    <button {...props}>
+      {icon && <span className="icon">{icon}</span>}
+      {children}
+    </button>
+  );
+}
+
+// Usage:
+<Button icon={<PlusIcon />}>Add Item</Button>
+```
+
+### Liskov Substitution Principle (LSP)
+Subtypes must be substitutable for their base types. In React, a component accepting specific props should handle any valid value for those props without breaking.
+
+```typescript
+// ❌ BAD: Component breaks if optional prop is missing
+function Avatar({ user }: { user?: User }) {
+  // Crashes if user is undefined
+  return <img src={user.imageUrl} />;
+}
+
+// ✅ GOOD: Robust handling of all valid states
+function Avatar({ user }: { user?: User }) {
+  if (!user) return <DefaultAvatar />;
+  return <img src={user.imageUrl} />;
+}
+```
+
+### Interface Segregation Principle (ISP)
+Clients should not be forced to depend on interfaces they do not use. Components should only require the props they actually need.
+
+```typescript
+// ❌ BAD: Requiring full User object when only name is needed
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  preferences: UserPreferences;
+}
+
+function UserGreeting({ user }: { user: User }) {
+  return <div>Hello, {user.name}</div>;
+}
+
+// ✅ GOOD: Only requesting necessary props
+function UserGreeting({ name }: { name: string }) {
+  return <div>Hello, {name}</div>;
+}
+```
+
+### Dependency Inversion Principle (DIP)
+High-level modules should not depend on low-level modules. Both should depend on abstractions. In React, use Context or props to inject dependencies rather than hardcoding them.
+
+```typescript
+// ❌ BAD: Hard dependency on specific service
+function UserList() {
+  const users = apiService.getUsers(); // Direct coupling
+  return <ul>{users.map(u => <li key={u.id}>{u.name}</li>)}</ul>;
+}
+
+// ✅ GOOD: Dependency injection via hook/context
+function UserList({ useUsersHook = useUsers }: { useUsersHook?: typeof useUsers }) {
+  const { data: users } = useUsersHook();
+  return <ul>{users?.map(u => <li key={u.id}>{u.name}</li>)}</ul>;
+}
+```
+
+## TypeScript Conventions
+- Use strict TypeScript configuration
+- Prefer `interface` over `type` for object shapes
+- Use proper type guards instead of `any` types
+- Leverage utility types (`Partial`, `Pick`, `Omit`, etc.)
+- Use `const assertions` for immutable data
+- Prefer nullish coalescing (`??`) over logical OR (`||`) for default values (see best practices section below)
+
+## React Patterns
+
+- Use functional components with hooks
+- Prefer custom hooks for reusable logic
+- Use `React.memo()` for performance optimization WHEN NEEDED
+- Follow the "lift state up" principle
+- Use proper error boundaries for error handling
+- Use `Readonly` for TSX props
+
+## Component Organization
+
+### Components vs Pages vs Layouts
+
+- **Components (`src/components/`)**: Reusable UI building blocks used across multiple pages/routes
+- **Pages (`src/pages/`)**: Route-specific components representing entire page views (used only once)
+- **Layouts (`src/layouts/`)**: Complete page layout templates that wrap multiple pages
+
+### Component Structure
+
+- `src/components/common/`: Generic reusable UI (Button, Modal, Card, Icon)
+- `src/components/navigation/`: Navigation building blocks (Header, Sidebar, Footer, Breadcrumbs)
+- `src/components/forms/`: Form-related components (FormField, FormGroup, Validation)
+- `src/components/feedback/`: User feedback (Loading, Error, Success, Empty)
+- `src/components/data-display/`: Data display (Table, Chart, Badge)
+- `src/components/business/`: Domain-specific components (Aircraft, Maintenance, User)
+
+### Usage Guidelines
+
+**Use Components for:** Reusable UI elements, shared form elements, common feedback patterns
+
+**Use Layouts for:** Complete page templates, route-level layout definitions, authentication/role-based layouts, device-specific layouts
+
+**Use Pages for:** Route-specific views, page-level state management, unique layouts, complete user workflows
+
+### Component → Layout → Page Flow Example
+
+```typescript
+// 1. Component: src/components/navigation/Header/Header.tsx
+export function Header() {
+  return (
+    <header className="bg-blue-600 text-white p-4">
+      <h1>LATAM eMantto</h1>
+      <nav>
+        <a href="/dashboard">Dashboard</a>
+      </nav>
+    </header>
+  );
+}
+
+// 2. Layout: src/layouts/MainLayout.tsx
+import { Header } from '@/components/navigation/Header/Header';
+import { Sidebar } from '@/components/navigation/Sidebar/Sidebar';
+import { Footer } from '@/components/navigation/Footer/Footer';
+
+export function MainLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <div className="flex flex-1">
+        <Sidebar />
+        <main className="flex-1 p-6">
+          {children}
+        </main>
+      </div>
+      <Footer />
+    </div>
+  );
+}
+
+// 3. Page: src/pages/Dashboard/DashboardPage.tsx
+import { MainLayout } from '@/layouts/MainLayout';
+import { StatsCard } from '@/components/common/Card/StatsCard';
+
+export function DashboardPage() {
+  return (
+    <MainLayout>
+      <h2>Maintenance Dashboard</h2>
+      <div className="grid grid-cols-3 gap-4">
+        <StatsCard title="Active Aircraft" value="24" />
+        <StatsCard title="Pending Tasks" value="12" />
+        <StatsCard title="Completed Today" value="8" />
+      </div>
+    </MainLayout>
+  );
+}
+
+// 4. Usage in Router: src/routes/dashboard.tsx
+import { createFileRoute } from '@tanstack/react-router';
+import { DashboardPage } from '@/pages/DashboardPage';
+
+export const Route = createFileRoute('/dashboard')({
+  component: DashboardPage,
+});
+```
+
+### Naming Conventions
+
+- Components: PascalCase (`UserProfile.tsx`, `MaintenanceCard.tsx`)
+- Component folders: PascalCase matching the main component
+- Pages: PascalCase (`DashboardPage.tsx`)
+- Utility files: camelCase (`formatDate.ts`)
+- kebab-case for route files: `user-settings.tsx`
+
+## Nullish Coalescing Best Practices
+
+**Use `??` when you want to preserve falsy values:**
+```typescript
+// ❌ BAD - Logical OR treats 0, false, "" as falsy
+const port = process.env.PORT || 3000; // If PORT is "0", uses 3000
+const showBanner = config.showBanner || true; // If showBanner is false, uses true
+
+// ✅ GOOD - Nullish coalescing only treats null/undefined as nullish
+const port = process.env.PORT ?? 3000; // Only uses 3000 if PORT is null/undefined
+const showBanner = config.showBanner ?? true; // Preserves false value
+```
+
+**When to use `||` vs `??`:**
+```typescript
+// Use || when you want to treat ALL falsy values as "empty"
+const displayName = user.name || user.email || "Guest"; // Any falsy name falls back
+
+// Use ?? when you only want to handle null/undefined
+const timeout = config.timeout ?? 5000; // Preserves 0 as valid timeout
+```
+
+## Immutability Best Practices
+
+**Prefer `immer` for complex state updates** to maintain immutability with cleaner syntax.
+
+**Avoid Direct Mutations:**
+```typescript
+// ❌ BAD - Modifying by reference
+const updateUser = (user: User, newData: Partial<User>) => {
+  user.name = newData.name; // Mutates original object
+  return user;
+};
+
+// ✅ GOOD - Immutable patterns
+const updateUser = (user: User, newData: Partial<User>): User => {
+  return {
+    ...user,
+    ...newData,
+  };
+};
+
+// ✅ GOOD - Using utility libraries
+import { produce } from 'immer';
+const updateUser = (user: User, newData: Partial<User>): User => {
+  return produce(user, (draft) => {
+    Object.assign(draft, newData);
+  });
+};
+```

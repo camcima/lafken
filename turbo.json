@@ -1,0 +1,41 @@
+{
+  "$schema": "./node_modules/turbo/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", "build/**", "!**/node_modules/**"]
+    },
+    "lint": {
+      "inputs": ["$TURBO_DEFAULT$", ".eslintrc*", "eslint.config.*"],
+      "outputs": []
+    },
+    "format": {
+      "inputs": ["$TURBO_DEFAULT$"],
+      "outputs": []
+    },
+    "format-check": {
+      "inputs": [],
+      "outputs": []
+    },
+    "type-check": {
+      "inputs": ["$TURBO_DEFAULT$", "tsconfig.json", "tsconfig.*.json"],
+      "outputs": [],
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "inputs": ["$TURBO_DEFAULT$", "**/*.test.*", "**/*.spec.*", "vitest.config.*"],
+      "outputs": [],
+      "dependsOn": ["^build"]
+    },
+    "test:cov": {
+      "inputs": ["$TURBO_DEFAULT$", "**/*.test.*", "**/*.spec.*", "vitest.config.*"],
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

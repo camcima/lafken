@@ -1,0 +1,387 @@
+---
+globs: apps/web/src/**/*
+alwaysApply: false
+description: React performance optimization patterns and best practices
+---
+
+# Performance Optimization
+
+## React.memo Usage
+
+### When to Use React.memo
+
+Use `React.memo` for components that:
+- Re-render frequently with the same props
+- Are expensive to render (complex calculations, large lists)
+- Are passed as props to frequently re-rendering parents
+
+```typescript
+// ✅ GOOD - Expensive component that rarely changes
+const ExpensiveChart = React.memo(({ data }: { data: ChartData }) => {
+  const processedData = useMemo(() => processChartData(data), [data]);
+  return <Chart data={processedData} />;
+});
+
+// ❌ BAD - Simple component, memo overhead not worth it
+const SimpleLabel = React.memo(({ text }: { text: string }) => {
+  return <span>{text}</span>;
+});
+```
+
+### Custom Comparison Function
+
+Use custom comparison for complex props:
+
+```typescript
+const UserCard = React.memo(
+  ({ user }: { user: User }) => {
+    return <div>{user.name}</div>;
+  },
+  (prevProps, nextProps) => {
+    // Only re-render if user ID or name changes
+    return (
+      prevProps.user.id === nextProps.user.id &&
+      prevProps.user.name === nextProps.user.name
+    );
+  }
+);
+```
+
+## useMemo and useCallback
+
+### useMemo for Expensive Calculations
+
+```typescript
+// ✅ GOOD - Expensive calculation memoized; use toSorted() (or spread first)
+// to avoid mutating the prop array in place.
+const ExpensiveComponent = ({ items }: { items: Item[] }) => {
+  const sortedItems = useMemo(() => {
+    return items.toSorted((a, b) => a.priority - b.priority);
+    // Or: [...items].sort((a, b) => a.priority - b.priority)
+  }, [items]);
+
+  return <ItemList items={sortedItems} />;
+};
+
+// ❌ BAD - Recalculates on every render AND mutates the prop array in place
+const ExpensiveComponent = ({ items }: { items: Item[] }) => {
+  const sortedItems = items.sort((a, b) => a.priority - b.priority);
+  return <ItemList items={sortedItems} />;
+};
+```
+
+### useCallback for Stable Function References
+
+```typescript
+// ✅ GOOD - Stable callback reference
+const ParentComponent = () => {
+  const [count, setCount] = useState(0);
+
+  const handleClick = useCallback(() => {
+    setCount(c => c + 1);
+  }, []); // Empty deps - function never changes
+
+  return <ExpensiveChildComponent onClick={handleClick} />;
+};
+
+// ❌ BAD - New function on every render
+const ParentComponent = () => {
+  const [count, setCount] = useState(0);
+
+  const handleClick = () => {
+    setCount(c => c + 1);
+  };
+
+  return <ExpensiveChildComponent onClick={handleClick} />;
+};
+```
+
+### When NOT to Use useMemo/useCallback
+
+```typescript
+// ❌ BAD - Overhead not worth it for simple operations
+const sum = useMemo(() => a + b, [a, b]);
+
+// ✅ GOOD - Simple operations don't need memoization
+const sum = a + b;
+
+// ❌ BAD - Function only used once, no need for useCallback
+const handleClick = useCallback(() => {
+  console.log('clicked');
+}, []);
+
+// ✅ GOOD - Only memoize if passed to memoized child
+const handleClick = () => {
+  console.log('clicked');
+};
+```
+
+## Code Splitting and Lazy Loading
+
+### Route-Level Code Splitting
+
+```typescript
+// ✅ GOOD - Lazy load route components
+import { lazy } from 'react';
+
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
+
+// In router
+export const Route = createFileRoute('/dashboard')({
+  component: DashboardPage,
+});
+```
+
+### Component-Level Code Splitting
+
+```typescript
+// ✅ GOOD - Lazy load heavy components
+const HeavyChart = lazy(() => import('@/components/charts/HeavyChart'));
+
+function Dashboard() {
+  const [showChart, setShowChart] = useState(false);
+
+  return (
+    <div>
+      <button onClick={() => setShowChart(true)}>Show Chart</button>
+      {showChart && (
+        <Suspense fallback={<ChartSkeleton />}>
+          <HeavyChart />
+        </Suspense>
+      )}
+    </div>
+  );
+}
+```
+
+### Always Provide Suspense Boundaries
+
+```typescript
+// ✅ GOOD - Suspense boundary for lazy components
+<Suspense fallback={<LoadingSpinner />}>
+  <LazyComponent />
+</Suspense>
+
+// ❌ BAD - No fallback, poor UX
+<LazyComponent />
+```
+
+## Virtual Scrolling
+
+Use virtual scrolling for large lists:
+
+```typescript
+// ✅ GOOD - Virtual scrolling for 1000+ items
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+function LargeList({ items }: { items: Item[] }) {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 50,
+  });
+
+  return (
+    <div ref={parentRef} className="h-96 overflow-auto">
+      <div style={{ height: `${virtualizer.getTotalSize()}px` }}>
+        {virtualizer.getVirtualItems().map((virtualItem) => (
+          <div
+            key={virtualItem.key}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: `${virtualItem.size}px`,
+              transform: `translateY(${virtualItem.start}px)`,
+            }}
+          >
+            <ItemCard item={items[virtualItem.index]} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+## Debouncing and Throttling
+
+### Debounce Expensive Operations
+
+```typescript
+// ✅ GOOD - Debounce search input
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+
+function SearchInput() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
+
+  const { data } = useQuery({
+    queryKey: ['search', debouncedSearchTerm],
+    queryFn: () => searchService.search(debouncedSearchTerm),
+    enabled: !!debouncedSearchTerm,
+  });
+
+  return (
+    <input
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      placeholder="Search..."
+    />
+  );
+}
+```
+
+### Throttle Scroll Events
+
+```typescript
+// ✅ GOOD - Throttle scroll handler
+import { throttle } from 'lodash-es';
+
+function ScrollableList() {
+  const handleScroll = useMemo(
+    () =>
+      throttle((e: React.UIEvent<HTMLDivElement>) => {
+        // Handle scroll
+      }, 100),
+    []
+  );
+
+  return <div onScroll={handleScroll}>...</div>;
+}
+```
+
+## Image Optimization
+
+### Lazy Load Images
+
+```typescript
+// ✅ GOOD - Native lazy loading
+<img
+  src={imageUrl}
+  alt={description}
+  loading="lazy"
+  decoding="async"
+/>
+
+// ✅ GOOD - Use WebP format when possible
+<picture>
+  <source srcSet={imageWebP} type="image/webp" />
+  <img src={imageJPG} alt={description} loading="lazy" />
+</picture>
+```
+
+## React Query Optimization
+
+### Selective Data Fetching
+
+```typescript
+// ✅ GOOD - Only fetch what's needed
+const { data: user } = useQuery({
+  queryKey: ['user', id],
+  queryFn: () => userService.getUser(id),
+  select: (user) => ({
+    id: user.id,
+    name: user.name,
+    // Only select needed fields
+  }),
+});
+
+// ❌ BAD - Fetching entire user object when only name is needed
+const { data: user } = useQuery({
+  queryKey: ['user', id],
+  queryFn: () => userService.getUser(id),
+});
+```
+
+### Stale Time Configuration
+
+```typescript
+// ✅ GOOD - Configure stale time based on data freshness needs
+const { data } = useQuery({
+  queryKey: ['users'],
+  queryFn: getUsers,
+  staleTime: 5 * 60 * 1000, // 5 minutes - data doesn't change often
+});
+
+const { data: notifications } = useQuery({
+  queryKey: ['notifications'],
+  queryFn: getNotifications,
+  staleTime: 0, // Always fresh - real-time data
+});
+```
+
+## Best Practices
+
+### 1. Measure Before Optimizing
+
+```typescript
+// Use React DevTools Profiler to identify bottlenecks
+// Don't optimize prematurely
+```
+
+### 2. Optimize Re-renders, Not Renders
+
+```typescript
+// ✅ GOOD - Prevent unnecessary re-renders
+const MemoizedChild = React.memo(ChildComponent);
+
+// ❌ BAD - Trying to prevent initial render (impossible)
+```
+
+### 3. Use React DevTools Profiler
+
+- Identify components that re-render unnecessarily
+- Measure render times
+- Find performance bottlenecks
+
+### 4. Bundle Analysis
+
+```bash
+# Analyze bundle size
+pnpm build --analyze
+
+# Check for large dependencies
+pnpm why <package-name>
+```
+
+## Anti-Patterns to Avoid
+
+### ❌ Overusing React.memo
+
+```typescript
+// ❌ BAD - Memoizing everything
+const Button = React.memo(({ onClick, children }) => (
+  <button onClick={onClick}>{children}</button>
+));
+
+// ✅ GOOD - Only memoize when needed
+const Button = ({ onClick, children }) => (
+  <button onClick={onClick}>{children}</button>
+);
+```
+
+### ❌ Memoizing Primitives
+
+```typescript
+// ❌ BAD - No benefit
+const count = useMemo(() => 0, []);
+
+// ✅ GOOD - Just use the value
+const count = 0;
+```
+
+### ❌ Creating Objects/Arrays in Render
+
+```typescript
+// ❌ BAD - New object on every render
+<ChildComponent style={{ margin: 10 }} />
+
+// ✅ GOOD - Stable reference
+const style = useMemo(() => ({ margin: 10 }), []);
+<ChildComponent style={style} />
+```

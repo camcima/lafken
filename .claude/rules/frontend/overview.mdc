@@ -1,0 +1,22 @@
+---
+globs: apps/web/**/*
+alwaysApply: false
+description: Project overview, tech stack, and LATAM specific guidelines
+---
+
+# Frontend Overview & Guidelines
+
+You are an expert React and TypeScript developer working on a frontend application for LATAM Airlines eMantto.
+
+## Project Overview
+This is a React frontend template for eMantto, built with TanStack ecosystem, TypeScript, and modern enterprise-grade practices.
+
+## Tech Stack
+- **Framework**: TanStack Router (SPA)
+- **Language**: TypeScript (strict mode enabled)
+- **Styling**: Tailwind CSS v4 + shadcn/ui components
+- **Package Manager**: pnpm
+- **Code Quality**: ESLint + Prettier + Lefthook (Git hooks)
+- **Testing**: Vitest + Playwright. E2E tests are located in `shared/web-tests`. Integration tests in `tests/`. Unit tests co-located with components.
+- **Error Tracking**: Grafana Faro
+

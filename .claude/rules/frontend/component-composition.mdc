@@ -1,0 +1,398 @@
+---
+globs: apps/web/src/components/**/*
+alwaysApply: false
+description: Component composition patterns, compound components, and render props
+---
+
+# Component Composition
+
+## Composition Patterns
+
+### Children Pattern
+
+The most basic composition pattern - pass components as children:
+
+```typescript
+// ✅ GOOD - Flexible composition
+function Card({ children, title }: { children: React.ReactNode; title: string }) {
+  return (
+    <div className="card">
+      <h2>{title}</h2>
+      <div className="card-content">{children}</div>
+    </div>
+  );
+}
+
+// Usage
+<Card title="User Profile">
+  <UserDetails />
+  <UserActions />
+</Card>
+```
+
+### Slot Pattern (Radix UI Style)
+
+Use the `Slot` pattern for flexible component composition:
+
+```typescript
+// components/common/Button/index.tsx
+import { Slot } from "@radix-ui/react-slot";
+
+function Button({
+  asChild = false,
+  children,
+  ...props
+}: ComponentProps<"button"> & { asChild?: boolean }) {
+  const Comp = asChild ? Slot : "button";
+
+  return (
+    <Comp className={buttonVariants()} {...props}>
+      {children}
+    </Comp>
+  );
+}
+
+// Usage - Button can render as different elements
+<Button asChild>
+  <Link to="/dashboard">Dashboard</Link>
+</Button>
+```
+
+### Compound Components
+
+Group related components together:
+
+```typescript
+// components/common/Modal/index.tsx
+function Modal({ children }: { children: React.ReactNode }) {
+  return <div className="modal">{children}</div>;
+}
+
+function ModalHeader({ children }: { children: React.ReactNode }) {
+  return <div className="modal-header">{children}</div>;
+}
+
+function ModalBody({ children }: { children: React.ReactNode }) {
+  return <div className="modal-body">{children}</div>;
+}
+
+function ModalFooter({ children }: { children: React.ReactNode }) {
+  return <div className="modal-footer">{children}</div>;
+}
+
+// Attach sub-components
+Modal.Header = ModalHeader;
+Modal.Body = ModalBody;
+Modal.Footer = ModalFooter;
+
+// Usage
+<Modal>
+  <Modal.Header>Title</Modal.Header>
+  <Modal.Body>Content</Modal.Body>
+  <Modal.Footer>Actions</Modal.Footer>
+</Modal>
+```
+
+### Render Props Pattern
+
+Pass a function as a child that receives state:
+
+```typescript
+// ✅ GOOD - Render props for flexible rendering
+function DataFetcher<T>({
+  queryKey,
+  queryFn,
+  children,
+}: {
+  queryKey: string[];
+  queryFn: () => Promise<T>;
+  children: (data: T | undefined, isLoading: boolean, error: Error | null) => React.ReactNode;
+}) {
+  const { data, isLoading, error } = useQuery({ queryKey, queryFn });
+
+  return <>{children(data, isLoading, error)}</>;
+}
+
+// Usage
+<DataFetcher queryKey={['users']} queryFn={getUsers}>
+  {(users, isLoading, error) => {
+    if (isLoading) return <Loading />;
+    if (error) return <Error />;
+    return <UserList users={users} />;
+  }}
+</DataFetcher>
+```
+
+### Controlled vs Uncontrolled Components
+
+Provide both controlled and uncontrolled patterns:
+
+```typescript
+// ✅ GOOD - Supports both patterns
+interface InputProps {
+  value?: string;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
+}
+
+function Input({ value, defaultValue, onChange, ...props }: InputProps) {
+  const [internalValue, setInternalValue] = useState(defaultValue ?? '');
+
+  const isControlled = value !== undefined;
+  const currentValue = isControlled ? value : internalValue;
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    if (!isControlled) {
+      setInternalValue(newValue);
+    }
+    onChange?.(newValue);
+  };
+
+  return <input value={currentValue} onChange={handleChange} {...props} />;
+}
+
+// Controlled usage
+<Input value={value} onChange={setValue} />
+
+// Uncontrolled usage
+<Input defaultValue="initial" onChange={handleChange} />
+```
+
+## Component Variants
+
+### Using class-variance-authority (CVA)
+
+```typescript
+// components/common/Button/index.tsx
+import { cva, type VariantProps } from "class-variance-authority";
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md font-medium transition-colors",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-white hover:bg-destructive/90",
+        outline: "border bg-background hover:bg-accent",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-9 px-4 py-2",
+        sm: "h-8 rounded-md px-3",
+        lg: "h-10 rounded-md px-6",
+        icon: "h-9 w-9",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+);
+
+function Button({
+  className,
+  variant,
+  size,
+  ...props
+}: ComponentProps<"button"> & VariantProps<typeof buttonVariants>) {
+  return (
+    <button
+      className={cn(buttonVariants({ variant, size }), className)}
+      {...props}
+    />
+  );
+}
+```
+
+## Higher-Order Components (HOCs)
+
+### Use HOCs for Cross-Cutting Concerns
+
+```typescript
+// components/common/withMonitoring/index.tsx
+function withMonitoring<P extends object>(
+  Component: React.ComponentType<P>
+) {
+  return function WithMonitoring(props: P) {
+    const { isAuthenticated, user } = useAuth();
+    const [isInitialized, setIsInitialized] = useState(false);
+
+    useEffect(() => {
+      if (user && !isInitialized) {
+        initFaro(user);
+        setIsInitialized(true);
+      }
+    }, [user, isInitialized]);
+
+    if (isAuthenticated && !isInitialized) {
+      return <LoadingSpinner />;
+    }
+
+    return <Component {...props} />;
+  };
+}
+
+// Usage
+export default withMonitoring(App);
+```
+
+## Best Practices
+
+### 1. Prefer Composition Over Configuration
+
+```typescript
+// ❌ BAD - Configuration object
+<Card config={{ title: "Title", showFooter: true, footerContent: "Footer" }} />
+
+// ✅ GOOD - Composition
+<Card>
+  <Card.Header>Title</Card.Header>
+  <Card.Body>Content</Card.Body>
+  <Card.Footer>Footer</Card.Footer>
+</Card>
+```
+
+### 2. Use TypeScript for Composition Safety
+
+```typescript
+// ✅ GOOD - Plain function declaration (avoid React.FC) + direct property assignment
+interface ModalProps {
+  children: React.ReactNode;
+}
+
+// Use a plain function with an explicit return type instead of React.FC.
+// React.FC implicitly typed `children` in older React versions and carries
+// other subtle drawbacks — prefer the explicit form below.
+function Modal({ children }: ModalProps): React.ReactElement {
+  return <div className="modal">{children}</div>;
+}
+
+// Direct property assignment — idiomatic, readable, and type-safe.
+// TypeScript infers the augmented type automatically.
+Modal.Header = ModalHeader;
+Modal.Body = ModalBody;
+Modal.Footer = ModalFooter;
+```
+
+### 3. Keep Components Focused
+
+```typescript
+// ❌ BAD - Component does too much
+function UserCard({ user, showActions, showDetails, showAvatar }) {
+  // Complex conditional rendering
+}
+
+// ✅ GOOD - Composed from smaller pieces
+function UserCard({ user }: { user: User }) {
+  return (
+    <Card>
+      <Card.Header>
+        <UserAvatar user={user} />
+        <UserName user={user} />
+      </Card.Header>
+      <Card.Body>
+        <UserDetails user={user} />
+      </Card.Body>
+      <Card.Footer>
+        <UserActions user={user} />
+      </Card.Footer>
+    </Card>
+  );
+}
+```
+
+### 4. Use Polymorphic Components
+
+```typescript
+// ✅ GOOD - Component can render as different elements
+function Text({
+  as: Component = 'p',
+  children,
+  ...props
+}: {
+  as?: React.ElementType;
+  children: React.ReactNode;
+} & React.ComponentPropsWithoutRef<'p'>) {
+  return <Component {...props}>{children}</Component>;
+}
+
+// Usage
+<Text as="h1">Heading</Text>
+<Text as="span">Span</Text>
+<Text>Paragraph</Text>
+```
+
+## Anti-Patterns to Avoid
+
+### ❌ Prop Drilling
+
+```typescript
+// ❌ BAD - Passing props through many levels
+function App() {
+  const theme = 'dark';
+  return <Layout theme={theme} />;
+}
+
+function Layout({ theme }) {
+  return <Header theme={theme} />;
+}
+
+function Header({ theme }) {
+  return <Button theme={theme} />;
+}
+
+// ✅ GOOD - Use Context for shared state
+const ThemeContext = createContext('light');
+
+function App() {
+  return (
+    <ThemeContext.Provider value="dark">
+      <Layout />
+    </ThemeContext.Provider>
+  );
+}
+```
+
+### ❌ Over-Composition
+
+```typescript
+// ❌ BAD - Too many nested components
+<Card>
+  <Card.Header>
+    <Card.Header.Title>
+      <Card.Header.Title.Text>Title</Card.Header.Title.Text>
+    </Card.Header.Title>
+  </Card.Header>
+</Card>
+
+// ✅ GOOD - Simple and clear
+<Card>
+  <Card.Header>
+    <Card.Title>Title</Card.Title>
+  </Card.Header>
+</Card>
+```
+
+### ❌ Mixing Concerns
+
+```typescript
+// ❌ BAD - Component handles data fetching and rendering
+function UserList() {
+  const { data } = useQuery({ queryKey: ['users'], queryFn: getUsers });
+  return <div>{/* render logic */}</div>;
+}
+
+// ✅ GOOD - Separate concerns
+function UserListContainer() {
+  const { data } = useUsers();
+  return <UserList users={data} />;
+}
+
+function UserList({ users }: { users: User[] }) {
+  return <div>{/* render logic */}</div>;
+}
+```

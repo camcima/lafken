@@ -1,0 +1,26 @@
+---
+description: Logging Standards — PinoJS + nestjs-pino
+alwaysApply: false
+---
+
+### Logging Standards
+
+- **Default Library**: Use `nestjs-pino` but under a 1rs-party interface called `AppLoggerPort` that will be bound to the `PinoLogger` provider available when using `LoggerModule.forRootAsync` (of `nestjs-pino`)
+  + also enable HTTP logging (`pino-http`) avaiable under the hood
+- **Environment Output Format**:
+  - Driven by the value of `NODE_ENV` environment variable:
+    - `development`: Use **pino-pretty** (as a transport configured via `nestjs-pino`) to render human-readable logs during local/dev runs.
+    - `test`, `staging`, `production` (and others): Output **structured JSON** (no pretty-print).
+- **Configurable Log Level**: Use `LOG_LEVEL` environment variable to control Pino's log level. The value must be loaded via the configuration service as mentioned at @configuration-standards.mdc
+- **Consistency**: Do not introduce alternative logging libraries or ad-hoc `console.*` usage in the code. All logs must flow through the centralized logger.
+- **Context & Metadata**: Include relevant context (request IDs, user IDs when available, module/service names) and use appropriate log levels (`trace`, `debug`, `info`, `warn`, `error`, `fatal`) to maintain signal-to-noise.
+
+- **PII & Secret Redaction**:
+  - Never log secrets, credentials, tokens, or PII. Apply structured redaction where necessary.
+  - Include a correlation/request ID in all request-scoped logs to aid traceability (align with OpenTelemetry context).
+  - Configure **Pino** with **redact** options during logger setup to automatically remove sensitive fields from logs. Recommended default keys: `['req.headers.authorization']`.
+
+### File structure and code usage
+
+- A dedicated module for logging should be available at `src/shared/infrastructure/logger/`
+  + exposes a `LoggerModule` (`logger.module.ts` file) that just expose the implementation of `AppLoggerPort` provider. When injecting it in some provider, always call `appLogger.setContext(TargetClass.name)` to setup the context in the logger

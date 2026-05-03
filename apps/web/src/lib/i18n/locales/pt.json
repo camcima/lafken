@@ -1,0 +1,119 @@
+{
+  "setup": {
+    "auth": "Inicializando autenticação...",
+    "health": "Verificando serviços...",
+    "redirectToLogin": "Redirecionando para o login..."
+  },
+  "auth": {
+    "welcomeToLatam": "Bem-vindo à LATAM",
+    "toAccess": "Para acessar, utilize sua conta LATAM",
+    "login": "Conecte-se",
+    "loading": "Entrando...",
+    "errorTitle": "Erro de autenticação",
+    "loginFailed": "Não foi possível entrar. Tente novamente ou contate seu administrador.",
+    "terms": "Ao entrar, você aceita nossos termos de serviço e política de privacidade."
+  },
+  "common": {
+    "healthyStatus": {
+      "checking": "Verificando serviços...",
+      "waiting": "Aguardando serviços estarem prontos...",
+      "error": "Não foi possível conectar aos serviços"
+    },
+    "actions": {
+      "retry": "Tentar novamente"
+    }
+  },
+  "errors": {
+    "serverError": "Ocorreu um erro no servidor. Por favor, tente novamente mais tarde.",
+    "genericError": "Ocorreu um erro",
+    "accessDenied": "Acesso Negado",
+    "noRolePermission": "Você não tem permissão para acessar esta página.",
+    "noGroupPermission": "Você não pertence ao grupo necessário para esta página.",
+    "goBack": "Voltar"
+  },
+  "navigation": {
+    "dashboard": "Painel",
+    "greeting": "Olá",
+    "logout": "Sair",
+    "userName": "Nome de Usuário"
+  },
+  "dashboard": {
+    "title": "Painel",
+    "stats": {
+      "activeAircraft": "Aeronaves Ativas",
+      "pendingTasks": "Tarefas Pendentes",
+      "completedToday": "Concluídas Hoje",
+      "critical": "Críticas"
+    },
+    "quickForm": {
+      "title": "Formulário rápido",
+      "name": "Nome",
+      "email": "E-mail",
+      "submit": "Enviar",
+      "reset": "Limpar"
+    }
+  },
+  "admin": {
+    "title": "Gestão de Usuários",
+    "subtitle": "Gerencie usuários e permissões do sistema",
+    "newUser": "Novo Usuário",
+    "noData": "Nenhum dado encontrado",
+    "userCreated": "Usuário criado com sucesso",
+    "userCreateError": "Falha ao criar usuário",
+    "form": {
+      "email": "E-mail",
+      "emailPlaceholder": "usuario@exemplo.com",
+      "currentBase": "Base atual",
+      "currentBasePlaceholder": "SCL",
+      "submit": "Enviar",
+      "saving": "Salvando...",
+      "reset": "Limpar",
+      "validation": {
+        "invalidEmail": "Endereço de e-mail inválido",
+        "baseLength": "A base deve ter exatamente 3 caracteres"
+      }
+    },
+    "activeUsers": "Usuários Ativos",
+    "loading": "Carregando...",
+    "error": "Erro ao carregar dados",
+    "noUsers": "Nenhum usuário encontrado",
+    "noWorkCenters": "Nenhum centro de trabalho encontrado",
+    "workCenters": "Centros de Trabalho",
+    "pagination": {
+      "showing": "Página {{page}} de {{lastPage}} ({{total}} total)",
+      "previous": "Anterior",
+      "next": "Próximo"
+    },
+    "table": {
+      "user": "Usuário",
+      "role": "Função",
+      "status": "Status",
+      "lastAccess": "Último Acesso",
+      "actions": "Ações",
+      "workCenter": "Centro de Trabalho"
+    },
+    "roles": {
+      "admin": "Administrador",
+      "technician": "Técnico",
+      "viewer": "Visualizador"
+    },
+    "status": {
+      "active": "Ativo"
+    },
+    "actions": {
+      "edit": "Editar",
+      "deactivate": "Desativar",
+      "refresh": "Recarregar"
+    },
+    "unauthorized": {
+      "title": "Acesso de Administrador Necessário",
+      "message": "Esta página requer permissões de administrador ou gerenciador de usuários.",
+      "contact": "Entre em contato com seu administrador se precisar de acesso.",
+      "back": "Voltar ao Painel",
+      "redirecting": "Redirecionando..."
+    },
+    "api.errors": {
+      "WorkCenterNotFoundError": "O centro de trabalho com nome base \"{{baseName}}\" não foi encontrado."
+    }
+  }
+}

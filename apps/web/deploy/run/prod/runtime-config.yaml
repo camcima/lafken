@@ -1,0 +1,26 @@
+# -----------------------------------------------------------------------------
+# This file is used to define all the gcloud deploy options and flags in order
+# to configure the Cloud Run service.
+# For boolean flags, left the value empty with no quotes.
+# For options that are supposed to have a empty string value, left an empty string.
+# For options where the value is a list use a comma-separated string without spaces.
+# See: https://docs.cloud.google.com/sdk/gcloud/reference/run/deploy
+# for the available key-value pairs.
+# -----------------------------------------------------------------------------
+
+## Environment variables for the Web as defined in the `public/config.js.template` file
+set-env-vars: ENVIRONMENT=prod,AUTH_PROVIDER=msal,API_URL=https://REPLACE_ME_PROD_HOST/be,AZURE_CLIENT_ID=REPLACE_ME_PROD_AZURE_CLIENT_ID,AZURE_TENANT_ID=REPLACE_ME_PROD_AZURE_TENANT_ID,AZURE_REDIRECT_URI=https://REPLACE_ME_PROD_HOST,AZURE_POST_LOGOUT_REDIRECT_URI=https://REPLACE_ME_PROD_HOST
+port: 8080
+service-account: emx-tmpl-web-sa@emx-prod-63eb.iam.gserviceaccount.com
+project: emx-prod-63eb
+region: us-east1
+cpu-boost:
+cpu: 2
+memory: 512Mi
+min-instances: 0
+max-instances: 3
+execution-environment: gen2
+allow-unauthenticated:
+ingress: internal-and-cloud-load-balancing
+no-default-url:
+labels: cmdb-emx_tmpl=emx_tmpl,iac=false

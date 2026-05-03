@@ -1,0 +1,25 @@
+// Runtime configuration generated from Cloud Run environment variables
+// This file is processed by envsubst at container startup
+// Template variables use ${VAR} or ${VAR:-default} syntax
+
+(function () {
+  if ("__APP_CONFIG__" in globalThis) {
+    throw new Error("[security] __APP_CONFIG__ was already defined before config.js loaded");
+  }
+
+  Object.defineProperty(globalThis, "__APP_CONFIG__", {
+    value: Object.freeze({
+      ENVIRONMENT: "${ENVIRONMENT:-intg}",
+      AUTH_PROVIDER: "${AUTH_PROVIDER:-mock}",
+      AZURE_CLIENT_ID: "${AZURE_CLIENT_ID:-}",
+      AZURE_REDIRECT_URI: "${AZURE_REDIRECT_URI:-}",
+      AZURE_TENANT_ID: "${AZURE_TENANT_ID:-}",
+      AZURE_POST_LOGOUT_REDIRECT_URI: "${AZURE_POST_LOGOUT_REDIRECT_URI:-}",
+      MONITORING_URL: "${MONITORING_URL:-}",
+      API_URL: "${API_URL:-}",
+    }),
+    writable: false,
+    configurable: false,
+    enumerable: true,
+  });
+})();

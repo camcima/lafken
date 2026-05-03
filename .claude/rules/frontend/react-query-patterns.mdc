@@ -1,0 +1,457 @@
+---
+globs: apps/web/src/hooks/**/*,apps/web/src/lib/api/**/*
+alwaysApply: false
+description: Advanced React Query patterns, query key management, and optimization
+---
+
+# React Query Patterns
+
+## Query Key Management
+
+### Hierarchical Query Keys
+
+Use hierarchical query keys for better cache invalidation:
+
+```typescript
+// lib/api/query-keys.ts
+export const queryKeys = {
+  users: {
+    all: ['users'] as const,
+    lists: () => [...queryKeys.users.all, 'list'] as const,
+    list: (filters: UserFilters) => [...queryKeys.users.lists(), filters] as const,
+    details: () => [...queryKeys.users.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.users.details(), id] as const,
+  },
+} as const;
+```
+
+### Usage in Hooks
+
+```typescript
+// hooks/useUserService.ts
+export const useUsers = (filters: UserFilters) => {
+  return useQuery({
+    queryKey: queryKeys.users.list(filters),
+    queryFn: () => userService.getUsers(filters),
+  });
+};
+
+export const useUser = (id: string) => {
+  return useQuery({
+    queryKey: queryKeys.users.detail(id),
+    queryFn: () => userService.getUser(id),
+    enabled: !!id,
+  });
+};
+```
+
+### Cache Invalidation
+
+```typescript
+// Invalidate all user queries
+queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+
+// Invalidate specific user detail
+queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(userId) });
+
+// Invalidate all user lists
+queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() });
+```
+
+## Query Client Configuration
+
+### Default Options
+
+Configure query client with `QueryCache`/`MutationCache` for structured logging, and `defaultOptions` for retry/stale behaviour. **Keep infrastructure concerns (logging) here and UI concerns (toasts) in a React component.**
+
+```typescript
+// lib/api/query-client.ts
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
+import { logger } from '@/lib/logger';
+
+export const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      logger.error('Query error', error instanceof Error ? error : undefined, {
+        queryKey: query.queryKey,
+      });
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      logger.error('Mutation error', error instanceof Error ? error : undefined);
+    },
+  }),
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      retry: (failureCount, error: unknown) => {
+        // Don't retry on 4xx errors
+        if (error && typeof error === "object" && "status" in error) {
+          const status = (error as { status: number }).status;
+          if (status >= 400 && status < 500) {
+            return false;
+          }
+        }
+        return failureCount < 3;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      refetchOnWindowFocus: import.meta.env.DEV,
+      refetchOnReconnect: true,
+      refetchOnMount: false,
+    },
+    mutations: {
+      retry: 1,
+      retryDelay: 1000,
+    },
+  },
+});
+```
+
+## Mutation Patterns
+
+### Optimistic Updates
+
+Update UI optimistically for better UX:
+
+```typescript
+export const useUpdateUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: UpdateUserDTO) => userService.updateUser(data),
+    onMutate: async (newData) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.users.detail(newData.id) });
+
+      // Snapshot previous value
+      const previousUser = queryClient.getQueryData(queryKeys.users.detail(newData.id));
+
+      // Optimistically update
+      queryClient.setQueryData(queryKeys.users.detail(newData.id), (old: UserDTO) => ({
+        ...old,
+        ...newData,
+      }));
+
+      return { previousUser };
+    },
+    onError: (err, newData, context) => {
+      // Rollback on error
+      if (context?.previousUser) {
+        queryClient.setQueryData(
+          queryKeys.users.detail(newData.id),
+          context.previousUser
+        );
+      }
+    },
+    onSettled: (data, error, variables) => {
+      // Refetch to ensure consistency
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(variables.id) });
+    },
+  });
+};
+```
+
+### `mutate` vs `mutateAsync`
+
+Prefer `mutate` with `onSuccess`/`onError` callbacks over `mutateAsync` + try/catch. `mutateAsync` re-throws errors — if you don't catch them, you get unhandled promise rejections. `mutate` never throws; errors are handled via callbacks or `GlobalQueryErrorHandler`.
+
+```typescript
+// ✅ GOOD — mutate with onSuccess; no try/catch needed
+const onSubmit = (data: FormValues) => {
+  createUser.mutate(
+    { email: data.email },
+    {
+      onSuccess: () => {
+        toast.success(t('user.created'));
+        reset();
+      },
+      // onError is optional here — GlobalQueryErrorHandler handles the toast
+    },
+  );
+};
+
+// ❌ BAD — mutateAsync with empty catch (hides intent, easy to forget)
+const onSubmit = async (data: FormValues) => {
+  try {
+    await createUser.mutateAsync({ email: data.email });
+    toast.success(t('user.created'));
+  } catch {
+    // error handled globally — but why use mutateAsync then?
+  }
+};
+```
+
+Use `mutateAsync` only when you need to **await the result** inside an async flow (e.g., chained operations where a subsequent step depends on the mutation's return value).
+
+### Dependent Mutations
+
+Chain mutations when one depends on another:
+
+```typescript
+export const useCreateUserWithProfile = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateUserDTO) => {
+      const user = await userService.createUser(data);
+      await profileService.createProfile({ userId: user.id, ...data.profile });
+      return user;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+    },
+  });
+};
+```
+
+## Advanced Query Patterns
+
+### Parallel Queries
+
+Use `useQueries` for parallel queries:
+
+```typescript
+export const useUsersByIds = (ids: string[]) => {
+  return useQueries({
+    queries: ids.map((id) => ({
+      queryKey: queryKeys.users.detail(id),
+      queryFn: () => userService.getUser(id),
+      enabled: !!id,
+    })),
+  });
+};
+```
+
+### Dependent Queries
+
+Use `enabled` option for dependent queries:
+
+```typescript
+export const useUserProfile = (userId: string | null) => {
+  const { data: user } = useUser(userId ?? '');
+
+  return useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: () => profileService.getProfile(user!.id),
+    enabled: !!user?.id, // Only fetch when user exists
+  });
+};
+```
+
+### Infinite Queries
+
+Use `useInfiniteQuery` for pagination:
+
+```typescript
+export const useInfiniteUsers = (filters: UserFilters) => {
+  return useInfiniteQuery({
+    queryKey: [...queryKeys.users.lists(), 'infinite', filters],
+    queryFn: ({ pageParam = 0 }) =>
+      userService.getUsers({ ...filters, page: pageParam, limit: 20 }),
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.hasNextPage ? allPages.length : undefined;
+    },
+    initialPageParam: 0,
+  });
+};
+```
+
+## Error Handling
+
+### Global Error Handling
+
+**Separation of concerns**:
+- `query-client.ts` (infrastructure) — logging only via `QueryCache`/`MutationCache`
+- `GlobalQueryErrorHandler` (React component) — subscribes to cache events and shows toasts
+
+**Do not use `onError` inside `defaultOptions`** — that callback was removed in TanStack Query v5. **Do not call `toast` from `query-client.ts`** — it is infrastructure and must not import UI.
+
+```typescript
+// components/feedback/GlobalQueryErrorHandler/index.tsx
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { toast } from 'sonner';
+import { ApiError } from '@/lib/api/api-error';
+
+export default function GlobalQueryErrorHandler() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const unsubscribeQuery = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type !== 'updated') return;
+      if (event.action.type !== 'error') return;
+
+      const error: unknown = event.action.error;
+
+      if (error instanceof ApiError && error.status >= 500) {
+        toast.error('A server error occurred. Please try again later.');
+      }
+      // 401 is handled by the auth layer (token refresh / redirect)
+    });
+
+    const unsubscribeMutation = queryClient.getMutationCache().subscribe((event) => {
+      if (event.type !== 'updated') return;
+      if (event.mutation.state.status !== 'error') return;
+
+      const error: unknown = event.mutation.state.error;
+      if (error instanceof ApiError && error.status >= 400) {
+        toast.error(error.body.detail ?? 'An error occurred');
+      }
+    });
+
+    return () => {
+      unsubscribeQuery();
+      unsubscribeMutation();
+    };
+  }, [queryClient]);
+
+  return null;
+}
+```
+
+Mount it inside `<QueryClientProvider>` but outside the auth layer so it has access to the query client:
+
+```tsx
+// contexts/RootProvider.tsx
+<QueryClientProvider client={queryClient}>
+  <GlobalQueryErrorHandler />
+  <AuthProvider>{children}</AuthProvider>
+</QueryClientProvider>
+```
+
+> **Note on TypeScript narrowing**: Use sequential `if` guards — not compound `||` — when narrowing discriminated union events. Compound guards prevent TypeScript from narrowing the type correctly.
+
+### Component-Level Error Handling
+
+```typescript
+export const UserList = () => {
+  const { data, error, isLoading } = useUsers();
+
+  if (isLoading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+  if (!data) return <EmptyState />;
+
+  return <UserListContent users={data} />;
+};
+```
+
+## Best Practices
+
+### 1. Always Use Query Keys Factory
+
+```typescript
+// ✅ GOOD - Centralized query keys
+const queryKeys = {
+  users: {
+    all: ['users'] as const,
+    detail: (id: string) => ['users', id] as const,
+  },
+};
+
+// ❌ BAD - Scattered query keys
+useQuery({ queryKey: ['users', id] });
+useQuery({ queryKey: ['users', id] }); // Duplicate
+```
+
+### 2. Use Enabled Option for Conditional Queries
+
+```typescript
+// ✅ GOOD - Prevents unnecessary requests
+useQuery({
+  queryKey: ['user', id],
+  queryFn: () => getUser(id),
+  enabled: !!id, // Only fetch when id exists
+});
+
+// ❌ BAD - Fetches even when id is null
+useQuery({
+  queryKey: ['user', id],
+  queryFn: () => getUser(id!), // Non-null assertion needed
+});
+```
+
+### 3. Invalidate Related Queries
+
+```typescript
+// ✅ GOOD - Invalidates related queries
+onSuccess: () => {
+  queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+}
+
+// ❌ BAD - Only invalidates specific query
+onSuccess: () => {
+  queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(id) });
+}
+```
+
+### 4. Use Optimistic Updates for Better UX
+
+```typescript
+// ✅ GOOD - Immediate feedback
+onMutate: async (newData) => {
+  await queryClient.cancelQueries({ queryKey: queryKeys.users.detail(id) });
+  const previous = queryClient.getQueryData(queryKeys.users.detail(id));
+  queryClient.setQueryData(queryKeys.users.detail(id), newData);
+  return { previous };
+}
+
+// ❌ BAD - User waits for server response
+// No optimistic update
+```
+
+### 5. Handle Loading and Error States
+
+```typescript
+// ✅ GOOD - All states handled
+const { data, isLoading, error } = useUsers();
+if (isLoading) return <Loading />;
+if (error) return <Error error={error} />;
+return <UserList users={data} />;
+
+// ❌ BAD - Missing error handling
+const { data } = useUsers();
+return <UserList users={data} />; // Crashes if error
+```
+
+## Anti-Patterns to Avoid
+
+### ❌ Don't Fetch in useEffect
+
+```typescript
+// ❌ BAD - Use React Query instead
+useEffect(() => {
+  fetch('/api/users').then(res => res.json()).then(setUsers);
+}, []);
+
+// ✅ GOOD - Use React Query hook
+const { data: users } = useUsers();
+```
+
+### ❌ Don't Store Server State in Component State
+
+```typescript
+// ❌ BAD - Duplicates React Query functionality
+const [users, setUsers] = useState([]);
+useEffect(() => {
+  userService.getUsers().then(setUsers);
+}, []);
+
+// ✅ GOOD - Use React Query
+const { data: users } = useUsers();
+```
+
+### ❌ Don't Use Inline or Ad-Hoc Query Keys
+
+```typescript
+// ❌ BAD - TanStack Query v5 requires queryKey to be a readonly array.
+// A plain string literal is a TypeScript type error and will not compile.
+// useQuery({ queryKey: 'users', queryFn: getUsers }); // ← compile error in v5
+
+// ❌ BAD - Inline array: no centralised key, easy to create silent duplicates
+useQuery({ queryKey: ['users'], queryFn: getUsers });
+
+// ✅ GOOD - Centralised, type-safe query key factory
+useQuery({ queryKey: queryKeys.users.all, queryFn: getUsers });
+```

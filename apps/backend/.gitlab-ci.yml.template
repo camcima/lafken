@@ -1,0 +1,90 @@
+stages:
+  - setup:pnpm
+  - lint
+  - unit_test
+  - integration_test
+  - api_e2e_test
+  - collect_coverage
+  - quality
+  - build:pnpm
+  - package
+  - deploy
+
+include:
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/setup@0.4.1
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/lint-and-format@0.4.1
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/test@0.4.1
+    inputs:
+      job_name: unit_test
+      job_stage: unit_test
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/api-e2e-test@0.4.1
+    inputs:
+      job_name: .integration_test
+      job_stage: integration_test
+      job_timeout: 20m
+      npm_script: "integration/test --coverage"
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/api-e2e-test@0.4.1
+    inputs:
+      job_name: .api_e2e_test
+      job_stage: api_e2e_test
+      job_timeout: 20m
+      npm_script: "e2e/test --coverage"
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/collect-coverage@0.4.1
+    inputs:
+      job_needs:
+        - job: "setup"
+          artifacts: true
+        - job: "unit_test"
+          artifacts: true
+        - job: "integration_test"
+          artifacts: true
+        - job: "api_e2e_test"
+          artifacts: true
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/build@0.4.1
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/quality@0.4.1
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/ci/package@0.4.1
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/cd/deploy-cloud-endpoints@2.11.3
+    inputs:
+      service: backend
+      environment: intg
+      gcp_region: us-east1
+      openapi_erb_path: apps/backend/deploy/endpoints/openapi.yaml.erb
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/cd/deploy-cloud-endpoints@2.11.3
+    inputs:
+      service: backend
+      environment: prod
+      gcp_region: us-east1
+      openapi_erb_path: apps/backend/deploy/endpoints/openapi.yaml.erb
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/cd/deploy-cloud-run@2.11.3
+    inputs:
+      environment: intg
+      cmdb_id: $CMDB_ID
+      jira_project: $JIRA_PROJECT
+      gcp_project_id: emx-intg-ab3d
+      gcp_region: us-east1
+      enable_espv2: true
+  - component: $CI_SERVER_FQDN/latamairlines/oper/emx/config/devops/components/cd/deploy-cloud-run@2.11.3
+    inputs:
+      environment: prod
+      cmdb_id: $CMDB_ID
+      jira_project: $JIRA_PROJECT
+      gcp_project_id: emx-prod-63eb
+      gcp_region: us-east1
+      enable_espv2: true
+
+# Adding mandatory application env vars so that the `pnpm e2e/test` can be executed successfully
+api_e2e_test:
+  extends: .api_e2e_test
+  needs: [setup, unit_test]
+  variables:
+    APP_NAME: backend
+    # backend's environment variables except the `NODE_ENV` and all the `DB_*` ones
+    APP_PORT: 0 # does not matter; just to fulfill app's needs
+
+integration_test:
+  extends: .integration_test
+  needs: [setup, unit_test]
+  variables:
+    APP_NAME: backend
+    # backend's environment variables except the `NODE_ENV` and all the `DB_*` ones
+    APP_PORT: 0 # does not matter; just to fulfill app's needs

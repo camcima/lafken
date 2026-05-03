@@ -1,0 +1,32 @@
+import type { environmentConfiguration } from "../../src/shared/infrastructure/environment.configuration";
+
+vitest.mock(
+  "../../src/shared/infrastructure/environment.configuration",
+  (): { environmentConfiguration: typeof environmentConfiguration } => ({
+    environmentConfiguration: {
+      NODE_ENV: "test",
+      APP_PORT: 3000,
+      LOG_LEVEL: "info",
+      PRETTY_LOGS: false,
+      CORS_ALLOWED_ORIGINS: [],
+      DB_HOST: "localhost",
+      DB_PORT: 5432,
+      DB_USER: "",
+      DB_NAME: "",
+      DB_PASSWORD: "",
+      DB_SSL: false,
+      DB_POOL_MIN: 1,
+      DB_POOL_MAX: 200,
+      DB_POOL_IDLE_TIMEOUT_MS: 30_000,
+      DB_POOL_CONNECTION_TIMEOUT_MS: 30_000,
+      DB_STATEMENT_TIMEOUT_MS: 60_000,
+      DB_QUERY_TIMEOUT_MS: 60_000,
+      DB_IDLE_IN_TX_TIMEOUT_MS: 100_000,
+      OTEL_SERVICE_NAME: "",
+      OTEL_RESOURCE_ATTRIBUTES: "",
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317",
+      AUTH_PROVIDER: "mock",
+      CLOUD_ENDPOINT_DEFINITION: false,
+    },
+  }),
+);

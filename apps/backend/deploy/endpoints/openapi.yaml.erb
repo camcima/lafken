@@ -1,0 +1,119 @@
+openapi: 3.0.0
+paths:
+  /v1/health:
+    get:
+      operationId: ApiHealthController_checkHealth_v1
+      parameters: []
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResultResponseDTO'
+      security:
+        - {}
+      tags:
+        - Health
+info:
+  title: BE - Template eMantto Project
+  description: Backend API for template-emantto-project monorepo
+  version: 0.0.0
+  contact:
+    name: grp_emx_platform_eng@latam.com
+    url: mailto:grp_emx_platform_eng@latam.com
+    email: grp_emx_platform_eng@latam.com
+tags: []
+servers:
+  - url: https://<%= service_name %>
+    description: Cloud Endpoints service URL
+    x-google-endpoint:
+      allowCors: true
+components:
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http
+      description: Azure AD Bearer token authorization
+    azure_ad_jwt:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: ''
+          scopes: {}
+      x-google-auth:
+        issuer: https://login.microsoftonline.com/<%=azure_tenant_id%>/v2.0
+        jwksUri: >-
+          https://login.microsoftonline.com/<%=azure_tenant_id%>/discovery/v2.0/keys
+        audiences:
+          - <%=azure_client_id%>
+        jwtLocations:
+          - header: Authorization
+            valuePrefix: 'Bearer '
+    api_key:
+      type: apiKey
+      in: query
+      name: key
+      description: API key for external clients (e.g., HTTP Sink Connector)
+  schemas:
+    HealthIndicatorStatusDTO:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - up
+            - down
+          description: Status of the specific health indicator
+      required:
+        - status
+    HealthIndicatorResultResponseDTO:
+      type: object
+      properties:
+        application:
+          $ref: '#/components/schemas/HealthIndicatorStatusDTO'
+        database:
+          $ref: '#/components/schemas/HealthIndicatorStatusDTO'
+    HealthCheckResultResponseDTO:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - error
+            - ok
+            - shutting_down
+        info:
+          description: Summary information about healthy health indicators
+          allOf:
+            - $ref: '#/components/schemas/HealthIndicatorResultResponseDTO'
+        error:
+          description: Summary information about failed health indicators
+          allOf:
+            - $ref: '#/components/schemas/HealthIndicatorResultResponseDTO'
+        details:
+          description: Details about all health indicators
+          allOf:
+            - $ref: '#/components/schemas/HealthIndicatorResultResponseDTO'
+      required:
+        - status
+        - info
+        - error
+        - details
+x-google-api-management:
+  backends:
+    backend:
+      address: http://127.0.0.1:3000
+      protocol: http/1.1
+      deadline: 600
+      pathTranslation: APPEND_PATH_TO_ADDRESS
+      disableAuth: true
+x-google-backend:
+  address: http://127.0.0.1:3000
+  protocol: http/1.1
+  deadline: 600
+  path_translation: APPEND_PATH_TO_ADDRESS
+  disable_auth: true
+security:
+  - azure_ad_jwt: []

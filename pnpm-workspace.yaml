@@ -1,0 +1,99 @@
+packages:
+  - apps/*
+  - shared/*
+
+# Explicitly allow or disallow lifecycle scripts per package.
+# Replaces onlyBuiltDependencies/ignoredBuiltDependencies with a single map.
+# Any dependency NOT listed here is blocked from running install scripts.
+allowBuilds:
+  '@nestjs/core': true
+  '@scarf/scarf': false
+  '@swc/core': true
+  dtrace-provider: true
+  esbuild: true
+  lefthook: true
+  msw: true
+  nestjs-pino: true
+  protobufjs: true
+  unrs-resolver: true
+
+# =============================================================================
+# Supply Chain Security
+# =============================================================================
+
+# Fail installation if any dependency has unreviewed build scripts,
+# instead of silently skipping them.
+strictDepBuilds: true
+
+# Transitive dependencies cannot use git repos or tarball URLs as sources.
+# Only direct dependencies may use exotic specifiers.
+blockExoticSubdeps: true
+
+# Prevent trust-level downgrades (e.g., a previously signed package
+# publishing an unsigned version). Installation fails on downgrade.
+trustPolicy: no-downgrade
+
+# Packages published over 1 year ago are exempt from trust policy checks,
+# since many older packages predate signing/provenance infrastructure.
+trustPolicyIgnoreAfter: 525600 # 1 year (in minutes)
+
+# Refuse to install packages published less than 3 days ago.
+# Gives the community time to detect and report compromised releases.
+minimumReleaseAge: 4320 # 3 days (in minutes)
+
+# Trusted publishers exempt from the quarantine window above.
+# These are well-known organizations with strong security practices
+# (signing, provenance, dedicated security teams) where delaying
+# a critical patch by 3 days carries more risk than installing early.
+minimumReleaseAgeExclude:
+  # --- Trusted organizations (wildcard) ---
+  - '@nestjs/*'
+  - '@azure/*'
+  - '@google-cloud/*'
+  - '@opentelemetry/*'
+  - '@grafana/*'
+  - '@tanstack/*'
+  - '@radix-ui/*'
+  - '@testing-library/*'
+  - '@playwright/*'
+  - '@storybook/*'
+  - eslint-plugin-storybook
+  - postcss
+  - import-in-the-middle
+  - '@vitest/*'
+  - '@swc/*'
+  - '@babel/*'
+  - '@vitejs/*'
+  - '@tailwindcss/*'
+  - '@commitlint/*'
+  - '@typescript-eslint/*'
+  - '@eslint/*'
+  - '@types/*'
+  - '@hookform/*'
+  - '@stylistic/*'
+  # --- Trusted individual packages ---
+  - react
+  - react-dom
+  - typescript
+  - eslint
+  - prettier
+  - vite
+  - tailwindcss
+  - turbo
+  - esbuild
+  - express
+  - axios
+  - rxjs
+  - zod
+  - kysely
+  - inversify
+  - storybook
+  - msw
+  - vitest
+  - supertest
+  - jsdom
+  - i18next
+  - react-i18next
+  - zustand
+  - pino-http
+  - google-auth-library

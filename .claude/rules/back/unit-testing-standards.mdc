@@ -1,0 +1,20 @@
+---
+description: Unit testing Standards — structure, boundaries, CI and code coverage
+alwaysApply: false
+---
+
+### Unit tests
+
+Unit tests focus on a single "unit" of code. To achieve this, external dependencies are often replaced with "test doubles" such as mocks, stubs, or spies.
+
+To run all the unit tests, execute, inside the `apps/backend` folder: `pnpm unit/test`
+
+When writting such tests, **you must**:
+- ✅ all the test suite files close the the subject under test (SUT). For example: if the file is `mappers/user-response.mapper.ts` then its unit test suite must be `mappers/user-response.mapper.spec.ts`
+- ✅ if the SUT is a class called `MyService`, use the `describe("MyService", ...)` and `it("#myMethod()")` conventions, to easily identify the components under test
+And **do not**:
+- ❌ spawn a real web server
+- ❌ have multiple SUTs in the same test suite file
+- ❌ have unit tests for `controllers` (**presentation** layer) as they must be tested at E2E stage
+- ❌ have unit tests for `repositories` (**infrastructure** layer) as they are useless unless we have a real database connection in place
+- ❌ tests that are very volatile, ie., that are testing the implementation instead of the behavior

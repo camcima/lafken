@@ -1,0 +1,40 @@
+---
+globs: apps/web/src/routes/**/*
+alwaysApply: false
+description: Routing conventions using TanStack Router
+---
+
+# Routing Guidelines
+
+## TanStack Router Conventions
+
+### File Structure (`src/routes/`)
+- **`__root.tsx`**: The root layout wrapper.
+- **`index.tsx`**: The default route for a directory.
+- **`$param.tsx`**: Dynamic routes (e.g., `users/$userId.tsx`).
+- **`_layout.tsx`**: Layout routes that don't add to the URL path.
+
+### Route Definition
+- Use `createFileRoute` for type-safe route definitions.
+- Validate search parameters (query strings) using `validateSearch` with Zod.
+
+```typescript
+export const Route = createFileRoute('/users')({
+  validateSearch: z.object({
+    page: z.number().optional(),
+    filter: z.string().optional(),
+  }),
+  loaderDeps: ({ search }) => ({ search }),
+  loader: ({ deps }) => fetchUsers(deps.search),
+  component: UsersPage,
+});
+```
+
+### Navigation
+- **Internal**: ALWAYS use the `<Link>` component or `useNavigate` hook.
+- **External**: Use standard `<a>` tags.
+- **Type Safety**: Rely on TypeScript to enforce valid route paths and params.
+
+### Data Loading
+- Prefer route `loader`s for critical data required to render the page.
+- Use `defer` for slow data to allow the UI to render partial content immediately.

@@ -1,0 +1,81 @@
+.git
+.gitignore
+.dockerignore
+
+docker-compose*
+Dockerfile*
+dev.Dockerfile
+README*
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+.tsbuildinfo
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Source files (not needed in production image)
+src/
+
+# Test files
+*.test.*
+*.spec.*
+*.stories.*
+vitest.config.*
+vitest.setup.*
+playwright.config.*
+
+# Config files (not needed in production)
+eslint.config.*
+prettier.config.*
+tsconfig.json
+tsconfig.*.json
+vite.config.*
+components.json
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.example
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Cache
+.cache/
+.turbo/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Misc
+*.md
+
+# Local Docker development
+out-*/
+local-*.sh
+docker-compose.local.yml

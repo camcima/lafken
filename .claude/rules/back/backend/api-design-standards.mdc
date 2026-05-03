@@ -1,0 +1,38 @@
+---
+description: http API Design Standards — REST principles, API versioning, and authentication patterns
+alwaysApply: false
+---
+
+### API Design Standards
+
+- **REST Principles**: All API endpoints must follow REST architectural style.
+  - Use appropriate HTTP methods: GET (retrieve), POST (create), PUT (full update), PATCH (partial update), DELETE (remove).
+  - Resources should be nouns, not verbs (e.g., `/users`, not `/getUsers`).
+  - Use plural nouns for collections (e.g., `/users`, `/orders`).
+  - Use HTTP status codes correctly (200, 201, 204, 400, 404, 422, 500, etc.).
+
+- **API Versioning**:
+  - All endpoints routes must not include a version prefix (e.g., `/v1/users`, `/v2/orders`). In case of the need of another version other than the default that is configured at the `setupApp()` (`setup-main-app.ts` file) function, must use the NestJS feature versioning feature instead of leaving the version hard coded in the route:
+  ```ts
+  // ✅ GOOD - using the versioning feature for versions that are not the defautl (ie, not "1")
+  @Controller({
+    path: "pcp-users",
+    version: "2"
+  })
+  export class PcpUserController {}
+
+  // ❌ BAD - hard coding the version instead of relying on the NestJS version feature
+  @Controller("v2/pcp-users")
+  export class PcpUserController {}
+  ```
+  - Maintain backward compatibility within the same major version when possible.
+  - Never change the default version defined at the `setupApp()` function!
+  - In case of using the default version (as defined at the `main.ts` file), the versioning is abstract-way from the controllers's definition
+
+- **Authentication & Authorization**:
+  - User authentication is handled by the Backend application but the token acquisition is started in the client-side (Frontend).
+
+- **Request/Response Patterns**:
+  - Use DTOs for all request and response shapes with proper validation.
+  - Return consistent error responses following RFC7807 Problem Details format. This is already handled by `CatchAllExceptionsForHttp` present in the template.
+  - Use appropriate HTTP status codes for success and error scenarios.

@@ -1,0 +1,25 @@
+---
+description: Configuration Standards — 12-Factor, env files, secrets
+alwaysApply: false
+---
+
+### Configuration Standards
+
+Configuration will follow the 12-Factor App methodology.
+
+- **Environment Variables**: All dynamic configuration will be provided via environment variables. Not necessarily '.env' files, since we can have some variables injected via Shell.
+  + To load '.env' files in the application, we will not use libs like `dotenv` as this implies a requirement from the application for '.env' files. Instead, we will use the Node.js CLI feature: `--env-file` for local development, `--env-file-if-exists` for running the application in production.
+- **Development Environment**: A `.env` file (added to .gitignore) will be used for local development. A `.env.example` file will be committed to the repository as a template.
+- **Sections & Style**:
+  - Divide `.env` into commented sections (e.g., `# APP`, `# DATABASE`, `# AUTH`, `# CACHE`, `# INTEGRATIONS`).
+  - **Names** must be SCREAMING_SNAKE_CASE (e.g., `DATABASE_URL`, `AUTH_ISSUER`).
+- **Schema & Parsing+Validation**: Configuration will be loaded exclusively through the third-party library `zod`. Direct access to `process.env` in application code is prohibited except from the file `environment.configuration.ts`.
+- **Validation**: A zod schema will be used to validate all environment variables at application startup. The application must fail immediately if any required configuration is missing or invalid.
+- **Test Override**: A `.env.test` file (added to .gitignore) can be used to override configurations during tests.
+  + Tests should be executed using `dotenv` lib to only load the `.env.test`, as we want to clarify what are the values being used when running automated tests
+- **Output Consistency**: Config keys must be present in `.env.example` and documented with inline comments where necessary.
+
+### Loading secrets
+
+Application secrets are value that are not exposed neither in development nor outside of the application process sandbox.  
+But from the application point-of-view, they are just environment variables. Thus, we must follow the same principles as mentioned in 'Configuration Standards'

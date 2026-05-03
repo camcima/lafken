@@ -1,0 +1,33 @@
+# docker-compose for local web testing with a local Backend. Adjust environment variables as needed for your setup.
+
+services:
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile.local
+    ports:
+      - "8080:8080"
+    # Allows the container to reach services on the host machine (e.g. a local Backend).
+    # On Linux, host.docker.internal requires this extra_hosts entry.
+    # On macOS/Windows it works automatically.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # ── App ──────────────────────────────────────────────────────────────────
+      ENVIRONMENT: intg
+      AUTH_PROVIDER: mock
+
+      # ── Azure AD / MSAL (leave blank when AUTH_PROVIDER=mock) ────────────────
+      AZURE_CLIENT_ID: ""
+      AZURE_REDIRECT_URI: ""
+      AZURE_TENANT_ID: ""
+      AZURE_POST_LOGOUT_REDIRECT_URI: ""
+
+      # ── API ───────────────────────────────────────────────────────────────────
+      # The browser makes requests to this URL directly, so it must be reachable
+      # from the host machine (not from inside the container).
+      # Change to the deployed Backend URL for integration testing.
+      API_URL: http://localhost:3000
+
+      # ── Monitoring (optional) ─────────────────────────────────────────────────
+      MONITORING_URL: ""

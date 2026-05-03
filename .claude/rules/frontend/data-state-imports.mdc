@@ -1,0 +1,118 @@
+---
+globs: apps/web/**/*
+alwaysApply: false
+description: Data fetching, state management, imports, and error handling
+---
+
+# Data, State & Imports Guidelines
+
+## Import Strategy & Bundle Optimization
+
+- **ALWAYS use path aliases** - Never use relative imports (`../`, `../../`, etc.)
+- **Import components via the folder path** — each component folder has an `index.tsx` that default-exports the component: `import Button from '@/components/common/Button'`
+- ❌ BAD: `import { Button } from '../../../components/common/Button'`
+- ✅ GOOD: `import Button from '@/components/common/Button'`
+- Place all test (`*.test.tsx`, `*.test.ts`, `*.spec.ts`) and Storybook (`*.stories.tsx`) files in the **same folder as the component they test or document**.
+- Each React component folder **must** have an `index.tsx` that default-exports only **that single component** — this is a single-component entry point, not a barrel file.
+- **Avoid barrel files** — an `index.ts` (or `index.tsx`) that re-exports multiple modules prevents tree shaking and must not be used.
+- For **library / utility imports**, prefer named imports: `import { useState } from 'react'` ✅, not `import * as _ from 'lodash'` ❌. Components use default exports; everything else (hooks, utils, constants) uses named exports.
+- Use `React.lazy()` for route-level components
+- Group imports: external libraries → internal modules → relative imports
+
+### Default vs Named Exports
+
+> **Rule**: if a file exports a single primary function/component, it **must** use `export default`. Named exports are only allowed when a file legitimately exports multiple things and there is no clear single "main" export.
+
+```typescript
+// ✅ Single component — must be default
+export default function Button() { ... }
+
+// ✅ File with one main component + related hook — component is default, hook is named
+export default function AuthProvider({ children }) { ... }
+export function useAuth(): AuthContextType { ... }  // hook, stays named
+
+// ✅ Compound component primitives (shadcn/Radix pattern) — named exports acceptable
+// because there is no single "main" component; all are co-equal primitives
+export { Avatar, AvatarImage, AvatarFallback };
+
+// ❌ Single component exported as named — wrong
+export function Button() { ... }   // must be: export default function Button()
+
+// ❌ Two components in one file with no clear primary — split into separate files instead
+export function Header() { ... }
+export function Footer() { ... }
+```
+
+### Same-Folder Imports (Tests & Stories)
+
+When a test or story file imports the component that lives in the **same folder**, use `"."` — never `"./index"`.
+
+```typescript
+// ❌ BAD - explicit index reference
+import LanguageSwitcher from "./index";
+
+// ✅ GOOD - implicit index via folder dot
+import LanguageSwitcher from ".";
+```
+
+This applies to all co-located files: `*.test.tsx`, `*.spec.ts`, `*.stories.tsx`.
+
+### Barrel Files vs Single-Component Entry Points
+
+```typescript
+// ❌ BAD - Barrel file re-exporting multiple modules
+// src/components/index.ts
+export { Button } from './Button/Button';
+export { Modal } from './Modal/Modal';
+
+// ❌ BAD - Importing from a barrel file
+import { Button, Modal } from '@/components';
+
+// ❌ BAD - Importing the implementation file directly
+import Button from '@/components/common/Button/Button';
+
+// ✅ GOOD - Folder import via single-component index.tsx
+// src/components/common/Button/index.tsx  →  export { default } from './Button';
+import Button from '@/components/common/Button';
+```
+
+**Rule of thumb:** if an `index.ts/tsx` re-exports more than one thing, it's a barrel file — delete it.
+
+### Tree Shaking Optimization
+
+- Import only what you need from libraries: `import { useState } from 'react'`
+- Use named imports for utilities: `import { debounce } from 'lodash-es'` ✅
+- Avoid importing entire libraries: `import * as _ from 'lodash'` ❌
+
+## API & Data Fetching
+
+- Use TanStack Query for server state management
+- Use **native fetch API** (not axios)
+- Implement request/response interceptors for auth tokens
+- Use proper TypeScript types for API responses
+- Implement proper error handling with try-catch blocks
+
+## State Management
+
+- Use React's built-in state for component-level state
+- Use TanStack Query for server state
+- Consider Zustand for complex client state (if needed)
+- Avoid prop drilling - use context/Zustand when appropriate
+
+## Error Handling & Logging
+
+- Use Error Boundaries for React component errors
+- **NEVER use console.log/error/warn in production code**
+- **ALWAYS use the centralized logger (`@/lib/logger`)**
+- Integrate with Grafana Faro for error tracking in production
+- Provide meaningful error messages to users
+- Log authentication events for security monitoring if needed
+
+```typescript
+// ❌ BAD
+console.error("Login failed:", error);
+
+// ✅ GOOD
+logger.error("Login failed", error, { userId: user?.id });
+logger.auth("User login attempt", { method: "MSAL" });
+```

@@ -1,0 +1,54 @@
+---
+description: OpenAPI Standards — Swagger UI for API docs
+alwaysApply: false
+---
+
+### OpenAPI Standards
+
+- **Documentation Library**: Use `@nestjs/swagger` lib (code-first approach) to document all HTTP endpoints and their input/output models.
+
+- **Controller & Route Annotations**:
+  - Every controller must have **`@ApiTags`**.
+  - Every route must include **`@ApiOperation({ summary, description })`**.
+  - Define success and error responses with **`@ApiResponse`** (status codes, description, and DTO schema).
+
+- **DTOs as Source of Truth**:
+  - Define request/response shapes with **DTO classes**.
+  - Use **class-validator** for validation and **Swagger decorators** (e.g., `@ApiProperty`, `@ApiPropertyOptional`) to describe fields, formats, enums, and examples.
+  - Reuse DTOs across endpoints when possible; avoid ad-hoc inline types.
+
+- **Parameters & Pagination**:
+  - Document **path**, **query**, **header**, and **cookie** params via decorators (`@ApiParam`, `@ApiQuery`, etc.).
+  - Standardize pagination/filtering DTOs and document them consistently.
+
+- **Versioning**:
+  - Apply NestJS API versioning (e.g., `v1`, `v2`) and reflect it in tags/paths in controllers like this:
+  ```ts
+  // ✅ GOOD - using the versioning feature for versions that are not the defautl (ie, not "1")
+  @Controller({
+    path: "pcp-users",
+    version: "2"
+  })
+  export class PcpUserController {}
+
+  // ❌ BAD - hard coding the version instead of relying on the NestJS version feature
+  @Controller("v2/pcp-users")
+  export class PcpUserController {}
+  ```
+
+- **Spec Generation**:
+  - Expose the Swagger UI page under `/openapi` page
+  - Expose the OpenAPI JSON at a stable path `/openapi.json` and its YAML version at `/openapi.yaml`
+
+- **Examples & Consistency**:
+  - Provide **field-level examples** (`example`) and **endpoint examples** where helpful.
+  - Ensure enums, unions, nullable fields, and default values are accurately represented.
+
+- **Build/CI Expectations**:
+  - Generate the spec as a build artifact (script like `pnpm openapi:gen`).
+  - Validate the spec in CI (e.g., OpenAPI CLI) to prevent regressions.
+
+- **Deprecations**:
+  - Mark deprecated routes with `deprecated: true` in the `@ApiOperation` decorator, and include replacement guidance in the description.
+
+- more details about the documentation is available at @documentation-standards.mdc

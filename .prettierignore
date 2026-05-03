@@ -1,0 +1,34 @@
+# Database dump (dbmate)
+db/schema.sql
+
+*.js.map
+
+scripts
+
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+.turbo/
+coverage/
+
+# Generated files
+*.tsbuildinfo
+**/routeTree.gen.ts
+**/*.gen.ts
+
+# Config files that shouldn't be formatted
+package-lock.json
+yarn.lock
+
+# Ignore log files
+*.log
+
+# Ignore miscellaneous editor files
+*.swp
+*.swo
+
+

@@ -1,0 +1,90 @@
+---
+description: Rules for placing static assets in Vite projects — when to use `public/` vs `src/assets/`
+globs: apps/web/**/*.{ts,tsx,css,html}
+alwaysApply: false
+---
+
+# Vite Static Assets: `public/` vs `src/assets/`
+
+## Default: use `src/assets/`
+
+Import assets into your source code. Vite hashes filenames in production builds (e.g., `logo.2d8efhg.png`), enabling long-term caching and automatic cache-busting. Small files may be inlined as base64.
+
+```tsx
+// CORRECT — imported asset, hashed in production
+import logo from '@/assets/logo-emantto.png';
+
+export const Logo = () => <img src={logo} alt="Logo" />;
+```
+
+Use `src/assets/` when:
+
+- The file is referenced in `.tsx`, `.ts`, or `.css` source code (images, SVGs, fonts used via `@font-face` in CSS modules, etc.)
+- You want build-time optimization (hashing, inlining, tree-shaking of unused assets)
+- The filename can change between deploys (cache-busting)
+
+## Exception: use `public/`
+
+Files in `public/` are copied as-is to the build output root, with **no hashing, no processing, no inlining**. Reference them with absolute paths from `/`.
+
+```tsx
+// CORRECT — absolute path, no import needed
+<link rel="icon" href="/favicon.ico" />
+<img src="/logo512.png" />
+```
+
+Use `public/` **only** when:
+
+- The file must keep its exact name and path (e.g., `favicon.ico`, `robots.txt`, `manifest.json`, `sitemap.xml`)
+- The file is never imported in source code (e.g., referenced only in `index.html` or by external systems)
+- The file is runtime-generated or runtime-injected (e.g., `config.js` / `config.js.template` processed by `entrypoint.sh` at container startup)
+- The file must be served at a well-known URL (e.g., `/.well-known/*`, PWA icons referenced by `manifest.json`)
+- Custom fonts loaded via `<link>` in `index.html` rather than CSS `@font-face`
+
+## What NOT to put in `public/`
+
+- Images, icons, or SVGs used in components — import them from `src/assets/` instead
+- CSS files — use CSS modules or import them in your source
+- JS/TS files — they bypass the module graph and won't be type-checked or tree-shaken
+- Anything that benefits from hashing/cache-busting
+
+## Current project layout
+
+```
+apps/web/
+  public/
+    config.js              # Runtime config (local dev values) — never imported, loaded via <script> in index.html
+    config.js.template     # envsubst template for container startup — processed by entrypoint.sh
+    favicon.ico            # Must keep exact name
+    fonts/                 # Loaded via <link> in index.html
+    index.html             # App shell
+    logo192.png            # PWA icon referenced by manifest.json
+    logo512.png            # PWA icon referenced by manifest.json
+    manifest.json          # PWA manifest — must keep exact name/path
+  src/assets/
+    logo-emantto.png       # App logo imported in components
+```
+
+## Dynamic asset URLs
+
+When the asset path depends on a variable, use the `new URL()` pattern instead of dynamic `import()`:
+
+```ts
+// CORRECT — Vite can analyze the static portion of the template literal
+function getIcon(name: string): string {
+  return new URL(`../assets/icons/${name}.svg`, import.meta.url).href;
+}
+```
+
+The string template must contain a static path prefix so Vite can resolve it at build time. Fully dynamic strings (e.g., `new URL(variable, import.meta.url)`) are left as-is and will break in production.
+
+## CSS asset references
+
+CSS `url()` references are processed by Vite the same way as JS imports — use relative paths:
+
+```css
+/* CORRECT — relative path, Vite resolves and hashes */
+.hero {
+  background-image: url('../assets/hero-bg.jpg');
+}
+```

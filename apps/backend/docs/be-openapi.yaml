@@ -1,0 +1,79 @@
+openapi: 3.0.0
+paths:
+  /v1/health:
+    get:
+      operationId: ApiHealthController_checkHealth_v1
+      parameters: []
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResultResponseDTO'
+      security:
+        - {}
+      tags:
+        - Health
+info:
+  title: BE - Template eMantto Project
+  description: Backend API for template-emantto-project monorepo
+  version: 0.0.0
+  contact:
+    name: grp_emx_platform_eng@latam.com
+    url: mailto:grp_emx_platform_eng@latam.com
+    email: grp_emx_platform_eng@latam.com
+tags: []
+servers: []
+components:
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http
+      description: Azure AD Bearer token authorization
+  schemas:
+    HealthIndicatorStatusDTO:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - up
+            - down
+          description: Status of the specific health indicator
+      required:
+        - status
+    HealthIndicatorResultResponseDTO:
+      type: object
+      properties:
+        application:
+          $ref: '#/components/schemas/HealthIndicatorStatusDTO'
+        database:
+          $ref: '#/components/schemas/HealthIndicatorStatusDTO'
+    HealthCheckResultResponseDTO:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - error
+            - ok
+            - shutting_down
+        info:
+          description: Summary information about healthy health indicators
+          allOf:
+            - $ref: '#/components/schemas/HealthIndicatorResultResponseDTO'
+        error:
+          description: Summary information about failed health indicators
+          allOf:
+            - $ref: '#/components/schemas/HealthIndicatorResultResponseDTO'
+        details:
+          description: Details about all health indicators
+          allOf:
+            - $ref: '#/components/schemas/HealthIndicatorResultResponseDTO'
+      required:
+        - status
+        - info
+        - error
+        - details

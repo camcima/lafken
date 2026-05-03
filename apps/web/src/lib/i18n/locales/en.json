@@ -1,0 +1,119 @@
+{
+  "setup": {
+    "auth": "Initializing authentication...",
+    "health": "Checking services...",
+    "redirectToLogin": "Redirecting you to login..."
+  },
+  "auth": {
+    "welcomeToLatam": "Welcome to LATAM",
+    "toAccess": "To access, use your LATAM account",
+    "login": "Sign in",
+    "loading": "Signing in...",
+    "errorTitle": "Authentication error",
+    "loginFailed": "We couldn't sign you in. Please try again or contact your administrator.",
+    "terms": "By signing in, you accept our terms of service and privacy policy."
+  },
+  "common": {
+    "healthyStatus": {
+      "checking": "Checking services...",
+      "waiting": "Waiting for services to be ready...",
+      "error": "Unable to connect to services"
+    },
+    "actions": {
+      "retry": "Retry"
+    }
+  },
+  "errors": {
+    "serverError": "A server error occurred. Please try again later.",
+    "genericError": "An error occurred",
+    "accessDenied": "Access Denied",
+    "noRolePermission": "You do not have permission to access this page.",
+    "noGroupPermission": "You do not belong to the required group for this page.",
+    "goBack": "Go Back"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "greeting": "Hello",
+    "logout": "Logout",
+    "userName": "User Name"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "stats": {
+      "activeAircraft": "Active Aircraft",
+      "pendingTasks": "Pending Tasks",
+      "completedToday": "Completed Today",
+      "critical": "Critical"
+    },
+    "quickForm": {
+      "title": "Quick Form",
+      "name": "Name",
+      "email": "Email",
+      "submit": "Submit",
+      "reset": "Reset"
+    }
+  },
+  "admin": {
+    "title": "User Management",
+    "subtitle": "Manage users and system permissions",
+    "newUser": "New User",
+    "userCreated": "User created successfully",
+    "userCreateError": "Failed to create user",
+    "form": {
+      "email": "Email",
+      "emailPlaceholder": "user@example.com",
+      "currentBase": "Current Base",
+      "currentBasePlaceholder": "SCL",
+      "submit": "Submit",
+      "saving": "Saving...",
+      "reset": "Reset",
+      "validation": {
+        "invalidEmail": "Invalid email address",
+        "baseLength": "Base must be exactly 3 characters"
+      }
+    },
+    "activeUsers": "Active Users",
+    "loading": "Loading...",
+    "error": "Error loading data",
+    "noData": "No data found",
+    "noUsers": "No users found",
+    "noWorkCenters": "No work centers found",
+    "workCenters": "Work Centers",
+    "pagination": {
+      "showing": "Page {{page}} of {{lastPage}} ({{total}} total)",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "table": {
+      "user": "User",
+      "role": "Role",
+      "status": "Status",
+      "lastAccess": "Last Access",
+      "actions": "Actions",
+      "workCenter": "Work Center"
+    },
+    "roles": {
+      "admin": "Administrator",
+      "technician": "Technician",
+      "viewer": "Viewer"
+    },
+    "status": {
+      "active": "Active"
+    },
+    "actions": {
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "refresh": "Refresh"
+    },
+    "unauthorized": {
+      "title": "Administrator Access Required",
+      "message": "This page requires administrator or user manager permissions.",
+      "contact": "Contact your administrator if you need access.",
+      "back": "Back to Dashboard",
+      "redirecting": "Redirecting..."
+    },
+    "api.errors": {
+      "WorkCenterNotFoundError": "The work center with base name \"{{baseName}}\" was not found."
+    }
+  }
+}

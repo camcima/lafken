@@ -1,0 +1,17 @@
+---
+description: Health Check Standards — Health endpoints with @nestjs/terminus
+alwaysApply: true
+---
+
+### Health Check Standards
+
+- **Health Check Endpoints**: Use **@nestjs/terminus** package to implement health check endpoints.
+  - Expose health check endpoints (e.g., `/health`, `/health/liveness`, `/health/readiness`) following Kubernetes health check conventions.
+  - Include checks for critical dependencies:
+    - Database connectivity
+    - Cache/Redis availability (if applicable)
+    - External service dependencies
+    - Disk space and memory (if applicable)
+  - Configure appropriate timeouts for health checks to prevent cascading failures.
+  - Return standardized responses with overall status and individual component statuses.
+  - Document health check endpoints in OpenAPI/Swagger documentation.

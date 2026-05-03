@@ -1,0 +1,22 @@
+{
+  "extends": "@shared/typescript-config/vite.json",
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    ".storybook/**/*.ts",
+    ".storybook/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "eslint.config.mjs",
+    "prettier.config.js",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "vitest.setup.ts"
+  ],
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "references": [{ "path": "../../shared/backend-api" }]
+}
