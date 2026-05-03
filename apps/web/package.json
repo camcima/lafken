@@ -36,6 +36,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@shared/backend-api": "workspace:*",
     "@azure/msal-browser": "^5.6.3",
     "@grafana/faro-react": "^2.2.4",
     "@grafana/faro-web-tracing": "^2.2.4",

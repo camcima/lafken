@@ -15,7 +15,8 @@
   ],
   "compilerOptions": {
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@shared/backend-api": ["../../shared/backend-api/index.ts"]
     }
   },
   "references": [{ "path": "../../shared/backend-api" }]

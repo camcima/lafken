@@ -1,8 +1,11 @@
-/**
- * Stubbed dashboard overview hook for Slice 0. Task 16 wires this to the
- * real backend service via TanStack Query. Returning undefined data is safe
- * because consumers use optional chaining for the count badges.
- */
-export function useDashboardOverview(): { data: undefined; isLoading: boolean } {
-  return { data: undefined, isLoading: false };
+import { useQuery } from "@tanstack/react-query";
+
+import { dashboardKeys } from "@/features/dashboard/keys";
+import { dashboardService } from "@/services";
+
+export function useDashboardOverview() {
+  return useQuery({
+    queryKey: dashboardKeys.overview(),
+    queryFn: () => dashboardService.getOverview(),
+  });
 }
