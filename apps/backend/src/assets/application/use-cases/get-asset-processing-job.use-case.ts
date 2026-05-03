@@ -19,7 +19,7 @@ export class GetAssetProcessingJobUseCase {
     const job = await this.repository.findProcessingJob(asset.props.id);
 
     if (!job) {
-      throw new ProcessingJobNotFoundError({ publicId: input.publicId });
+      throw new ProcessingJobNotFoundError({ assetPublicId: input.publicId });
     }
 
     return job;

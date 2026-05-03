@@ -29,10 +29,8 @@ export class AssetQueryRepository implements AssetQueryRepositoryPort {
 
     let dataQuery = this.db.connection
       .selectFrom("assets")
-      .selectAll()
-      .orderBy("created_at", "desc")
-      .limit(input.limit)
-      .offset(offset);
+      .selectAll("assets")
+      .orderBy("assets.created_at", "desc");
 
     if (input.namespaceSlug) {
       countQuery = countQuery
@@ -41,8 +39,7 @@ export class AssetQueryRepository implements AssetQueryRepositoryPort {
 
       dataQuery = dataQuery
         .innerJoin("namespaces", "namespaces.id", "assets.namespace_id")
-        .where("namespaces.slug", "=", input.namespaceSlug)
-        .select("assets.id");
+        .where("namespaces.slug", "=", input.namespaceSlug);
     }
 
     if (input.states && input.states.length > 0) {
@@ -78,7 +75,7 @@ export class AssetQueryRepository implements AssetQueryRepositoryPort {
     const [{ count }] = await countQuery.execute();
     const total = Number(count);
 
-    const rows = await dataQuery.execute();
+    const rows = await dataQuery.limit(input.limit).offset(offset).execute();
 
     return {
       data: rows.map((row) => AssetDbMapper.toDomain(row as Record<string, any>)),
