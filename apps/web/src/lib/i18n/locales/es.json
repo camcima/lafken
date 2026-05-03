@@ -5,6 +5,8 @@
     "redirectToLogin": "Redirigiendo al inicio de sesión..."
   },
   "auth": {
+    "welcomeToLafken": "",
+    "signInWithSso": "",
     "welcomeToLatam": "Bienvenido a LATAM",
     "toAccess": "Para acceder, utiliza tu cuenta LATAM",
     "login": "Conéctate",
@@ -114,6 +116,199 @@
     },
     "api.errors": {
       "WorkCenterNotFoundError": "El centro de trabajo con nombre base \"{{baseName}}\" no fue encontrado."
+    }
+  },
+  "assetStates": {
+    "pending": "",
+    "uploaded": "",
+    "processing": "",
+    "ready": "",
+    "rejected": "",
+    "quarantined_virus": "",
+    "quarantined_moderation": "",
+    "processing_failed": "",
+    "expired": "",
+    "deleted": ""
+  },
+  "idChip": {
+    "copyToClipboard": "",
+    "copied": ""
+  },
+  "nav": {
+    "groups": {
+      "workspace": "",
+      "review": "",
+      "platform": ""
+    },
+    "home": "",
+    "assets": "",
+    "namespaces": "",
+    "quarantine": "",
+    "legalHolds": "",
+    "audit": "",
+    "system": "",
+    "settings": "",
+    "envBadge": "",
+    "comingInSlice1": ""
+  },
+  "topBar": {
+    "refresh": "",
+    "notifications": "",
+    "notificationsComingSoon": ""
+  },
+  "user": {
+    "noRole": "",
+    "signOut": ""
+  },
+  "pages": {
+    "home": {
+      "title": "",
+      "subtitle": "",
+      "welcomeBack": "",
+      "lastRefreshed": "",
+      "justNow": "",
+      "stats": {
+        "totalAssets": "",
+        "inFlight": "",
+        "queueDepth": "",
+        "quarantine": "",
+        "legalHolds": ""
+      },
+      "pipelineHealth": "",
+      "checking": "",
+      "needsAttention": "",
+      "needsAttentionEmpty": "",
+      "topNamespaces": "",
+      "topNamespacesEmpty": "",
+      "liveEvents": "",
+      "liveEventsEmpty": ""
+    },
+    "assets": {
+      "title": "",
+      "filterByNamespace": "",
+      "filterByState": "",
+      "filterByUploader": "",
+      "filterByDate": "",
+      "table": {
+        "asset": "",
+        "namespace": "",
+        "state": "",
+        "size": "",
+        "uploaded": ""
+      },
+      "empty": {
+        "title": "",
+        "description": ""
+      },
+      "pagination": "",
+      "bulkActions": {
+        "label": "",
+        "comingSoon": ""
+      }
+    },
+    "assetDetail": {
+      "title": "",
+      "loading": "",
+      "notFound": {
+        "title": "",
+        "description": "",
+        "action": ""
+      },
+      "sections": {
+        "identity": "",
+        "fileProperties": "",
+        "timeline": "",
+        "analyses": "",
+        "presets": ""
+      }
+    },
+    "namespaces": {
+      "title": "",
+      "create": "",
+      "table": {
+        "slug": "",
+        "displayName": "",
+        "storage": "",
+        "policyVersion": "",
+        "assetCount": ""
+      },
+      "empty": {
+        "title": "",
+        "description": ""
+      }
+    },
+    "namespaceDetail": {
+      "title": "",
+      "loading": "",
+      "notFound": {
+        "title": "",
+        "description": "",
+        "action": ""
+      },
+      "tabs": {
+        "overview": "",
+        "policy": "",
+        "presets": "",
+        "assets": "",
+        "webhooks": "",
+        "quotas": ""
+      },
+      "empty": {
+        "overview": "",
+        "policy": "",
+        "presets": "",
+        "assets": "",
+        "webhooks": "",
+        "quotas": ""
+      }
+    },
+    "quarantine": {
+      "title": "",
+      "empty": {
+        "title": "",
+        "description": ""
+      }
+    },
+    "legalHolds": {
+      "title": "",
+      "place": "",
+      "empty": {
+        "title": "",
+        "description": ""
+      }
+    },
+    "audit": {
+      "title": "",
+      "export": "",
+      "filters": {
+        "principal": "",
+        "action": "",
+        "entity": "",
+        "from": "",
+        "to": ""
+      },
+      "empty": { "title": "" }
+    },
+    "system": {
+      "title": "",
+      "storageBindings": "",
+      "integrations": "",
+      "health": "",
+      "noStorageBindings": "",
+      "noIndicators": "",
+      "integrationStatus": {
+        "configured": "",
+        "not_configured": ""
+      }
+    },
+    "settings": {
+      "title": "",
+      "comingSoon": "",
+      "labels": {
+        "theme": "",
+        "language": "",
+        "dateFormat": ""
+      }
     }
   }
 }
