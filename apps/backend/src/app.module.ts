@@ -1,6 +1,7 @@
 import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 import { APP_FILTER, APP_PIPE } from "@nestjs/core";
 
+import { AssetsModule } from "./assets/assets.module";
 import { HealthModule } from "./health/health.module";
 import { NamespacesModule } from "./namespaces/namespaces.module";
 import { LoggerModule } from "./shared/infrastructure/logger/logger.module";
@@ -12,7 +13,14 @@ import { JsonBodyParserMiddleware } from "./shared/presentation/middlewares/json
 import { UrlEncodedParserMiddleware } from "./shared/presentation/middlewares/url-encoded-parser.middleware";
 
 @Module({
-  imports: [LoggerModule, TelemetryModule, HealthModule, AuthModule, NamespacesModule],
+  imports: [
+    LoggerModule,
+    TelemetryModule,
+    HealthModule,
+    AuthModule,
+    NamespacesModule,
+    AssetsModule,
+  ],
   providers: [
     {
       provide: APP_PIPE,

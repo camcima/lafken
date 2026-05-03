@@ -1,0 +1,60 @@
+import { beforeEach, describe, expect, it } from "vitest";
+
+import { GetAssetByPublicIdUseCase } from "@/assets/application/use-cases/get-asset-by-public-id.use-case";
+import { Asset } from "@/assets/domain/entities/asset.entity";
+import { AssetNotFoundError } from "@/assets/domain/errors/asset-not-found.error";
+
+import { InMemoryAssetQueryRepository } from "../__fakes__/in-memory-asset-query.repository";
+
+describe("GetAssetByPublicIdUseCase", () => {
+  let repository: InMemoryAssetQueryRepository;
+  let useCase: GetAssetByPublicIdUseCase;
+
+  beforeEach(() => {
+    repository = new InMemoryAssetQueryRepository();
+    useCase = new GetAssetByPublicIdUseCase(repository);
+  });
+
+  it("throws AssetNotFoundError when the public ID does not exist", async () => {
+    await expect(useCase.execute({ publicId: "missing-id" })).rejects.toBeInstanceOf(
+      AssetNotFoundError,
+    );
+  });
+
+  it("returns the asset with metadata when found", async () => {
+    const fixture = Asset.fromProps({
+      id: 1n,
+      publicId: "abc-123",
+      namespaceId: 10n,
+      policyVersionId: 20n,
+      storageBindingId: 30n,
+      storageKey: "uploads/abc-123",
+      state: "ready",
+      stateReason: null,
+      sizeBytes: null,
+      mimeType: null,
+      declaredMimeType: null,
+      width: null,
+      height: null,
+      contentHash: null,
+      uploadedBy: null,
+      owningRecordType: null,
+      owningRecordId: null,
+      customMetadata: {},
+      captureContext: null,
+      legalHold: false,
+      confirmedAt: null,
+      stateChangedAt: new Date("2026-01-01T00:00:00Z"),
+      createdAt: new Date("2026-01-01T00:00:00Z"),
+      updatedAt: new Date("2026-01-01T00:00:00Z"),
+    });
+    repository.seed([fixture]);
+    repository.seedNamespaceSlug(10n, "aircraft-photos");
+    repository.seedPolicyVersion(20n, 3);
+
+    const result = await useCase.execute({ publicId: "abc-123" });
+    expect(result.asset.props.publicId).toBe("abc-123");
+    expect(result.namespaceSlug).toBe("aircraft-photos");
+    expect(result.policyVersion).toBe(3);
+  });
+});
