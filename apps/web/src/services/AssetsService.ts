@@ -1,45 +1,32 @@
 import type {
   AssetAnalysisResponseDTO,
   AssetResponseDTO,
-  AssetState,
   AssetStateTransitionResponseDTO,
+  ListAssetsQueryDTO,
   PaginatedResult,
   ProcessingJobResponseDTO,
 } from "@shared/backend-api";
 
 import { BaseService } from "./BaseService";
 
-export interface ListAssetsQuery {
-  page?: number;
-  limit?: number;
-  namespaceSlug?: string;
-  states?: AssetState[];
-  uploadedBy?: string;
-  owningRecordType?: string;
-  owningRecordId?: string;
-  uploadedFrom?: string;
-  uploadedTo?: string;
-}
-
 export class AssetsService extends BaseService {
   private readonly basePath = "/assets";
 
-  async list(query: ListAssetsQuery = {}): Promise<PaginatedResult<AssetResponseDTO>> {
+  async list(query: Partial<ListAssetsQueryDTO> = {}): Promise<PaginatedResult<AssetResponseDTO>> {
+    const params: Record<string, unknown> = {
+      page: query.page,
+      limit: query.limit,
+      namespaceSlug: query.namespaceSlug,
+      states: query.states?.join(","),
+      uploadedBy: query.uploadedBy,
+      owningRecordType: query.owningRecordType,
+      owningRecordId: query.owningRecordId,
+      uploadedFrom: query.uploadedFrom,
+      uploadedTo: query.uploadedTo,
+    };
     return this.getApiClient().get<PaginatedResult<AssetResponseDTO>>(
       this.getServiceUrl(this.basePath),
-      {
-        params: {
-          page: query.page,
-          limit: query.limit,
-          namespaceSlug: query.namespaceSlug,
-          states: query.states,
-          uploadedBy: query.uploadedBy,
-          owningRecordType: query.owningRecordType,
-          owningRecordId: query.owningRecordId,
-          uploadedFrom: query.uploadedFrom,
-          uploadedTo: query.uploadedTo,
-        },
-      },
+      { params },
     );
   }
 

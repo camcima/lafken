@@ -1,22 +1,17 @@
-import type { AuditEntryResponseDTO, PaginatedResult } from "@shared/backend-api";
+import type {
+  AuditEntryResponseDTO,
+  ListAuditQueryDTO,
+  PaginatedResult,
+} from "@shared/backend-api";
 
 import { BaseService } from "./BaseService";
-
-export interface ListAuditQuery {
-  page?: number;
-  limit?: number;
-  principal?: string;
-  action?: string;
-  entityType?: string;
-  entityId?: string;
-  occurredFrom?: string;
-  occurredTo?: string;
-}
 
 export class AuditService extends BaseService {
   private readonly basePath = "/audit";
 
-  async list(query: ListAuditQuery = {}): Promise<PaginatedResult<AuditEntryResponseDTO>> {
+  async list(
+    query: Partial<ListAuditQueryDTO> = {},
+  ): Promise<PaginatedResult<AuditEntryResponseDTO>> {
     return this.getApiClient().get<PaginatedResult<AuditEntryResponseDTO>>(
       this.getServiceUrl(this.basePath),
       {

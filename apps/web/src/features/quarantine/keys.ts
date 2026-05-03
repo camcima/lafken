@@ -1,7 +1,7 @@
-import type { ListQuarantineQuery } from "@/services/QuarantineService";
+import type { ListQuarantineQueryDTO } from "@shared/backend-api";
 
 export const quarantineKeys = {
   all: ["quarantine"] as const,
   lists: () => [...quarantineKeys.all, "list"] as const,
-  list: (q: ListQuarantineQuery) => [...quarantineKeys.lists(), q] as const,
+  list: (q: Partial<ListQuarantineQueryDTO>) => [...quarantineKeys.lists(), q] as const,
 };

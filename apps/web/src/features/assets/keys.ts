@@ -1,9 +1,9 @@
-import type { ListAssetsQuery } from "@/services/AssetsService";
+import type { ListAssetsQueryDTO } from "@shared/backend-api";
 
 export const assetsKeys = {
   all: ["assets"] as const,
   lists: () => [...assetsKeys.all, "list"] as const,
-  list: (q: ListAssetsQuery) => [...assetsKeys.lists(), q] as const,
+  list: (q: Partial<ListAssetsQueryDTO>) => [...assetsKeys.lists(), q] as const,
   details: () => [...assetsKeys.all, "detail"] as const,
   detail: (publicId: string) => [...assetsKeys.details(), publicId] as const,
   stateTransitions: (publicId: string) =>

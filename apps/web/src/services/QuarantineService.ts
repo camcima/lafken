@@ -1,21 +1,16 @@
-import type { PaginatedResult, QuarantinedAssetResponseDTO } from "@shared/backend-api";
+import type {
+  ListQuarantineQueryDTO,
+  PaginatedResult,
+  QuarantinedAssetResponseDTO,
+} from "@shared/backend-api";
 
 import { BaseService } from "./BaseService";
-
-export interface ListQuarantineQuery {
-  page?: number;
-  limit?: number;
-  kind?: "virus" | "moderation";
-  namespaceSlug?: string;
-  flaggedFrom?: string;
-  flaggedTo?: string;
-}
 
 export class QuarantineService extends BaseService {
   private readonly basePath = "/quarantine";
 
   async list(
-    query: ListQuarantineQuery = {},
+    query: Partial<ListQuarantineQueryDTO> = {},
   ): Promise<PaginatedResult<QuarantinedAssetResponseDTO>> {
     return this.getApiClient().get<PaginatedResult<QuarantinedAssetResponseDTO>>(
       this.getServiceUrl(this.basePath),

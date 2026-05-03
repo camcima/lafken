@@ -36,7 +36,6 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@shared/backend-api": "workspace:*",
     "@azure/msal-browser": "^5.6.3",
     "@grafana/faro-react": "^2.2.4",
     "@grafana/faro-web-tracing": "^2.2.4",
@@ -44,6 +43,7 @@
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-slot": "^1.2.4",
+    "@shared/backend-api": "workspace:*",
     "@tanstack/react-query": "^5.96.2",
     "@tanstack/react-router": "^1.168.10",
     "class-variance-authority": "^0.7.1",

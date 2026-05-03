@@ -1,10 +1,10 @@
+import type { ListAssetsQueryDTO } from "@shared/backend-api";
 import { useQuery } from "@tanstack/react-query";
 
 import { assetsKeys } from "@/features/assets/keys";
 import { assetsService } from "@/services";
-import type { ListAssetsQuery } from "@/services/AssetsService";
 
-export function useAssets(q: ListAssetsQuery = {}) {
+export function useAssets(q: Partial<ListAssetsQueryDTO> = {}) {
   return useQuery({
     queryKey: assetsKeys.list(q),
     queryFn: () => assetsService.list(q),
