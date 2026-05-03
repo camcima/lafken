@@ -182,7 +182,29 @@
       "liveEvents": "Live events",
       "liveEventsEmpty": "No recent events"
     },
-    "assets": { "title": "Assets" },
+    "assets": {
+      "title": "Assets",
+      "filterByNamespace": "Namespace",
+      "filterByState": "State",
+      "filterByUploader": "Uploaded by",
+      "filterByDate": "Uploaded between",
+      "table": {
+        "asset": "Asset",
+        "namespace": "Namespace",
+        "state": "State",
+        "size": "Size",
+        "uploaded": "Uploaded"
+      },
+      "empty": {
+        "title": "No assets match these filters",
+        "description": "Try clearing some filters."
+      },
+      "pagination": "{{shown}} of {{total}} · page {{page}}",
+      "bulkActions": {
+        "label": "Bulk actions",
+        "comingSoon": "Bulk actions come in a later slice"
+      }
+    },
     "namespaces": { "title": "Namespaces" },
     "quarantine": { "title": "Quarantine" },
     "legalHolds": { "title": "Legal holds" },
