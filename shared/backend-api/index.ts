@@ -1,6 +1,9 @@
 export * from "./shared/errors-response-dto-factories";
 export type * from "./shared/paginated-result.interface";
-export { makePaginatedRequestInputDto, makePaginatedResponseDto } from "./shared/pagination-dto-factories";
+export {
+  makePaginatedRequestInputDto,
+  makePaginatedResponseDto,
+} from "./shared/pagination-dto-factories";
 
 export * from "./presentation/health-dtos/health-check-result.dto";
 export * from "./presentation/auth/unauthorized-error-response.dto";

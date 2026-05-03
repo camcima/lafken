@@ -30,7 +30,7 @@ export function AssetDetailPage({ publicId }: IAssetDetailPageProps): React.JSX.
           description={t("pages.assetDetail.notFound.description")}
           action={
             <Link
-              to="/assets/"
+              to="/assets"
               className="bg-background hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-medium whitespace-nowrap shadow-xs transition-all"
             >
               {t("pages.assetDetail.notFound.action")}
