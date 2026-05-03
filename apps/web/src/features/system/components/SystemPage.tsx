@@ -82,7 +82,7 @@ export function SystemPage(): React.JSX.Element {
                 <span
                   className={`size-2 rounded-full ${
                     indicator.status === "ok"
-                      ? "bg-teal-500"
+                      ? "bg-ok"
                       : indicator.status === "degraded"
                         ? "bg-amber-400"
                         : indicator.status === "failing"

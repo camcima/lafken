@@ -32,7 +32,7 @@ export function IdChip({ id, className }: IIdChipProps) {
     >
       <span>{displayId}</span>
       {isCopied ? (
-        <Check className="size-3 text-teal-700" aria-hidden />
+        <Check className="text-ok size-3" aria-hidden />
       ) : (
         <Copy className="size-3" aria-hidden />
       )}

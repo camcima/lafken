@@ -267,14 +267,13 @@
         "areaSeverity": "Area · severity",
         "namespaceWo": "Namespace · WO",
         "uploadedBy": "Uploaded by",
-        "age": "Age"
+        "age": "Age",
+        "selectAll": "Select all"
       },
       "row": {
-        "hold": "hold"
+        "hold": "Legal hold"
       },
       "empty": {
-        "title": "No assets match these filters",
-        "description": "Try clearing some filters.",
         "noMatches": {
           "title": "No assets match these filters",
           "description": "Try clearing one of the filters above, or search by a different field."

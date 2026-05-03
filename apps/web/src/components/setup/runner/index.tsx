@@ -120,7 +120,7 @@ export default function BootstrapRunner({
         </svg>
         <h2 className="mb-2 text-xl font-semibold text-neutral-900">{stepError.errorTitle}</h2>
         <p className="mb-6 text-neutral-600">{stepError.errorDescription}</p>
-        <Button onClick={handleRetry} variant="brand" className="h-12 w-full">
+        <Button onClick={handleRetry} variant="pink" className="h-12 w-full">
           {t("common.actions.retry")}
         </Button>
       </BrandedScreen>

@@ -55,7 +55,7 @@ export function LoginWelcome({ redirectPath }: Readonly<LoginWelcomeProps>) {
 
       <Button
         type="button"
-        variant="brand"
+        variant="pink"
         onClick={() => {
           void handleLogin();
         }}

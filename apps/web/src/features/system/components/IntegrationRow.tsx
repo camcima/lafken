@@ -18,7 +18,7 @@ export function IntegrationRow({ port, adapter, status }: IIntegrationRowProps):
       </div>
       <span
         className={`text-xs font-medium ${
-          status === "configured" ? "text-teal-700" : "text-neutral-400"
+          status === "configured" ? "text-ok" : "text-neutral-400"
         }`}
       >
         {t(`pages.system.integrationStatus.${status}`)}

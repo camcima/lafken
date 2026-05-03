@@ -267,14 +267,13 @@
         "areaSeverity": "Área · severidad",
         "namespaceWo": "Namespace · OT",
         "uploadedBy": "Subido por",
-        "age": "Antigüedad"
+        "age": "Antigüedad",
+        "selectAll": "Seleccionar todo"
       },
       "row": {
-        "hold": "retención"
+        "hold": "Retención legal"
       },
       "empty": {
-        "title": "Ningún activo coincide con estos filtros",
-        "description": "Intenta limpiar algunos filtros.",
         "noMatches": {
           "title": "Ningún activo coincide con estos filtros",
           "description": "Intenta limpiar uno de los filtros o buscar por otro campo."

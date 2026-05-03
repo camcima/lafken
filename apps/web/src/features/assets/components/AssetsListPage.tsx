@@ -92,21 +92,12 @@ const ROWS_COLS =
 
 interface IRowsViewProps {
   pageRows: DemoAsset[];
-  page: number;
-  pageSize: number;
   selected: Set<string>;
   onToggleOne: (id: string, checked: boolean) => void;
   onToggleAll: (checked: boolean) => void;
 }
 
-function RowsView({
-  pageRows,
-  page,
-  pageSize,
-  selected,
-  onToggleOne,
-  onToggleAll,
-}: IRowsViewProps) {
+function RowsView({ pageRows, selected, onToggleOne, onToggleAll }: IRowsViewProps) {
   const { t } = useTranslation();
   const allChecked = pageRows.length > 0 && pageRows.every((row) => selected.has(row.id));
   return (
@@ -126,7 +117,7 @@ function RowsView({
               onToggleAll(e.target.checked);
             }}
             className="accent-latam-indigo"
-            aria-label={t("pages.assets.table.asset")}
+            aria-label={t("pages.assets.table.selectAll")}
           />
           <span />
           <span>{t("pages.assets.table.asset")}</span>
@@ -139,9 +130,9 @@ function RowsView({
           <span />
         </div>
         {/* Data rows */}
-        {pageRows.map((asset, idx) => (
+        {pageRows.map((asset) => (
           <Link
-            key={asset.id + "_" + String(page * pageSize + idx)}
+            key={asset.id}
             to="/assets/$publicId"
             params={{ publicId: asset.publicId }}
             className={cn(
@@ -209,16 +200,14 @@ function RowsView({
 // ── Grid view ─────────────────────────────────────────────────────────────
 interface IGridViewProps {
   pageRows: DemoAsset[];
-  page: number;
-  pageSize: number;
 }
 
-function GridView({ pageRows, page, pageSize }: IGridViewProps) {
+function GridView({ pageRows }: IGridViewProps) {
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
-      {pageRows.map((asset, idx) => (
+      {pageRows.map((asset) => (
         <Link
-          key={asset.id + "_g_" + String(page * pageSize + idx)}
+          key={asset.id}
           to="/assets/$publicId"
           params={{ publicId: asset.publicId }}
           className="group border-border bg-card hover:border-latam-indigo/30 block overflow-hidden rounded-md border no-underline transition-all hover:shadow-md"
@@ -251,16 +240,14 @@ function GridView({ pageRows, page, pageSize }: IGridViewProps) {
 // ── Hybrid view ───────────────────────────────────────────────────────────
 interface IHybridViewProps {
   pageRows: DemoAsset[];
-  page: number;
-  pageSize: number;
 }
 
-function HybridView({ pageRows, page, pageSize }: IHybridViewProps) {
+function HybridView({ pageRows }: IHybridViewProps) {
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-      {pageRows.map((asset, idx) => (
+      {pageRows.map((asset) => (
         <Link
-          key={asset.id + "_h_" + String(page * pageSize + idx)}
+          key={asset.id}
           to="/assets/$publicId"
           params={{ publicId: asset.publicId }}
           className="border-border bg-card hover:border-latam-indigo/30 flex gap-3 overflow-hidden rounded-md border p-2.5 no-underline transition-all hover:shadow-sm"
@@ -338,7 +325,8 @@ const QUICK_FILTER_KEYS = [
   "mine",
 ] as const;
 
-const MORE_FILTERS_BADGE = 2;
+// Slice 1: wire to active more-filters count
+const MORE_FILTERS_BADGE_PLACEHOLDER = 2;
 
 export function AssetsListPage() {
   const { t } = useTranslation();
@@ -363,7 +351,7 @@ export function AssetsListPage() {
           !asset.id.toLowerCase().includes(q) &&
           !asset.tail.toLowerCase().includes(q) &&
           !asset.wo.toLowerCase().includes(q) &&
-          !asset.area.includes(q)
+          !asset.area.toLowerCase().includes(q)
         )
           return false;
       }
@@ -379,16 +367,19 @@ export function AssetsListPage() {
   function handleStateFilter(value: string): void {
     setStateFilter(value);
     setPage(0);
+    setSelected(new Set());
   }
 
   function handleNamespaceFilter(value: string): void {
     setNamespaceFilter(value);
     setPage(0);
+    setSelected(new Set());
   }
 
   function handleQuery(value: string): void {
     setQuery(value);
     setPage(0);
+    setSelected(new Set());
   }
 
   function handleClearFilters(): void {
@@ -396,6 +387,7 @@ export function AssetsListPage() {
     setNamespaceFilter("all");
     setQuery("");
     setPage(0);
+    setSelected(new Set());
   }
 
   function handleToggleOne(id: string, checked: boolean): void {
@@ -522,7 +514,7 @@ export function AssetsListPage() {
           >
             <Filter size={13} /> {t("pages.assets.filters.moreFilters")}
             <span className="bg-secondary text-muted-foreground ml-1 rounded-full px-1.5 py-px text-[10.5px]">
-              {MORE_FILTERS_BADGE}
+              {MORE_FILTERS_BADGE_PLACEHOLDER}
             </span>
           </button>
 
@@ -648,15 +640,13 @@ export function AssetsListPage() {
           {view === "rows" && (
             <RowsView
               pageRows={pageRows}
-              page={page}
-              pageSize={pageSize}
               selected={selected}
               onToggleOne={handleToggleOne}
               onToggleAll={handleToggleAll}
             />
           )}
-          {view === "hybrid" && <HybridView pageRows={pageRows} page={page} pageSize={pageSize} />}
-          {view === "grid" && <GridView pageRows={pageRows} page={page} pageSize={pageSize} />}
+          {view === "hybrid" && <HybridView pageRows={pageRows} />}
+          {view === "grid" && <GridView pageRows={pageRows} />}
         </>
       )}
     </div>
