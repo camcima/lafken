@@ -117,5 +117,21 @@
     "api.errors": {
       "WorkCenterNotFoundError": "The work center with base name \"{{baseName}}\" was not found."
     }
+  },
+  "assetStates": {
+    "pending": "Pending",
+    "uploaded": "Uploaded",
+    "processing": "Processing",
+    "ready": "Ready",
+    "rejected": "Rejected",
+    "quarantined_virus": "Quarantined (virus)",
+    "quarantined_moderation": "Quarantined (moderation)",
+    "processing_failed": "Processing failed",
+    "expired": "Expired",
+    "deleted": "Deleted"
+  },
+  "idChip": {
+    "copyToClipboard": "Copy to clipboard",
+    "copied": "Copied!"
   }
 }
