@@ -3,6 +3,7 @@ import { APP_FILTER, APP_PIPE } from "@nestjs/core";
 
 import { AssetsModule } from "./assets/assets.module";
 import { HealthModule } from "./health/health.module";
+import { LegalHoldsModule } from "./legal-holds/legal-holds.module";
 import { NamespacesModule } from "./namespaces/namespaces.module";
 import { QuarantineModule } from "./quarantine/quarantine.module";
 import { LoggerModule } from "./shared/infrastructure/logger/logger.module";
@@ -22,6 +23,7 @@ import { UrlEncodedParserMiddleware } from "./shared/presentation/middlewares/ur
     NamespacesModule,
     AssetsModule,
     QuarantineModule,
+    LegalHoldsModule,
   ],
   providers: [
     {
