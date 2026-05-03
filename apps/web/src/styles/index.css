@@ -1,30 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@font-face {
-  font-family: "Latam Sans";
-  src: url("/fonts/Latam_Sans_Light.otf") format("opentype");
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Latam Sans";
-  src: url("/fonts/Latam_Sans_Regular.otf") format("opentype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Latam Sans";
-  src: url("/fonts/Latam_Sans_Bold.otf") format("opentype");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -47,6 +23,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -111,43 +88,77 @@
   --color-orange-50: var(--color-orange-50);
   --color-orange-600: var(--color-orange-600);
   --color-orange-700: var(--color-orange-700);
-  --font-family-sans: var(--font-family);
+  /* LATAM brand utilities */
+  --color-latam-indigo: var(--color-latam-indigo);
+  --color-latam-indigo-deep: var(--color-latam-indigo-deep);
+  --color-latam-indigo-soft: var(--color-latam-indigo-soft);
+  --color-latam-pink: var(--color-latam-pink);
+  --color-latam-pink-soft: var(--color-latam-pink-soft);
+  --color-latam-red: var(--color-latam-red);
+  --color-latam-yellow: var(--color-latam-yellow);
+  /* Semantic state utilities */
+  --color-ok: var(--color-ok);
+  --color-ok-soft: var(--color-ok-soft);
+  --color-ok-line: var(--color-ok-line);
+  --color-info: var(--color-info);
+  --color-info-soft: var(--color-info-soft);
+  --color-info-line: var(--color-info-line);
+  --color-warn: var(--color-warn);
+  --color-warn-soft: var(--color-warn-soft);
+  --color-warn-line: var(--color-warn-line);
+  --color-alert: var(--color-alert);
+  --color-alert-soft: var(--color-alert-soft);
+  --color-alert-line: var(--color-alert-line);
+  --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
+  --color-danger-line: var(--color-danger-line);
+  /* Font utilities */
+  --font-sans: var(--font-family);
+  --font-mono: var(--font-family-mono);
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --font-family: "Latam Sans", sans-serif;
+  --radius: 0.375rem;
+
+  /* shadcn HSL — pre-wrapped so Tailwind v4 @theme inline can reference them directly */
+  --background: hsl(240 20% 97%);           /* #F4F4F6 canvas */
+  --foreground: hsl(252 50% 11%);           /* deep indigo ink */
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(252 50% 11%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(252 50% 11%);
+  --primary: hsl(252 100% 27%);             /* LATAM indigo #1B0088 */
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(240 15% 95%);
+  --secondary-foreground: hsl(252 50% 11%);
+  --muted: hsl(240 15% 95%);
+  --muted-foreground: hsl(250 16% 45%);
+  --accent: hsl(332 100% 45%);              /* LATAM pink #E50063 */
+  --accent-foreground: hsl(0 0% 100%);
+  --destructive: hsl(354 100% 43%);         /* LATAM red #D9001E */
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(240 12% 90%);
+  --input: hsl(240 12% 90%);
+  --ring: hsl(252 100% 27%);
+  --chart-1: hsl(41 91% 48%);
+  --chart-2: hsl(184 60% 40%);
+  --chart-3: hsl(227 56% 35%);
+  --chart-4: hsl(84 50% 55%);
+  --chart-5: hsl(70 60% 52%);
+  --sidebar: hsl(0 0% 100%);
+  --sidebar-foreground: hsl(252 50% 11%);
+  --sidebar-primary: hsl(252 100% 27%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(240 15% 95%);
+  --sidebar-accent-foreground: hsl(252 50% 11%);
+  --sidebar-border: hsl(240 12% 90%);
+  --sidebar-ring: hsl(252 100% 27%);
+
+  /* Font families */
+  --font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-family-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+
+  /* Existing custom palette — kept intact so neutral/coral/indigo/etc utilities work */
   --color-neutral-50: #ffffff;
   --color-neutral-100: #f2f2f2;
   --color-neutral-200: #d9d9d9;
@@ -196,6 +207,32 @@
   --color-orange-50: #fdf0e7;
   --color-orange-600: #a64c0c;
   --color-orange-700: #853d0a;
+
+  /* LATAM brand hex tokens */
+  --color-latam-indigo: #1b0088;
+  --color-latam-indigo-deep: #11005c;
+  --color-latam-indigo-soft: #2e1a87;
+  --color-latam-pink: #e50063;
+  --color-latam-pink-soft: #ff2f84;
+  --color-latam-red: #d9001e;
+  --color-latam-yellow: #f5bd00;
+
+  /* Semantic state tokens — DEFAULT / soft / line */
+  --color-ok: #1a6b46;
+  --color-ok-soft: #e7f1eb;
+  --color-ok-line: #c4dccd;
+  --color-info: #155579;
+  --color-info-soft: #e3edf4;
+  --color-info-line: #b8cee0;
+  --color-warn: #8a5a07;
+  --color-warn-soft: #f6ecd6;
+  --color-warn-line: #e3cf9f;
+  --color-alert: #8a4209;
+  --color-alert-soft: #f7e3d0;
+  --color-alert-line: #e6c39d;
+  --color-danger: #8b271a;
+  --color-danger-soft: #f6dfdb;
+  --color-danger-line: #e2b6ae;
 }
 
 .dark {
@@ -244,6 +281,8 @@
    */
   html {
     font-size: 16px;
+    margin: 0;
+    padding: 0;
   }
   @media (min-width: 1280px) {
     html {
@@ -258,49 +297,207 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-family);
-  }
+    font-feature-settings: "kern" 1;
+    margin: 0;
+    padding: 0;
 
-  button,
-  a,
-  [role="button"],
-  [role="link"],
-  [role="tab"],
-  [role="checkbox"],
-  [role="radio"],
-  [role="switch"],
-  [role="menuitem"],
-  [role="option"],
-  select,
-  summary,
-  label[for] {
-    cursor: pointer;
+    button,
+    a,
+    [role="button"],
+    [role="link"],
+    [role="tab"],
+    [role="checkbox"],
+    [role="radio"],
+    [role="switch"],
+    [role="menuitem"],
+    [role="option"],
+    select,
+    summary,
+    label[for] {
+      cursor: pointer;
+    }
   }
 }
 
-/* === Lafken theme tokens (Slice 0) ===
-   LATAM indigo primary (#1B0088), LATAM pink accent (#E50063).
-   Sidebar uses dark indigo background. Asset state colors mapped per design.
-*/
-:root {
-  /* Sidebar */
-  --lafken-sidebar-bg: oklch(0.205 0.04 280);
-  --lafken-sidebar-fg: oklch(0.95 0.02 280);
-  --lafken-sidebar-active-bg: oklch(0.65 0.18 25);
-  --lafken-sidebar-active-fg: oklch(0.99 0 0);
-  --lafken-sidebar-muted-fg: oklch(0.7 0.03 280);
-  --lafken-sidebar-section-heading: oklch(0.55 0.03 280);
+/* Density modes */
+[data-density="dense"] { font-size: 12.5px; }
+[data-density="medium"] { font-size: 13.5px; }
+[data-density="airy"] { font-size: 14.5px; }
 
-  /* Brand accent (LATAM indigo) */
-  --lafken-accent: oklch(0.32 0.27 280);
+::selection { background: #ddd5f5; color: #11005c; }
 
-  /* Asset state colors (rough mappings — refine in later slices) */
-  --lafken-state-ready: oklch(0.55 0.13 180);
-  --lafken-state-processing: oklch(0.5 0.12 200);
-  --lafken-state-quarantined: oklch(0.65 0.18 25);
-  --lafken-state-rejected: oklch(0.55 0.2 25);
-  --lafken-state-failed: oklch(0.6 0.18 50);
-  --lafken-state-expired: oklch(0.7 0.02 0);
+/* Image placeholder — striped, labeled */
+.image-placeholder {
+  width: 100%;
+  height: 100%;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      #2e1a87 0,
+      #2e1a87 14px,
+      #1b0088 14px,
+      #1b0088 28px
+    );
+  display: grid;
+  place-items: center;
+  position: relative;
+  color: rgba(255, 255, 255, 0.85);
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-align: center;
 }
+.image-placeholder::after {
+  content: "";
+  position: absolute;
+  inset: 8%;
+  border: 1px dashed rgba(255, 255, 255, 0.35);
+  border-radius: 4px;
+}
+.image-placeholder .ip-inner {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 10px 16px;
+  border-radius: 4px;
+  position: relative;
+  z-index: 1;
+  line-height: 1.6;
+  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+}
+.image-placeholder .ip-inner b {
+  display: block;
+  font-size: 13px;
+  color: #fff;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-family: var(--font-family);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+/* Sibling thumbnails */
+.sib-thumb {
+  background: linear-gradient(135deg, hsl(var(--shue, 30) 50% 55%), hsl(var(--shue, 30) 60% 35%));
+}
+.sib-processing::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0 4px, transparent 4px 8px);
+  animation: scan 1.5s linear infinite;
+}
+
+/* Processing progress bar */
+.proc-progress {
+  height: 3px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  background: rgba(21, 85, 121, 0.15);
+}
+.proc-progress::after {
+  content: "";
+  display: block;
+  width: 35%;
+  height: 100%;
+  background: #155579;
+  animation: pp 1.6s ease-in-out infinite;
+}
+
+/* JSON syntax highlight */
+.json-block {
+  background: #0f0a2e;
+  color: #c2d0e0;
+  font-family: var(--font-family-mono);
+  font-size: 11.5px;
+  line-height: 1.55;
+  padding: 12px 14px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 12px 0 0;
+  white-space: pre;
+}
+.json-block .jk { color: #b49dff; }
+.json-block .js { color: #b8d18b; }
+.json-block .jn { color: #ffb070; }
+.json-block .jb { color: #ff7ab8; }
+
+/* Mini-map placeholder */
+.minimap {
+  height: 92px;
+  background:
+    linear-gradient(180deg, #ece9fa, #ddd5f5),
+    repeating-linear-gradient(0deg, transparent 0 19px, rgba(27, 0, 136, 0.1) 19px 20px),
+    repeating-linear-gradient(90deg, transparent 0 19px, rgba(27, 0, 136, 0.1) 19px 20px);
+  background-blend-mode: normal, multiply, multiply;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.minimap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 30% 70%, rgba(27, 0, 136, 0.18), transparent 60%),
+    radial-gradient(ellipse 80% 50% at 75% 30%, rgba(229, 0, 99, 0.12), transparent 60%);
+}
+.minimap .pin {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #e50063;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 6px rgba(229, 0, 99, 0.25);
+  top: 50%;
+  left: 38%;
+  transform: translate(-50%, -50%);
+}
+
+/* Timeline rail dot */
+.tl-dot {
+  position: relative;
+}
+.tl-dot::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid currentColor;
+}
+.tl-dot.solid::after { background: currentColor; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  background: #11005c;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 12.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 1000;
+  animation: toast-in 0.2s ease-out;
+  box-shadow: 0 12px 40px -12px rgba(17, 0, 92, 0.6);
+}
+
+/* Mono utility class */
+.mono { font-family: var(--font-family-mono); font-feature-settings: "zero" 1; }
 
 @layer utilities {
   @keyframes blink {
@@ -314,5 +511,20 @@
   }
   .animate-blink {
     animation: blink 1s infinite;
+  }
+
+  @keyframes scan {
+    from { background-position: 0 0; }
+    to { background-position: 24px 0; }
+  }
+
+  @keyframes pp {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(360%); }
+  }
+
+  @keyframes toast-in {
+    from { opacity: 0; transform: translate(-50%, 6px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
   }
 }
