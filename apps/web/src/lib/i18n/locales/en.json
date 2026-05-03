@@ -393,6 +393,27 @@
         "idCopied": "Public ID copied",
         "hashCopied": "Hash copied",
         "urlCopied": "URL copied: {{name}}"
+      },
+      "analyses": {
+        "threshold": "Threshold:",
+        "decision": "Decision:"
+      },
+      "stateHeroValues": {
+        "processing": {
+          "attemptsValue": "{{current}} of {{total}}"
+        },
+        "processingFailed": {
+          "nextRetryManual": "manual"
+        },
+        "quarantinedModeration": {
+          "inQueueValue": "{{hours}}h {{minutes}}m"
+        },
+        "ready": {
+          "pipelineValue": "{{seconds}}s end-to-end",
+          "retentionValue": "{{years}} yrs · {{date}}",
+          "legalHoldNone": "None",
+          "servingValue": "signed · {{ttl}} TTL"
+        }
       }
     },
     "namespaces": {

@@ -30,6 +30,7 @@ const TIME_SLICE_END = 8;
 const SCORE_PRECISION = 3;
 
 function ModerationBars({ raw }: { raw: IDemoAssetDetailAnalysis["raw"] }): React.JSX.Element {
+  const { t } = useTranslation();
   const categories = raw.categories as Record<string, number>;
   const threshold = raw.threshold as number;
   const decision = raw.decision as string;
@@ -59,7 +60,8 @@ function ModerationBars({ raw }: { raw: IDemoAssetDetailAnalysis["raw"] }): Reac
         );
       })}
       <div className="text-muted-foreground mt-1.5 text-[11px]">
-        Threshold: {threshold} · Decision: <b className="text-ok">{decision}</b>
+        {t("pages.assetDetail.analyses.threshold")} {threshold} ·{" "}
+        {t("pages.assetDetail.analyses.decision")} <b className="text-ok">{decision}</b>
       </div>
     </div>
   );

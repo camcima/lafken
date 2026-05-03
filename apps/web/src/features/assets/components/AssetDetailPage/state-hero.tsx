@@ -48,8 +48,18 @@ export function StateHero({ state }: IStateHeroProps): React.JSX.Element {
     const fields: IHeroField[] = [
       { fieldKey: t("pages.assetDetail.stateHero.fields.pipeline"), fieldValue: "rn_01HXJ8K48S" },
       { fieldKey: t("pages.assetDetail.stateHero.fields.worker"), fieldValue: "processor-7" },
-      { fieldKey: t("pages.assetDetail.stateHero.fields.attempts"), fieldValue: "1 of 4" },
-      { fieldKey: t("pages.assetDetail.stateHero.fields.nextStep"), fieldValue: "moderate" },
+      {
+        fieldKey: t("pages.assetDetail.stateHero.fields.attempts"),
+        fieldValue: t("pages.assetDetail.stateHeroValues.processing.attemptsValue", {
+          current: 1,
+          total: 4,
+        }),
+      },
+      {
+        fieldKey: t("pages.assetDetail.stateHero.fields.nextStep"),
+        // stage names are pipeline identifiers, not translated
+        fieldValue: "moderate",
+      },
     ];
     return (
       <div className="border-border bg-card mb-5 flex flex-col items-stretch overflow-hidden rounded-md border md:flex-row">
@@ -87,7 +97,10 @@ export function StateHero({ state }: IStateHeroProps): React.JSX.Element {
         fieldKey: t("pages.assetDetail.stateHero.fields.attempts"),
         fieldValue: `${String(FAILED_RETRIES)} of ${String(FAILED_RETRIES)}`,
       },
-      { fieldKey: t("pages.assetDetail.stateHero.fields.nextRetry"), fieldValue: "manual" },
+      {
+        fieldKey: t("pages.assetDetail.stateHero.fields.nextRetry"),
+        fieldValue: t("pages.assetDetail.stateHeroValues.processingFailed.nextRetryManual"),
+      },
       { fieldKey: t("pages.assetDetail.stateHero.fields.run"), fieldValue: "rn_01HXJ8K48S" },
     ];
     return (
@@ -122,7 +135,13 @@ export function StateHero({ state }: IStateHeroProps): React.JSX.Element {
         fieldValue: "violence · 0.78",
       },
       { fieldKey: t("pages.assetDetail.stateHero.fields.threshold"), fieldValue: "0.65" },
-      { fieldKey: t("pages.assetDetail.stateHero.fields.inQueue"), fieldValue: "2h 14m" },
+      {
+        fieldKey: t("pages.assetDetail.stateHero.fields.inQueue"),
+        fieldValue: t("pages.assetDetail.stateHeroValues.quarantinedModeration.inQueueValue", {
+          hours: 2,
+          minutes: 14,
+        }),
+      },
     ];
     return (
       <div className="border-border bg-card mb-5 flex flex-col items-stretch overflow-hidden rounded-md border md:flex-row">
@@ -151,18 +170,24 @@ export function StateHero({ state }: IStateHeroProps): React.JSX.Element {
   const fields: IHeroField[] = [
     {
       fieldKey: t("pages.assetDetail.stateHero.fields.pipeline"),
-      fieldValue: "11.2s end-to-end",
+      fieldValue: t("pages.assetDetail.stateHeroValues.ready.pipelineValue", { seconds: 11.2 }),
     },
     {
       fieldKey: t("pages.assetDetail.stateHero.fields.retention"),
-      fieldValue: "7 yrs · 2033-05-03",
+      fieldValue: t("pages.assetDetail.stateHeroValues.ready.retentionValue", {
+        years: 7,
+        date: "2033-05-03",
+      }),
     },
     {
       fieldKey: t("pages.assetDetail.stateHero.fields.legalHold"),
-      fieldValue: "None",
+      fieldValue: t("pages.assetDetail.stateHeroValues.ready.legalHoldNone"),
       muted: true,
     },
-    { fieldKey: t("pages.assetDetail.stateHero.fields.serving"), fieldValue: "signed · 5m TTL" },
+    {
+      fieldKey: t("pages.assetDetail.stateHero.fields.serving"),
+      fieldValue: t("pages.assetDetail.stateHeroValues.ready.servingValue", { ttl: "5m" }),
+    },
   ];
   return (
     <div className="border-border bg-card mb-5 flex flex-col items-stretch overflow-hidden rounded-md border md:flex-row">
