@@ -4,11 +4,11 @@ import { Test } from "@nestjs/testing";
 import { mock } from "vitest-mock-extended";
 
 import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
-import {
-  AzureAdRoles,
-  AzureAdRolesAuthzGuard,
-} from "@/shared/presentation/auth/azure-ad/azure-ad-roles-authz.guard";
 import { AuthenticatedUser } from "@/shared/presentation/auth/decorators/authenticated-user.decorator";
+import {
+  OidcRoles,
+  OidcRolesAuthzGuard,
+} from "@/shared/presentation/auth/oidc/oidc-roles-authz.guard";
 
 /** Utility */
 function makeHttpCtxMock(authenticatedUser: AuthenticatedUser) {
@@ -21,7 +21,7 @@ function makeHttpCtxMock(authenticatedUser: AuthenticatedUser) {
   return httpCtxMock;
 }
 
-describe("AzureAdRolesAuthzGuard for HTTP handlers", () => {
+describe("OidcRolesAuthzGuard for HTTP handlers", () => {
   let reflector: Reflector;
 
   beforeAll(async () => {
@@ -38,7 +38,7 @@ describe("AzureAdRolesAuthzGuard for HTTP handlers", () => {
         const contextMock = mock<ExecutionContext>();
         const reflectorMock = mock<Reflector>();
 
-        const guardSUT = new AzureAdRolesAuthzGuard(reflectorMock);
+        const guardSUT = new OidcRolesAuthzGuard(reflectorMock);
 
         const canActivateResult = guardSUT.canActivate(contextMock);
 
@@ -49,7 +49,7 @@ describe("AzureAdRolesAuthzGuard for HTTP handlers", () => {
       });
     });
 
-    describe("When the route required roles defined at class level with `@AzureAdRoles()`", () => {
+    describe("When the route required roles defined at class level with `@OidcRoles()`", () => {
       describe("And the current user has at least one of the required roles", () => {
         it("should return `true`", () => {
           const httpCtxMock = makeHttpCtxMock({
@@ -59,14 +59,14 @@ describe("AzureAdRolesAuthzGuard for HTTP handlers", () => {
           });
           const contextMock = mock<ExecutionContext>();
 
-          @AzureAdRoles([ApplicationRole.ADMIN])
+          @OidcRoles([ApplicationRole.ADMIN])
           class Foo {}
 
           contextMock.getHandler.mockReturnValue(() => {});
           contextMock.getClass.mockReturnValue(Foo);
           contextMock.switchToHttp.mockReturnValue(httpCtxMock);
 
-          const guardSUT = new AzureAdRolesAuthzGuard(reflector);
+          const guardSUT = new OidcRolesAuthzGuard(reflector);
 
           const canActivateResult = guardSUT.canActivate(contextMock);
 

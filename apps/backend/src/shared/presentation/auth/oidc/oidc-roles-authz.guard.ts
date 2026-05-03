@@ -12,17 +12,17 @@ import type { AuthenticatedUser } from "../decorators/authenticated-user.decorat
  * If the current authenticated user has at least one of the required roles,
  * access is granted.
  *
- * Used for `AzureAdRolesAuthzGuard` guard.
+ * Used for `OidcRolesAuthzGuard` guard.
  */
-export const AzureAdRoles = Reflector.createDecorator<ApplicationRole[]>();
+export const OidcRoles = Reflector.createDecorator<ApplicationRole[]>();
 
 @Injectable()
-export class AzureAdRolesAuthzGuard implements CanActivate {
+export class OidcRolesAuthzGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(ctx: ExecutionContext): boolean {
     const requiredRoles =
-      this.reflector.getAllAndOverride(AzureAdRoles, [ctx.getHandler(), ctx.getClass()]) || [];
+      this.reflector.getAllAndOverride(OidcRoles, [ctx.getHandler(), ctx.getClass()]) || [];
 
     // If no roles are required for the endpoint or the controller, allow access
     if (requiredRoles.length === 0) {

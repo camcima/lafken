@@ -6,19 +6,19 @@ import {
   getSchemaPath,
 } from "@nestjs/swagger";
 
-import { AzureAdBearerAuthnGuard } from "../azure-ad/azure-ad-bearer-authn.guard";
 import { UnauthorizedErrorResponseDTO } from "../dto/unauthorized-error.dto";
+import { OidcBearerAuthnGuard } from "../oidc/oidc-bearer-authn.guard";
 
 /**
  * Use this in controller methods that are only accessible to authenticated users
- * via Azure AD Bearer authentication strategy.
+ * via OIDC Bearer authentication strategy.
  */
 export const AuthenticatedEndpoint = () => {
   // eslint-disable-next-line no-process-env
   const IS_CLOUD_ENDPOINT_DEFINITION = process.env.CLOUD_ENDPOINT_DEFINITION === "true";
 
   return applyDecorators(
-    UseGuards(AzureAdBearerAuthnGuard),
+    UseGuards(OidcBearerAuthnGuard),
     IS_CLOUD_ENDPOINT_DEFINITION ? () => {} : ApiBearerAuth(),
     ApiExtraModels(UnauthorizedErrorResponseDTO),
     ApiUnauthorizedResponse({

@@ -3,8 +3,8 @@ import { ApiExtraModels, ApiForbiddenResponse, getSchemaPath } from "@nestjs/swa
 
 import type { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 
-import { AzureAdRoles, AzureAdRolesAuthzGuard } from "../azure-ad/azure-ad-roles-authz.guard";
 import { ForbiddenErrorResponseDTO } from "../dto/forbidden-error.dto";
+import { OidcRoles, OidcRolesAuthzGuard } from "../oidc/oidc-roles-authz.guard";
 import { AuthenticatedEndpoint } from "./authenticated-endpoint.decorator";
 
 /**
@@ -19,8 +19,8 @@ import { AuthenticatedEndpoint } from "./authenticated-endpoint.decorator";
 export const EndpointRequiredRoles = (roles: ApplicationRole[]) =>
   applyDecorators(
     AuthenticatedEndpoint(),
-    UseGuards(AzureAdRolesAuthzGuard),
-    AzureAdRoles(roles),
+    UseGuards(OidcRolesAuthzGuard),
+    OidcRoles(roles),
     ApiExtraModels(ForbiddenErrorResponseDTO),
     ApiForbiddenResponse({
       content: {

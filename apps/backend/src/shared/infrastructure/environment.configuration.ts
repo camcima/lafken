@@ -80,19 +80,21 @@ const environmentSchema = z
 
     /** Indicates the authentication provider to use */
     AUTH_PROVIDER: z
-      .enum(["msal", "mock"])
-      .default("msal")
+      .enum(["oidc", "mock"])
+      .default("oidc")
       .overwrite((data) => {
-        // Ensures "mock" is only used in case of 'development' as it was designed for local development purposes
+        // Ensures "mock" is only used in case of 'development' or 'test' as it was designed for local development purposes
         if (process.env.NODE_ENV === "production" || !process.env.NODE_ENV) {
-          return "msal";
+          return "oidc";
         }
         return data;
       })
-      .default("msal"),
-    // Mandatory configuration when AUTH_PROVIDER is "msal"
-    AUTH_TENANT_ID: z.string().nonempty().optional(),
-    AUTH_CLIENT_ID: z.string().nonempty().optional(),
+      .default("oidc"),
+    // Mandatory configuration when AUTH_PROVIDER is "oidc"
+    OIDC_ISSUER: z.string().url().optional(),
+    OIDC_AUDIENCE: z.string().optional(),
+    OIDC_PRINCIPAL_CLAIM: z.string().default("preferred_username"),
+    OIDC_ROLES_CLAIM: z.string().default("roles"),
   })
   .refine(
     (data) => {
@@ -114,16 +116,16 @@ const environmentSchema = z
   )
   .refine(
     (data) => {
-      // Ensures that AUTH_TENANT_ID and AUTH_CLIENT_ID are provided when AUTH_PROVIDER is "msal"
-      if (data.AUTH_PROVIDER === "msal") {
-        if (!data.AUTH_TENANT_ID || !data.AUTH_CLIENT_ID) {
+      // Ensures that OIDC_ISSUER and OIDC_AUDIENCE are provided when AUTH_PROVIDER is "oidc"
+      if (data.AUTH_PROVIDER === "oidc") {
+        if (!data.OIDC_ISSUER || !data.OIDC_AUDIENCE) {
           return false;
         }
       }
       return true;
     },
     {
-      message: "AUTH_TENANT_ID and AUTH_CLIENT_ID are required when AUTH_PROVIDER is 'msal'",
+      message: "OIDC_ISSUER and OIDC_AUDIENCE are required when AUTH_PROVIDER is 'oidc'",
     },
   )
   .refine((data) => data.DB_POOL_MIN <= data.DB_POOL_MAX, {
