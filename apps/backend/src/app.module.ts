@@ -14,6 +14,7 @@ import { AuthModule } from "./shared/presentation/auth/auth.module";
 import { CatchAllExceptionsForHttp } from "./shared/presentation/middlewares/catch-all-exceptions.filter";
 import { JsonBodyParserMiddleware } from "./shared/presentation/middlewares/json-body-parser.middleware";
 import { UrlEncodedParserMiddleware } from "./shared/presentation/middlewares/url-encoded-parser.middleware";
+import { SystemModule } from "./system/system.module";
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { UrlEncodedParserMiddleware } from "./shared/presentation/middlewares/ur
     QuarantineModule,
     LegalHoldsModule,
     AuditModule,
+    SystemModule,
   ],
   providers: [
     {
