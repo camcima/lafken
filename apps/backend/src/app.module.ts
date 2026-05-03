@@ -2,6 +2,7 @@ import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common
 import { APP_FILTER, APP_PIPE } from "@nestjs/core";
 
 import { AssetsModule } from "./assets/assets.module";
+import { AuditModule } from "./audit/audit.module";
 import { HealthModule } from "./health/health.module";
 import { LegalHoldsModule } from "./legal-holds/legal-holds.module";
 import { NamespacesModule } from "./namespaces/namespaces.module";
@@ -24,6 +25,7 @@ import { UrlEncodedParserMiddleware } from "./shared/presentation/middlewares/ur
     AssetsModule,
     QuarantineModule,
     LegalHoldsModule,
+    AuditModule,
   ],
   providers: [
     {
