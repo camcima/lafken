@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import logoAvif from "@/assets/logo-latam-dark.avif";
-import logo from "@/assets/logo-latam-dark.png";
+import lafkenLogo from "@/assets/lafken-logo.svg";
 import { BrandedScreen } from "@/components/common/BrandedScreen";
 import { Button } from "@/components/common/Button";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,21 +30,18 @@ export function LoginWelcome({ redirectPath }: Readonly<LoginWelcomeProps>) {
 
   return (
     <BrandedScreen>
-      <picture>
-        <source srcSet={logoAvif} type="image/avif" />
-        <img
-          src={logo}
-          width={3301}
-          height={1009}
-          className="mb-8 h-10 w-auto"
-          alt="LATAM"
-          loading="eager"
-          decoding="async"
-          fetchPriority="high"
-        />
-      </picture>
-      <h1 className="mb-5 text-3xl font-semibold tracking-tight">{t("auth.welcomeToLatam")}</h1>
-      <h2 className="mb-5 text-xl font-semibold tracking-tight">{t("auth.toAccess")}</h2>
+      <img
+        src={lafkenLogo}
+        width={64}
+        height={64}
+        className="mb-8 h-16 w-auto"
+        alt="Lafken"
+        loading="eager"
+        decoding="async"
+        fetchPriority="high"
+      />
+      <h1 className="mb-5 text-3xl font-semibold tracking-tight">{t("auth.welcomeToLafken")}</h1>
+      <h2 className="mb-5 text-xl font-semibold tracking-tight">{t("auth.signInWithSso")}</h2>
 
       {hasLoginError && (
         <div

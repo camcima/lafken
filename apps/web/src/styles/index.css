@@ -277,6 +277,31 @@
   }
 }
 
+/* === Lafken theme tokens (Slice 0) ===
+   LATAM indigo primary (#1B0088), LATAM pink accent (#E50063).
+   Sidebar uses dark indigo background. Asset state colors mapped per design.
+*/
+:root {
+  /* Sidebar */
+  --lafken-sidebar-bg: oklch(0.205 0.04 280);
+  --lafken-sidebar-fg: oklch(0.95 0.02 280);
+  --lafken-sidebar-active-bg: oklch(0.65 0.18 25);
+  --lafken-sidebar-active-fg: oklch(0.99 0 0);
+  --lafken-sidebar-muted-fg: oklch(0.7 0.03 280);
+  --lafken-sidebar-section-heading: oklch(0.55 0.03 280);
+
+  /* Brand accent (LATAM indigo) */
+  --lafken-accent: oklch(0.32 0.27 280);
+
+  /* Asset state colors (rough mappings — refine in later slices) */
+  --lafken-state-ready: oklch(0.55 0.13 180);
+  --lafken-state-processing: oklch(0.5 0.12 200);
+  --lafken-state-quarantined: oklch(0.65 0.18 25);
+  --lafken-state-rejected: oklch(0.55 0.2 25);
+  --lafken-state-failed: oklch(0.6 0.18 50);
+  --lafken-state-expired: oklch(0.7 0.02 0);
+}
+
 @layer utilities {
   @keyframes blink {
     0%,

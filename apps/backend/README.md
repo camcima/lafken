@@ -1,4 +1,4 @@
-# BackEnd
+# Lafken Backend
 
 ## Application Swagger
 

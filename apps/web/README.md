@@ -1,4 +1,4 @@
-# Web Application
+# Lafken Web
 
 ## Configuration
 

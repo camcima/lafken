@@ -5,6 +5,8 @@
     "redirectToLogin": "Redirecting you to login..."
   },
   "auth": {
+    "welcomeToLafken": "Welcome to Lafken",
+    "signInWithSso": "Sign in with single sign-on",
     "welcomeToLatam": "Welcome to LATAM",
     "toAccess": "To access, use your LATAM account",
     "login": "Sign in",
