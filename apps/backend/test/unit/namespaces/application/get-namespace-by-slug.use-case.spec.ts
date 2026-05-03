@@ -37,6 +37,6 @@ describe("GetNamespaceBySlugUseCase", () => {
     repository.seed([fixture]);
 
     const result = await useCase.execute({ slug: "aircraft-photos" });
-    expect(result.props.slug.value).toBe("aircraft-photos");
+    expect(result.namespace.props.slug.value).toBe("aircraft-photos");
   });
 });

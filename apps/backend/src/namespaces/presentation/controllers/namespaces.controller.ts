@@ -11,7 +11,6 @@ import { ListNamespacePoliciesUseCase } from "@/namespaces/application/use-cases
 import { ListNamespacePresetsUseCase } from "@/namespaces/application/use-cases/list-namespace-presets.use-case";
 import { ListNamespacesUseCase } from "@/namespaces/application/use-cases/list-namespaces.use-case";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
-import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import { AuthenticatedEndpoint } from "@/shared/presentation/auth/decorators/authenticated-endpoint.decorator";
 
 import {
@@ -30,7 +29,6 @@ export class NamespacesController {
     private readonly getNamespaceBySlugUseCase: GetNamespaceBySlugUseCase,
     private readonly listNamespacePoliciesUseCase: ListNamespacePoliciesUseCase,
     private readonly listNamespacePresetsUseCase: ListNamespacePresetsUseCase,
-    private readonly repository: NamespaceQueryRepositoryPort,
   ) {}
 
   @Get()
@@ -43,18 +41,12 @@ export class NamespacesController {
       limit: query.limit,
     });
 
-    const data = await Promise.all(
-      page.data.map(async (ns) => {
-        const [bindingName, currentVersion] = await Promise.all([
-          this.repository.findStorageBindingName(ns.props.storageBindingId),
-          this.repository.findCurrentPolicyVersion(ns.props.id),
-        ]);
-        return NamespaceResponseMapper.fromDomain(
-          ns,
-          bindingName ?? "unknown",
-          currentVersion ?? 0,
-        );
-      }),
+    const data = page.data.map((item) =>
+      NamespaceResponseMapper.fromDomain(
+        item.namespace,
+        item.storageBindingName,
+        item.currentPolicyVersion,
+      ),
     );
 
     return { data, total: page.total, page: page.page, limit: page.limit, lastPage: page.lastPage };
@@ -67,15 +59,11 @@ export class NamespacesController {
   @ApiNotFoundResponse()
   async getOne(@Param("slug") slug: string): Promise<NamespaceResponseDTO> {
     try {
-      const namespace = await this.getNamespaceBySlugUseCase.execute({ slug });
-      const [bindingName, currentVersion] = await Promise.all([
-        this.repository.findStorageBindingName(namespace.props.storageBindingId),
-        this.repository.findCurrentPolicyVersion(namespace.props.id),
-      ]);
+      const result = await this.getNamespaceBySlugUseCase.execute({ slug });
       return NamespaceResponseMapper.fromDomain(
-        namespace,
-        bindingName ?? "unknown",
-        currentVersion ?? 0,
+        result.namespace,
+        result.storageBindingName,
+        result.currentPolicyVersion,
       );
     } catch (err) {
       if (err instanceof NamespaceNotFoundError) {
