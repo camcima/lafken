@@ -23,7 +23,7 @@ export function HomePage() {
           </h1>
           {user?.name ? (
             <div className="mt-1 text-[12.5px] text-neutral-500">
-              <span>Welcome back, {user.name}.</span>
+              <span>{t("pages.home.welcomeBack", { name: user.name })}</span>
               <span className="mx-2">·</span>
               <span>
                 {t("pages.home.lastRefreshed")}{" "}

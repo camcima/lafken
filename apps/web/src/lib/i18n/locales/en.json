@@ -163,6 +163,7 @@
     "home": {
       "title": "Home",
       "subtitle": "Operator dashboard",
+      "welcomeBack": "Welcome back, {{name}}.",
       "lastRefreshed": "Last refreshed",
       "justNow": "just now",
       "stats": {
