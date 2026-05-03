@@ -20,12 +20,11 @@ interface IAssetDetailPageProps {
 }
 
 interface IToast {
-  id: number;
+  id: string;
   message: string;
 }
 
 const TOAST_DURATION_MS = 2000;
-let toastCounter = 0;
 
 export function AssetDetailPage(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -37,7 +36,7 @@ export function AssetDetailPage(
 
   const handleCopy = (text: string, label: string): void => {
     void navigator.clipboard.writeText(text).catch(() => undefined);
-    const id = ++toastCounter;
+    const id = crypto.randomUUID();
     setToasts((prev) => [...prev, { id, message: label }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));

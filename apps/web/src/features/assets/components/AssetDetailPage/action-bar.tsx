@@ -62,39 +62,39 @@ export function ActionBar({ asset, onCopy }: IActionBarProps): React.JSX.Element
                   closeMenu();
                 }}
               >
-                Copy public ID
+                {t("pages.assetDetail.actions.menu.copyPublicId")}
               </button>
               <button
                 type="button"
                 className="hover:bg-secondary flex w-full cursor-pointer items-center gap-2 rounded px-2.5 py-1.5"
               >
-                Download original
+                {t("pages.assetDetail.actions.menu.downloadOriginal")}
               </button>
               <button
                 type="button"
                 className="hover:bg-secondary flex w-full cursor-pointer items-center gap-2 rounded px-2.5 py-1.5"
               >
-                Open in API
+                {t("pages.assetDetail.actions.menu.openInApi")}
               </button>
               <div className="bg-border my-1 h-px" />
               <button
                 type="button"
                 className="hover:bg-secondary flex w-full cursor-pointer items-center gap-2 rounded px-2.5 py-1.5"
               >
-                View audit trail
+                {t("pages.assetDetail.actions.menu.viewAuditTrail")}
               </button>
               <button
                 type="button"
                 className="hover:bg-secondary flex w-full cursor-pointer items-center gap-2 rounded px-2.5 py-1.5"
               >
-                Edit metadata
+                {t("pages.assetDetail.actions.menu.editMetadata")}
               </button>
               <div className="bg-border my-1 h-px" />
               <button
                 type="button"
                 className="text-danger hover:bg-danger-soft flex w-full cursor-pointer items-center gap-2 rounded px-2.5 py-1.5"
               >
-                Force expire…
+                {t("pages.assetDetail.actions.menu.forceExpire")}
               </button>
             </div>
           </>

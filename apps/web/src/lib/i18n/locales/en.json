@@ -298,7 +298,15 @@
         "reProcess": "Re-process",
         "placeLegalHold": "Place legal hold",
         "evidentiaryExport": "Evidentiary export",
-        "more": "More"
+        "more": "More",
+        "menu": {
+          "copyPublicId": "Copy public ID",
+          "downloadOriginal": "Download original",
+          "openInApi": "Open in API",
+          "viewAuditTrail": "View audit trail",
+          "editMetadata": "Edit metadata",
+          "forceExpire": "Force expire…"
+        }
       },
       "stateHero": {
         "ready": {
@@ -335,7 +343,6 @@
         }
       },
       "sections": {
-        "identity": "Identity and lineage",
         "identityLineage": "Identity & lineage",
         "fileProperties": "File properties",
         "timeline": "Timeline",
@@ -403,6 +410,7 @@
           "attemptsValue": "{{current}} of {{total}}"
         },
         "processingFailed": {
+          "attemptsValue": "{{current}} of {{total}}",
           "nextRetryManual": "manual"
         },
         "quarantinedModeration": {

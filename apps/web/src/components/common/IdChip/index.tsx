@@ -12,7 +12,7 @@ interface IIdChipProps {
   variant?: "default" | "indigo";
 }
 
-export function IdChip({ id, className, variant = "default" }: IIdChipProps) {
+export function IdChip({ id, className, variant = "default" }: IIdChipProps): React.JSX.Element {
   const { t } = useTranslation();
   const { copied, copy } = useCopy();
 

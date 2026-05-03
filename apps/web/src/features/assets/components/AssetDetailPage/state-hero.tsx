@@ -16,7 +16,7 @@ interface IHeroField {
 const PROCESSING_STEP = 4;
 const PROCESSING_TOTAL = 5;
 const PROCESSING_ELAPSED_S = 8;
-const FAILED_RETRIES = 3;
+const MAX_FAILED_RETRIES = 3;
 const QUARANTINE_FLAG_SEC = 11;
 
 function HeroFields({ fields }: { fields: IHeroField[] }): React.JSX.Element {
@@ -95,7 +95,10 @@ export function StateHero({ state }: IStateHeroProps): React.JSX.Element {
       },
       {
         fieldKey: t("pages.assetDetail.stateHero.fields.attempts"),
-        fieldValue: `${String(FAILED_RETRIES)} of ${String(FAILED_RETRIES)}`,
+        fieldValue: t("pages.assetDetail.stateHeroValues.processingFailed.attemptsValue", {
+          current: MAX_FAILED_RETRIES,
+          total: MAX_FAILED_RETRIES,
+        }),
       },
       {
         fieldKey: t("pages.assetDetail.stateHero.fields.nextRetry"),
@@ -117,7 +120,7 @@ export function StateHero({ state }: IStateHeroProps): React.JSX.Element {
             <div className="text-alert/85 text-[11.5px]">
               {t("pages.assetDetail.stateHero.processingFailed.subtitle", {
                 stage: "transform",
-                retries: FAILED_RETRIES,
+                retries: MAX_FAILED_RETRIES,
               })}
             </div>
           </div>

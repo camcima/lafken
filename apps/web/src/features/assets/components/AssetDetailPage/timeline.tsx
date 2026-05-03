@@ -34,7 +34,7 @@ export function Timeline({ asset }: ITimelineProps): React.JSX.Element {
       </CardHeader>
       <div className="px-5 py-3">
         {asset.timeline.map((e, i) => (
-          <div key={i} className="grid grid-cols-[18px_1fr] gap-3 py-2">
+          <div key={`${e.at}-${e.kind}`} className="grid grid-cols-[18px_1fr] gap-3 py-2">
             <div className="relative">
               <div
                 className={cn(

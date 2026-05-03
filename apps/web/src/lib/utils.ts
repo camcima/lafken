@@ -15,5 +15,5 @@ export function fmtBytes(bytes: number): string {
 }
 
 export function fmtNum(num: number): string {
-  return num.toLocaleString("en-US");
+  return num.toLocaleString();
 }

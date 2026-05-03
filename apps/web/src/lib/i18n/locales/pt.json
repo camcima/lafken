@@ -298,7 +298,15 @@
         "reProcess": "Reprocessar",
         "placeLegalHold": "Aplicar retenção legal",
         "evidentiaryExport": "Exportação probatória",
-        "more": "Mais"
+        "more": "Mais",
+        "menu": {
+          "copyPublicId": "Copiar ID público",
+          "downloadOriginal": "Baixar original",
+          "openInApi": "Abrir na API",
+          "viewAuditTrail": "Ver trilha de auditoria",
+          "editMetadata": "Editar metadados",
+          "forceExpire": "Forçar expiração…"
+        }
       },
       "stateHero": {
         "ready": {
@@ -335,7 +343,6 @@
         }
       },
       "sections": {
-        "identity": "Identidade e linhagem",
         "identityLineage": "Identidade & linhagem",
         "fileProperties": "Propriedades do arquivo",
         "timeline": "Linha do tempo",
@@ -403,6 +410,7 @@
           "attemptsValue": "{{current}} de {{total}}"
         },
         "processingFailed": {
+          "attemptsValue": "{{current}} de {{total}}",
           "nextRetryManual": "manual"
         },
         "quarantinedModeration": {
