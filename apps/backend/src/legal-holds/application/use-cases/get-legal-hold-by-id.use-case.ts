@@ -13,8 +13,11 @@ export class GetLegalHoldByIdUseCase {
     let id: bigint;
     try {
       id = BigInt(input.id);
-    } catch {
-      throw new LegalHoldNotFoundError({ id: input.id });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        throw new LegalHoldNotFoundError({ id: input.id });
+      }
+      throw err;
     }
 
     const legalHold = await this.repository.findById(id);

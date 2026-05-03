@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common";
 
-import { LegalHold } from "@/legal-holds/domain/entities/legal-hold.entity";
-import {
-  LegalHoldQueryRepositoryPort,
-  ListLegalHoldsInput,
-} from "@/legal-holds/domain/repositories/legal-hold-query.repository.port";
+import type { LegalHold } from "@/legal-holds/domain/entities/legal-hold.entity";
+import { LegalHoldQueryRepositoryPort } from "@/legal-holds/domain/repositories/legal-hold-query.repository.port";
+import type { ListLegalHoldsInput } from "@/legal-holds/domain/repositories/legal-hold-query.repository.port";
 
 export interface LegalHoldWithMetadata {
   legalHold: LegalHold;
