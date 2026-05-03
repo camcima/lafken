@@ -3,6 +3,7 @@ import { APP_FILTER, APP_PIPE } from "@nestjs/core";
 
 import { AssetsModule } from "./assets/assets.module";
 import { AuditModule } from "./audit/audit.module";
+import { DashboardModule } from "./dashboard/dashboard.module";
 import { HealthModule } from "./health/health.module";
 import { LegalHoldsModule } from "./legal-holds/legal-holds.module";
 import { NamespacesModule } from "./namespaces/namespaces.module";
@@ -28,6 +29,7 @@ import { SystemModule } from "./system/system.module";
     LegalHoldsModule,
     AuditModule,
     SystemModule,
+    DashboardModule,
   ],
   providers: [
     {
