@@ -53,6 +53,5 @@ describe("[E2E] Dashboard controller", () => {
       });
       expect(response.body.health.integrations).toHaveLength(7);
     });
-
   });
 });
