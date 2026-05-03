@@ -218,26 +218,73 @@
       }
     },
     "assets": {
-      "title": "",
-      "filterByNamespace": "",
-      "filterByState": "",
-      "filterByUploader": "",
-      "filterByDate": "",
+      "title": "Ativos",
+      "subtitle": "{{total}} no total · em {{nsCount}} namespaces",
+      "filterByNamespace": "Namespace",
+      "filterByState": "Estado",
+      "filterByUploader": "Enviado por",
+      "filterByDate": "Enviado entre",
+      "search": {
+        "placeholder": "Buscar por ID público, matrícula, ordem de serviço, área de defeito…"
+      },
+      "filters": {
+        "allStates": "Todos os estados",
+        "allNamespaces": "Todos os namespaces",
+        "moreFilters": "Mais filtros",
+        "clear": "Limpar filtros",
+        "quickFiltersLabel": "Filtros rápidos:",
+        "quickFilters": {
+          "last24h": "Últimas 24h",
+          "hasLegalHold": "Com retenção legal",
+          "majorSeverity": "Severidade maior",
+          "failedPipelines": "Pipelines com falha",
+          "mine": "Meus"
+        }
+      },
+      "viewToggle": {
+        "rows": "Linhas",
+        "hybrid": "Híbrido",
+        "grid": "Grade"
+      },
+      "actions": {
+        "export": "Exportar visão",
+        "upload": "Enviar"
+      },
+      "bulkBar": {
+        "selected": "{{count}} selecionados",
+        "export": "Exportar",
+        "placeHold": "Aplicar retenção legal…",
+        "editMetadata": "Editar metadados…",
+        "clear": "Limpar"
+      },
+      "summary": "Exibindo {{shown}} de {{total}} ativos correspondentes",
       "table": {
-        "asset": "",
-        "namespace": "",
-        "state": "",
-        "size": "",
-        "uploaded": ""
+        "asset": "Ativo",
+        "namespace": "Namespace",
+        "state": "Estado",
+        "size": "Tamanho",
+        "uploaded": "Enviado",
+        "areaSeverity": "Área · severidade",
+        "namespaceWo": "Namespace · OS",
+        "uploadedBy": "Enviado por",
+        "age": "Idade"
+      },
+      "row": {
+        "hold": "retenção"
       },
       "empty": {
-        "title": "",
-        "description": ""
+        "title": "Nenhum ativo corresponde a estes filtros",
+        "description": "Tente limpar alguns filtros.",
+        "noMatches": {
+          "title": "Nenhum ativo corresponde a estes filtros",
+          "description": "Tente limpar um dos filtros acima ou buscar por outro campo."
+        }
       },
-      "pagination": "",
+      "pagination": "{{shown}} de {{total}} · página {{page}}",
+      "paginationPage": "página {{page}} / {{total}}",
       "bulkActions": {
-        "label": "",
-        "comingSoon": ""
+        "label": "Ações em lote",
+        "comingSoon": "Ações em lote disponíveis em um próximo slice"
       }
     },
     "assetDetail": {

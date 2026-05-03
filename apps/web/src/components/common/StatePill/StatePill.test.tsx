@@ -74,13 +74,13 @@ describe("StatePill", () => {
   it("applies ready state styles", () => {
     renderWithI18n(<StatePill state="ready" />);
     const pill = screen.getByText("Ready");
-    expect(pill).toHaveClass("bg-teal-50", "text-teal-700");
+    expect(pill).toHaveClass("bg-ok-soft", "text-ok");
   });
 
   it("applies pending state styles", () => {
     renderWithI18n(<StatePill state="pending" />);
     const pill = screen.getByText("Pending");
-    expect(pill).toHaveClass("bg-neutral-100", "text-neutral-700");
+    expect(pill).toHaveClass("bg-secondary", "text-muted-foreground");
   });
 
   it("applies custom className", () => {

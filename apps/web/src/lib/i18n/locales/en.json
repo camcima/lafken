@@ -219,22 +219,69 @@
     },
     "assets": {
       "title": "Assets",
+      "subtitle": "{{total}} total · across {{nsCount}} namespaces",
       "filterByNamespace": "Namespace",
       "filterByState": "State",
       "filterByUploader": "Uploaded by",
       "filterByDate": "Uploaded between",
+      "search": {
+        "placeholder": "Search by public ID, tail, work order, defect area…"
+      },
+      "filters": {
+        "allStates": "All states",
+        "allNamespaces": "All namespaces",
+        "moreFilters": "More filters",
+        "clear": "Clear filters",
+        "quickFiltersLabel": "Quick filters:",
+        "quickFilters": {
+          "last24h": "Last 24h",
+          "hasLegalHold": "Has legal hold",
+          "majorSeverity": "Major severity",
+          "failedPipelines": "Failed pipelines",
+          "mine": "Mine"
+        }
+      },
+      "viewToggle": {
+        "rows": "Rows",
+        "hybrid": "Hybrid",
+        "grid": "Grid"
+      },
+      "actions": {
+        "export": "Export view",
+        "upload": "Upload"
+      },
+      "bulkBar": {
+        "selected": "{{count}} selected",
+        "export": "Export",
+        "placeHold": "Place legal hold…",
+        "editMetadata": "Edit metadata…",
+        "clear": "Clear"
+      },
+      "summary": "Showing {{shown}} of {{total}} matching assets",
       "table": {
         "asset": "Asset",
         "namespace": "Namespace",
         "state": "State",
         "size": "Size",
-        "uploaded": "Uploaded"
+        "uploaded": "Uploaded",
+        "areaSeverity": "Area · severity",
+        "namespaceWo": "Namespace · WO",
+        "uploadedBy": "Uploaded by",
+        "age": "Age"
+      },
+      "row": {
+        "hold": "hold"
       },
       "empty": {
         "title": "No assets match these filters",
-        "description": "Try clearing some filters."
+        "description": "Try clearing some filters.",
+        "noMatches": {
+          "title": "No assets match these filters",
+          "description": "Try clearing one of the filters above, or search by a different field."
+        }
       },
       "pagination": "{{shown}} of {{total}} · page {{page}}",
+      "paginationPage": "page {{page}} / {{total}}",
       "bulkActions": {
         "label": "Bulk actions",
         "comingSoon": "Bulk actions come in a later slice"

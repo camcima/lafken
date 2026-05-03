@@ -218,26 +218,73 @@
       }
     },
     "assets": {
-      "title": "",
-      "filterByNamespace": "",
-      "filterByState": "",
-      "filterByUploader": "",
-      "filterByDate": "",
+      "title": "Activos",
+      "subtitle": "{{total}} en total · en {{nsCount}} namespaces",
+      "filterByNamespace": "Namespace",
+      "filterByState": "Estado",
+      "filterByUploader": "Subido por",
+      "filterByDate": "Subido entre",
+      "search": {
+        "placeholder": "Buscar por ID público, matrícula, orden de trabajo, área de defecto…"
+      },
+      "filters": {
+        "allStates": "Todos los estados",
+        "allNamespaces": "Todos los namespaces",
+        "moreFilters": "Más filtros",
+        "clear": "Limpiar filtros",
+        "quickFiltersLabel": "Filtros rápidos:",
+        "quickFilters": {
+          "last24h": "Últimas 24h",
+          "hasLegalHold": "Con retención legal",
+          "majorSeverity": "Severidad mayor",
+          "failedPipelines": "Pipelines fallidos",
+          "mine": "Míos"
+        }
+      },
+      "viewToggle": {
+        "rows": "Filas",
+        "hybrid": "Híbrido",
+        "grid": "Cuadrícula"
+      },
+      "actions": {
+        "export": "Exportar vista",
+        "upload": "Subir"
+      },
+      "bulkBar": {
+        "selected": "{{count}} seleccionados",
+        "export": "Exportar",
+        "placeHold": "Aplicar retención legal…",
+        "editMetadata": "Editar metadatos…",
+        "clear": "Limpiar"
+      },
+      "summary": "Mostrando {{shown}} de {{total}} activos coincidentes",
       "table": {
-        "asset": "",
-        "namespace": "",
-        "state": "",
-        "size": "",
-        "uploaded": ""
+        "asset": "Activo",
+        "namespace": "Namespace",
+        "state": "Estado",
+        "size": "Tamaño",
+        "uploaded": "Subido",
+        "areaSeverity": "Área · severidad",
+        "namespaceWo": "Namespace · OT",
+        "uploadedBy": "Subido por",
+        "age": "Antigüedad"
+      },
+      "row": {
+        "hold": "retención"
       },
       "empty": {
-        "title": "",
-        "description": ""
+        "title": "Ningún activo coincide con estos filtros",
+        "description": "Intenta limpiar algunos filtros.",
+        "noMatches": {
+          "title": "Ningún activo coincide con estos filtros",
+          "description": "Intenta limpiar uno de los filtros o buscar por otro campo."
+        }
       },
-      "pagination": "",
+      "pagination": "{{shown}} de {{total}} · página {{page}}",
+      "paginationPage": "página {{page}} / {{total}}",
       "bulkActions": {
-        "label": "",
-        "comingSoon": ""
+        "label": "Acciones masivas",
+        "comingSoon": "Las acciones masivas estarán disponibles en un slice posterior"
       }
     },
     "assetDetail": {

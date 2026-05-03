@@ -20,16 +20,16 @@ const statePillVariants = cva(
   {
     variants: {
       state: {
-        pending: "bg-neutral-100 text-neutral-700",
-        uploaded: "bg-petroleum-50 text-petroleum-600",
-        processing: "bg-petroleum-50 text-petroleum-600",
-        ready: "bg-teal-50 text-teal-700",
-        rejected: "bg-coral-50 text-coral-700",
-        quarantined_virus: "bg-coral-50 text-coral-700",
-        quarantined_moderation: "bg-orange-50 text-orange-700",
-        processing_failed: "bg-coral-50 text-coral-700",
-        expired: "bg-neutral-100 text-neutral-500",
-        deleted: "bg-neutral-100 text-neutral-500",
+        pending: "bg-secondary text-muted-foreground",
+        uploaded: "bg-info-soft text-info",
+        processing: "bg-info-soft text-info",
+        ready: "bg-ok-soft text-ok",
+        rejected: "bg-warn-soft text-warn",
+        quarantined_virus: "bg-alert-soft text-alert",
+        quarantined_moderation: "bg-alert-soft text-alert",
+        processing_failed: "bg-danger-soft text-danger",
+        expired: "bg-secondary text-muted-foreground",
+        deleted: "bg-secondary text-muted-foreground",
       },
     },
     defaultVariants: {
