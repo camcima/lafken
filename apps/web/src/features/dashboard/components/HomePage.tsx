@@ -4,11 +4,13 @@ import { useTranslation } from "react-i18next";
 
 import { Card, CardHeader, CardMeta, CardTitle } from "@/components/common/Card";
 import { Sparkline } from "@/components/common/Sparkline";
+import { getRuntimeValue } from "@/config/app-config";
 import { useDashboardOverview } from "@/features/dashboard/hooks/useDashboardOverview";
 import { useAuth } from "@/hooks/useAuth";
 import {
   DEMO_AUDIT,
   DEMO_NAMESPACES,
+  DEMO_PENDING_HOLD_CASE_REF,
   DEMO_QUEUE_SPARKS,
   DEMO_QUEUES,
   DEMO_WORKERS,
@@ -34,7 +36,6 @@ const NAMESPACE_UPLOAD_BASE = 41;
 const DEMO_QUARANTINE_COUNT = 47;
 const DEMO_QUARANTINE_DISPLAY = "47";
 const DEMO_LEGAL_HOLDS_DISPLAY = "12";
-const DEMO_TOTAL_ASSETS_DISPLAY = "2.42M";
 
 // Number of attention items in the "Needs attention" card
 const NEEDS_ATTENTION_COUNT = 3;
@@ -47,9 +48,6 @@ const TOP_NAMESPACES_COUNT = 5;
 
 // Fallback worker id when no down worker is found
 const FALLBACK_DOWN_WORKER_ID = "processor-12";
-
-// Default case ref for the hold pending attention row
-const DEMO_HOLD_CASE_REF = "CHL-2025-AVN-077";
 
 function eventTone(event: DemoAuditEntry): string {
   if (event.result === "fail") return "text-danger";
@@ -90,6 +88,7 @@ interface IQueueRowProps {
 }
 
 function QueueRow({ queue }: IQueueRowProps) {
+  const { t } = useTranslation();
   const tone = queue.trend;
   const sparks = DEMO_QUEUE_SPARKS[queue.name] ?? [0];
   return (
@@ -100,7 +99,9 @@ function QueueRow({ queue }: IQueueRowProps) {
       </div>
       <div className="text-right">
         <div className="font-mono text-[12.5px] tabular-nums">{queue.inflight}</div>
-        <div className="text-muted-foreground text-[10px] tracking-wide uppercase">in flight</div>
+        <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
+          {t("pages.home.kpi.queueLabels.inFlight")}
+        </div>
       </div>
       <div className="text-right">
         <div
@@ -115,11 +116,15 @@ function QueueRow({ queue }: IQueueRowProps) {
         >
           {queue.depth.toLocaleString()}
         </div>
-        <div className="text-muted-foreground text-[10px] tracking-wide uppercase">queued</div>
+        <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
+          {t("pages.home.kpi.queueLabels.queued")}
+        </div>
       </div>
       <div className="text-right">
         <div className="font-mono text-[12.5px] tabular-nums">{queue.p95_ms}ms</div>
-        <div className="text-muted-foreground text-[10px] tracking-wide uppercase">p95</div>
+        <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
+          {t("pages.home.kpi.queueLabels.p95")}
+        </div>
       </div>
       <div className="flex justify-end">
         <span
@@ -183,7 +188,7 @@ export function HomePage() {
   const totalAssetsValue =
     apiTotalAssets > 0
       ? (apiTotalAssets / NAMESPACE_ASSET_DIVISOR).toFixed(2) + "M"
-      : DEMO_TOTAL_ASSETS_DISPLAY;
+      : t("pages.home.kpi.totalAssets");
 
   const apiInFlight = data?.counts?.inFlight ?? 0;
   const inFlightValue =
@@ -212,7 +217,7 @@ export function HomePage() {
                 <span className="text-foreground/30 mx-2">·</span>
               </>
             ) : null}
-            <span className="font-mono">prod · sa-east-1</span>
+            <span className="font-mono">{getRuntimeValue("ENVIRONMENT")} · sa-east-1</span>
             <span className="text-foreground/30 mx-2">·</span>
             <span>
               {t("pages.home.lastRefreshed")}{" "}
@@ -236,9 +241,11 @@ export function HomePage() {
         <AlertTriangle size={16} />
         <div className="flex-1">
           <div className="text-[13px] font-semibold">{bannerMessage}</div>
-          {overallTone !== "ok" ? (
-            <div className="text-[12px] opacity-90">{t("pages.home.attentionBanner.detail")}</div>
-          ) : null}
+          <div className="text-[12px] opacity-90">
+            {overallTone !== "ok"
+              ? t("pages.home.attentionBanner.detail")
+              : t("pages.home.attentionBanner.detailOk")}
+          </div>
         </div>
       </div>
 
@@ -358,7 +365,9 @@ export function HomePage() {
                   {t("pages.home.attention.holdPendingTitle")}
                 </div>
                 <div className="text-muted-foreground text-[11.5px]">
-                  {t("pages.home.attention.holdPendingDetail", { caseRef: DEMO_HOLD_CASE_REF })}
+                  {t("pages.home.attention.holdPendingDetail", {
+                    caseRef: DEMO_PENDING_HOLD_CASE_REF,
+                  })}
                 </div>
               </div>
               <ChevronRight size={12} className="text-muted-foreground mt-1" />
@@ -391,7 +400,7 @@ export function HomePage() {
                       {namespace.slug}
                     </div>
                     <div className="text-muted-foreground text-[11px]">
-                      policy v{namespace.policyVersion}
+                      {t("pages.home.policyVersion", { version: namespace.policyVersion })}
                     </div>
                   </div>
                   <div className="bg-secondary relative h-2 overflow-hidden rounded-full">

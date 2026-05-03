@@ -191,7 +191,8 @@
         "alert": "1 estágio do pipeline degradado · fila de transformação acumulando",
         "warn": "Alguns estágios do pipeline precisam de atenção",
         "ok": "Todos os sistemas normais",
-        "detail": "transform p95 = 2,63s (meta < 1,50s) · profundidade 4.811 e crescendo · processor-12 fora (pool Memphis)"
+        "detail": "transform p95 = 2,63s (meta < 1,50s) · profundidade 4.811 e crescendo · processor-12 fora (pool Memphis)",
+        "detailOk": "Todas as filas normais · zero entradas em quarentena · todos os workers saudáveis"
       },
       "attention": {
         "quarantineTitle": "Fila de quarentena · {{count}} itens",
@@ -201,13 +202,19 @@
         "holdPendingTitle": "1 retenção pendente de liberação",
         "holdPendingDetail": "{{caseRef}} · aguardando aprovação jurídica"
       },
+      "policyVersion": "política v{{version}}",
       "kpi": {
         "totalAssets": "2,42M",
         "totalAssetsHint": "+18,3K nas últimas 24h",
         "inFlightHint": "em {{stages}} estágios",
         "queueDepthHint": "moderate + transform estão a 99%",
         "quarantineHint": "+5 hoje · mais antigo há 36h",
-        "legalHoldsHint": "11 ativas · 1 liberação pendente"
+        "legalHoldsHint": "11 ativas · 1 liberação pendente",
+        "queueLabels": {
+          "inFlight": "em voo",
+          "queued": "na fila",
+          "p95": "p95"
+        }
       }
     },
     "assets": {

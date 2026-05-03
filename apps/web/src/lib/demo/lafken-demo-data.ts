@@ -923,6 +923,11 @@ export const DEMO_STATE_DEFS: Record<string, DemoStateDef> = {
   deleted: { label: "Deleted", tone: "ghost", dot: "#cbd5e1" },
 };
 
+// ── Home page demo constants ─────────────────────────────
+
+/** Case reference shown in the "hold pending release" attention row on the Home page. */
+export const DEMO_PENDING_HOLD_CASE_REF = "CHL-2025-AVN-077";
+
 // ── Time helpers ─────────────────────────────────────────
 
 const MINUTES_PER_HOUR = 60;

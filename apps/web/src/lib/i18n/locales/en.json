@@ -191,7 +191,8 @@
         "alert": "1 pipeline stage degraded · transform queue is backing up",
         "warn": "Some pipeline stages need attention",
         "ok": "All systems nominal",
-        "detail": "transform p95 = 2.63s (target < 1.50s) · depth 4,811 and growing · processor-12 down (Memphis pool)"
+        "detail": "transform p95 = 2.63s (target < 1.50s) · depth 4,811 and growing · processor-12 down (Memphis pool)",
+        "detailOk": "All queues nominal · zero quarantine intake · all workers healthy"
       },
       "attention": {
         "quarantineTitle": "Quarantine queue · {{count}} items",
@@ -201,13 +202,19 @@
         "holdPendingTitle": "1 hold pending release",
         "holdPendingDetail": "{{caseRef}} · awaiting counsel sign-off"
       },
+      "policyVersion": "policy v{{version}}",
       "kpi": {
         "totalAssets": "2.42M",
         "totalAssetsHint": "+18.3K in last 24h",
         "inFlightHint": "across {{stages}} stages",
         "queueDepthHint": "moderate + transform are 99%",
         "quarantineHint": "+5 today · oldest 36h",
-        "legalHoldsHint": "11 active · 1 pending lift"
+        "legalHoldsHint": "11 active · 1 pending lift",
+        "queueLabels": {
+          "inFlight": "in flight",
+          "queued": "queued",
+          "p95": "p95"
+        }
       }
     },
     "assets": {
