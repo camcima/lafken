@@ -8,6 +8,7 @@ import { HealthModule } from "./health/health.module";
 import { LegalHoldsModule } from "./legal-holds/legal-holds.module";
 import { NamespacesModule } from "./namespaces/namespaces.module";
 import { QuarantineModule } from "./quarantine/quarantine.module";
+import { AuthorizationModule } from "./shared/infrastructure/authorization/authorization.module";
 import { LoggerModule } from "./shared/infrastructure/logger/logger.module";
 import { TelemetryModule } from "./shared/infrastructure/telemetry/telemetry.module";
 import { ApiInputValidationPipe } from "./shared/presentation/api-input-validation.pipe";
@@ -23,6 +24,7 @@ import { SystemModule } from "./system/system.module";
     TelemetryModule,
     HealthModule,
     AuthModule,
+    AuthorizationModule,
     NamespacesModule,
     AssetsModule,
     QuarantineModule,
