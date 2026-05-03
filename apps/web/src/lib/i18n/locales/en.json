@@ -160,7 +160,27 @@
     "signOut": "Sign out"
   },
   "pages": {
-    "home": { "title": "Home" },
+    "home": {
+      "title": "Home",
+      "subtitle": "Operator dashboard",
+      "lastRefreshed": "Last refreshed",
+      "justNow": "just now",
+      "stats": {
+        "totalAssets": "Total assets",
+        "inFlight": "In flight",
+        "queueDepth": "Queue depth",
+        "quarantine": "Quarantine",
+        "legalHolds": "Legal holds"
+      },
+      "pipelineHealth": "Pipeline health",
+      "checking": "checking…",
+      "needsAttention": "Things needing attention",
+      "needsAttentionEmpty": "Nothing needs attention right now",
+      "topNamespaces": "Top namespaces",
+      "topNamespacesEmpty": "No namespace activity yet",
+      "liveEvents": "Live events",
+      "liveEventsEmpty": "No recent events"
+    },
     "assets": { "title": "Assets" },
     "namespaces": { "title": "Namespaces" },
     "quarantine": { "title": "Quarantine" },
