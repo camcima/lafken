@@ -273,3 +273,25 @@ Configured in `pnpm-workspace.yaml`:
 - **`trustPolicy: no-downgrade`**: Prevents trust-level downgrades in packages
 - **`minimumReleaseAge: 4320`** (3 days): Quarantine period for newly published packages
 - Trusted publishers (NestJS, Azure, Google Cloud, TanStack, etc.) are exempt from the quarantine
+
+---
+
+## Lafken bounded contexts
+
+The Lafken domain breaks into seven backend modules under `apps/backend/src/`:
+
+| Module        | Owns                                                                                         |
+|---------------|----------------------------------------------------------------------------------------------|
+| `namespaces`  | `namespaces`, `namespace_policies`, `namespace_presets`                                      |
+| `assets`      | `assets`, `upload_intents`, `processing_jobs`, `asset_state_transitions`, `asset_analyses`   |
+| `quarantine`  | (no tables) — read views over `assets`                                                       |
+| `legal-holds` | `legal_holds`, `legal_hold_assets`                                                           |
+| `audit`       | `configuration_audit_log` (+ read views over `asset_state_transitions`)                      |
+| `system`      | `storage_bindings`, integration metadata                                                     |
+| `dashboard`   | (no tables) — aggregates reads from the six modules above for the Home overview endpoint     |
+
+Each module follows the standard four-layer hexagonal layout: `domain/`, `application/`, `infrastructure/`, `presentation/`.
+
+### Primary key strategy
+
+Lafken uses `bigserial` internal primary keys with UUIDv4 `public_id` columns for externally-facing identifiers (assets and upload intents). This deviates from the project-wide UUIDv7 convention; the rationale is documented in ADR 0001 (`docs/adr/0001-pk-strategy.md`).
