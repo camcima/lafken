@@ -133,5 +133,40 @@
   "idChip": {
     "copyToClipboard": "Copy to clipboard",
     "copied": "Copied!"
+  },
+  "nav": {
+    "groups": {
+      "workspace": "Workspace",
+      "review": "Review",
+      "platform": "Platform"
+    },
+    "home": "Home",
+    "assets": "Assets",
+    "namespaces": "Namespaces",
+    "quarantine": "Quarantine",
+    "legalHolds": "Legal holds",
+    "audit": "Audit",
+    "system": "System",
+    "settings": "Settings",
+    "envBadge": "{{env}}"
+  },
+  "topBar": {
+    "refresh": "Refresh",
+    "notifications": "Notifications",
+    "notificationsComingSoon": "Notifications coming soon"
+  },
+  "user": {
+    "noRole": "No role",
+    "signOut": "Sign out"
+  },
+  "pages": {
+    "home": { "title": "Home" },
+    "assets": { "title": "Assets" },
+    "namespaces": { "title": "Namespaces" },
+    "quarantine": { "title": "Quarantine" },
+    "legalHolds": { "title": "Legal holds" },
+    "audit": { "title": "Audit" },
+    "system": { "title": "System" },
+    "settings": { "title": "Settings" }
   }
 }

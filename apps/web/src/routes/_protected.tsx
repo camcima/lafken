@@ -1,4 +1,4 @@
-import { createFileRoute, Navigate, Outlet, useLocation } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useLocation } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { MonitoringProvider } from "@/components/common/MonitoringProvider";
@@ -7,7 +7,7 @@ import { ErrorBoundary } from "@/components/feedback/Error/ErrorBoundary";
 import BootstrapRunner from "@/components/setup/runner";
 import type { SetupStep } from "@/components/setup/types";
 import { useAuth } from "@/hooks/useAuth";
-import { MainLayout } from "@/layouts/MainLayout";
+import { AppShell } from "@/layouts/AppShell";
 import { buildRedirectTarget } from "@/lib/auth/validateRedirect";
 import { healthService } from "@/services";
 
@@ -65,9 +65,7 @@ function ProtectedLayout() {
     <ErrorBoundary>
       <MonitoringProvider>
         <BootstrapRunner steps={requiredSteps}>
-          <MainLayout>
-            <Outlet />
-          </MainLayout>
+          <AppShell />
         </BootstrapRunner>
       </MonitoringProvider>
     </ErrorBoundary>
