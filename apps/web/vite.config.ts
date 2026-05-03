@@ -38,7 +38,6 @@ const config = defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, "index.html"),
-        redirect: resolve(__dirname, "redirect.html"),
       },
       external: [/\.storybook\//, /\.stories\./, /\.test\./, /\.spec\./],
       output: {
