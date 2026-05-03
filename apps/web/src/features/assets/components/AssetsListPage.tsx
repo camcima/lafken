@@ -1,8 +1,8 @@
-import { ASSET_STATES } from "@shared/backend-api";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/common/EmptyState";
+import { ASSET_STATES } from "@/features/assets/asset-states";
 import { useAssets } from "@/features/assets/hooks/useAssets";
 
 export function AssetsListPage(): React.JSX.Element {
