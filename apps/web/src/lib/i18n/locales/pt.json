@@ -747,7 +747,47 @@
       "title": "Status do sistema",
       "subtitle": "prod · sa-east-1 · atualização 30s · última âncora 12s atrás",
       "publicStatusPage": "Página de status público",
-      "storageBindings": "Bindings de armazenamento",
+      "storageBindings": {
+        "title": "Bindings de armazenamento",
+        "addBinding": "Adicionar binding",
+        "edit": "Editar",
+        "delete": "Excluir",
+        "demoLabel": "(demo)",
+        "real": {
+          "bucket": "Bucket",
+          "projectId": "ID do projeto",
+          "createdAt": "Criado"
+        },
+        "deleteConfirm": {
+          "title": "Excluir binding {{name}}?",
+          "body": "Esta ação não pode ser desfeita. O binding será removido; o bucket em si não é afetado.",
+          "confirm": "Excluir",
+          "cancel": "Cancelar"
+        },
+        "form": {
+          "createTitle": "Adicionar binding de armazenamento",
+          "editTitle": "Editar binding de armazenamento",
+          "name": "Nome",
+          "nameHelp": "Letras minúsculas, dígitos e hifens. Deve começar e terminar com uma letra ou dígito.",
+          "adapterType": "Adaptador",
+          "bucket": "Bucket",
+          "bucketHelp": "Nome do bucket GCS. O Lafken não criará o bucket — ele já deve existir.",
+          "projectId": "ID do projeto GCP",
+          "prefix": "Prefixo (opcional)",
+          "submit": "Salvar",
+          "cancel": "Cancelar"
+        },
+        "errors": {
+          "bucketNotFound": "O bucket \"{{bucket}}\" não existe. O Lafken não cria buckets — crie-o primeiro.",
+          "duplicateName": "Já existe um binding com este nome.",
+          "validationFailed": "Por favor, corrija os campos destacados.",
+          "generic": "Não foi possível salvar o binding.",
+          "invalidName": "Use letras minúsculas, dígitos e hifens. Deve começar e terminar com uma letra ou dígito.",
+          "invalidBucket": "O nome do bucket deve ter entre 3 e 63 caracteres: letras minúsculas, dígitos, pontos, hifens e sublinhados.",
+          "invalidProjectId": "O ID do projeto deve ter entre 6 e 30 caracteres.",
+          "invalidPrefix": "O prefixo deve ter no máximo 255 caracteres."
+        }
+      },
       "integrations": "Integrações",
       "health": "Saúde do sistema",
       "noStorageBindings": "Nenhum binding de armazenamento configurado",

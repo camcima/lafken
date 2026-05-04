@@ -747,7 +747,47 @@
       "title": "Estado del sistema",
       "subtitle": "prod · sa-east-1 · actualización 30s · último anclaje hace 12s",
       "publicStatusPage": "Página de estado público",
-      "storageBindings": "Bindings de almacenamiento",
+      "storageBindings": {
+        "title": "Bindings de almacenamiento",
+        "addBinding": "Añadir binding",
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "demoLabel": "(demo)",
+        "real": {
+          "bucket": "Bucket",
+          "projectId": "ID de proyecto",
+          "createdAt": "Creado"
+        },
+        "deleteConfirm": {
+          "title": "¿Eliminar binding {{name}}?",
+          "body": "Esta acción no se puede deshacer. Se eliminará el binding; el bucket en sí no se ve afectado.",
+          "confirm": "Eliminar",
+          "cancel": "Cancelar"
+        },
+        "form": {
+          "createTitle": "Añadir binding de almacenamiento",
+          "editTitle": "Editar binding de almacenamiento",
+          "name": "Nombre",
+          "nameHelp": "Letras minúsculas, dígitos y guiones. Debe comenzar y terminar con una letra o dígito.",
+          "adapterType": "Adaptador",
+          "bucket": "Bucket",
+          "bucketHelp": "Nombre del bucket de GCS. Lafken no creará el bucket — debe existir previamente.",
+          "projectId": "ID de proyecto GCP",
+          "prefix": "Prefijo (opcional)",
+          "submit": "Guardar",
+          "cancel": "Cancelar"
+        },
+        "errors": {
+          "bucketNotFound": "El bucket \"{{bucket}}\" no existe. Lafken no crea buckets — créalo primero.",
+          "duplicateName": "Ya existe un binding con este nombre.",
+          "validationFailed": "Por favor, corrige los campos resaltados.",
+          "generic": "No se pudo guardar el binding.",
+          "invalidName": "Usa letras minúsculas, dígitos y guiones. Debe comenzar y terminar con una letra o dígito.",
+          "invalidBucket": "El nombre del bucket debe tener entre 3 y 63 caracteres: letras minúsculas, dígitos, puntos, guiones y guiones bajos.",
+          "invalidProjectId": "El ID de proyecto debe tener entre 6 y 30 caracteres.",
+          "invalidPrefix": "El prefijo debe tener como máximo 255 caracteres."
+        }
+      },
       "integrations": "Integraciones",
       "health": "Salud del sistema",
       "noStorageBindings": "No hay bindings de almacenamiento configurados",
