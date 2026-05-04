@@ -5,17 +5,31 @@ import { useTranslation } from "react-i18next";
 import { useDashboardOverview } from "@/features/dashboard/hooks/useDashboardOverview";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  DEMO_ASSET_LIST,
   DEMO_LEGAL_HOLDS,
   DEMO_NAMESPACES,
   DEMO_QUARANTINE,
+  DEMO_TOTAL_ASSETS,
 } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
 
 import type { INavGroup, INavLink } from "./nav-config";
 import { NAV_GROUPS } from "./nav-config";
 
-const MAX_BADGE = 99;
+const COUNT_K = 1_000;
+const COUNT_M = 1_000_000;
+const COMPACT_THRESHOLD = 10;
+const DECIMALS = 1;
+
+/** Format a count for the sidebar badge: 312, 4.2K, 1.8M. */
+function formatCount(count: number): string {
+  if (count < COUNT_K) return count.toLocaleString();
+  if (count < COUNT_M) {
+    const value = count / COUNT_K;
+    return `${value < COMPACT_THRESHOLD ? value.toFixed(DECIMALS) : Math.round(value).toString()}K`;
+  }
+  const value = count / COUNT_M;
+  return `${value < COMPACT_THRESHOLD ? value.toFixed(DECIMALS) : Math.round(value).toString()}M`;
+}
 
 function NavLinkItem({
   link,
@@ -50,7 +64,7 @@ function NavLinkItem({
             isActive ? "bg-white/25 text-white" : "bg-white/15 text-white/85",
           )}
         >
-          {count > MAX_BADGE ? `${MAX_BADGE}+` : count}
+          {formatCount(count)}
         </span>
       )}
     </Link>
@@ -153,11 +167,13 @@ export function Sidebar(): React.ReactElement {
       | undefined
   )?.counts;
 
+  // Slice 0: BE returns 0 for empty tables; fall back to demo data so badges
+  // show meaningful counts. Switch to `??` once BE returns real values.
   const getCount = (key: string): number | undefined => {
-    if (key === "quarantine") return counts?.quarantine ?? DEMO_QUARANTINE.length;
-    if (key === "legalHolds") return counts?.legalHolds ?? DEMO_LEGAL_HOLDS.length;
-    if (key === "assets") return counts?.totalAssets ?? DEMO_ASSET_LIST.length;
-    if (key === "namespaces") return counts?.namespaces ?? DEMO_NAMESPACES.length;
+    if (key === "quarantine") return counts?.quarantine || DEMO_QUARANTINE.length;
+    if (key === "legalHolds") return counts?.legalHolds || DEMO_LEGAL_HOLDS.length;
+    if (key === "assets") return counts?.totalAssets || DEMO_TOTAL_ASSETS;
+    if (key === "namespaces") return counts?.namespaces || DEMO_NAMESPACES.length;
     return undefined;
   };
 

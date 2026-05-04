@@ -73,7 +73,7 @@ describe("button", () => {
 
       const button = screen.getByRole("button");
 
-      expect(button).toHaveClass("border", "bg-background");
+      expect(button).toHaveClass("border", "bg-card", "text-foreground");
     });
 
     it("applies secondary variant styles", () => {
@@ -89,7 +89,7 @@ describe("button", () => {
 
       const button = screen.getByRole("button");
 
-      expect(button).toHaveClass("hover:bg-accent");
+      expect(button).toHaveClass("hover:bg-secondary", "hover:text-foreground");
     });
 
     it("applies link variant styles", () => {

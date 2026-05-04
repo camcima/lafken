@@ -36,17 +36,17 @@ describe("StatePill", () => {
 
   it("renders the label for quarantined_virus state", () => {
     renderWithI18n(<StatePill state="quarantined_virus" />);
-    expect(screen.getByText("Quarantined (virus)")).toBeInTheDocument();
+    expect(screen.getByText("Virus")).toBeInTheDocument();
   });
 
   it("renders the label for quarantined_moderation state", () => {
     renderWithI18n(<StatePill state="quarantined_moderation" />);
-    expect(screen.getByText("Quarantined (moderation)")).toBeInTheDocument();
+    expect(screen.getByText("Moderation")).toBeInTheDocument();
   });
 
   it("renders the label for processing_failed state", () => {
     renderWithI18n(<StatePill state="processing_failed" />);
-    expect(screen.getByText("Processing failed")).toBeInTheDocument();
+    expect(screen.getByText("Failed")).toBeInTheDocument();
   });
 
   it("renders the label for expired state", () => {

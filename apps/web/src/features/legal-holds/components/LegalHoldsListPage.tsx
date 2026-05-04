@@ -272,7 +272,6 @@ export function LegalHoldsListPage(): React.JSX.Element {
             {t("pages.legalHolds.title")}
           </h1>
           <div className="text-muted-foreground mt-1 text-[12.5px]">
-            <b className="text-foreground">{filtered.length}</b>{" "}
             {t("pages.legalHolds.subtitle", {
               filtered: filtered.length,
               assets: totalAssets.toLocaleString(),

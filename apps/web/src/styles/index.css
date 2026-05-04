@@ -500,6 +500,23 @@
 .mono { font-family: var(--font-family-mono); font-feature-settings: "zero" 1; }
 
 @layer utilities {
+  /* Native <select> chevron — applied as a background image so the down-arrow
+     renders consistently when `appearance-none` strips the platform glyph.
+     Defined here (not as an arbitrary Tailwind class) because Tailwind v4
+     fails to parse data: URLs containing nested quotes. */
+  .select-chevron {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M4 6l4 4 4-4'/></svg>");
+    background-repeat: no-repeat;
+  }
+  .select-chevron-md {
+    background-position: right 0.5rem center;
+    background-size: 14px 14px;
+  }
+  .select-chevron-sm {
+    background-position: right 0.4rem center;
+    background-size: 12px 12px;
+  }
+
   @keyframes blink {
     0%,
     100% {

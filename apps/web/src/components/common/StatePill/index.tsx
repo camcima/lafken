@@ -28,16 +28,16 @@ const STATE_COLORS: Record<AssetState, string> = {
 };
 
 const STATE_TEXT_CLASSES: Record<AssetState, string> = {
-  pending: "bg-secondary text-muted-foreground",
-  uploaded: "bg-info-soft text-info",
-  processing: "bg-info-soft text-info",
-  ready: "bg-ok-soft text-ok",
-  rejected: "bg-warn-soft text-warn",
-  quarantined_virus: "bg-alert-soft text-alert",
-  quarantined_moderation: "bg-alert-soft text-alert",
-  processing_failed: "bg-danger-soft text-danger",
-  expired: "bg-secondary text-muted-foreground",
-  deleted: "bg-secondary text-muted-foreground",
+  pending: "bg-secondary text-muted-foreground border-border",
+  uploaded: "bg-info-soft text-info border-info-line",
+  processing: "bg-info-soft text-info border-info-line",
+  ready: "bg-ok-soft text-ok border-ok-line",
+  rejected: "bg-warn-soft text-warn border-warn-line",
+  quarantined_virus: "bg-alert-soft text-alert border-alert-line",
+  quarantined_moderation: "bg-alert-soft text-alert border-alert-line",
+  processing_failed: "bg-danger-soft text-danger border-danger-line",
+  expired: "bg-secondary text-muted-foreground border-border",
+  deleted: "bg-secondary text-muted-foreground border-border",
 };
 
 interface IStatePillProps {
@@ -56,7 +56,7 @@ export function StatePill({ state, className, lg }: IStatePillProps) {
       data-slot="state-pill"
       data-state={state}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full font-medium tabular-nums",
+        "inline-flex items-center gap-1.5 rounded-full border font-medium tabular-nums",
         lg ? "px-2.5 py-1 text-[12.5px]" : "px-2 py-0.5 text-[11.5px]",
         textClass,
         className,

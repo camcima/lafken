@@ -16,6 +16,7 @@ import {
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
 import { Paginator } from "@/components/common/Paginator";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
@@ -454,18 +455,12 @@ export function AssetsListPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <ViewToggle view={view} onChange={handleViewChange} />
-            <button
-              type="button"
-              className="border-border bg-card hover:bg-secondary inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-[12.5px]"
-            >
-              <Download size={13} /> {t("pages.assets.actions.export")}
-            </button>
-            <button
-              type="button"
-              className="bg-latam-indigo hover:bg-latam-indigo-deep inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-[12.5px] text-white"
-            >
-              <Plus size={13} /> {t("pages.assets.actions.upload")}
-            </button>
+            <Button type="button" variant="outline">
+              <Download /> {t("pages.assets.actions.export")}
+            </Button>
+            <Button type="button" variant="indigo">
+              <Plus /> {t("pages.assets.actions.upload")}
+            </Button>
           </div>
         </div>
       </div>
@@ -528,10 +523,10 @@ export function AssetsListPage() {
             ))}
           </select>
 
-          {/* More filters */}
+          {/* More filters — matches the h-9 filter row, not the action-bar h-8 */}
           <button
             type="button"
-            className="border-border bg-card hover:bg-secondary inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-[12.5px]"
+            className="border-border bg-card hover:bg-secondary hover:border-latam-indigo/30 inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-[12.5px]"
           >
             <Filter size={13} /> {t("pages.assets.filters.moreFilters")}
             <span className="bg-secondary text-muted-foreground ml-1 rounded-full px-1.5 py-px text-[10.5px]">

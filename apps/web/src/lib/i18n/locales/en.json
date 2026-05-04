@@ -125,9 +125,9 @@
     "processing": "Processing",
     "ready": "Ready",
     "rejected": "Rejected",
-    "quarantined_virus": "Quarantined (virus)",
-    "quarantined_moderation": "Quarantined (moderation)",
-    "processing_failed": "Processing failed",
+    "quarantined_virus": "Virus",
+    "quarantined_moderation": "Moderation",
+    "processing_failed": "Failed",
     "expired": "Expired",
     "deleted": "Deleted"
   },

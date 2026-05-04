@@ -101,6 +101,11 @@ export const DEMO_NAMESPACES: DemoNamespace[] = [
   },
 ];
 
+// Aggregate of per-namespace assetCount — represents the realistic total an
+// operator would see in the sidebar badge ("2.5M") rather than the size of the
+// in-memory demo asset list (312 rows).
+export const DEMO_TOTAL_ASSETS = DEMO_NAMESPACES.reduce((total, ns) => total + ns.assetCount, 0);
+
 // ── Pipeline sparkline data (Home page) ──────────────────
 
 // Sparkline constants: 12 data points per queue, representing 30s buckets over

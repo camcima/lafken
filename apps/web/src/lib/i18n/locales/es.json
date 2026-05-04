@@ -120,16 +120,16 @@
     }
   },
   "assetStates": {
-    "pending": "",
-    "uploaded": "",
-    "processing": "",
-    "ready": "",
-    "rejected": "",
-    "quarantined_virus": "",
-    "quarantined_moderation": "",
-    "processing_failed": "",
-    "expired": "",
-    "deleted": ""
+    "pending": "Pendiente",
+    "uploaded": "Subido",
+    "processing": "Procesando",
+    "ready": "Listo",
+    "rejected": "Rechazado",
+    "quarantined_virus": "Virus",
+    "quarantined_moderation": "Moderación",
+    "processing_failed": "Falló",
+    "expired": "Expirado",
+    "deleted": "Eliminado"
   },
   "idChip": {
     "copyToClipboard": "",
