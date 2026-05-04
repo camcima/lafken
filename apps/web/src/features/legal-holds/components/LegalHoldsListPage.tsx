@@ -21,6 +21,7 @@ import { Card } from "@/components/common/Card";
 import { Label } from "@/components/common/Label";
 import { Paginator } from "@/components/common/Paginator";
 import { RightDrawer } from "@/components/common/RightDrawer";
+import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
 import { DEMO_LEGAL_HOLDS } from "@/lib/demo/lafken-demo-data";
 import type { DemoLegalHold } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
@@ -41,9 +42,6 @@ const DATE_SLICE_END = 10;
 // Shared grid column definition (header + row must stay in sync)
 const TABLE_COLS =
   "grid-cols-[minmax(0,1.4fr)_120px_minmax(0,2fr)_85px_minmax(0,1.2fr)_110px_120px_34px]";
-
-const SELECT_CLASS =
-  "h-9 appearance-none rounded-md border border-input bg-card pl-3 pr-8 text-[12.5px]";
 
 interface IScopeIconProps {
   scope: string;
@@ -210,10 +208,6 @@ function HoldDrawer({ hold, onClose }: IHoldDrawerProps): React.JSX.Element {
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 25;
 /* eslint-enable no-magic-numbers */
-
-// Rows-per-page select (compact variant for pagination footer)
-const PAGE_SIZE_SELECT_CLASS =
-  "h-7 appearance-none rounded border border-input bg-card px-2 pr-6 text-[12px] leading-none";
 
 // Slice 0: oldest-hold stat — derived from demo data, not hardcoded.
 // Computed once at module load so Date.now() is stable across renders.
@@ -478,7 +472,7 @@ export function LegalHoldsListPage(): React.JSX.Element {
               setPageSize(Number(ev.target.value));
               setPage(0);
             }}
-            className={PAGE_SIZE_SELECT_CLASS}
+            className={SELECT_CLASS_SM}
             aria-label={t("paginator.rowsPerPage")}
           >
             {PAGE_SIZE_OPTIONS.map((pageOpt) => (

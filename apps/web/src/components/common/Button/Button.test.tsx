@@ -107,7 +107,7 @@ describe("button", () => {
 
       const button = screen.getByRole("button");
 
-      expect(button).toHaveClass("h-9", "px-4", "py-2");
+      expect(button).toHaveClass("h-8", "px-3");
     });
 
     it("applies small size styles", () => {
@@ -115,7 +115,7 @@ describe("button", () => {
 
       const button = screen.getByRole("button");
 
-      expect(button).toHaveClass("h-8", "rounded-md");
+      expect(button).toHaveClass("h-7", "rounded-md");
     });
 
     it("applies large size styles", () => {
@@ -123,7 +123,7 @@ describe("button", () => {
 
       const button = screen.getByRole("button");
 
-      expect(button).toHaveClass("h-10", "rounded-md");
+      expect(button).toHaveClass("h-9", "rounded-md");
     });
 
     it("applies icon size styles", () => {
@@ -131,7 +131,7 @@ describe("button", () => {
 
       const button = screen.getByRole("button");
 
-      expect(button).toHaveClass("size-9");
+      expect(button).toHaveClass("size-8");
     });
 
     it("applies icon-sm size styles", () => {
@@ -139,7 +139,7 @@ describe("button", () => {
 
       const button = screen.getByRole("button");
 
-      expect(button).toHaveClass("size-8");
+      expect(button).toHaveClass("size-6");
     });
 
     it("applies icon-lg size styles", () => {
@@ -147,7 +147,7 @@ describe("button", () => {
 
       const button = screen.getByRole("button");
 
-      expect(button).toHaveClass("size-10");
+      expect(button).toHaveClass("size-9");
     });
   });
 
@@ -301,7 +301,7 @@ describe("button", () => {
 
       const button = screen.getByRole("button");
 
-      expect(button).toHaveClass("bg-destructive", "h-10");
+      expect(button).toHaveClass("bg-destructive", "h-9");
     });
 
     it("combines all props correctly", () => {
@@ -313,7 +313,7 @@ describe("button", () => {
 
       const button = screen.getByRole("button");
 
-      expect(button).toHaveClass("border", "h-8", "custom-class");
+      expect(button).toHaveClass("border", "h-7", "custom-class");
       expect(button).toBeDisabled();
     });
   });
@@ -352,7 +352,7 @@ describe("button", () => {
 
       expect(button).toBeInTheDocument();
       // Should fall back to default size
-      expect(button).toHaveClass("h-9");
+      expect(button).toHaveClass("h-8");
     });
   });
 });

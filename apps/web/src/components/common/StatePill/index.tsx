@@ -1,4 +1,3 @@
-import { cva, type VariantProps } from "class-variance-authority";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
@@ -15,43 +14,59 @@ export type AssetState =
   | "expired"
   | "deleted";
 
-const statePillVariants = cva(
-  "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-  {
-    variants: {
-      state: {
-        pending: "bg-secondary text-muted-foreground",
-        uploaded: "bg-info-soft text-info",
-        processing: "bg-info-soft text-info",
-        ready: "bg-ok-soft text-ok",
-        rejected: "bg-warn-soft text-warn",
-        quarantined_virus: "bg-alert-soft text-alert",
-        quarantined_moderation: "bg-alert-soft text-alert",
-        processing_failed: "bg-danger-soft text-danger",
-        expired: "bg-secondary text-muted-foreground",
-        deleted: "bg-secondary text-muted-foreground",
-      },
-    },
-    defaultVariants: {
-      state: "pending",
-    },
-  },
-);
+const STATE_COLORS: Record<AssetState, string> = {
+  pending: "#94a3b8",
+  uploaded: "#94a3b8",
+  processing: "#0e7ea8",
+  ready: "#1f7a4f",
+  rejected: "#a16207",
+  quarantined_virus: "#8A4209",
+  quarantined_moderation: "#8A4209",
+  processing_failed: "#8B271A",
+  expired: "#cbd5e1",
+  deleted: "#cbd5e1",
+};
 
-interface IStatePillProps extends VariantProps<typeof statePillVariants> {
+const STATE_TEXT_CLASSES: Record<AssetState, string> = {
+  pending: "bg-secondary text-muted-foreground",
+  uploaded: "bg-info-soft text-info",
+  processing: "bg-info-soft text-info",
+  ready: "bg-ok-soft text-ok",
+  rejected: "bg-warn-soft text-warn",
+  quarantined_virus: "bg-alert-soft text-alert",
+  quarantined_moderation: "bg-alert-soft text-alert",
+  processing_failed: "bg-danger-soft text-danger",
+  expired: "bg-secondary text-muted-foreground",
+  deleted: "bg-secondary text-muted-foreground",
+};
+
+interface IStatePillProps {
   state: AssetState;
   className?: string;
+  lg?: boolean;
 }
 
-export function StatePill({ state, className }: IStatePillProps) {
+export function StatePill({ state, className, lg }: IStatePillProps) {
   const { t } = useTranslation();
+  const dotColor = STATE_COLORS[state];
+  const textClass = STATE_TEXT_CLASSES[state];
 
   return (
     <span
       data-slot="state-pill"
       data-state={state}
-      className={cn(statePillVariants({ state, className }))}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full font-medium tabular-nums",
+        lg ? "px-2.5 py-1 text-[12.5px]" : "px-2 py-0.5 text-[11.5px]",
+        textClass,
+        className,
+      )}
     >
+      <span
+        className="size-1.5 flex-none rounded-full"
+        style={{ background: dotColor }}
+        aria-hidden="true"
+      />
       {t(`assetStates.${state}`)}
     </span>
   );

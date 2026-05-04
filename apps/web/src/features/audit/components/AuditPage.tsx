@@ -20,6 +20,7 @@ import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
 import { Paginator } from "@/components/common/Paginator";
 import { RightDrawer } from "@/components/common/RightDrawer";
+import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
 import { DEMO_AUDIT, fmtMinAgo } from "@/lib/demo/lafken-demo-data";
 import type { DemoAuditEntry } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
@@ -126,18 +127,11 @@ function AuditDrawer({ entry, onClose }: IAuditDrawerProps): React.JSX.Element {
   );
 }
 
-const SELECT_CLASS =
-  "h-9 appearance-none rounded-md border border-input bg-card pl-3 pr-8 text-[12.5px]";
-
 // Page-size options for the rows-per-page selector
 /* eslint-disable no-magic-numbers */
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const;
 const DEFAULT_PAGE_SIZE = 50;
 /* eslint-enable no-magic-numbers */
-
-// Rows-per-page select (compact variant for pagination footer)
-const PAGE_SIZE_SELECT_CLASS =
-  "h-7 appearance-none rounded border border-input bg-card px-2 pr-6 text-[12px] leading-none";
 
 export function AuditPage(): React.JSX.Element {
   const { t } = useTranslation();
@@ -322,7 +316,7 @@ export function AuditPage(): React.JSX.Element {
               setPageSize(Number(e.target.value));
               setPage(0);
             }}
-            className={PAGE_SIZE_SELECT_CLASS}
+            className={SELECT_CLASS_SM}
             aria-label={t("paginator.rowsPerPage")}
           >
             {PAGE_SIZE_OPTIONS.map((pageOpt) => (

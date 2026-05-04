@@ -17,7 +17,7 @@ export interface INavLink {
   to: string;
   labelKey: string;
   icon: LucideIcon;
-  countKey?: "quarantine" | "legalHolds";
+  countKey?: "quarantine" | "legalHolds" | "assets" | "namespaces";
   requiredRoles?: string[];
 }
 
@@ -33,12 +33,13 @@ export const NAV_GROUPS: INavGroup[] = [
     headingKey: "nav.groups.workspace",
     links: [
       { id: "home", to: "/", labelKey: "nav.home", icon: Home },
-      { id: "assets", to: "/assets", labelKey: "nav.assets", icon: Image },
+      { id: "assets", to: "/assets", labelKey: "nav.assets", icon: Image, countKey: "assets" },
       {
         id: "namespaces",
         to: "/namespaces",
         labelKey: "nav.namespaces",
         icon: Folder,
+        countKey: "namespaces",
       },
     ],
   },

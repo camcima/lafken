@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/common/Badge";
 import { Button } from "@/components/common/Button";
 import { Card, CardContent, CardHeader, CardMeta, CardTitle } from "@/components/common/Card";
+import { SELECT_CLASS } from "@/components/common/select-styles";
 import { StatePill } from "@/components/common/StatePill";
 import { DEMO_QUARANTINE, type DemoQuarantineItem, fmtMinAgo } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
@@ -419,7 +420,7 @@ export function QuarantinePage(): React.JSX.Element {
           onChange={(e) => {
             setReasonFilter(e.target.value);
           }}
-          className="border-input bg-card h-9 appearance-none rounded-md border pr-8 pl-3 text-[12.5px]"
+          className={SELECT_CLASS}
         >
           <option value="all">{t("pages.quarantine.reasons.all")}</option>
           <option value="violence">{t("pages.quarantine.reasons.violence")}</option>
@@ -585,7 +586,8 @@ export function QuarantinePage(): React.JSX.Element {
               <div className="border-border bg-secondary/30 border-t px-5 py-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
-                    variant="default"
+                    variant="pink"
+                    size="sm"
                     onClick={() => {
                       decide("release");
                     }}
@@ -595,6 +597,7 @@ export function QuarantinePage(): React.JSX.Element {
                   </Button>
                   <Button
                     variant="danger"
+                    size="sm"
                     onClick={() => {
                       setShowRejectModal(true);
                     }}
@@ -602,12 +605,12 @@ export function QuarantinePage(): React.JSX.Element {
                     <X size={ICON_MD} />
                     {t("pages.quarantine.actions.reject")}
                   </Button>
-                  <Button variant="outline">
+                  <Button variant="outline" size="sm">
                     <Flag size={ICON_MD} />
                     {t("pages.quarantine.actions.escalate")}
                   </Button>
                   <div className="ml-auto">
-                    <Button variant="ghost">
+                    <Button variant="ghost" size="sm">
                       <ExternalLink size={ICON_XS + 2} />
                       {t("pages.quarantine.actions.openDetail")}
                     </Button>

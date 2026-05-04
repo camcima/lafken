@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 
 import { Card } from "@/components/common/Card";
 import { Paginator } from "@/components/common/Paginator";
+import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
 import { StatePill } from "@/components/common/StatePill";
 import { DEMO_ASSET_LIST, DEMO_NAMESPACES, fmtMinAgo } from "@/lib/demo/lafken-demo-data";
 import type { DemoAsset } from "@/lib/demo/lafken-demo-data";
@@ -35,14 +36,6 @@ function getAutoPageSize(view: ViewMode): number {
   if (view === "hybrid") return AUTO_PAGE_SIZE_HYBRID;
   return AUTO_PAGE_SIZE_ROWS;
 }
-
-// Custom-arrow select class (shared with page-size dropdowns)
-const SELECT_CLASS =
-  "h-9 appearance-none rounded-md border border-input bg-card pl-3 pr-8 text-[12.5px]";
-
-// Rows-per-page select (compact variant for pagination footer)
-const PAGE_SIZE_SELECT_CLASS =
-  "h-7 appearance-none rounded border border-input bg-card px-2 pr-6 text-[12px] leading-none";
 
 // Page-size options for the rows-per-page selector
 /* eslint-disable no-magic-numbers */
@@ -660,7 +653,7 @@ export function AssetsListPage() {
                   setPageSize(Number(e.target.value));
                   setPage(0);
                 }}
-                className={PAGE_SIZE_SELECT_CLASS}
+                className={SELECT_CLASS_SM}
                 aria-label={t("paginator.rowsPerPage")}
               >
                 {PAGE_SIZE_OPTIONS.map((pageOpt) => (

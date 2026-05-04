@@ -66,26 +66,26 @@ describe("StatePill", () => {
 
   it("sets data-slot and data-state attributes", () => {
     renderWithI18n(<StatePill state="ready" />);
-    const pill = screen.getByText("Ready");
+    const pill = screen.getByText("Ready").closest("[data-slot='state-pill']");
     expect(pill).toHaveAttribute("data-slot", "state-pill");
     expect(pill).toHaveAttribute("data-state", "ready");
   });
 
   it("applies ready state styles", () => {
     renderWithI18n(<StatePill state="ready" />);
-    const pill = screen.getByText("Ready");
+    const pill = screen.getByText("Ready").closest("[data-slot='state-pill']");
     expect(pill).toHaveClass("bg-ok-soft", "text-ok");
   });
 
   it("applies pending state styles", () => {
     renderWithI18n(<StatePill state="pending" />);
-    const pill = screen.getByText("Pending");
+    const pill = screen.getByText("Pending").closest("[data-slot='state-pill']");
     expect(pill).toHaveClass("bg-secondary", "text-muted-foreground");
   });
 
   it("applies custom className", () => {
     renderWithI18n(<StatePill state="ready" className="custom-class" />);
-    const pill = screen.getByText("Ready");
+    const pill = screen.getByText("Ready").closest("[data-slot='state-pill']");
     expect(pill).toHaveClass("custom-class");
   });
 });

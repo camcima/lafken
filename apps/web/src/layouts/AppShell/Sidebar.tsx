@@ -1,8 +1,15 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useDashboardOverview } from "@/features/dashboard/hooks/useDashboardOverview";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  DEMO_ASSET_LIST,
+  DEMO_LEGAL_HOLDS,
+  DEMO_NAMESPACES,
+  DEMO_QUARANTINE,
+} from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
 
 import type { INavGroup, INavLink } from "./nav-config";
@@ -92,7 +99,7 @@ function NavGroupSection({
 }
 
 function UserBlock(): React.ReactElement {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { t } = useTranslation();
 
   const initials = (user?.name ?? user?.email ?? "?")
@@ -110,12 +117,21 @@ function UserBlock(): React.ReactElement {
       <div className="bg-latam-pink grid size-[26px] flex-none place-items-center rounded-full text-[10.5px] font-bold text-white">
         {initials}
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="truncate text-[12.5px] leading-tight font-medium text-white">
           {user?.name ?? user?.email}
         </div>
         <div className="truncate text-[10.5px] leading-tight text-white/55">{role}</div>
       </div>
+      <button
+        type="button"
+        onClick={() => void logout()}
+        title={t("user.signOut")}
+        aria-label={t("user.signOut")}
+        className="grid size-7 flex-none cursor-pointer place-items-center rounded text-white/55 hover:bg-white/10 hover:text-white"
+      >
+        <LogOut size={14} />
+      </button>
     </div>
   );
 }
@@ -124,12 +140,24 @@ export function Sidebar(): React.ReactElement {
   const { user } = useAuth();
   const pathname = useRouterState({ select: (routerState) => routerState.location.pathname });
   const { data } = useDashboardOverview();
-  const counts = (data as { counts?: { quarantine?: number; legalHolds?: number } } | undefined)
-    ?.counts;
+  const counts = (
+    data as
+      | {
+          counts?: {
+            quarantine?: number;
+            legalHolds?: number;
+            totalAssets?: number;
+            namespaces?: number;
+          };
+        }
+      | undefined
+  )?.counts;
 
   const getCount = (key: string): number | undefined => {
-    if (key === "quarantine") return counts?.quarantine;
-    if (key === "legalHolds") return counts?.legalHolds;
+    if (key === "quarantine") return counts?.quarantine ?? DEMO_QUARANTINE.length;
+    if (key === "legalHolds") return counts?.legalHolds ?? DEMO_LEGAL_HOLDS.length;
+    if (key === "assets") return counts?.totalAssets ?? DEMO_ASSET_LIST.length;
+    if (key === "namespaces") return counts?.namespaces ?? DEMO_NAMESPACES.length;
     return undefined;
   };
 
