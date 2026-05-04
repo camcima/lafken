@@ -234,6 +234,60 @@ describe("apiClient", () => {
     });
   });
 
+  describe("delete", () => {
+    it("resolves to undefined when the response is 204 No Content", async () => {
+      const jsonSpy = vi.fn();
+      const mockResponse = {
+        ok: true,
+        status: 204,
+        headers: { get: vi.fn().mockReturnValue(null) },
+        json: jsonSpy,
+      } as unknown as Response;
+
+      vi.mocked(globalThis.fetch).mockResolvedValue(mockResponse);
+
+      await expect(apiClient.delete("/api/users/123")).resolves.toBeUndefined();
+      expect(jsonSpy).not.toHaveBeenCalled();
+
+      const [url, options] = vi.mocked(globalThis.fetch).mock.calls[0];
+      expect(url).toBe("/api/users/123");
+      const fetchOptions = options as RequestInit;
+      expect(fetchOptions.method).toBe("DELETE");
+      const headers = fetchOptions.headers as Record<string, string>;
+      expect(headers["Authorization"]).toBe("Bearer mock-token");
+    });
+
+    it("resolves to undefined when the response has Content-Length 0", async () => {
+      const jsonSpy = vi.fn();
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        headers: { get: vi.fn((key: string) => (key === "Content-Length" ? "0" : null)) },
+        json: jsonSpy,
+      } as unknown as Response;
+
+      vi.mocked(globalThis.fetch).mockResolvedValue(mockResponse);
+
+      await expect(apiClient.delete("/api/users/123")).resolves.toBeUndefined();
+      expect(jsonSpy).not.toHaveBeenCalled();
+    });
+
+    it("parses the JSON body when the response has content", async () => {
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        headers: { get: vi.fn().mockReturnValue(null) },
+        json: vi.fn().mockResolvedValue({ deleted: true }),
+      } as unknown as Response;
+
+      vi.mocked(globalThis.fetch).mockResolvedValue(mockResponse);
+
+      const result = await apiClient.delete<{ deleted: boolean }>("/api/users/123");
+
+      expect(result).toEqual({ deleted: true });
+    });
+  });
+
   describe("health", () => {
     it("makes GET request without authorization", async () => {
       const mockResponse = {

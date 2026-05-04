@@ -9,6 +9,8 @@ import { ApiError, type ApiErrorBody } from "./api-error";
 
 type HttpMethods = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS" | "HEAD";
 
+const HTTP_STATUS_NO_CONTENT = 204;
+
 async function handleErrorResponse(response: Response): Promise<never> {
   const text = await response.text();
   let errorBody: unknown;
@@ -281,7 +283,7 @@ export const apiClient = {
     return await validateJsonResponse<U>(url, response, responseSchema);
   },
 
-  delete: async <T>(
+  delete: async <T = void>(
     url: string,
     options?: {
       schema?: z.ZodType<T>;
@@ -298,6 +300,13 @@ export const apiClient = {
         signal: options?.signal,
       }),
     );
+
+    if (
+      response.status === HTTP_STATUS_NO_CONTENT ||
+      response.headers.get("Content-Length") === "0"
+    ) {
+      return undefined as T;
+    }
 
     if (!schema) {
       return (await response.json()) as T;
