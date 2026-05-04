@@ -119,3 +119,7 @@ out-*/
 docker/local-*.sh
 docker/docker-compose.local.yml
 !Dockerfile.local
+
+# fake-gcs-server bucket contents (bucket dirs kept via .gitkeep)
+apps/backend/dev-data/gcs/*/*
+!apps/backend/dev-data/gcs/*/.gitkeep
