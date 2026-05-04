@@ -254,8 +254,7 @@ export function NamespaceDetailPage({
     );
   }
 
-  // Not-found: no demo data to show (Slice 0 always has API error — use demo fallback)
-  if (!demoNs) {
+  if (!namespace) {
     return (
       <div className="space-y-4">
         <EmptyState
@@ -287,10 +286,10 @@ export function NamespaceDetailPage({
         </Link>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex flex-wrap items-baseline gap-3">
-            <h1 className="text-[22px] font-bold tracking-tight">{demoNs.displayName}</h1>
-            <span className="text-muted-foreground font-mono text-[12.5px]">{demoNs.slug}</span>
+            <h1 className="text-[22px] font-bold tracking-tight">{namespace.displayName}</h1>
+            <span className="text-muted-foreground font-mono text-[12.5px]">{namespace.slug}</span>
             <Badge variant="muted">
-              {t("pages.namespaces.policyVersion", { version: demoNs.policyVersion })}
+              {t("pages.namespaces.policyVersion", { version: namespace.currentPolicyVersion })}
             </Badge>
             {isArchived ? (
               <Badge variant="warn">{t("pages.namespaces.archivedBadge")}</Badge>
@@ -338,8 +337,18 @@ export function NamespaceDetailPage({
       />
 
       {/* Tab panels */}
-      {activeTab === "overview" && <OverviewTab ns={demoNs} />}
-      {activeTab === "policy" && <PolicyTab ns={demoNs} />}
+      {activeTab === "overview" &&
+        (demoNs ? (
+          <OverviewTab ns={demoNs} />
+        ) : (
+          <SliceLaterTab label={t("pages.namespaceDetail.empty.overview")} />
+        ))}
+      {activeTab === "policy" &&
+        (demoNs ? (
+          <PolicyTab ns={demoNs} />
+        ) : (
+          <SliceLaterTab label={t("pages.namespaceDetail.empty.policy")} />
+        ))}
       {activeTab === "presets" && (
         <SliceLaterTab label={t("pages.namespaceDetail.empty.presets")} />
       )}
