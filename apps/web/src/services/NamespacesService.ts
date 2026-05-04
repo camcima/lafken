@@ -26,19 +26,19 @@ export class NamespacesService extends BaseService {
 
   async getBySlug(slug: string): Promise<NamespaceResponseDTO> {
     return this.getApiClient().get<NamespaceResponseDTO>(
-      this.getServiceUrl(`${this.basePath}/${slug}`),
+      this.getServiceUrl(`${this.basePath}/${encodeURIComponent(slug)}`),
     );
   }
 
   async listPolicies(slug: string): Promise<NamespacePolicyResponseDTO[]> {
     return this.getApiClient().get<NamespacePolicyResponseDTO[]>(
-      this.getServiceUrl(`${this.basePath}/${slug}/policies`),
+      this.getServiceUrl(`${this.basePath}/${encodeURIComponent(slug)}/policies`),
     );
   }
 
   async listPresets(slug: string): Promise<NamespacePresetResponseDTO[]> {
     return this.getApiClient().get<NamespacePresetResponseDTO[]>(
-      this.getServiceUrl(`${this.basePath}/${slug}/presets`),
+      this.getServiceUrl(`${this.basePath}/${encodeURIComponent(slug)}/presets`),
     );
   }
 

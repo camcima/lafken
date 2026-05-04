@@ -116,7 +116,7 @@ describe("useCreateNamespace", () => {
       },
     };
     const failure = new Error("boom");
-    vi.spyOn(namespacesService, "createNamespace").mockRejectedValue(failure);
+    vi.spyOn(namespacesService, "createNamespace").mockRejectedValueOnce(failure);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useCreateNamespace(), {
