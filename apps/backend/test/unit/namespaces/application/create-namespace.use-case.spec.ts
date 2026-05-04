@@ -1,0 +1,83 @@
+import { beforeEach, describe, expect, it } from "vitest";
+
+import { CreateNamespaceUseCase } from "@/namespaces/application/use-cases/create-namespace.use-case";
+import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
+import { InvalidSlugError } from "@/namespaces/domain/errors/invalid-slug.error";
+import { NamespaceAlreadyExistsError } from "@/namespaces/domain/errors/namespace-already-exists.error";
+import { StorageBindingMissingError } from "@/namespaces/domain/errors/storage-binding-missing.error";
+import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
+
+import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
+import { InMemoryNamespaceWriteRepository } from "../__fakes__/in-memory-namespace-write.repository";
+
+const VALID_INPUT = {
+  slug: "aircraft-photos",
+  displayName: "Aircraft photos",
+  description: "Photos of aircraft.",
+  storageBindingId: 1n,
+  policy: {
+    retentionDays: null,
+    retentionMode: "none" as const,
+    maxFileSizeBytes: 52_428_800n,
+    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+    exifHandling: "strip" as const,
+    virusScanRequired: true,
+    contentModeration: null,
+    requiredMetadataSchema: null,
+    immutable: false,
+    servingMode: "signed" as const,
+    signedUrlTtlSeconds: 3600,
+    signedUrlBucketSize: 300,
+    retryConfig: null,
+  },
+  createdBy: "ops@latam.com",
+};
+
+describe("CreateNamespaceUseCase", () => {
+  let queryRepo: InMemoryNamespaceQueryRepository;
+  let writeRepo: InMemoryNamespaceWriteRepository;
+  let useCase: CreateNamespaceUseCase;
+
+  beforeEach(() => {
+    queryRepo = new InMemoryNamespaceQueryRepository();
+    writeRepo = new InMemoryNamespaceWriteRepository();
+    useCase = new CreateNamespaceUseCase(queryRepo, writeRepo);
+  });
+
+  it("creates a namespace and returns it when the slug is unique and binding exists", async () => {
+    const namespace = await useCase.execute(VALID_INPUT);
+    expect(namespace.props.slug.value).toBe("aircraft-photos");
+    expect(writeRepo.has("aircraft-photos")).toBe(true);
+  });
+
+  it("throws NamespaceAlreadyExistsError when the slug is taken", async () => {
+    queryRepo.seed([
+      Namespace.fromProps({
+        id: 99n,
+        slug: new Slug("aircraft-photos"),
+        displayName: "x",
+        description: null,
+        currentPolicyId: 1n,
+        storageBindingId: 1n,
+        archivedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+    ]);
+    await expect(useCase.execute(VALID_INPUT)).rejects.toBeInstanceOf(NamespaceAlreadyExistsError);
+    expect(writeRepo.size()).toBe(0);
+  });
+
+  it("throws InvalidSlugError when the slug is invalid", async () => {
+    await expect(useCase.execute({ ...VALID_INPUT, slug: "Bad Slug!" })).rejects.toBeInstanceOf(
+      InvalidSlugError,
+    );
+    expect(writeRepo.size()).toBe(0);
+  });
+
+  it("throws StorageBindingMissingError when the binding does not exist", async () => {
+    writeRepo.missingStorageBindings.add(VALID_INPUT.storageBindingId);
+    await expect(useCase.execute(VALID_INPUT)).rejects.toBeInstanceOf(StorageBindingMissingError);
+    expect(writeRepo.size()).toBe(0);
+  });
+});
