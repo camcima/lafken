@@ -324,12 +324,12 @@ export function NamespacesListPage(): React.JSX.Element {
             {t("pages.namespaces.subtitle")}
           </div>
         </div>
-        <Link to="/namespaces/new">
-          <Button variant="indigo" type="button">
+        <Button asChild variant="indigo">
+          <Link to="/namespaces/new">
             <Plus size={ICON_MD} />
             {t("pages.namespaces.actions.newNamespace")}
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
 
       {/* Search */}
