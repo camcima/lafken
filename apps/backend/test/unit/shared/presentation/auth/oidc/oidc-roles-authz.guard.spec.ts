@@ -54,12 +54,12 @@ describe("OidcRolesAuthzGuard for HTTP handlers", () => {
         it("should return `true`", () => {
           const httpCtxMock = makeHttpCtxMock({
             emailAddress: "foo@gmail.com",
-            roles: [ApplicationRole.ADMIN, ApplicationRole.VIEWER],
+            roles: [ApplicationRole.PLATFORM_OPERATOR, ApplicationRole.CONTENT_REVIEWER],
             bp: "123",
           });
           const contextMock = mock<ExecutionContext>();
 
-          @OidcRoles([ApplicationRole.ADMIN])
+          @OidcRoles([ApplicationRole.PLATFORM_OPERATOR])
           class Foo {}
 
           contextMock.getHandler.mockReturnValue(() => {});

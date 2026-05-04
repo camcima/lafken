@@ -22,7 +22,7 @@ export class MockOidcBearerAuthnStrategy extends PassportStrategy(Strategy, STRA
     const fakeUser: CurrentAuthenticatedUserDTO = {
       bp: "1234567",
       emailAddress: "test@test.com",
-      roles: [ApplicationRole.ADMIN],
+      roles: [ApplicationRole.PLATFORM_OPERATOR],
       name: "Joaquin Hernandez Admin",
     };
     return fakeUser;
