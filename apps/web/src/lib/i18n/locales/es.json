@@ -426,50 +426,189 @@
       }
     },
     "namespaces": {
-      "title": "",
-      "create": "",
+      "title": "Namespaces",
+      "subtitle": "Cada namespace es un límite de política: retención, tipos permitidos, moderación, metadatos requeridos y almacenamiento por binding.",
+      "create": "Crear namespace",
+      "newNamespace": "Nuevo namespace",
+      "searchPlaceholder": "Buscar namespaces por slug o nombre de visualización…",
+      "policyVersion": "política v{{version}}",
+      "owner": "propietario",
+      "quarantineCount": "{{count}} cuarentena",
+      "queueClean": "cola limpia",
+      "allowedTypes": {
+        "demoValue": "image/jpeg, image/png, image/heic"
+      },
+      "moderation": {
+        "enabled": "moderación",
+        "none": "sin moderación"
+      },
+      "stats": {
+        "assets": "Activos",
+        "retention": "Retención",
+        "maxSize": "Tam. máx.",
+        "holds": "Retenciones"
+      },
       "table": {
-        "slug": "",
-        "displayName": "",
-        "storage": "",
-        "policyVersion": "",
-        "assetCount": ""
+        "slug": "Slug",
+        "displayName": "Nombre de visualización",
+        "storage": "Almacenamiento",
+        "policyVersion": "Versión de política",
+        "assetCount": "Cant. de activos"
       },
       "empty": {
-        "title": "",
-        "description": ""
+        "title": "Aún no hay namespaces",
+        "description": "Crea el primer namespace para comenzar."
+      },
+      "drawer": {
+        "caption": "Namespace",
+        "policyTitle": "Política v{{version}}",
+        "policyMeta": "Fuente YAML",
+        "retention": "Retención",
+        "maxSize": "Tam. máx.",
+        "allowedTypes": "Tipos permitidos",
+        "moderation": "Moderación",
+        "moderationEnabled": "habilitada (v2)",
+        "moderationDisabled": "deshabilitada",
+        "exifPolicy": "Política EXIF",
+        "exifPolicyValue": "eliminar; preservar GPS en capture_context",
+        "storageBinding": "Binding de almacenamiento",
+        "storageBindingValue": "gcs-prod-aircraft-evidence",
+        "owner": "Propietario",
+        "reviewers": "Revisores",
+        "reviewersValue": "l.tapia, j.cordero",
+        "requiredMetadata": "Metadatos requeridos",
+        "requiredBadge": "requerido",
+        "viewAssets": "Ver activos",
+        "editPolicy": "Editar política…",
+        "activity": {
+          "title": "Actividad de las últimas 24h",
+          "uploads": "Subidas",
+          "quarantine": "Cuarentena",
+          "holds": "Retenciones"
+        }
       }
     },
     "namespaceDetail": {
-      "title": "",
-      "loading": "",
+      "title": "Namespace",
+      "loading": "Cargando…",
+      "backToNamespaces": "Volver a namespaces",
       "notFound": {
-        "title": "",
-        "description": "",
-        "action": ""
+        "title": "Namespace no encontrado",
+        "description": "Este namespace no existe.",
+        "action": "Volver a Namespaces"
       },
       "tabs": {
-        "overview": "",
-        "policy": "",
-        "presets": "",
-        "assets": "",
-        "webhooks": "",
-        "quotas": ""
+        "overview": "Resumen",
+        "policy": "Política",
+        "presets": "Presets",
+        "assets": "Activos",
+        "webhooks": "Webhooks",
+        "quotas": "Cuotas"
+      },
+      "overview": {
+        "latestActivity": "Actividad reciente",
+        "latestActivityMeta": "últimas 24h · este namespace",
+        "noActivity": "No hay actividad reciente en este namespace."
       },
       "empty": {
-        "overview": "",
-        "policy": "",
-        "presets": "",
-        "assets": "",
-        "webhooks": "",
-        "quotas": ""
+        "overview": "Los detalles del resumen aparecerán aquí cuando los datos estén disponibles.",
+        "policy": "Aún no hay políticas.",
+        "presets": "Los presets estarán disponibles en un slice posterior.",
+        "assets": "El listado de activos por namespace estará disponible en un slice posterior.",
+        "webhooks": "Los webhooks estarán disponibles en un slice posterior.",
+        "quotas": "Las cuotas estarán disponibles en un slice posterior."
       }
     },
     "quarantine": {
-      "title": "",
+      "title": "Cola de cuarentena",
+      "subtitle": {
+        "awaitingReview": "en espera de revisión · más antiguo 36h · SLO del revisor",
+        "slo": "4h"
+      },
+      "reviewedToday": "{{count}} revisados hoy",
+      "exportQueue": "Exportar cola",
+      "policyBadge": "política v7",
+      "decisionNote": "Todas las decisiones se registran en el log de auditoría con tu principal, el ID del activo, el nombre del analizador y tu nota.",
+      "filters": {
+        "all": "Todos",
+        "moderation": "Moderación",
+        "virus": "Virus"
+      },
+      "reasons": {
+        "all": "Todos los motivos",
+        "violence": "Violencia",
+        "medical": "Médico",
+        "adult": "Adulto",
+        "gore": "Gore",
+        "virus": "Virus"
+      },
+      "keys": {
+        "label": "Teclas:",
+        "next": "siguiente",
+        "prev": "anterior",
+        "release": "liberar",
+        "reject": "rechazar"
+      },
+      "allClear": {
+        "title": "Todo despejado",
+        "description": "Ningún elemento coincide con estos filtros."
+      },
+      "queueEmpty": {
+        "title": "Cola vacía",
+        "description": "Nada en espera de revisión con los filtros actuales."
+      },
+      "detail": {
+        "asset": "Activo",
+        "flag": "Señalización",
+        "analyzer": "Analizador",
+        "scoreVsThreshold": "Puntuación vs umbral",
+        "score": "puntuación",
+        "threshold": "umbral",
+        "uploadedBy": "Subido por"
+      },
+      "actions": {
+        "release": "Liberar como listo",
+        "reject": "Rechazar…",
+        "escalate": "Escalar a legal…",
+        "openDetail": "Abrir detalle"
+      },
+      "flagged": {
+        "title": "Por qué fue señalizado",
+        "meta": "moderation-v2 · todas las categorías"
+      },
+      "context": {
+        "title": "Contexto",
+        "namespace": "Namespace",
+        "workOrder": "Orden de trabajo",
+        "aircraft": "Aeronave",
+        "inspectionType": "Tipo de inspección",
+        "defectArea": "Área del defecto",
+        "capturedAt": "Capturado el",
+        "device": "Dispositivo"
+      },
+      "uploaderHistory": {
+        "title": "Historial del cargador",
+        "meta": "últimos 30 días",
+        "uploaded": "subidos",
+        "flagged": "señalizados",
+        "flagRate": "tasa de señalización",
+        "note": "La tasa de señalización está dentro del rango normal para este cargador. No se detectó ningún patrón de escalada de revisor."
+      },
+      "rejectModal": {
+        "title": "Rechazar activo",
+        "description": "Rechazar marca este activo como terminal. Los bytes originales están programados para destrucción según la política del namespace. Esta acción se registra y no puede deshacerse sin retención legal.",
+        "noteLabel": "Nota del revisor (obligatoria, ≥ 12 caracteres)",
+        "notePlaceholder": "ej.: confirma señalización de moderación — la imagen contiene detalles gráficos de lesión",
+        "cancel": "Cancelar",
+        "confirm": "Rechazar activo"
+      },
+      "toast": {
+        "released": "{{id}} liberado. El activo ahora está listo.",
+        "rejected": "{{id}} rechazado. Activo rechazado de forma terminal."
+      },
       "empty": {
-        "title": "",
-        "description": ""
+        "title": "Nada que revisar ahora",
+        "description": "Los activos señalizados aparecerán aquí."
       }
     },
     "legalHolds": {
@@ -599,15 +738,43 @@
       }
     },
     "system": {
-      "title": "",
-      "storageBindings": "",
-      "integrations": "",
-      "health": "",
-      "noStorageBindings": "",
-      "noIndicators": "",
+      "title": "Estado del sistema",
+      "subtitle": "prod · sa-east-1 · actualización 30s · último anclaje hace 12s",
+      "publicStatusPage": "Página de estado público",
+      "storageBindings": "Bindings de almacenamiento",
+      "integrations": "Integraciones",
+      "health": "Salud del sistema",
+      "noStorageBindings": "No hay bindings de almacenamiento configurados",
+      "noIndicators": "Aún no hay indicadores de salud",
       "integrationStatus": {
-        "configured": "",
-        "not_configured": ""
+        "configured": "Configurado",
+        "not_configured": "No configurado"
+      },
+      "banner": {
+        "ok": "Todos los sistemas operativos",
+        "warn": "Problemas menores — latencia de moderación por encima del objetivo",
+        "degraded": "Degradado — la cola de transformación se está acumulando",
+        "degradedDetail": "transform p95 = 2,63s (objetivo ≤ 1,50s) · profundidad de cola 4.811 y creciendo · 1 worker caído (processor-12)"
+      },
+      "pipelines": {
+        "title": "Etapas del pipeline",
+        "meta": "últimos 12 minutos · intervalos de 30s",
+        "stage": "Etapa",
+        "throughput": "Rendimiento",
+        "inflight": "En vuelo",
+        "queued": "En cola",
+        "p95": "p95"
+      },
+      "storage": {
+        "title": "Almacenamiento",
+        "meta": "3 bindings · delta 24h"
+      },
+      "dependencies": {
+        "title": "Dependencias"
+      },
+      "workers": {
+        "title": "Flota de workers",
+        "meta": "{{count}} workers · 2 pools"
       }
     },
     "settings": {

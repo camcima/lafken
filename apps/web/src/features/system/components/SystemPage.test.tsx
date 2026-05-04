@@ -16,32 +16,77 @@ vi.mock("@/features/system/hooks/useSystem", () => ({
 }));
 
 describe("SystemPage", () => {
-  it("renders the no storage bindings empty state", () => {
+  it("renders the title heading", () => {
     render(
       <I18nProvider>
         <SystemPage />
       </I18nProvider>,
     );
-    expect(screen.getByText(/no storage bindings configured/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/system status/i);
   });
 
-  it("renders the no health indicators empty state", () => {
+  it("renders all 5 pipeline queue rows", () => {
     render(
       <I18nProvider>
         <SystemPage />
       </I18nProvider>,
     );
-    expect(screen.getByText(/no health indicators yet/i)).toBeInTheDocument();
+    expect(screen.getByText("validate")).toBeInTheDocument();
+    expect(screen.getByText("av-scan")).toBeInTheDocument();
+    expect(screen.getByText("exif-strip")).toBeInTheDocument();
+    expect(screen.getByText("moderate")).toBeInTheDocument();
+    expect(screen.getByText("transform")).toBeInTheDocument();
   });
 
-  it("renders the section headings", () => {
+  it("renders the storage section with 3 binding rows", () => {
     render(
       <I18nProvider>
         <SystemPage />
       </I18nProvider>,
     );
-    expect(screen.getAllByText(/storage bindings/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/integrations/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/system health/i)).toBeInTheDocument();
+    expect(screen.getByText("gcs-prod-aircraft-evidence")).toBeInTheDocument();
+    expect(screen.getByText("gcs-prod-cargo-claims")).toBeInTheDocument();
+    expect(screen.getByText("gcs-prod-hr-docs")).toBeInTheDocument();
+  });
+
+  it("renders the dependencies section", () => {
+    render(
+      <I18nProvider>
+        <SystemPage />
+      </I18nProvider>,
+    );
+    expect(screen.getByText("moderation-v2")).toBeInTheDocument();
+    expect(screen.getByText("clamav signatures")).toBeInTheDocument();
+    expect(screen.getByText("kms (key vault)")).toBeInTheDocument();
+  });
+
+  it("renders the worker fleet with at least 6 workers", () => {
+    render(
+      <I18nProvider>
+        <SystemPage />
+      </I18nProvider>,
+    );
+    // Workers are labeled processor-01 through processor-24
+    expect(screen.getByText("processor-01")).toBeInTheDocument();
+    expect(screen.getByText("processor-06")).toBeInTheDocument();
+  });
+
+  it("renders the status banner", () => {
+    render(
+      <I18nProvider>
+        <SystemPage />
+      </I18nProvider>,
+    );
+    // The banner should show the degraded message since transform is alert
+    expect(screen.getByText(/degraded/i)).toBeInTheDocument();
+  });
+
+  it("renders the public status page button", () => {
+    render(
+      <I18nProvider>
+        <SystemPage />
+      </I18nProvider>,
+    );
+    expect(screen.getByRole("button", { name: /public status page/i })).toBeInTheDocument();
   });
 });

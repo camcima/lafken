@@ -1,103 +1,337 @@
+// Slice 0: BE returns empty arrays; rendering against typed demo data
+import { ExternalLink } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { EmptyState } from "@/components/common/EmptyState";
-import { IntegrationRow } from "@/features/system/components/IntegrationRow";
+import { Button } from "@/components/common/Button";
+import { Card, CardHeader, CardMeta, CardTitle } from "@/components/common/Card";
+import { Sparkline } from "@/components/common/Sparkline";
 import {
-  useIntegrations,
-  useStorageBindings,
-  useSystemHealth,
-} from "@/features/system/hooks/useSystem";
+  DEMO_QUEUE_SPARKS,
+  DEMO_QUEUES,
+  DEMO_WORKERS,
+  type DemoQueue,
+  type DemoWorker,
+} from "@/lib/demo/lafken-demo-data";
+import { cn } from "@/lib/utils";
+
+// ── Constants ─────────────────────────────────────────────
+const ICON_SM = 13;
+const PROGRESS_WARN = 60;
+const PROGRESS_ALERT = 80;
+const QUEUE_DEPTH_WARN = 1000;
+const QUEUE_DEPTH_ALERT = 4000;
+const P95_WARN = 2000;
+
+// ── Demo storage bindings ─────────────────────────────────
+interface IStorageBinding {
+  name: string;
+  region: string;
+  used: string;
+  quota: string;
+  pct: number;
+  delta: string;
+}
+
+const DEMO_STORAGE_BINDINGS: IStorageBinding[] = [
+  {
+    name: "gcs-prod-aircraft-evidence",
+    region: "southamerica-east1",
+    used: "742.3 TB",
+    quota: "1.20 PB",
+    pct: 62,
+    delta: "+4.1 TB",
+  },
+  {
+    name: "gcs-prod-cargo-claims",
+    region: "southamerica-east1",
+    used: "118.6 TB",
+    quota: "300 TB",
+    pct: 39,
+    delta: "+0.9 TB",
+  },
+  {
+    name: "gcs-prod-hr-docs",
+    region: "southamerica-east1",
+    used: "21.4 TB",
+    quota: "100 TB",
+    pct: 21,
+    delta: "+0.1 TB",
+  },
+];
+
+// ── Demo dependencies ─────────────────────────────────────
+interface IDependency {
+  name: string;
+  status: "ok" | "warn" | "alert";
+  latency: string;
+  note: string;
+}
+
+const DEMO_DEPS: IDependency[] = [
+  { name: "moderation-v2", status: "ok", latency: "412ms", note: "self-hosted, sa-east-1" },
+  { name: "clamav signatures", status: "ok", latency: "—", note: "27294 (2026-05-03)" },
+  { name: "kms (key vault)", status: "ok", latency: "12ms", note: "rotated 12d ago" },
+  { name: "object storage (gcs)", status: "ok", latency: "38ms", note: "all bindings green" },
+  {
+    name: "audit anchor (notarize)",
+    status: "warn",
+    latency: "1.8s",
+    note: "elevated; non-blocking",
+  },
+];
+
+// ── Sub-components ────────────────────────────────────────
+
+function StatusBanner({ status }: { status: "ok" | "warn" | "degraded" }): React.JSX.Element {
+  const { t } = useTranslation();
+
+  const bannerLabel: Record<string, string> = {
+    ok: t("pages.system.banner.ok"),
+    warn: t("pages.system.banner.warn"),
+    degraded: t("pages.system.banner.degraded"),
+  };
+
+  return (
+    <Card
+      className={cn(
+        "mb-4 flex items-center gap-3 border-l-4 px-5 py-4",
+        status === "ok" && "border-l-ok bg-ok-soft/40",
+        status === "warn" && "border-l-warn bg-warn-soft/40",
+        status === "degraded" && "border-l-alert bg-alert-soft/40",
+      )}
+    >
+      <span
+        className={cn(
+          "size-3 rounded-full",
+          status === "ok" && "bg-ok",
+          status === "warn" && "bg-warn",
+          status === "degraded" && "bg-alert animate-pulse",
+        )}
+      />
+      <div className="flex-1">
+        <div className="text-[13.5px] font-semibold">{bannerLabel[status]}</div>
+        {status !== "ok" && (
+          <div className="text-muted-foreground mt-0.5 text-[11.5px]">
+            {t("pages.system.banner.degradedDetail")}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function PipelineRow({ q }: { q: DemoQueue }): React.JSX.Element {
+  const sparks = DEMO_QUEUE_SPARKS[q.name] ?? [];
+  const tone = q.trend === "alert" ? "alert" : q.trend === "warn" ? "warn" : "ok";
+
+  return (
+    <div className="border-border/40 grid grid-cols-[140px_1fr_90px_90px_90px_60px] items-center gap-3 border-b px-5 py-2.5 last:border-b-0">
+      <span className="font-mono text-[12.5px]">{q.name}</span>
+      <Sparkline values={sparks} tone={tone} />
+      <span className="text-right font-mono text-[12.5px] tabular-nums">{q.inflight}</span>
+      <span
+        className={cn(
+          "text-right font-mono text-[12.5px] tabular-nums",
+          q.depth > QUEUE_DEPTH_ALERT && "text-alert font-medium",
+          q.depth > QUEUE_DEPTH_WARN && q.depth <= QUEUE_DEPTH_ALERT && "text-warn",
+        )}
+      >
+        {q.depth.toLocaleString()}
+      </span>
+      <span
+        className={cn(
+          "text-right font-mono text-[12.5px] tabular-nums",
+          q.p95_ms > P95_WARN && "text-warn",
+        )}
+      >
+        {q.p95_ms}ms
+      </span>
+      <span
+        className="ml-auto size-2 rounded-full"
+        style={{
+          background:
+            q.trend === "alert" ? "var(--alert)" : q.trend === "warn" ? "var(--warn)" : "var(--ok)",
+        }}
+      />
+    </div>
+  );
+}
+
+function WorkerCard({ w: worker }: { w: DemoWorker }): React.JSX.Element {
+  return (
+    <div
+      className={cn(
+        "rounded border p-2 text-[10.5px]",
+        worker.status === "down" && "border-alert bg-alert-soft/40",
+        worker.status === "alert" && "border-alert bg-alert-soft/30",
+        worker.status === "warn" && "border-warn bg-warn-soft/30",
+        worker.status === "ok" && "border-border bg-secondary/30",
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <span className="truncate font-mono text-[10.5px]">{worker.id}</span>
+        <span
+          className={cn(
+            "size-1.5 rounded-full",
+            worker.status === "ok" && "bg-ok",
+            worker.status === "warn" && "bg-warn",
+            worker.status === "alert" && "bg-alert",
+            worker.status === "down" && "bg-alert animate-pulse",
+          )}
+        />
+      </div>
+      {worker.status === "down" ? (
+        <div className="text-alert mt-1 font-medium tracking-wider uppercase">DOWN</div>
+      ) : (
+        <div className="mt-1 grid grid-cols-2 gap-x-2 font-mono tabular-nums">
+          <span className="text-muted-foreground">cpu</span>
+          <span className="text-right">{worker.cpu}%</span>
+          <span className="text-muted-foreground">mem</span>
+          <span className="text-right">{worker.mem}%</span>
+          <span className="text-muted-foreground">flight</span>
+          <span className="text-right">{worker.inflight}</span>
+        </div>
+      )}
+      <div className="text-muted-foreground mt-1 truncate font-mono text-[9.5px]">
+        {worker.pool}
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────
 
 export function SystemPage(): React.JSX.Element {
   const { t } = useTranslation();
-  const { data: storageBindings } = useStorageBindings();
-  const { data: integrations } = useIntegrations();
-  const { data: health } = useSystemHealth();
 
-  const bindings = storageBindings ?? [];
-  const integrationList = integrations ?? [];
-  const indicators = health?.indicators ?? [];
+  const overallStatus: "ok" | "warn" | "degraded" = DEMO_QUEUES.some((q) => q.trend === "alert")
+    ? "degraded"
+    : DEMO_QUEUES.some((q) => q.trend === "warn")
+      ? "warn"
+      : "ok";
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-[22px] font-bold tracking-tight text-neutral-900">
-          {t("pages.system.title")}
-        </h1>
-      </header>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="m-0 text-[22px] font-bold tracking-tight">{t("pages.system.title")}</h1>
+          <div className="text-muted-foreground mt-1 text-[12.5px]">
+            {t("pages.system.subtitle")}
+          </div>
+        </div>
+        <Button variant="outline">
+          <ExternalLink size={ICON_SM} />
+          {t("pages.system.publicStatusPage")}
+        </Button>
+      </div>
 
-      {/* Storage bindings */}
-      <section className="rounded-lg border border-neutral-200 bg-white shadow-sm">
-        <header className="border-b border-neutral-200 px-5 py-3">
-          <h2 className="text-sm font-medium text-neutral-900">
-            {t("pages.system.storageBindings")}
-          </h2>
-        </header>
-        {bindings.length === 0 ? (
-          <EmptyState title={t("pages.system.noStorageBindings")} className="py-8" />
-        ) : (
-          <ul className="divide-y divide-neutral-100">
-            {bindings.map((b) => (
-              <li key={b.name} className="px-5 py-3 text-sm text-neutral-900">
-                {b.name} — {b.adapterType}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {/* Banner */}
+      <StatusBanner status={overallStatus} />
 
-      {/* Integrations */}
-      <section className="rounded-lg border border-neutral-200 bg-white shadow-sm">
-        <header className="border-b border-neutral-200 px-5 py-3">
-          <h2 className="text-sm font-medium text-neutral-900">{t("pages.system.integrations")}</h2>
-        </header>
-        {integrationList.length === 0 ? (
-          <EmptyState title={t("pages.system.integrations")} className="py-8" />
-        ) : (
-          <div>
-            {integrationList.map((integration) => (
-              <IntegrationRow
-                key={integration.port}
-                port={integration.port}
-                adapter={integration.adapter}
-                status={integration.status}
-              />
+      {/* Pipelines */}
+      <Card className="mb-4 overflow-x-auto">
+        <CardHeader>
+          <CardTitle>{t("pages.system.pipelines.title")}</CardTitle>
+          <CardMeta>{t("pages.system.pipelines.meta")}</CardMeta>
+        </CardHeader>
+        <div className="min-w-[820px]">
+          <div className="border-border/60 text-muted-foreground grid grid-cols-[140px_1fr_90px_90px_90px_60px] items-center gap-3 border-b px-5 py-2 text-[10.5px] font-medium tracking-wider uppercase">
+            <span>{t("pages.system.pipelines.stage")}</span>
+            <span>{t("pages.system.pipelines.throughput")}</span>
+            <span className="text-right">{t("pages.system.pipelines.inflight")}</span>
+            <span className="text-right">{t("pages.system.pipelines.queued")}</span>
+            <span className="text-right">{t("pages.system.pipelines.p95")}</span>
+            <span />
+          </div>
+          {DEMO_QUEUES.map((q) => (
+            <PipelineRow key={q.name} q={q} />
+          ))}
+        </div>
+      </Card>
+
+      {/* Storage + deps 2-col */}
+      <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Storage */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("pages.system.storage.title")}</CardTitle>
+            <CardMeta>{t("pages.system.storage.meta")}</CardMeta>
+          </CardHeader>
+          <div className="space-y-3 px-5 py-4">
+            {DEMO_STORAGE_BINDINGS.map((b) => (
+              <div key={b.name}>
+                <div className="flex justify-between text-[12px]">
+                  <span className="font-mono">{b.name}</span>
+                  <span className="text-muted-foreground font-mono">{b.delta}</span>
+                </div>
+                <div className="bg-secondary mt-1 h-2 overflow-hidden rounded">
+                  <div
+                    className={cn(
+                      "h-full",
+                      b.pct > PROGRESS_ALERT
+                        ? "bg-alert"
+                        : b.pct > PROGRESS_WARN
+                          ? "bg-warn"
+                          : "bg-latam-indigo",
+                    )}
+                    style={{ width: `${b.pct}%` }}
+                  />
+                </div>
+                <div className="text-muted-foreground mt-1 flex justify-between font-mono text-[10.5px]">
+                  <span>{b.region}</span>
+                  <span>
+                    {b.used} / {b.quota}
+                  </span>
+                </div>
+              </div>
             ))}
           </div>
-        )}
-      </section>
+        </Card>
 
-      {/* System health */}
-      <section className="rounded-lg border border-neutral-200 bg-white shadow-sm">
-        <header className="border-b border-neutral-200 px-5 py-3">
-          <h2 className="text-sm font-medium text-neutral-900">{t("pages.system.health")}</h2>
-        </header>
-        {indicators.length === 0 ? (
-          <EmptyState title={t("pages.system.noIndicators")} className="py-8" />
-        ) : (
-          <ul className="divide-y divide-neutral-100">
-            {indicators.map((indicator) => (
-              <li key={indicator.name} className="flex items-center gap-3 px-5 py-3 text-sm">
+        {/* Dependencies */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("pages.system.dependencies.title")}</CardTitle>
+          </CardHeader>
+          <div className="px-5 py-4">
+            {DEMO_DEPS.map((dep) => (
+              <div
+                key={dep.name}
+                className="border-border/40 flex items-center gap-3 border-b py-2.5 last:border-b-0"
+              >
                 <span
-                  className={`size-2 rounded-full ${
-                    indicator.status === "ok"
-                      ? "bg-ok"
-                      : indicator.status === "degraded"
-                        ? "bg-amber-400"
-                        : indicator.status === "failing"
-                          ? "bg-red-500"
-                          : "bg-neutral-300"
-                  }`}
-                  aria-hidden
+                  className={cn(
+                    "size-2 flex-none rounded-full",
+                    dep.status === "ok" ? "bg-ok" : dep.status === "warn" ? "bg-warn" : "bg-alert",
+                  )}
                 />
-                <span className="font-mono text-[12.5px] text-neutral-700">{indicator.name}</span>
-                <span className="ml-auto text-[12px] text-neutral-500">{indicator.status}</span>
-              </li>
+                <div className="min-w-0 flex-1">
+                  <div className="font-mono text-[12.5px]">{dep.name}</div>
+                  <div className="text-muted-foreground text-[10.5px]">{dep.note}</div>
+                </div>
+                <div className="text-muted-foreground font-mono text-[11px] tabular-nums">
+                  {dep.latency}
+                </div>
+              </div>
             ))}
-          </ul>
-        )}
-      </section>
+          </div>
+        </Card>
+      </div>
+
+      {/* Worker fleet */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("pages.system.workers.title")}</CardTitle>
+          <CardMeta>{t("pages.system.workers.meta", { count: DEMO_WORKERS.length })}</CardMeta>
+        </CardHeader>
+        <div className="grid grid-cols-2 gap-2 px-5 py-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          {DEMO_WORKERS.map((worker) => (
+            <WorkerCard key={worker.id} w={worker} />
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }

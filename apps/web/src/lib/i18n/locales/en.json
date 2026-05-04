@@ -427,7 +427,27 @@
     },
     "namespaces": {
       "title": "Namespaces",
+      "subtitle": "Each namespace is a policy boundary: retention, allowed types, moderation, required metadata, and per-binding storage.",
       "create": "Create namespace",
+      "newNamespace": "New namespace",
+      "searchPlaceholder": "Search namespaces by slug or display name…",
+      "policyVersion": "policy v{{version}}",
+      "owner": "owner",
+      "quarantineCount": "{{count}} quarantine",
+      "queueClean": "queue clean",
+      "allowedTypes": {
+        "demoValue": "image/jpeg, image/png, image/heic"
+      },
+      "moderation": {
+        "enabled": "moderation",
+        "none": "no moderation"
+      },
+      "stats": {
+        "assets": "Assets",
+        "retention": "Retention",
+        "maxSize": "Max size",
+        "holds": "Holds"
+      },
       "table": {
         "slug": "Slug",
         "displayName": "Display name",
@@ -438,11 +458,40 @@
       "empty": {
         "title": "No namespaces yet",
         "description": "Create the first namespace to get started."
+      },
+      "drawer": {
+        "caption": "Namespace",
+        "policyTitle": "Policy v{{version}}",
+        "policyMeta": "YAML source",
+        "retention": "Retention",
+        "maxSize": "Max size",
+        "allowedTypes": "Allowed types",
+        "moderation": "Moderation",
+        "moderationEnabled": "enabled (v2)",
+        "moderationDisabled": "disabled",
+        "exifPolicy": "EXIF policy",
+        "exifPolicyValue": "strip; preserve GPS in capture_context",
+        "storageBinding": "Storage binding",
+        "storageBindingValue": "gcs-prod-aircraft-evidence",
+        "owner": "Owner",
+        "reviewers": "Reviewers",
+        "reviewersValue": "l.tapia, j.cordero",
+        "requiredMetadata": "Required metadata",
+        "requiredBadge": "required",
+        "viewAssets": "View assets",
+        "editPolicy": "Edit policy…",
+        "activity": {
+          "title": "Last 24h activity",
+          "uploads": "Uploads",
+          "quarantine": "Quarantine",
+          "holds": "Holds"
+        }
       }
     },
     "namespaceDetail": {
       "title": "Namespace",
       "loading": "Loading…",
+      "backToNamespaces": "Back to namespaces",
       "notFound": {
         "title": "Namespace not found",
         "description": "This namespace does not exist.",
@@ -456,17 +505,107 @@
         "webhooks": "Webhooks",
         "quotas": "Quotas"
       },
+      "overview": {
+        "latestActivity": "Latest activity",
+        "latestActivityMeta": "last 24h · this namespace",
+        "noActivity": "No recent activity in this namespace."
+      },
       "empty": {
         "overview": "Overview details will appear here once data is available.",
         "policy": "No policies yet.",
-        "presets": "No presets yet.",
-        "assets": "No assets in this namespace.",
+        "presets": "Presets come in a later slice.",
+        "assets": "Asset listing per-namespace comes in a later slice.",
         "webhooks": "Webhooks come in a later slice.",
         "quotas": "Quotas come in a later slice."
       }
     },
     "quarantine": {
-      "title": "Quarantine",
+      "title": "Quarantine queue",
+      "subtitle": {
+        "awaitingReview": "awaiting review · oldest 36h · reviewer SLO",
+        "slo": "4h"
+      },
+      "reviewedToday": "{{count}} reviewed today",
+      "exportQueue": "Export queue",
+      "policyBadge": "policy v7",
+      "decisionNote": "All decisions write to the audit log with your principal, the asset ID, the analyzer name, and your note.",
+      "filters": {
+        "all": "All",
+        "moderation": "Moderation",
+        "virus": "Virus"
+      },
+      "reasons": {
+        "all": "All reasons",
+        "violence": "Violence",
+        "medical": "Medical",
+        "adult": "Adult",
+        "gore": "Gore",
+        "virus": "Virus"
+      },
+      "keys": {
+        "label": "Keys:",
+        "next": "next",
+        "prev": "prev",
+        "release": "release",
+        "reject": "reject"
+      },
+      "allClear": {
+        "title": "All clear",
+        "description": "No items match these filters."
+      },
+      "queueEmpty": {
+        "title": "Queue empty",
+        "description": "Nothing awaiting review with the current filters."
+      },
+      "detail": {
+        "asset": "Asset",
+        "flag": "Flag",
+        "analyzer": "Analyzer",
+        "scoreVsThreshold": "Score vs threshold",
+        "score": "score",
+        "threshold": "threshold",
+        "uploadedBy": "Uploaded by"
+      },
+      "actions": {
+        "release": "Release to ready",
+        "reject": "Reject…",
+        "escalate": "Escalate to legal…",
+        "openDetail": "Open detail"
+      },
+      "flagged": {
+        "title": "Why this was flagged",
+        "meta": "moderation-v2 · all categories"
+      },
+      "context": {
+        "title": "Context",
+        "namespace": "Namespace",
+        "workOrder": "Work order",
+        "aircraft": "Aircraft",
+        "inspectionType": "Inspection type",
+        "defectArea": "Defect area",
+        "capturedAt": "Captured at",
+        "device": "Device"
+      },
+      "uploaderHistory": {
+        "title": "Uploader history",
+        "meta": "last 30 days",
+        "uploaded": "uploaded",
+        "flagged": "flagged",
+        "flagRate": "flag rate",
+        "note": "Flag rate is within normal range for this uploader. No reviewer escalation pattern detected."
+      },
+      "rejectModal": {
+        "title": "Reject asset",
+        "description": "Rejecting marks this asset terminal. The original bytes are scheduled for shred per namespace policy. This action is logged and cannot be undone without legal hold.",
+        "noteLabel": "Reviewer note (required, ≥ 12 chars)",
+        "notePlaceholder": "e.g. confirms moderation flag — image contains graphic injury detail",
+        "cancel": "Cancel",
+        "confirm": "Reject asset"
+      },
+      "toast": {
+        "released": "Released {{id}}. Asset is now ready.",
+        "rejected": "Rejected {{id}}. Asset terminal-rejected."
+      },
       "empty": {
         "title": "Nothing to review right now",
         "description": "Flagged assets will appear here."
@@ -599,7 +738,9 @@
       }
     },
     "system": {
-      "title": "System",
+      "title": "System status",
+      "subtitle": "prod · sa-east-1 · refresh 30s · last anchor 12s ago",
+      "publicStatusPage": "Public status page",
       "storageBindings": "Storage bindings",
       "integrations": "Integrations",
       "health": "System health",
@@ -608,6 +749,32 @@
       "integrationStatus": {
         "configured": "Configured",
         "not_configured": "Not configured"
+      },
+      "banner": {
+        "ok": "All systems operational",
+        "warn": "Minor issues — moderation latency above target",
+        "degraded": "Degraded — transform queue is backing up",
+        "degradedDetail": "transform p95 = 2.63s (target ≤ 1.50s) · queue depth 4,811 and growing · 1 worker down (processor-12)"
+      },
+      "pipelines": {
+        "title": "Pipeline stages",
+        "meta": "last 12 minutes · 30s buckets",
+        "stage": "Stage",
+        "throughput": "Throughput",
+        "inflight": "In flight",
+        "queued": "Queued",
+        "p95": "p95"
+      },
+      "storage": {
+        "title": "Storage",
+        "meta": "3 bindings · 24h delta"
+      },
+      "dependencies": {
+        "title": "Dependencies"
+      },
+      "workers": {
+        "title": "Worker fleet",
+        "meta": "{{count}} workers · 2 pools"
       }
     },
     "settings": {
