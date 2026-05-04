@@ -1,11 +1,10 @@
-/* eslint-disable no-process-env */
 import { describe, expect, it } from "vitest";
 
 import { BucketCheckFailedError } from "@/system/domain/errors/bucket-check-failed.error";
 import { BucketNotFoundError } from "@/system/domain/errors/bucket-not-found.error";
 import { GcsBucketExistsCheckerAdapter } from "@/system/infrastructure/services/gcs-bucket-exists-checker.adapter";
 
-const ENDPOINT = process.env["STORAGE_GCS_ENDPOINT"] ?? "http://localhost:4444";
+const ENDPOINT = "http://localhost:4444";
 
 describe("GcsBucketExistsCheckerAdapter (fake-gcs-server)", () => {
   it("resolves when the bucket exists", async () => {

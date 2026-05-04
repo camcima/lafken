@@ -6,6 +6,8 @@ import { BucketNotFoundError } from "@/system/domain/errors/bucket-not-found.err
 import type { GcsBindingConfig } from "@/system/domain/schemas/gcs-binding-config.schema";
 import { BucketExistsCheckerPort } from "@/system/domain/services/bucket-exists-checker.service.port";
 
+const FAKE_GCS_PROJECT_ID = "fake-gcs";
+
 interface IGcsBucketExistsCheckerOptions {
   endpoint?: string;
   credentialsJson?: string;
@@ -28,7 +30,7 @@ export class GcsBucketExistsCheckerAdapter extends BucketExistsCheckerPort {
       : undefined;
 
     const storageOptions: StorageOptions = {
-      projectId: credentials?.project_id ?? "lafken-dev",
+      projectId: credentials?.project_id ?? FAKE_GCS_PROJECT_ID,
       // Existence checks are quick yes/no probes — surface failures fast
       // instead of letting the SDK retry-loop for the default 600 seconds.
       retryOptions: { autoRetry: false, maxRetries: 0 },
