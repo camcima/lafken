@@ -56,9 +56,9 @@ describe("UpdateStorageBindingUseCase", () => {
   });
 
   it("rejects when the named binding does not exist", async () => {
-    await expect(
-      useCase.execute({ name: "missing", config: newConfig }),
-    ).rejects.toBeInstanceOf(StorageBindingNotFoundError);
+    await expect(useCase.execute({ name: "missing", config: newConfig })).rejects.toBeInstanceOf(
+      StorageBindingNotFoundError,
+    );
   });
 
   it("rejects when the config does not match the GCS schema and leaves the existing binding unchanged", async () => {

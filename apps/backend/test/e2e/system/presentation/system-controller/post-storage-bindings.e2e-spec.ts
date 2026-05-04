@@ -2,8 +2,8 @@ import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
 

@@ -1,16 +1,19 @@
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 import { StorageBindingWriteRepositoryPort } from "@/system/domain/repositories/storage-binding-write.repository.port";
 
+const INITIAL_ID = 1n;
+const ID_INCREMENT = 1n;
+
 export class InMemoryStorageBindingWriteRepository implements StorageBindingWriteRepositoryPort {
   private readonly bindings = new Map<string, StorageBinding>();
-  private nextId: bigint = 1n;
+  private nextId: bigint = INITIAL_ID;
 
   insert(binding: StorageBinding): Promise<StorageBinding> {
     const stored = StorageBinding.fromProps({
       ...binding.props,
       id: this.nextId,
     });
-    this.nextId += 1n;
+    this.nextId += ID_INCREMENT;
     this.bindings.set(stored.props.name, stored);
     return Promise.resolve(stored);
   }
@@ -29,7 +32,7 @@ export class InMemoryStorageBindingWriteRepository implements StorageBindingWrit
   seed(binding: StorageBinding): void {
     this.bindings.set(binding.props.name, binding);
     if (binding.props.id >= this.nextId) {
-      this.nextId = binding.props.id + 1n;
+      this.nextId = binding.props.id + ID_INCREMENT;
     }
   }
 

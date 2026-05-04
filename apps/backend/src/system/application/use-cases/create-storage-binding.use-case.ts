@@ -3,8 +3,8 @@ import { Injectable } from "@nestjs/common";
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 import { DuplicateStorageBindingNameError } from "@/system/domain/errors/duplicate-storage-binding-name.error";
 import {
-  type IStorageBindingConfigViolation,
   InvalidStorageBindingConfigError,
+  type IStorageBindingConfigViolation,
 } from "@/system/domain/errors/invalid-storage-binding-config.error";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 import { StorageBindingWriteRepositoryPort } from "@/system/domain/repositories/storage-binding-write.repository.port";

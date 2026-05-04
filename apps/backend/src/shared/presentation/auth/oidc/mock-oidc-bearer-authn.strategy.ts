@@ -19,8 +19,8 @@ function parseRolesFromHeader(headerValue: unknown): ApplicationRole[] {
   }
   const validated = raw
     .split(",")
-    .map((r) => r.trim())
-    .filter((r): r is ApplicationRole => (KNOWN_ROLES as readonly string[]).includes(r));
+    .map((role) => role.trim())
+    .filter((role): role is ApplicationRole => (KNOWN_ROLES as readonly string[]).includes(role));
   return validated.length > 0 ? validated : [ApplicationRole.PLATFORM_OPERATOR];
 }
 

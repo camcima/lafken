@@ -2,8 +2,8 @@ import { Injectable } from "@nestjs/common";
 
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 import {
-  type IStorageBindingConfigViolation,
   InvalidStorageBindingConfigError,
+  type IStorageBindingConfigViolation,
 } from "@/system/domain/errors/invalid-storage-binding-config.error";
 import { StorageBindingNotFoundError } from "@/system/domain/errors/storage-binding-not-found.error";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
