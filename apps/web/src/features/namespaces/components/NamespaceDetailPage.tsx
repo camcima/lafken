@@ -1,10 +1,12 @@
 // Slice 0: BE returns empty arrays; rendering against typed demo data
+import type { NamespaceResponseDTO } from "@shared/backend-api";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/common/Badge";
+import { Button } from "@/components/common/Button";
 import { Card, CardHeader, CardMeta, CardTitle } from "@/components/common/Card";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Tabs } from "@/components/common/Tabs";
@@ -17,6 +19,9 @@ import {
 import { DEMO_AUDIT, DEMO_NAMESPACES, type DemoNamespace } from "@/lib/demo/lafken-demo-data";
 import { fmtAgo } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
+
+import { ArchiveNamespaceDialog } from "./ArchiveNamespaceDialog";
+import { NamespaceMetadataDrawer } from "./NamespaceMetadataDrawer";
 
 const BACK_ICON_SIZE = 14;
 const RECENT_AUDIT_COUNT = 5;
@@ -188,13 +193,27 @@ function SliceLaterTab({ label }: { label: string }): React.JSX.Element {
   );
 }
 
+/** Build a minimal NamespaceResponseDTO from demo data for drawer/dialog usage */
+function demoToNamespaceDTO(demoNs: DemoNamespace): NamespaceResponseDTO {
+  return {
+    slug: demoNs.slug,
+    displayName: demoNs.displayName,
+    description: undefined,
+    currentPolicyVersion: demoNs.policyVersion,
+    storageBindingName: "gcs-prod",
+    archivedAt: undefined,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 export function NamespaceDetailPage({
   slug,
   tab,
   onTabChange,
 }: INamespaceDetailPageProps): React.JSX.Element {
   const { t } = useTranslation();
-  const { isLoading } = useNamespace(slug);
+  const { isLoading, data: namespaceData } = useNamespace(slug);
 
   // Consume the hooks to satisfy the contract even if unused in Slice 0
   useNamespacePolicies(slug);
@@ -203,6 +222,10 @@ export function NamespaceDetailPage({
   // Find demo namespace for content rendering
   const demoNs = DEMO_NAMESPACES.find((ns) => ns.slug === slug);
 
+  // Derive the namespace DTO: prefer real API data, fall back to demo-derived DTO
+  const namespace: NamespaceResponseDTO | undefined =
+    namespaceData ?? (demoNs ? demoToNamespaceDTO(demoNs) : undefined);
+
   // Active tab — falls back to overview
   const activeTab: INamespaceTab = tab ?? "overview";
 
@@ -210,6 +233,18 @@ export function NamespaceDetailPage({
     id,
     label: t(`pages.namespaceDetail.tabs.${id}`),
   }));
+
+  // Drawer / dialog state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [archiveMode, setArchiveMode] = useState<"archive" | "unarchive">("archive");
+
+  const isArchived = Boolean(namespace?.archivedAt);
+
+  function handleArchiveClick(): void {
+    setArchiveMode(isArchived ? "unarchive" : "archive");
+    setDialogOpen(true);
+  }
 
   if (isLoading) {
     return (
@@ -250,12 +285,46 @@ export function NamespaceDetailPage({
           <ArrowLeft size={BACK_ICON_SIZE} />
           {t("pages.namespaceDetail.backToNamespaces")}
         </Link>
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="text-[22px] font-bold tracking-tight">{demoNs.displayName}</h1>
-          <span className="text-muted-foreground font-mono text-[12.5px]">{demoNs.slug}</span>
-          <Badge variant="muted">
-            {t("pages.namespaces.policyVersion", { version: demoNs.policyVersion })}
-          </Badge>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h1 className="text-[22px] font-bold tracking-tight">{demoNs.displayName}</h1>
+            <span className="text-muted-foreground font-mono text-[12.5px]">{demoNs.slug}</span>
+            <Badge variant="muted">
+              {t("pages.namespaces.policyVersion", { version: demoNs.policyVersion })}
+            </Badge>
+            {isArchived ? (
+              <Badge variant="warn">{t("pages.namespaces.archivedBadge")}</Badge>
+            ) : null}
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setDrawerOpen(true);
+              }}
+            >
+              {t("pages.namespaces.actions.editMetadata")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled
+              aria-disabled="true"
+              title={t("pages.namespaces.actions.editPolicyDeferred")}
+            >
+              {t("pages.namespaces.actions.editPolicy")}
+            </Button>
+            <Button
+              type="button"
+              variant={isArchived ? "outline" : "destructive"}
+              onClick={handleArchiveClick}
+            >
+              {isArchived
+                ? t("pages.namespaces.actions.unarchive")
+                : t("pages.namespaces.actions.archive")}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -279,6 +348,25 @@ export function NamespaceDetailPage({
         <SliceLaterTab label={t("pages.namespaceDetail.empty.webhooks")} />
       )}
       {activeTab === "quotas" && <SliceLaterTab label={t("pages.namespaceDetail.empty.quotas")} />}
+
+      {/* Metadata drawer */}
+      <NamespaceMetadataDrawer
+        open={drawerOpen}
+        namespace={namespace}
+        onClose={() => {
+          setDrawerOpen(false);
+        }}
+      />
+
+      {/* Archive / unarchive dialog */}
+      <ArchiveNamespaceDialog
+        open={dialogOpen}
+        mode={archiveMode}
+        namespace={namespace}
+        onClose={() => {
+          setDialogOpen(false);
+        }}
+      />
     </div>
   );
 }

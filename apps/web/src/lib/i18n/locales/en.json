@@ -531,6 +531,22 @@
         "title": "No namespaces yet",
         "description": "Create the first namespace to get started."
       },
+      "actions": {
+        "editMetadata": "Edit metadata",
+        "editPolicy": "Edit policy",
+        "editPolicyDeferred": "Policy editing arrives in the next slice.",
+        "archive": "Archive",
+        "unarchive": "Unarchive"
+      },
+      "archive": {
+        "confirmArchiveTitle": "Archive {{name}}?",
+        "confirmArchiveBody": "Existing assets remain accessible. New uploads will be rejected once the upload endpoint ships.",
+        "confirmUnarchiveTitle": "Unarchive {{name}}?",
+        "confirmUnarchiveBody": "The namespace will accept new uploads again.",
+        "confirm": "Confirm",
+        "cancel": "Cancel"
+      },
+      "archivedBadge": "archived",
       "drawer": {
         "caption": "Namespace",
         "policyTitle": "Policy v{{version}}",
