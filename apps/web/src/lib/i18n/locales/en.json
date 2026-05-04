@@ -483,6 +483,11 @@
         "cancel": "Cancel",
         "submit": "Create namespace"
       },
+      "edit": {
+        "title": "Edit namespace",
+        "submit": "Save",
+        "cancel": "Cancel"
+      },
       "errors": {
         "noStorageBindings": "No storage bindings configured.",
         "noStorageBindingsLink": "Create one in System.",
@@ -491,7 +496,11 @@
         "storageMissing": "The selected storage binding no longer exists.",
         "storageMissingLink": "Go to System to manage storage bindings.",
         "invalidJson": "Must be valid JSON or empty.",
-        "generic": "Could not save the namespace. Please try again."
+        "generic": "Could not save the namespace. Please try again.",
+        "namespaceDeleted": "This namespace was deleted. Please refresh the page.",
+        "displayNameRequired": "Display name is required.",
+        "displayNameTooLong": "Display name must be 200 characters or fewer.",
+        "descriptionTooLong": "Description must be 2000 characters or fewer."
       },
       "searchPlaceholder": "Search namespaces by slug or display name…",
       "policyVersion": "policy v{{version}}",
