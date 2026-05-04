@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
+import { PolicyVersionConflictError } from "@/namespaces/domain/errors/policy-version-conflict.error";
 import { StorageBindingMissingError } from "@/namespaces/domain/errors/storage-binding-missing.error";
 import type {
   ICreatePolicyVersionInput,
@@ -17,6 +18,7 @@ import { NamespaceDbMapper } from "../mappers/namespace.db-mapper";
 
 const PG_FK_VIOLATION = "23503";
 const STORAGE_BINDING_FK_HINT = "storage_binding_id";
+const PG_UNIQUE_VIOLATION = "23505";
 
 @Injectable()
 export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
@@ -121,8 +123,78 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
     return NamespaceDbMapper.toDomain(row);
   }
 
-  createPolicyVersion(_input: ICreatePolicyVersionInput): Promise<ICreatePolicyVersionResult> {
-    return Promise.reject(new Error("Not implemented yet — Task 3"));
+  async createPolicyVersion(input: ICreatePolicyVersionInput): Promise<ICreatePolicyVersionResult> {
+    return this.attemptCreatePolicyVersion(input, 0);
+  }
+
+  private async attemptCreatePolicyVersion(
+    input: ICreatePolicyVersionInput,
+    attempt: number,
+  ): Promise<ICreatePolicyVersionResult> {
+    let nextVersion: number = 0;
+    try {
+      return await this.db.connection.transaction().execute(async (tx) => {
+        const maxRow = await tx
+          .selectFrom("namespace_policies")
+          .select((eb) => eb.fn.max<number>("version").as("max"))
+          .where("namespace_id", "=", input.namespaceId)
+          .executeTakeFirstOrThrow();
+        nextVersion = ((maxRow as { max: number | null }).max ?? 0) + 1;
+
+        const policyRow = await tx
+          .insertInto("namespace_policies")
+          .values({
+            namespace_id: input.namespaceId,
+            version: nextVersion,
+            retention_days: input.policy.retentionDays ?? undefined,
+            retention_mode: input.policy.retentionMode,
+            max_file_size_bytes: input.policy.maxFileSizeBytes,
+            allowed_mime_types: input.policy.allowedMimeTypes,
+            exif_handling: input.policy.exifHandling,
+            virus_scan_required: input.policy.virusScanRequired,
+            content_moderation: input.policy.contentModeration ?? undefined,
+            required_metadata_schema: input.policy.requiredMetadataSchema ?? undefined,
+            immutable: input.policy.immutable,
+            serving_mode: input.policy.servingMode,
+            signed_url_ttl_seconds: input.policy.signedUrlTtlSeconds ?? undefined,
+            signed_url_bucket_size: input.policy.signedUrlBucketSize ?? undefined,
+            retry_config: input.policy.retryConfig ?? undefined,
+            created_by: input.createdBy ?? undefined,
+          })
+          .returningAll()
+          .executeTakeFirstOrThrow();
+
+        const policyId = BigInt((policyRow as { id: bigint }).id);
+
+        const nsRow = await tx
+          .updateTable("namespaces")
+          .set({ current_policy_id: policyId })
+          .where("id", "=", input.namespaceId)
+          .returningAll()
+          .executeTakeFirstOrThrow();
+
+        return {
+          namespace: NamespaceDbMapper.toDomain(nsRow),
+          newPolicyVersion: nextVersion,
+        };
+      });
+    } catch (err) {
+      if (this.isPolicyVersionUniqueViolation(err)) {
+        if (attempt < 1) {
+          return this.attemptCreatePolicyVersion(input, attempt + 1);
+        }
+        throw new PolicyVersionConflictError({ slug: "<unknown>", attemptedVersion: nextVersion });
+      }
+      throw err;
+    }
+  }
+
+  private isPolicyVersionUniqueViolation(err: unknown): boolean {
+    if (!err || typeof err !== "object") return false;
+    const code = (err as { code?: unknown }).code;
+    if (code !== PG_UNIQUE_VIOLATION) return false;
+    const detail = (err as { detail?: unknown }).detail;
+    return typeof detail === "string" && detail.includes("(namespace_id, version)");
   }
 
   private isStorageBindingFkViolation(err: unknown): boolean {

@@ -8,6 +8,7 @@ import { ListNamespacePresetsUseCase } from "./application/use-cases/list-namesp
 import { ListNamespacesUseCase } from "./application/use-cases/list-namespaces.use-case";
 import { UnarchiveNamespaceUseCase } from "./application/use-cases/unarchive-namespace.use-case";
 import { UpdateNamespaceMetadataUseCase } from "./application/use-cases/update-namespace-metadata.use-case";
+import { UpdateNamespacePolicyUseCase } from "./application/use-cases/update-namespace-policy.use-case";
 import { NamespacesInfrastructureModule } from "./infrastructure/namespaces-infrastructure.module";
 import { NamespacesController } from "./presentation/controllers/namespaces.controller";
 
@@ -23,6 +24,7 @@ import { NamespacesController } from "./presentation/controllers/namespaces.cont
     UpdateNamespaceMetadataUseCase,
     ArchiveNamespaceUseCase,
     UnarchiveNamespaceUseCase,
+    UpdateNamespacePolicyUseCase,
   ],
 })
 export class NamespacesModule {}
