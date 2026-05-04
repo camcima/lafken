@@ -781,7 +781,11 @@
           "bucketNotFound": "The bucket \"{{bucket}}\" does not exist. Lafken does not create buckets — please create it first.",
           "duplicateName": "A binding with this name already exists.",
           "validationFailed": "Please fix the highlighted fields.",
-          "generic": "Could not save the binding."
+          "generic": "Could not save the binding.",
+          "invalidName": "Use lowercase letters, digits, and hyphens. Must start and end with a letter or digit.",
+          "invalidBucket": "Bucket name must be 3–63 characters: lowercase letters, digits, dots, hyphens, and underscores.",
+          "invalidProjectId": "Project ID must be 6–30 characters.",
+          "invalidPrefix": "Prefix must be at most 255 characters."
         }
       },
       "integrations": "Integrations",

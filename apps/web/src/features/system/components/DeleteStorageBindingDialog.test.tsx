@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiError, type ApiErrorBody } from "@/lib/api/api-error";
 import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
 
 import { DeleteStorageBindingDialog } from "./DeleteStorageBindingDialog";
@@ -123,5 +124,31 @@ describe("DeleteStorageBindingDialog", () => {
   it("does not render when binding is undefined", () => {
     renderDialog({ open: true });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("shows an inline error message when the delete mutation fails", async () => {
+    const user = userEvent.setup();
+    const errorBody: ApiErrorBody = {
+      type: "https://lafken.dev/problems/storage-binding-not-found-error",
+      title: "Not Found",
+      status: 404,
+      detail: "Storage binding could not be deleted right now",
+    };
+    deleteMutation.mutateAsync = vi
+      .fn()
+      .mockRejectedValue(new ApiError(404, "Not Found", errorBody));
+
+    const onClose = vi.fn();
+    renderDialog({ open: true, binding: sampleBinding, onClose });
+
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /storage binding could not be deleted right now/i,
+      );
+    });
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });

@@ -185,6 +185,40 @@ describe("StorageBindingDrawer", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("maps RFC 9457 invalid-config violations to per-field form errors", async () => {
+    const user = userEvent.setup();
+    const errorBody: ApiErrorBody = {
+      type: "https://lafken.dev/problems/invalid-storage-binding-config-error",
+      title: "Bad Request",
+      status: 400,
+      detail: "Storage binding config failed validation",
+      params: {
+        violations: [
+          { path: "bucket", message: "Bucket too short", code: "too_small" },
+          { path: "projectId", message: "Project ID required", code: "invalid_string" },
+        ],
+      },
+    };
+    createMutation.mutateAsync = vi
+      .fn()
+      .mockRejectedValue(new ApiError(400, "Bad Request", errorBody));
+
+    const onClose = vi.fn();
+    renderDrawer({ open: true, mode: "create", onClose });
+
+    await user.type(screen.getByLabelText(/^name$/i), "lafken-prod");
+    await user.type(screen.getByLabelText(/^bucket$/i), "lafken-bucket");
+    await user.type(screen.getByLabelText(/gcp project id/i), "lafken-prj-1");
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Bucket too short")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Project ID required")).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("displays a form-level error mentioning the bucket when the API responds with a bucket-not-found error", async () => {
     const user = userEvent.setup();
     const errorBody: ApiErrorBody = {

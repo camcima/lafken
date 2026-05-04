@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { StorageBindingResponseDTO } from "@shared/backend-api";
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -24,19 +24,13 @@ const PROJECT_ID_MAX_LENGTH = 30;
 const PREFIX_MAX_LENGTH = 255;
 const PROBLEM_TYPE_PREFIX = "https://lafken.dev/problems/";
 
-const formSchema = z.object({
-  name: z.string().regex(NAME_PATTERN, { message: "Invalid name" }),
-  adapterType: z.literal("gcs"),
-  bucket: z
-    .string()
-    .min(BUCKET_MIN_LENGTH)
-    .max(BUCKET_MAX_LENGTH)
-    .regex(BUCKET_PATTERN, { message: "Invalid bucket name" }),
-  projectId: z.string().min(PROJECT_ID_MIN_LENGTH).max(PROJECT_ID_MAX_LENGTH),
-  prefix: z.string().max(PREFIX_MAX_LENGTH).optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+interface FormValues {
+  name: string;
+  adapterType: "gcs";
+  bucket: string;
+  projectId: string;
+  prefix?: string;
+}
 type FormFieldName = keyof FormValues;
 
 interface IStorageBindingDrawerProps {
@@ -76,17 +70,27 @@ function TextInput(
 }
 
 function FieldMessage({
+  id,
   children,
-}: Readonly<{ children?: React.ReactNode }>): React.JSX.Element | null {
+}: Readonly<{ id?: string; children?: React.ReactNode }>): React.JSX.Element | null {
   if (!children) return null;
-  return <p className="text-destructive mt-1 text-xs">{children}</p>;
+  return (
+    <p id={id} className="text-destructive mt-1 text-xs">
+      {children}
+    </p>
+  );
 }
 
 function FieldHelp({
+  id,
   children,
-}: Readonly<{ children?: React.ReactNode }>): React.JSX.Element | null {
+}: Readonly<{ id?: string; children?: React.ReactNode }>): React.JSX.Element | null {
   if (!children) return null;
-  return <p className="text-muted-foreground mt-1 text-xs">{children}</p>;
+  return (
+    <p id={id} className="text-muted-foreground mt-1 text-xs">
+      {children}
+    </p>
+  );
 }
 
 function getEmptyValues(): FormValues {
@@ -129,8 +133,44 @@ export function StorageBindingDrawer({
   const createMutation = useCreateStorageBinding();
   const updateMutation = useUpdateStorageBinding();
 
+  const schema = useMemo(
+    () =>
+      z.object({
+        name: z.string().regex(NAME_PATTERN, {
+          message: t("pages.system.storageBindings.errors.invalidName"),
+        }),
+        adapterType: z.literal("gcs"),
+        bucket: z
+          .string()
+          .min(BUCKET_MIN_LENGTH, {
+            message: t("pages.system.storageBindings.errors.invalidBucket"),
+          })
+          .max(BUCKET_MAX_LENGTH, {
+            message: t("pages.system.storageBindings.errors.invalidBucket"),
+          })
+          .regex(BUCKET_PATTERN, {
+            message: t("pages.system.storageBindings.errors.invalidBucket"),
+          }),
+        projectId: z
+          .string()
+          .min(PROJECT_ID_MIN_LENGTH, {
+            message: t("pages.system.storageBindings.errors.invalidProjectId"),
+          })
+          .max(PROJECT_ID_MAX_LENGTH, {
+            message: t("pages.system.storageBindings.errors.invalidProjectId"),
+          }),
+        prefix: z
+          .string()
+          .max(PREFIX_MAX_LENGTH, {
+            message: t("pages.system.storageBindings.errors.invalidPrefix"),
+          })
+          .optional(),
+      }),
+    [t],
+  );
+
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(schema),
     defaultValues: getEmptyValues(),
     mode: "onBlur",
   });
@@ -293,10 +333,18 @@ export function StorageBindingDrawer({
             disabled={mode === "edit"}
             readOnly={mode === "edit"}
             aria-readonly={mode === "edit"}
+            aria-invalid={errors.name ? true : undefined}
+            aria-describedby={
+              errors.name ? "storage-binding-name-error" : "storage-binding-name-help"
+            }
             {...register("name")}
           />
-          <FieldHelp>{t("pages.system.storageBindings.form.nameHelp")}</FieldHelp>
-          <FieldMessage>{errors.name?.message}</FieldMessage>
+          <FieldHelp id="storage-binding-name-help">
+            {t("pages.system.storageBindings.form.nameHelp")}
+          </FieldHelp>
+          {errors.name?.message ? (
+            <FieldMessage id="storage-binding-name-error">{errors.name.message}</FieldMessage>
+          ) : null}
         </div>
 
         <div className="grid gap-2">
@@ -309,37 +357,73 @@ export function StorageBindingDrawer({
             disabled
             readOnly
             aria-readonly="true"
+            aria-invalid={false}
+            aria-describedby={
+              errors.adapterType?.message ? "storage-binding-adapter-error" : undefined
+            }
           />
-          <FieldMessage>{errors.adapterType?.message}</FieldMessage>
+          {errors.adapterType?.message ? (
+            <FieldMessage id="storage-binding-adapter-error">
+              {errors.adapterType.message}
+            </FieldMessage>
+          ) : null}
         </div>
 
         <div className="grid gap-2">
           <FieldLabel htmlFor="storage-binding-bucket">
             {t("pages.system.storageBindings.form.bucket")}
           </FieldLabel>
-          <TextInput id="storage-binding-bucket" {...register("bucket")} />
-          <FieldHelp>{t("pages.system.storageBindings.form.bucketHelp")}</FieldHelp>
-          <FieldMessage>{errors.bucket?.message}</FieldMessage>
+          <TextInput
+            id="storage-binding-bucket"
+            aria-invalid={errors.bucket ? true : undefined}
+            aria-describedby={
+              errors.bucket ? "storage-binding-bucket-error" : "storage-binding-bucket-help"
+            }
+            {...register("bucket")}
+          />
+          <FieldHelp id="storage-binding-bucket-help">
+            {t("pages.system.storageBindings.form.bucketHelp")}
+          </FieldHelp>
+          {errors.bucket?.message ? (
+            <FieldMessage id="storage-binding-bucket-error">{errors.bucket.message}</FieldMessage>
+          ) : null}
         </div>
 
         <div className="grid gap-2">
           <FieldLabel htmlFor="storage-binding-project-id">
             {t("pages.system.storageBindings.form.projectId")}
           </FieldLabel>
-          <TextInput id="storage-binding-project-id" {...register("projectId")} />
-          <FieldMessage>{errors.projectId?.message}</FieldMessage>
+          <TextInput
+            id="storage-binding-project-id"
+            aria-invalid={errors.projectId ? true : undefined}
+            aria-describedby={errors.projectId ? "storage-binding-project-id-error" : undefined}
+            {...register("projectId")}
+          />
+          {errors.projectId?.message ? (
+            <FieldMessage id="storage-binding-project-id-error">
+              {errors.projectId.message}
+            </FieldMessage>
+          ) : null}
         </div>
 
         <div className="grid gap-2">
           <FieldLabel htmlFor="storage-binding-prefix">
             {t("pages.system.storageBindings.form.prefix")}
           </FieldLabel>
-          <TextInput id="storage-binding-prefix" {...register("prefix")} />
-          <FieldMessage>{errors.prefix?.message}</FieldMessage>
+          <TextInput
+            id="storage-binding-prefix"
+            aria-invalid={errors.prefix ? true : undefined}
+            aria-describedby={errors.prefix ? "storage-binding-prefix-error" : undefined}
+            {...register("prefix")}
+          />
+          {errors.prefix?.message ? (
+            <FieldMessage id="storage-binding-prefix-error">{errors.prefix.message}</FieldMessage>
+          ) : null}
         </div>
 
         {formLevelError ? (
           <div
+            id="storage-binding-form-error"
             role="alert"
             className="border-destructive/40 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm"
           >
