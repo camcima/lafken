@@ -1,16 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
 
 import { AuditPage } from "./AuditPage";
-
-vi.mock("@/features/audit/hooks/useAudit", () => ({
-  useAuditEntries: () => ({
-    data: { data: [], total: 0, page: 1, limit: 20, lastPage: 1 },
-    isLoading: false,
-  }),
-}));
 
 function renderPage() {
   return render(

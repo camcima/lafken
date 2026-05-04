@@ -1,17 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
 
 import { LegalHoldsListPage } from "./LegalHoldsListPage";
-
-vi.mock("@/features/legal-holds/hooks/useLegalHolds", () => ({
-  useLegalHolds: () => ({
-    data: { data: [], total: 0, page: 1, limit: 20, lastPage: 1 },
-    isLoading: false,
-  }),
-  useLegalHold: () => ({ data: undefined, isLoading: false }),
-}));
 
 function renderPage() {
   return render(

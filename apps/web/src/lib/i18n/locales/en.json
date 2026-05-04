@@ -22,7 +22,8 @@
       "error": "Unable to connect to services"
     },
     "actions": {
-      "retry": "Retry"
+      "retry": "Retry",
+      "close": "Close drawer"
     }
   },
   "errors": {

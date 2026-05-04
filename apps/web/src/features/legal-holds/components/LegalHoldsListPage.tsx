@@ -11,7 +11,6 @@ import {
   Plus,
   Search,
   Tag,
-  X,
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,6 +19,7 @@ import { Badge } from "@/components/common/Badge";
 import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
 import { Label } from "@/components/common/Label";
+import { RightDrawer } from "@/components/common/RightDrawer";
 import { DEMO_LEGAL_HOLDS } from "@/lib/demo/lafken-demo-data";
 import type { DemoLegalHold } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
@@ -31,12 +31,15 @@ const SCOPE_ICON_DEFAULT_SIZE = 12;
 const BADGE_ICON_SIZE = 10;
 const BTN_ICON_SIZE = 13;
 const CHEVRON_SIZE = 12;
-const X_ICON_SIZE = 16;
 const CHECK_ICON_SIZE = 12;
 const SEARCH_ICON_SIZE = 13;
 
 // Date slice: first 10 chars = YYYY-MM-DD
 const DATE_SLICE_END = 10;
+
+// Shared grid column definition (header + row must stay in sync)
+const TABLE_COLS =
+  "grid-cols-[minmax(0,1.4fr)_120px_minmax(0,2fr)_85px_minmax(0,1.2fr)_110px_120px_34px]";
 
 const SELECT_CLASS =
   "h-9 appearance-none rounded-md border border-input bg-card pl-3 pr-8 text-[12.5px]";
@@ -91,131 +94,14 @@ function HoldDrawer({ hold, onClose }: IHoldDrawerProps): React.JSX.Element {
   ];
 
   return (
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- backdrop dismiss is supplemental; close button handles keyboard
-    <div
-      className="bg-foreground/30 fixed inset-0 z-40 flex justify-end backdrop-blur-sm"
-      onClick={onClose}
-    >
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- stopPropagation inside dialog panel; close button + Escape handle keyboard */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        tabIndex={-1}
-        className="bg-card flex h-full w-full max-w-[520px] flex-col overflow-y-auto shadow-2xl"
-        onKeyDown={(ev: React.KeyboardEvent) => {
-          if (ev.key === "Escape") {
-            onClose();
-          }
-        }}
-        onClick={(ev: React.MouseEvent) => {
-          ev.stopPropagation();
-        }}
-      >
-        {/* Sticky header */}
-        <div className="border-border bg-card sticky top-0 flex items-center justify-between border-b px-5 py-3">
-          <div>
-            <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
-              {t("pages.legalHolds.drawer.caption")}
-            </div>
-            <div className="font-mono text-[14px] font-semibold">{hold.caseRef}</div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground"
-            aria-label={t("pages.legalHolds.drawer.close")}
-          >
-            <X size={X_ICON_SIZE} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 space-y-5 px-5 py-5">
-          <div>
-            <Label>{t("pages.legalHolds.drawer.holdId")}</Label>
-            <div className="mt-0.5 font-mono text-[12.5px]">{hold.id}</div>
-          </div>
-
-          <div>
-            <Label>{t("pages.legalHolds.drawer.scope")}</Label>
-            <div className="border-border bg-secondary/50 mt-1 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px]">
-              <ScopeIcon scope={hold.scope} />
-              {scopeLabels[hold.scope] ?? hold.scope}
-            </div>
-            <div className="text-muted-foreground mt-1.5 font-mono text-[12px]">
-              {hold.scopeLabel}
-            </div>
-          </div>
-
-          <div>
-            <Label>{t("pages.legalHolds.drawer.reason")}</Label>
-            <div className="border-border bg-secondary/30 mt-1 rounded border px-3 py-2 text-[12.5px]">
-              {hold.reason}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <Label>{t("pages.legalHolds.drawer.assetsCovered")}</Label>
-              <div className="mt-0.5 font-mono text-[18px] tabular-nums">
-                {hold.assets.toLocaleString()}
-              </div>
-            </div>
-            <div>
-              <Label>{t("pages.legalHolds.drawer.status")}</Label>
-              <div className="mt-1">
-                {hold.status === "active" ? (
-                  <Badge variant="warn">
-                    <Lock size={BADGE_ICON_SIZE} />
-                    {t("pages.legalHolds.statuses.active")}
-                  </Badge>
-                ) : (
-                  <Badge variant="info">
-                    <Clock size={BADGE_ICON_SIZE} />
-                    {t("pages.legalHolds.statuses.pendingRelease")}
-                  </Badge>
-                )}
-              </div>
-            </div>
-            <div>
-              <Label>{t("pages.legalHolds.drawer.placedBy")}</Label>
-              <div className="mt-0.5 font-mono text-[12px]">{hold.placedBy}</div>
-              <div className="text-muted-foreground text-[11px]">
-                {hold.placedAt.replace("T", " ").replace("Z", " UTC")}
-              </div>
-            </div>
-            <div>
-              <Label>{t("pages.legalHolds.drawer.lastReviewed")}</Label>
-              <div className="mt-0.5 text-[12px]">{hold.lastReviewed.slice(0, DATE_SLICE_END)}</div>
-              <div className="text-muted-foreground text-[11px]">
-                {t("pages.legalHolds.drawer.reviewCadence")}
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <Label>{t("pages.legalHolds.drawer.recentActivity")}</Label>
-            <div className="mt-1.5 space-y-2">
-              {activities.map((activity, idx) => (
-                <div
-                  key={idx}
-                  className="border-border bg-secondary/30 flex gap-2 rounded border px-3 py-2 text-[11.5px]"
-                >
-                  <Check size={CHECK_ICON_SIZE} className="text-ok mt-0.5 flex-none" />
-                  <div className="flex-1">
-                    <div>{activity.title}</div>
-                    <div className="text-muted-foreground font-mono text-[10.5px]">
-                      {activity.at} · {activity.by}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Sticky footer */}
-        <div className="border-border bg-card sticky bottom-0 flex justify-end gap-2 border-t px-5 py-3">
+    <RightDrawer
+      open
+      onClose={onClose}
+      caption={t("pages.legalHolds.drawer.caption")}
+      title={hold.caseRef}
+      maxWidthClass="max-w-[520px]"
+      footer={
+        <>
           <Button variant="outline">
             <Eye size={BTN_ICON_SIZE} />
             {t("pages.legalHolds.drawer.actions.viewAssets")}
@@ -228,9 +114,93 @@ function HoldDrawer({ hold, onClose }: IHoldDrawerProps): React.JSX.Element {
             <Lock size={BTN_ICON_SIZE} />
             {t("pages.legalHolds.drawer.actions.requestLift")}
           </Button>
+        </>
+      }
+    >
+      <div className="flex-1 space-y-5 px-5 py-5">
+        <div>
+          <Label>{t("pages.legalHolds.drawer.holdId")}</Label>
+          <div className="mt-0.5 font-mono text-[12.5px]">{hold.id}</div>
+        </div>
+
+        <div>
+          <Label>{t("pages.legalHolds.drawer.scope")}</Label>
+          <div className="border-border bg-secondary/50 mt-1 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px]">
+            <ScopeIcon scope={hold.scope} />
+            {scopeLabels[hold.scope] ?? hold.scope}
+          </div>
+          <div className="text-muted-foreground mt-1.5 font-mono text-[12px]">
+            {hold.scopeLabel}
+          </div>
+        </div>
+
+        <div>
+          <Label>{t("pages.legalHolds.drawer.reason")}</Label>
+          <div className="border-border bg-secondary/30 mt-1 rounded border px-3 py-2 text-[12.5px]">
+            {hold.reason}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <Label>{t("pages.legalHolds.drawer.assetsCovered")}</Label>
+            <div className="mt-0.5 font-mono text-[18px] tabular-nums">
+              {hold.assets.toLocaleString()}
+            </div>
+          </div>
+          <div>
+            <Label>{t("pages.legalHolds.drawer.status")}</Label>
+            <div className="mt-1">
+              {hold.status === "active" ? (
+                <Badge variant="warn">
+                  <Lock size={BADGE_ICON_SIZE} />
+                  {t("pages.legalHolds.statuses.active")}
+                </Badge>
+              ) : (
+                <Badge variant="info">
+                  <Clock size={BADGE_ICON_SIZE} />
+                  {t("pages.legalHolds.statuses.pendingRelease")}
+                </Badge>
+              )}
+            </div>
+          </div>
+          <div>
+            <Label>{t("pages.legalHolds.drawer.placedBy")}</Label>
+            <div className="mt-0.5 font-mono text-[12px]">{hold.placedBy}</div>
+            <div className="text-muted-foreground text-[11px]">
+              {hold.placedAt.replace("T", " ").replace("Z", " UTC")}
+            </div>
+          </div>
+          <div>
+            <Label>{t("pages.legalHolds.drawer.lastReviewed")}</Label>
+            <div className="mt-0.5 text-[12px]">{hold.lastReviewed.slice(0, DATE_SLICE_END)}</div>
+            <div className="text-muted-foreground text-[11px]">
+              {t("pages.legalHolds.drawer.reviewCadence")}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <Label>{t("pages.legalHolds.drawer.recentActivity")}</Label>
+          <div className="mt-1.5 space-y-2">
+            {activities.map((activity) => (
+              <div
+                key={activity.title}
+                className="border-border bg-secondary/30 flex gap-2 rounded border px-3 py-2 text-[11.5px]"
+              >
+                <Check size={CHECK_ICON_SIZE} className="text-ok mt-0.5 flex-none" />
+                <div className="flex-1">
+                  <div>{activity.title}</div>
+                  <div className="text-muted-foreground font-mono text-[10.5px]">
+                    {activity.at} · {activity.by}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </RightDrawer>
   );
 }
 
@@ -402,7 +372,12 @@ export function LegalHoldsListPage(): React.JSX.Element {
       {/* Table card */}
       <Card className="overflow-x-auto">
         <div className="min-w-[1080px]">
-          <div className="border-border bg-secondary/40 text-muted-foreground grid grid-cols-[minmax(0,1.4fr)_120px_minmax(0,2fr)_85px_minmax(0,1.2fr)_110px_120px_34px] items-center gap-3 border-b px-4 py-2 text-[10.5px] font-medium tracking-wider uppercase">
+          <div
+            className={cn(
+              "border-border bg-secondary/40 text-muted-foreground grid items-center gap-3 border-b px-4 py-2 text-[10.5px] font-medium tracking-wider uppercase",
+              TABLE_COLS,
+            )}
+          >
             <span>{t("pages.legalHolds.table.caseRef")}</span>
             <span>{t("pages.legalHolds.table.scope")}</span>
             <span>{t("pages.legalHolds.table.target")}</span>
@@ -419,7 +394,10 @@ export function LegalHoldsListPage(): React.JSX.Element {
               onClick={() => {
                 setOpenId(hold.id);
               }}
-              className="border-border/40 hover:bg-secondary/30 grid w-full grid-cols-[minmax(0,1.4fr)_120px_minmax(0,2fr)_85px_minmax(0,1.2fr)_110px_120px_34px] items-center gap-3 border-b px-4 py-2.5 text-left text-[12.5px] last:border-b-0"
+              className={cn(
+                "border-border/40 hover:bg-secondary/30 grid w-full items-center gap-3 border-b px-4 py-2.5 text-left text-[12.5px] last:border-b-0",
+                TABLE_COLS,
+              )}
             >
               <div className="min-w-0">
                 <div className="text-latam-indigo-deep truncate font-mono text-[12.5px]">

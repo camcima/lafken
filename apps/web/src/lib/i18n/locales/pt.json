@@ -22,7 +22,8 @@
       "error": "Não foi possível conectar aos serviços"
     },
     "actions": {
-      "retry": "Tentar novamente"
+      "retry": "Tentar novamente",
+      "close": "Fechar painel"
     }
   },
   "errors": {

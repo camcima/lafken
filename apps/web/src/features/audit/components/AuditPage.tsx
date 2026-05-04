@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/common/Badge";
 import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
+import { RightDrawer } from "@/components/common/RightDrawer";
 import { DEMO_AUDIT, fmtMinAgo } from "@/lib/demo/lafken-demo-data";
 import type { DemoAuditEntry } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
@@ -34,7 +35,6 @@ const TYPE_ICON_DRAWER_SIZE = 14;
 const CHEVRON_SIZE = 12;
 const BTN_ICON_SIZE = 13;
 const COPY_ICON_SIZE = 11;
-const X_ICON_SIZE = 16;
 
 // Drawer JSON hour arithmetic
 const DEMO_HOUR_BASE = 8;
@@ -42,6 +42,10 @@ const MINUTES_PER_HOUR = 60;
 const ID_SLICE_REQ_START = 4;
 const ID_SLICE_REQ_END = 18;
 const ID_SLICE_TRACE_END = 32;
+
+// Shared grid column definition (header + row must stay in sync)
+const TABLE_COLS =
+  "grid-cols-[110px_minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,1.4fr)_120px_70px_34px]";
 
 type ITypeIconProps = {
   type: string;
@@ -95,55 +99,32 @@ function AuditDrawer({ entry, onClose }: IAuditDrawerProps): React.JSX.Element {
 }`;
 
   return (
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- backdrop dismiss is supplemental; Escape key handled in dialog
-    <div
-      className="bg-foreground/30 fixed inset-0 z-40 flex justify-end backdrop-blur-sm"
-      onClick={onClose}
-    >
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- dialog role is interactive; stopPropagation prevents backdrop dismiss */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        tabIndex={-1}
-        className="bg-card h-full w-full max-w-[480px] overflow-y-auto shadow-2xl"
-        onClick={(ev: React.MouseEvent) => {
-          ev.stopPropagation();
-        }}
-        onKeyDown={(ev: React.KeyboardEvent) => {
-          if (ev.key === "Escape") onClose();
-        }}
-      >
-        <div className="border-border bg-card sticky top-0 flex items-center justify-between border-b px-5 py-3">
-          <div className="flex items-center gap-2">
-            <TypeIcon type={entry.type} size={TYPE_ICON_DRAWER_SIZE} />
-            <span className="font-mono text-[14px] font-semibold">{entry.type}</span>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground"
-            aria-label={t("pages.audit.drawer.close")}
-          >
-            <X size={X_ICON_SIZE} />
-          </button>
+    <RightDrawer
+      open
+      onClose={onClose}
+      title={
+        <div className="flex items-center gap-2">
+          <TypeIcon type={entry.type} size={TYPE_ICON_DRAWER_SIZE} />
+          <span>{entry.type}</span>
         </div>
-        <div className="px-5 py-5">
-          <div className="border-border bg-secondary/30 rounded border p-3 font-mono text-[11px] leading-relaxed whitespace-pre">
-            {jsonText}
-          </div>
-          <div className="mt-3 flex justify-end gap-2">
-            <Button variant="outline" size="sm">
-              <Copy size={COPY_ICON_SIZE} />
-              {t("pages.audit.drawer.copyJson")}
-            </Button>
-            <Button variant="outline" size="sm">
-              <ExternalLink size={COPY_ICON_SIZE} />
-              {t("pages.audit.drawer.openTarget")}
-            </Button>
-          </div>
+      }
+    >
+      <div className="px-5 py-5">
+        <div className="border-border bg-secondary/30 rounded border p-3 font-mono text-[11px] leading-relaxed whitespace-pre">
+          {jsonText}
+        </div>
+        <div className="mt-3 flex justify-end gap-2">
+          <Button variant="outline" size="sm">
+            <Copy size={COPY_ICON_SIZE} />
+            {t("pages.audit.drawer.copyJson")}
+          </Button>
+          <Button variant="outline" size="sm">
+            <ExternalLink size={COPY_ICON_SIZE} />
+            {t("pages.audit.drawer.openTarget")}
+          </Button>
         </div>
       </div>
-    </div>
+    </RightDrawer>
   );
 }
 
@@ -248,7 +229,12 @@ export function AuditPage(): React.JSX.Element {
       {/* Table card */}
       <Card className="overflow-x-auto">
         <div className="min-w-[920px]">
-          <div className="border-border bg-secondary/40 text-muted-foreground grid grid-cols-[110px_minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,1.4fr)_120px_70px_34px] items-center gap-3 border-b px-4 py-2 text-[10.5px] font-medium tracking-wider uppercase">
+          <div
+            className={cn(
+              "border-border bg-secondary/40 text-muted-foreground grid items-center gap-3 border-b px-4 py-2 text-[10.5px] font-medium tracking-wider uppercase",
+              TABLE_COLS,
+            )}
+          >
             <span>{t("pages.audit.table.time")}</span>
             <span>{t("pages.audit.table.type")}</span>
             <span>{t("pages.audit.table.actor")}</span>
@@ -264,7 +250,10 @@ export function AuditPage(): React.JSX.Element {
               onClick={() => {
                 setOpenId(entry.id);
               }}
-              className="border-border/40 hover:bg-secondary/30 grid w-full grid-cols-[110px_minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,1.4fr)_120px_70px_34px] items-center gap-3 border-b px-4 py-2 text-left text-[12px] last:border-b-0"
+              className={cn(
+                "border-border/40 hover:bg-secondary/30 grid w-full items-center gap-3 border-b px-4 py-2 text-left text-[12px] last:border-b-0",
+                TABLE_COLS,
+              )}
             >
               <div className="text-muted-foreground font-mono text-[11px] tabular-nums">
                 {fmtMinAgo(entry.minutesAgo)}

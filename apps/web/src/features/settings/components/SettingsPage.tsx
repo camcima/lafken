@@ -1,5 +1,5 @@
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { AlertTriangle, Check, MoreHorizontal, Plus } from "lucide-react";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/common/Badge";
@@ -393,7 +393,11 @@ function DangerTab(): React.JSX.Element {
 
 export function SettingsPage(): React.JSX.Element {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<ISettingsTab>("workspace");
+  const { tab } = useSearch({ from: "/_protected/settings" });
+  const navigate = useNavigate({ from: "/settings" });
+  const setTab = (next: ISettingsTab): void => {
+    void navigate({ search: { tab: next } });
+  };
 
   const tabs: ITab<ISettingsTab>[] = [
     { id: "workspace", label: t("pages.settings.tabs.workspace") },
