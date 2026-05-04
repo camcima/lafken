@@ -2,6 +2,10 @@ import { Injectable } from "@nestjs/common";
 
 import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
 import { StorageBindingMissingError } from "@/namespaces/domain/errors/storage-binding-missing.error";
+import type {
+  ICreatePolicyVersionInput,
+  ICreatePolicyVersionResult,
+} from "@/namespaces/domain/repositories/namespace-write.repository.port";
 import {
   ICreateNamespaceInput,
   IUpdateNamespaceMetadataInput,
@@ -115,6 +119,12 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
       .executeTakeFirstOrThrow();
 
     return NamespaceDbMapper.toDomain(row);
+  }
+
+  async createPolicyVersion(
+    _input: ICreatePolicyVersionInput,
+  ): Promise<ICreatePolicyVersionResult> {
+    throw new Error("Not implemented yet — Task 3");
   }
 
   private isStorageBindingFkViolation(err: unknown): boolean {

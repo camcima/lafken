@@ -32,9 +32,21 @@ export interface IUpdateNamespaceMetadataInput {
   description: string | null;
 }
 
+export interface ICreatePolicyVersionInput {
+  namespaceId: bigint;
+  policy: ICreateNamespaceInitialPolicyInput;
+  createdBy: string | null;
+}
+
+export interface ICreatePolicyVersionResult {
+  namespace: Namespace;
+  newPolicyVersion: number;
+}
+
 export abstract class NamespaceWriteRepositoryPort {
   abstract createWithInitialPolicy(input: ICreateNamespaceInput): Promise<Namespace>;
   abstract updateMetadata(input: IUpdateNamespaceMetadataInput): Promise<Namespace>;
   abstract archive(slug: string): Promise<Namespace>;
   abstract unarchive(slug: string): Promise<Namespace>;
+  abstract createPolicyVersion(input: ICreatePolicyVersionInput): Promise<ICreatePolicyVersionResult>;
 }

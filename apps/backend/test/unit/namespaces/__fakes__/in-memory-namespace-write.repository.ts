@@ -1,5 +1,9 @@
 import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
 import { StorageBindingMissingError } from "@/namespaces/domain/errors/storage-binding-missing.error";
+import type {
+  ICreatePolicyVersionInput,
+  ICreatePolicyVersionResult,
+} from "@/namespaces/domain/repositories/namespace-write.repository.port";
 import {
   ICreateNamespaceInput,
   IUpdateNamespaceMetadataInput,
@@ -97,5 +101,11 @@ export class InMemoryNamespaceWriteRepository extends NamespaceWriteRepositoryPo
     });
     this.namespaces.set(slug, updated);
     return Promise.resolve(updated);
+  }
+
+  createPolicyVersion(
+    _input: ICreatePolicyVersionInput,
+  ): Promise<ICreatePolicyVersionResult> {
+    return Promise.reject(new Error("Not implemented yet — Task 2"));
   }
 }
