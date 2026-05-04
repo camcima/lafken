@@ -28,6 +28,8 @@ export * from "./presentation/audit/audit-entry-response.dto";
 export * from "./presentation/audit/list-audit-query.dto";
 
 export * from "./presentation/system/storage-binding-response.dto";
+export * from "./presentation/system/create-storage-binding-request.dto";
+export * from "./presentation/system/update-storage-binding-request.dto";
 export * from "./presentation/system/integration-status-response.dto";
 export * from "./presentation/system/system-health-response.dto";
 

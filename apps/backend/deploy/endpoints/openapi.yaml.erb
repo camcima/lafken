@@ -617,6 +617,37 @@ paths:
       summary: List storage bindings
       tags:
         - System
+    post:
+      operationId: SystemController_createStorageBinding_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStorageBindingRequestDTO'
+      responses:
+        '201':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageBindingResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
+          description: ''
+      summary: Create a storage binding
+      tags:
+        - System
   /v1/system/storage-bindings/{name}:
     get:
       operationId: SystemController_getStorageBinding_v1
@@ -642,6 +673,68 @@ paths:
         '404':
           description: ''
       summary: Get a storage binding by name
+      tags:
+        - System
+    patch:
+      operationId: SystemController_updateStorageBinding_v1
+      parameters:
+        - name: name
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStorageBindingRequestDTO'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageBindingResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
+          description: ''
+      summary: Update a storage binding's config
+      tags:
+        - System
+    delete:
+      operationId: SystemController_deleteStorageBinding_v1
+      parameters:
+        - name: name
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '204':
+          description: ''
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
+          description: ''
+      summary: Delete a storage binding
       tags:
         - System
   /v1/system/integrations:
@@ -1349,6 +1442,55 @@ components:
         - adapterType
         - config
         - createdAt
+    ForbiddenErrorResponseDTO:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+          enum:
+            - ForbiddenException
+        status:
+          type: number
+        detail:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+      required:
+        - type
+        - title
+        - status
+        - detail
+        - errors
+    CreateStorageBindingRequestDTO:
+      type: object
+      properties:
+        name:
+          type: string
+          example: lafken-prod
+        adapterType:
+          type: string
+          enum:
+            - gcs
+        config:
+          type: object
+          example:
+            bucket: lafken-dev
+            projectId: lafken-prod-1
+      required:
+        - name
+        - adapterType
+        - config
+    UpdateStorageBindingRequestDTO:
+      type: object
+      properties:
+        config:
+          type: object
+      required:
+        - config
     IntegrationStatusResponseDTO:
       type: object
       properties:
