@@ -432,6 +432,67 @@
       "subtitle": "Each namespace is a policy boundary: retention, allowed types, moderation, required metadata, and per-binding storage.",
       "create": "Create namespace",
       "newNamespace": "New namespace",
+      "form": {
+        "title": "New namespace",
+        "subtitle": "Configure the namespace identity, storage, and policy.",
+        "sections": {
+          "identity": "Identity",
+          "storage": "Storage",
+          "validation": "Validation",
+          "lifecycle": "Lifecycle",
+          "serving": "Serving",
+          "advanced": "Advanced"
+        },
+        "fields": {
+          "slug": "Slug",
+          "slugHelp": "Lowercase letters, digits, and hyphens. Must start and end with a letter or digit.",
+          "displayName": "Display name",
+          "description": "Description (optional)",
+          "storageBinding": "Storage binding",
+          "storageBindingPlaceholder": "Select a storage binding",
+          "maxFileSizeBytes": "Max file size (bytes)",
+          "allowedMimeTypes": "Allowed MIME types",
+          "allowedMimeTypesHelp": "Comma-separated list of MIME types, e.g. image/jpeg, image/png",
+          "virusScanRequired": "Require virus scan",
+          "retentionDays": "Retention (days, optional)",
+          "retentionMode": "Retention mode",
+          "exifHandling": "EXIF handling",
+          "immutable": "Immutable",
+          "servingMode": "Serving mode",
+          "signedUrlTtlSeconds": "Signed URL TTL (seconds, optional)",
+          "signedUrlBucketSize": "Signed URL bucket size (optional)",
+          "contentModeration": "Content moderation config (JSON, optional)",
+          "requiredMetadataSchema": "Required metadata schema (JSON, optional)",
+          "retryConfig": "Retry config (JSON, optional)"
+        },
+        "retentionMode": {
+          "delete": "Delete",
+          "archive": "Archive",
+          "none": "None"
+        },
+        "exifHandling": {
+          "strip": "Strip",
+          "preserve": "Preserve",
+          "extract_then_strip": "Extract then strip"
+        },
+        "servingMode": {
+          "public": "Public",
+          "signed": "Signed",
+          "proxied": "Proxied"
+        },
+        "cancel": "Cancel",
+        "submit": "Create namespace"
+      },
+      "errors": {
+        "noStorageBindings": "No storage bindings configured.",
+        "noStorageBindingsLink": "Create one in System.",
+        "duplicateSlug": "A namespace with this slug already exists.",
+        "invalidSlug": "Use lowercase letters, digits, and hyphens. Must start and end with a letter or digit.",
+        "storageMissing": "The selected storage binding no longer exists.",
+        "storageMissingLink": "Go to System to manage storage bindings.",
+        "invalidJson": "Must be valid JSON or empty.",
+        "generic": "Could not save the namespace. Please try again."
+      },
       "searchPlaceholder": "Search namespaces by slug or display name…",
       "policyVersion": "policy v{{version}}",
       "owner": "owner",
