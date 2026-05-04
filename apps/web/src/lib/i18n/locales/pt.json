@@ -432,6 +432,8 @@
       "subtitle": "Cada namespace é um limite de política: retenção, tipos permitidos, moderação, metadados obrigatórios e armazenamento por binding.",
       "create": "Criar namespace",
       "newNamespace": "Novo namespace",
+      "demoLabel": "(demo)",
+      "archivedBadge": "arquivado",
       "searchPlaceholder": "Buscar namespaces por slug ou nome de exibição…",
       "policyVersion": "política v{{version}}",
       "owner": "proprietário",
@@ -460,6 +462,92 @@
       "empty": {
         "title": "Nenhum namespace ainda",
         "description": "Crie o primeiro namespace para começar."
+      },
+      "actions": {
+        "newNamespace": "+ Novo namespace",
+        "editMetadata": "Editar metadados",
+        "editPolicy": "Editar política",
+        "editPolicyDeferred": "A edição de política chegará na próxima entrega.",
+        "archive": "Arquivar",
+        "unarchive": "Desarquivar"
+      },
+      "form": {
+        "title": "Novo namespace",
+        "subtitle": "Configure a identidade, armazenamento e política do namespace.",
+        "sections": {
+          "identity": "Identidade",
+          "storage": "Armazenamento",
+          "validation": "Validação",
+          "lifecycle": "Ciclo de vida",
+          "serving": "Entrega",
+          "advanced": "Avançado (JSON)"
+        },
+        "fields": {
+          "slug": "Slug",
+          "slugHelp": "Identificador permanente. Letras minúsculas, dígitos e hifens. Não pode ser alterado depois.",
+          "displayName": "Nome de exibição",
+          "description": "Descrição",
+          "storageBinding": "Vinculação de armazenamento",
+          "storageBindingPlaceholder": "Selecionar uma vinculação de armazenamento",
+          "maxFileSizeBytes": "Tamanho máximo do arquivo (bytes)",
+          "allowedMimeTypes": "Tipos MIME permitidos",
+          "allowedMimeTypesHelp": "Separados por vírgula. Por exemplo: image/jpeg, image/png",
+          "virusScanRequired": "Exigir verificação de vírus",
+          "retentionDays": "Retenção (dias, vazio = indefinido)",
+          "retentionMode": "Modo de retenção",
+          "exifHandling": "Tratamento de EXIF",
+          "immutable": "Imutável (ativos não poderão ser excluídos)",
+          "servingMode": "Modo de entrega",
+          "signedUrlTtlSeconds": "TTL da URL assinada (segundos)",
+          "signedUrlBucketSize": "Tamanho do bucket de URL assinada (segundos)",
+          "contentModeration": "Configuração de moderação de conteúdo (JSON)",
+          "requiredMetadataSchema": "Esquema de metadados obrigatório (JSON)",
+          "retryConfig": "Configuração de tentativas (JSON)"
+        },
+        "retentionMode": {
+          "delete": "Excluir",
+          "archive": "Arquivar",
+          "none": "Nenhum"
+        },
+        "exifHandling": {
+          "strip": "Remover",
+          "preserve": "Preservar",
+          "extract_then_strip": "Extrair e remover"
+        },
+        "servingMode": {
+          "public": "Público",
+          "signed": "Assinado",
+          "proxied": "Proxy"
+        },
+        "cancel": "Cancelar",
+        "submit": "Criar namespace"
+      },
+      "edit": {
+        "title": "Editar namespace",
+        "submit": "Salvar",
+        "cancel": "Cancelar"
+      },
+      "errors": {
+        "noStorageBindings": "Nenhuma vinculação de armazenamento configurada.",
+        "noStorageBindingsLink": "Crie uma em Sistema.",
+        "duplicateSlug": "Já existe um namespace com este slug.",
+        "invalidSlug": "Use letras minúsculas, dígitos e hifens. Deve começar e terminar com uma letra ou dígito.",
+        "storageMissing": "A vinculação de armazenamento selecionada não existe mais.",
+        "storageMissingLink": "Ir para Sistema para gerenciar vinculações de armazenamento.",
+        "invalidJson": "Deve ser JSON válido ou estar vazio.",
+        "generic": "Não foi possível salvar o namespace.",
+        "namespaceDeleted": "Este namespace foi excluído. Atualize a página.",
+        "displayNameRequired": "O nome de exibição é obrigatório.",
+        "displayNameTooLong": "O nome de exibição deve ter no máximo 200 caracteres.",
+        "descriptionTooLong": "A descrição deve ter no máximo 2000 caracteres."
+      },
+      "archive": {
+        "confirmArchiveTitle": "Arquivar {{name}}?",
+        "confirmArchiveBody": "Os ativos existentes continuarão acessíveis. Novos uploads serão rejeitados quando o endpoint de upload for habilitado.",
+        "confirmUnarchiveTitle": "Desarquivar {{name}}?",
+        "confirmUnarchiveBody": "O namespace voltará a aceitar novos uploads.",
+        "confirm": "Confirmar",
+        "cancel": "Cancelar"
       },
       "drawer": {
         "caption": "Namespace",
