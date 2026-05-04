@@ -531,7 +531,9 @@
         "title": "No namespaces yet",
         "description": "Create the first namespace to get started."
       },
+      "demoLabel": "(demo)",
       "actions": {
+        "newNamespace": "+ New namespace",
         "editMetadata": "Edit metadata",
         "editPolicy": "Edit policy",
         "editPolicyDeferred": "Policy editing arrives in the next slice.",
