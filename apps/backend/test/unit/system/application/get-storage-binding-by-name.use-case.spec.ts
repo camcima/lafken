@@ -25,9 +25,8 @@ describe("GetStorageBindingByNameUseCase", () => {
     const binding = StorageBinding.fromProps({
       id: 1n,
       name: "default",
-      adapterType: "local",
+      adapterType: "gcs",
       config: {},
-      encryptedCreds: null,
       createdAt: new Date("2026-01-01T00:00:00Z"),
       updatedAt: new Date("2026-01-01T00:00:00Z"),
     });
@@ -35,6 +34,6 @@ describe("GetStorageBindingByNameUseCase", () => {
 
     const result = await useCase.execute({ name: "default" });
     expect(result.props.name).toBe("default");
-    expect(result.props.adapterType).toBe("local");
+    expect(result.props.adapterType).toBe("gcs");
   });
 });

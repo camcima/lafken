@@ -1,9 +1,8 @@
 export interface IStorageBindingProps {
   id: bigint;
   name: string;
-  adapterType: "gcs" | "s3" | "local";
+  adapterType: "gcs";
   config: Record<string, unknown>;
-  encryptedCreds: Buffer | null;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -188,7 +188,6 @@ export interface StorageBindings {
   adapterType: string;
   config: Json;
   createdAt: Generated<Timestamp>;
-  encryptedCreds: string | null;
   id: Generated<Int8>;
   name: string;
   updatedAt: Generated<Timestamp>;

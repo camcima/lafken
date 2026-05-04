@@ -5,40 +5,37 @@ import { StorageBinding } from "@/system/domain/entities/storage-binding.entity"
 import { StorageBindingResponseMapper } from "./storage-binding.response-mapper";
 
 describe("StorageBindingResponseMapper", () => {
-  it("maps a storage binding without encrypted creds to encryptedCredsPresent=false", () => {
+  it("maps a GCS storage binding to its response DTO with all fields", () => {
     const binding = StorageBinding.fromProps({
       id: 1n,
-      name: "default",
-      adapterType: "local",
-      config: { path: "/tmp" },
-      encryptedCreds: null,
+      name: "gcs-prod",
+      adapterType: "gcs",
+      config: { bucket: "my-bucket" },
       createdAt: new Date("2026-01-01T00:00:00Z"),
       updatedAt: new Date("2026-01-01T00:00:00Z"),
     });
 
     const dto = StorageBindingResponseMapper.fromDomain(binding);
 
-    expect(dto.name).toBe("default");
-    expect(dto.adapterType).toBe("local");
-    expect(dto.config).toEqual({ path: "/tmp" });
-    expect(dto.encryptedCredsPresent).toBe(false);
+    expect(dto.name).toBe("gcs-prod");
+    expect(dto.adapterType).toBe("gcs");
+    expect(dto.config).toEqual({ bucket: "my-bucket" });
     expect(dto.createdAt).toBe("2026-01-01T00:00:00.000Z");
   });
 
-  it("maps a storage binding with encrypted creds to encryptedCredsPresent=true without exposing the blob", () => {
+  it("does not expose any credential field on the DTO", () => {
     const binding = StorageBinding.fromProps({
       id: 2n,
-      name: "gcs-prod",
+      name: "gcs-staging",
       adapterType: "gcs",
-      config: { bucket: "my-bucket" },
-      encryptedCreds: Buffer.from("secret"),
-      createdAt: new Date("2026-02-01T00:00:00Z"),
-      updatedAt: new Date("2026-02-01T00:00:00Z"),
+      config: { bucket: "staging-bucket" },
+      createdAt: new Date("2026-06-01T00:00:00Z"),
+      updatedAt: new Date("2026-06-01T00:00:00Z"),
     });
 
     const dto = StorageBindingResponseMapper.fromDomain(binding);
 
-    expect(dto.encryptedCredsPresent).toBe(true);
+    expect("encryptedCredsPresent" in dto).toBe(false);
     expect("encryptedCreds" in dto).toBe(false);
   });
 });

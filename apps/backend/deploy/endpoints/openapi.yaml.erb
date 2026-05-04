@@ -15,6 +15,697 @@ paths:
         - {}
       tags:
         - Health
+  /v1/namespaces:
+    get:
+      operationId: NamespacesController_list_v1
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            default: 20
+            type: number
+        - name: order
+          required: false
+          in: query
+          schema:
+            default:
+              - desc
+            type: array
+            items:
+              type: string
+              enum:
+                - desc
+                - asc
+        - name: orderBy
+          required: false
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNamespacesResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+      summary: List namespaces
+      tags:
+        - Namespaces
+  /v1/namespaces/{slug}:
+    get:
+      operationId: NamespacesController_getOne_v1
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NamespaceResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+      summary: Get a namespace by slug
+      tags:
+        - Namespaces
+  /v1/namespaces/{slug}/policies:
+    get:
+      operationId: NamespacesController_listPolicies_v1
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NamespacePolicyResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+      summary: List policy versions for a namespace
+      tags:
+        - Namespaces
+  /v1/namespaces/{slug}/presets:
+    get:
+      operationId: NamespacesController_listPresets_v1
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NamespacePresetResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+      summary: List active presets for a namespace
+      tags:
+        - Namespaces
+  /v1/assets:
+    get:
+      operationId: AssetsController_list_v1
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            default: 20
+            type: number
+        - name: order
+          required: false
+          in: query
+          schema:
+            default:
+              - desc
+            type: array
+            items:
+              type: string
+              enum:
+                - desc
+                - asc
+        - name: orderBy
+          required: false
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: namespaceSlug
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: states
+          required: false
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - pending
+                - uploaded
+                - processing
+                - ready
+                - rejected
+                - quarantined_virus
+                - quarantined_moderation
+                - processing_failed
+                - expired
+                - deleted
+        - name: uploadedBy
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: owningRecordType
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: owningRecordId
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: uploadedFrom
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: uploadedTo
+          required: false
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAssetResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+      summary: List assets
+      tags:
+        - Assets
+  /v1/assets/{publicId}:
+    get:
+      operationId: AssetsController_getOne_v1
+      parameters:
+        - name: publicId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+      summary: Get an asset by public ID
+      tags:
+        - Assets
+  /v1/assets/{publicId}/state-transitions:
+    get:
+      operationId: AssetsController_listStateTransitions_v1
+      parameters:
+        - name: publicId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssetStateTransitionResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+      summary: List state transitions for an asset
+      tags:
+        - Assets
+  /v1/assets/{publicId}/analyses:
+    get:
+      operationId: AssetsController_listAnalyses_v1
+      parameters:
+        - name: publicId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssetAnalysisResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+      summary: List analyses for an asset
+      tags:
+        - Assets
+  /v1/assets/{publicId}/processing-job:
+    get:
+      operationId: AssetsController_getProcessingJob_v1
+      parameters:
+        - name: publicId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessingJobResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+      summary: Get the processing job for an asset
+      tags:
+        - Assets
+  /v1/quarantine:
+    get:
+      operationId: QuarantineController_list_v1
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            default: 20
+            type: number
+        - name: order
+          required: false
+          in: query
+          schema:
+            default:
+              - desc
+            type: array
+            items:
+              type: string
+              enum:
+                - desc
+                - asc
+        - name: orderBy
+          required: false
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: kind
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - virus
+              - moderation
+        - name: namespaceSlug
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: flaggedFrom
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: flaggedTo
+          required: false
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedQuarantinedAssetResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+      summary: List quarantined assets
+      tags:
+        - Quarantine
+  /v1/legal-holds:
+    get:
+      operationId: LegalHoldsController_list_v1
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            default: 20
+            type: number
+        - name: order
+          required: false
+          in: query
+          schema:
+            default:
+              - desc
+            type: array
+            items:
+              type: string
+              enum:
+                - desc
+                - asc
+        - name: orderBy
+          required: false
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLegalHoldResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+      summary: List legal holds
+      tags:
+        - Legal holds
+  /v1/legal-holds/{id}:
+    get:
+      operationId: LegalHoldsController_getOne_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LegalHoldResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+      summary: Get legal hold by id
+      tags:
+        - Legal holds
+  /v1/audit:
+    get:
+      operationId: AuditController_list_v1
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            default: 20
+            type: number
+        - name: order
+          required: false
+          in: query
+          schema:
+            default:
+              - desc
+            type: array
+            items:
+              type: string
+              enum:
+                - desc
+                - asc
+        - name: orderBy
+          required: false
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: principal
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: action
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: entityType
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: entityId
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: occurredFrom
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: occurredTo
+          required: false
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditEntryResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+      summary: List audit log entries
+      tags:
+        - Audit
+  /v1/system/storage-bindings:
+    get:
+      operationId: SystemController_listStorageBindings_v1
+      parameters: []
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StorageBindingResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+      summary: List storage bindings
+      tags:
+        - System
+  /v1/system/storage-bindings/{name}:
+    get:
+      operationId: SystemController_getStorageBinding_v1
+      parameters:
+        - name: name
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageBindingResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+      summary: Get a storage binding by name
+      tags:
+        - System
+  /v1/system/integrations:
+    get:
+      operationId: SystemController_listIntegrations_v1
+      parameters: []
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IntegrationStatusResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+      summary: List integration adapter statuses
+      tags:
+        - System
+  /v1/system/health:
+    get:
+      operationId: SystemController_health_v1
+      parameters: []
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemHealthResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+      summary: System health snapshot
+      tags:
+        - System
+  /v1/dashboard/overview:
+    get:
+      operationId: DashboardController_getOverview_v1
+      parameters: []
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardOverviewResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+      summary: Dashboard overview — counts and system health snapshot
+      tags:
+        - Dashboard
 info:
   title: BE - Template eMantto Project
   description: Backend API for template-emantto-project monorepo
@@ -101,6 +792,652 @@ components:
         - info
         - error
         - details
+    UnauthorizedErrorResponseDTO:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+          enum:
+            - UnauthorizedException
+        status:
+          type: number
+        detail:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+      required:
+        - type
+        - title
+        - status
+        - detail
+        - errors
+    NamespaceResponseDTO:
+      type: object
+      properties:
+        slug:
+          type: string
+        displayName:
+          type: string
+        description:
+          type: string
+        currentPolicyVersion:
+          type: number
+        storageBindingName:
+          type: string
+        archivedAt:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - slug
+        - displayName
+        - currentPolicyVersion
+        - storageBindingName
+        - createdAt
+        - updatedAt
+    PaginatedNamespacesResponseDTO:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/NamespaceResponseDTO'
+        total:
+          type: number
+        limit:
+          type: number
+        page:
+          type: number
+        lastPage:
+          type: number
+      required:
+        - data
+        - total
+        - limit
+        - page
+        - lastPage
+    NamespacePolicyResponseDTO:
+      type: object
+      properties:
+        version:
+          type: number
+        retentionDays:
+          type: number
+        retentionMode:
+          type: string
+          enum:
+            - delete
+            - archive
+            - none
+        maxFileSizeBytes:
+          type: number
+        allowedMimeTypes:
+          type: array
+          items:
+            type: string
+        exifHandling:
+          type: string
+          enum:
+            - strip
+            - preserve
+            - extract_then_strip
+        virusScanRequired:
+          type: boolean
+        contentModeration:
+          type: object
+        requiredMetadataSchema:
+          type: object
+        immutable:
+          type: boolean
+        servingMode:
+          type: string
+          enum:
+            - public
+            - signed
+            - proxied
+        signedUrlTtlSeconds:
+          type: number
+        signedUrlBucketSize:
+          type: number
+        retryConfig:
+          type: object
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - version
+        - retentionMode
+        - maxFileSizeBytes
+        - allowedMimeTypes
+        - exifHandling
+        - virusScanRequired
+        - immutable
+        - servingMode
+        - createdAt
+    NamespacePresetResponseDTO:
+      type: object
+      properties:
+        name:
+          type: string
+        version:
+          type: number
+        transformation:
+          type: object
+        cdnMaxAge:
+          type: number
+        signedUrlTtl:
+          type: number
+        preGenerate:
+          type: boolean
+        requiredPermission:
+          type: string
+        description:
+          type: string
+        active:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - name
+        - version
+        - transformation
+        - preGenerate
+        - active
+        - createdAt
+    AssetResponseDTO:
+      type: object
+      properties:
+        publicId:
+          type: string
+        namespaceSlug:
+          type: string
+        policyVersion:
+          type: number
+        state:
+          type: string
+          enum:
+            - pending
+            - uploaded
+            - processing
+            - ready
+            - rejected
+            - quarantined_virus
+            - quarantined_moderation
+            - processing_failed
+            - expired
+            - deleted
+        stateReason:
+          type: string
+        sizeBytes:
+          type: number
+        mimeType:
+          type: string
+        declaredMimeType:
+          type: string
+        width:
+          type: number
+        height:
+          type: number
+        contentHashHex:
+          type: string
+        uploadedBy:
+          type: string
+        owningRecordType:
+          type: string
+        owningRecordId:
+          type: string
+        customMetadata:
+          type: object
+        captureContext:
+          type: object
+        legalHold:
+          type: boolean
+        confirmedAt:
+          type: string
+        stateChangedAt:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - publicId
+        - namespaceSlug
+        - policyVersion
+        - state
+        - customMetadata
+        - legalHold
+        - stateChangedAt
+        - createdAt
+    PaginatedAssetResponseDTO:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetResponseDTO'
+        total:
+          type: number
+        limit:
+          type: number
+        page:
+          type: number
+        lastPage:
+          type: number
+      required:
+        - data
+        - total
+        - limit
+        - page
+        - lastPage
+    AssetStateTransitionResponseDTO:
+      type: object
+      properties:
+        fromState:
+          type: string
+          enum:
+            - pending
+            - uploaded
+            - processing
+            - ready
+            - rejected
+            - quarantined_virus
+            - quarantined_moderation
+            - processing_failed
+            - expired
+            - deleted
+        toState:
+          type: string
+          enum:
+            - pending
+            - uploaded
+            - processing
+            - ready
+            - rejected
+            - quarantined_virus
+            - quarantined_moderation
+            - processing_failed
+            - expired
+            - deleted
+        reason:
+          type: string
+        metadata:
+          type: object
+        occurredBy:
+          type: string
+        occurredAt:
+          type: string
+      required:
+        - toState
+        - occurredAt
+    AssetAnalysisResponseDTO:
+      type: object
+      properties:
+        analyzer:
+          type: string
+        analyzerVersion:
+          type: string
+        findings:
+          type: object
+        decision:
+          type: string
+          enum:
+            - pass
+            - flag
+            - quarantine
+            - error
+        occurredAt:
+          type: string
+      required:
+        - analyzer
+        - findings
+        - occurredAt
+    ProcessingJobResponseDTO:
+      type: object
+      properties:
+        state:
+          type: string
+          enum:
+            - claimed
+            - released
+            - completed
+        workerId:
+          type: string
+        currentStep:
+          type: string
+        attemptNumber:
+          type: number
+        notBefore:
+          type: string
+        lastError:
+          type: string
+        lastErrorAt:
+          type: string
+        heartbeatAt:
+          type: string
+        claimedAt:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - state
+        - attemptNumber
+        - createdAt
+    QuarantinedAssetResponseDTO:
+      type: object
+      properties:
+        publicId:
+          type: string
+        namespaceSlug:
+          type: string
+        policyVersion:
+          type: number
+        state:
+          type: string
+          enum:
+            - pending
+            - uploaded
+            - processing
+            - ready
+            - rejected
+            - quarantined_virus
+            - quarantined_moderation
+            - processing_failed
+            - expired
+            - deleted
+        stateReason:
+          type: string
+        sizeBytes:
+          type: number
+        mimeType:
+          type: string
+        declaredMimeType:
+          type: string
+        width:
+          type: number
+        height:
+          type: number
+        contentHashHex:
+          type: string
+        uploadedBy:
+          type: string
+        owningRecordType:
+          type: string
+        owningRecordId:
+          type: string
+        customMetadata:
+          type: object
+        captureContext:
+          type: object
+        legalHold:
+          type: boolean
+        confirmedAt:
+          type: string
+        stateChangedAt:
+          type: string
+        createdAt:
+          type: string
+        quarantineKind:
+          type: string
+          enum:
+            - virus
+            - moderation
+        flaggedAnalyzer:
+          type: string
+        flaggedCategory:
+          type: string
+        flaggedScore:
+          type: number
+        flaggedAt:
+          type: string
+      required:
+        - publicId
+        - namespaceSlug
+        - policyVersion
+        - state
+        - customMetadata
+        - legalHold
+        - stateChangedAt
+        - createdAt
+        - quarantineKind
+        - flaggedAt
+    PaginatedQuarantinedAssetResponseDTO:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuarantinedAssetResponseDTO'
+        total:
+          type: number
+        limit:
+          type: number
+        page:
+          type: number
+        lastPage:
+          type: number
+      required:
+        - data
+        - total
+        - limit
+        - page
+        - lastPage
+    LegalHoldResponseDTO:
+      type: object
+      properties:
+        id:
+          type: string
+        caseReference:
+          type: string
+        description:
+          type: string
+        scopeSummary:
+          type: string
+        placedBy:
+          type: string
+        placedAt:
+          type: string
+        liftedBy:
+          type: string
+        liftedAt:
+          type: string
+        liftReason:
+          type: string
+        active:
+          type: boolean
+        affectedAssetCount:
+          type: number
+      required:
+        - id
+        - caseReference
+        - description
+        - scopeSummary
+        - placedBy
+        - placedAt
+        - active
+        - affectedAssetCount
+    PaginatedLegalHoldResponseDTO:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/LegalHoldResponseDTO'
+        total:
+          type: number
+        limit:
+          type: number
+        page:
+          type: number
+        lastPage:
+          type: number
+      required:
+        - data
+        - total
+        - limit
+        - page
+        - lastPage
+    AuditEntryResponseDTO:
+      type: object
+      properties:
+        id:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+        action:
+          type: string
+        occurredBy:
+          type: string
+        beforeState:
+          type: object
+        afterState:
+          type: object
+        reason:
+          type: string
+        occurredAt:
+          type: string
+      required:
+        - id
+        - entityType
+        - entityId
+        - action
+        - occurredBy
+        - occurredAt
+    PaginatedAuditEntryResponseDTO:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEntryResponseDTO'
+        total:
+          type: number
+        limit:
+          type: number
+        page:
+          type: number
+        lastPage:
+          type: number
+      required:
+        - data
+        - total
+        - limit
+        - page
+        - lastPage
+    StorageBindingResponseDTO:
+      type: object
+      properties:
+        name:
+          type: string
+        adapterType:
+          type: string
+          enum:
+            - gcs
+        config:
+          type: object
+        createdAt:
+          type: string
+      required:
+        - name
+        - adapterType
+        - config
+        - createdAt
+    IntegrationStatusResponseDTO:
+      type: object
+      properties:
+        port:
+          type: string
+        adapter:
+          type: string
+        status:
+          type: string
+          enum:
+            - configured
+            - not_configured
+        detail:
+          type: string
+      required:
+        - port
+        - adapter
+        - status
+    SystemHealthIndicatorDTO:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum:
+            - ok
+            - degraded
+            - failing
+            - unknown
+        detail:
+          type: string
+      required:
+        - name
+        - status
+    SystemHealthResponseDTO:
+      type: object
+      properties:
+        overall:
+          type: string
+          enum:
+            - ok
+            - degraded
+            - failing
+            - unknown
+        indicators:
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemHealthIndicatorDTO'
+        integrations:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationStatusResponseDTO'
+      required:
+        - overall
+        - indicators
+        - integrations
+    DashboardCountsDTO:
+      type: object
+      properties:
+        totalAssets:
+          type: number
+        inFlight:
+          type: number
+        queueDepth:
+          type: number
+        quarantine:
+          type: number
+        legalHolds:
+          type: number
+        failedProcessing:
+          type: number
+      required:
+        - totalAssets
+        - inFlight
+        - queueDepth
+        - quarantine
+        - legalHolds
+        - failedProcessing
+    DashboardOverviewResponseDTO:
+      type: object
+      properties:
+        counts:
+          $ref: '#/components/schemas/DashboardCountsDTO'
+        health:
+          $ref: '#/components/schemas/SystemHealthResponseDTO'
+      required:
+        - counts
+        - health
 x-google-api-management:
   backends:
     backend:

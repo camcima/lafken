@@ -4,14 +4,11 @@ export class StorageBindingResponseDTO {
   @ApiProperty()
   name!: string;
 
-  @ApiProperty({ enum: ["gcs", "s3", "local"] })
-  adapterType!: "gcs" | "s3" | "local";
+  @ApiProperty({ enum: ["gcs"] })
+  adapterType!: "gcs";
 
   @ApiProperty({ type: Object })
   config!: Record<string, unknown>;
-
-  @ApiProperty()
-  encryptedCredsPresent!: boolean;
 
   @ApiProperty()
   createdAt!: string;

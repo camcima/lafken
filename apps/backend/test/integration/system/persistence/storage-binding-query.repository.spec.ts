@@ -39,24 +39,24 @@ describe("StorageBindingQueryRepository", () => {
     expect(result).toBeNull();
   });
 
-  it("retrieves a storage binding by name", async () => {
+  it("retrieves a GCS storage binding by name", async () => {
     await db.connection
       .insertInto("storage_bindings")
-      .values({ name: "test-binding", adapter_type: "local", config: {} })
+      .values({ name: "test-binding", adapter_type: "gcs", config: { bucket: "my-bucket" } })
       .execute();
 
     const found = await repository.findByName("test-binding");
     expect(found).not.toBeNull();
     expect(found!.props.name).toBe("test-binding");
-    expect(found!.props.adapterType).toBe("local");
-    expect(found!.props.encryptedCreds).toBeNull();
+    expect(found!.props.adapterType).toBe("gcs");
+    expect(found!.props.config).toEqual({ bucket: "my-bucket" });
   });
 
   it("lists all storage bindings ordered by name", async () => {
     await db.connection
       .insertInto("storage_bindings")
       .values([
-        { name: "z-binding", adapter_type: "s3", config: {} },
+        { name: "z-binding", adapter_type: "gcs", config: {} },
         { name: "a-binding", adapter_type: "gcs", config: {} },
       ])
       .execute();

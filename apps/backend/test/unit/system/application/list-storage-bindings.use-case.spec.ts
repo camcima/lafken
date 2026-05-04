@@ -23,9 +23,8 @@ describe("ListStorageBindingsUseCase", () => {
     const binding = StorageBinding.fromProps({
       id: 1n,
       name: "default",
-      adapterType: "local",
+      adapterType: "gcs",
       config: {},
-      encryptedCreds: null,
       createdAt: new Date("2026-01-01T00:00:00Z"),
       updatedAt: new Date("2026-01-01T00:00:00Z"),
     });
