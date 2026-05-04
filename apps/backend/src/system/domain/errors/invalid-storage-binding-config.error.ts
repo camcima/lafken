@@ -1,5 +1,3 @@
-import type { ZodIssue } from "zod";
-
 import { ValidationError } from "@/shared/kernel/domain/errors/validation-error.interface";
 
 export interface IStorageBindingConfigViolation {
@@ -9,15 +7,10 @@ export interface IStorageBindingConfigViolation {
 }
 
 export class InvalidStorageBindingConfigError extends ValidationError {
-  constructor(issues: ZodIssue[]) {
-    const violations: IStorageBindingConfigViolation[] = issues.map((issue) => ({
-      path: issue.path.join("."),
-      message: issue.message,
-      code: issue.code,
-    }));
+  constructor(props: { violations: IStorageBindingConfigViolation[] }) {
     super({
       message: "Storage binding config failed validation",
-      params: { violations },
+      params: props,
     });
   }
 }

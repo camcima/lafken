@@ -7,7 +7,7 @@ export class StorageBindingName {
 
   static fromString(value: string): StorageBindingName {
     if (!NAME_PATTERN.test(value)) {
-      throw new InvalidStorageBindingNameError(value);
+      throw new InvalidStorageBindingNameError({ value });
     }
     return new StorageBindingName(value);
   }
