@@ -747,7 +747,43 @@
       "title": "System status",
       "subtitle": "prod · sa-east-1 · refresh 30s · last anchor 12s ago",
       "publicStatusPage": "Public status page",
-      "storageBindings": "Storage bindings",
+      "storageBindings": {
+        "title": "Storage bindings",
+        "addBinding": "Add binding",
+        "edit": "Edit",
+        "delete": "Delete",
+        "demoLabel": "(demo)",
+        "real": {
+          "bucket": "Bucket",
+          "projectId": "Project ID",
+          "createdAt": "Created"
+        },
+        "deleteConfirm": {
+          "title": "Delete binding {{name}}?",
+          "body": "This cannot be undone. The binding will be removed; the bucket itself is not affected.",
+          "confirm": "Delete",
+          "cancel": "Cancel"
+        },
+        "form": {
+          "createTitle": "Add storage binding",
+          "editTitle": "Edit storage binding",
+          "name": "Name",
+          "nameHelp": "Lowercase letters, digits, and hyphens. Must start and end with a letter or digit.",
+          "adapterType": "Adapter",
+          "bucket": "Bucket",
+          "bucketHelp": "GCS bucket name. Lafken will not create the bucket — it must already exist.",
+          "projectId": "GCP project ID",
+          "prefix": "Prefix (optional)",
+          "submit": "Save",
+          "cancel": "Cancel"
+        },
+        "errors": {
+          "bucketNotFound": "The bucket \"{{bucket}}\" does not exist. Lafken does not create buckets — please create it first.",
+          "duplicateName": "A binding with this name already exists.",
+          "validationFailed": "Please fix the highlighted fields.",
+          "generic": "Could not save the binding."
+        }
+      },
       "integrations": "Integrations",
       "health": "System health",
       "noStorageBindings": "No storage bindings configured",

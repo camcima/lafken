@@ -1,11 +1,16 @@
-// Slice 0: BE returns empty arrays; rendering against typed demo data
-import { ExternalLink } from "lucide-react";
-import React from "react";
+// Slice 1: SystemPage now reads real storage bindings via the BE; falls back
+// to a typed demo card while the list is empty.
+import type { StorageBindingResponseDTO } from "@shared/backend-api";
+import { ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/common/Button";
 import { Card, CardHeader, CardMeta, CardTitle } from "@/components/common/Card";
 import { Sparkline } from "@/components/common/Sparkline";
+import { DeleteStorageBindingDialog } from "@/features/system/components/DeleteStorageBindingDialog";
+import { StorageBindingDrawer } from "@/features/system/components/StorageBindingDrawer";
+import { useStorageBindings } from "@/features/system/hooks/useSystem";
 import {
   DEMO_QUEUE_SPARKS,
   DEMO_QUEUES,
@@ -17,11 +22,13 @@ import { cn } from "@/lib/utils";
 
 // ── Constants ─────────────────────────────────────────────
 const ICON_SM = 13;
+const ICON_XS = 12;
 const PROGRESS_WARN = 60;
 const PROGRESS_ALERT = 80;
 const QUEUE_DEPTH_WARN = 1000;
 const QUEUE_DEPTH_ALERT = 4000;
 const P95_WARN = 2000;
+const ISO_DATE_LENGTH = 10;
 
 // ── Demo storage bindings ─────────────────────────────────
 interface IStorageBinding {
@@ -204,16 +211,129 @@ function WorkerCard({ w: worker }: { w: DemoWorker }): React.JSX.Element {
   );
 }
 
+interface IRealStorageBindingRowProps {
+  binding: StorageBindingResponseDTO;
+  onEdit: (binding: StorageBindingResponseDTO) => void;
+  onDelete: (binding: StorageBindingResponseDTO) => void;
+}
+
+function formatCreatedAt(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toISOString().slice(0, ISO_DATE_LENGTH);
+}
+
+function RealStorageBindingRow({
+  binding,
+  onEdit,
+  onDelete,
+}: IRealStorageBindingRowProps): React.JSX.Element {
+  const { t } = useTranslation();
+  const config = binding.config ?? {};
+  const bucket = typeof config.bucket === "string" ? config.bucket : "—";
+  const projectId = typeof config.projectId === "string" ? config.projectId : "—";
+
+  return (
+    <div className="border-border/40 flex items-start justify-between gap-3 border-b px-5 py-3 last:border-b-0">
+      <div className="min-w-0 flex-1">
+        <div className="font-mono text-[12.5px] font-semibold">{binding.name}</div>
+        <div className="text-muted-foreground mt-1 grid grid-cols-1 gap-x-3 gap-y-0.5 font-mono text-[11px] sm:grid-cols-3">
+          <span className="truncate">
+            <span className="text-muted-foreground/80">
+              {t("pages.system.storageBindings.real.bucket")}:
+            </span>{" "}
+            {bucket}
+          </span>
+          <span className="truncate">
+            <span className="text-muted-foreground/80">
+              {t("pages.system.storageBindings.real.projectId")}:
+            </span>{" "}
+            {projectId}
+          </span>
+          <span className="truncate">
+            <span className="text-muted-foreground/80">
+              {t("pages.system.storageBindings.real.createdAt")}:
+            </span>{" "}
+            {formatCreatedAt(binding.createdAt)}
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            onEdit(binding);
+          }}
+        >
+          <Pencil size={ICON_XS} />
+          {t("pages.system.storageBindings.edit")}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            onDelete(binding);
+          }}
+        >
+          <Trash2 size={ICON_XS} />
+          {t("pages.system.storageBindings.delete")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────
 
 export function SystemPage(): React.JSX.Element {
   const { t } = useTranslation();
+  const bindingsQuery = useStorageBindings();
+  const bindings: StorageBindingResponseDTO[] = bindingsQuery.data ?? [];
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState<"create" | "edit">("create");
+  const [editingBinding, setEditingBinding] = useState<StorageBindingResponseDTO | undefined>(
+    undefined,
+  );
+
+  const [deletingBinding, setDeletingBinding] = useState<StorageBindingResponseDTO | undefined>(
+    undefined,
+  );
+
+  function openCreateDrawer(): void {
+    setDrawerMode("create");
+    setEditingBinding(undefined);
+    setDrawerOpen(true);
+  }
+
+  function openEditDrawer(binding: StorageBindingResponseDTO): void {
+    setDrawerMode("edit");
+    setEditingBinding(binding);
+    setDrawerOpen(true);
+  }
+
+  function closeDrawer(): void {
+    setDrawerOpen(false);
+  }
+
+  function openDeleteDialog(binding: StorageBindingResponseDTO): void {
+    setDeletingBinding(binding);
+  }
+
+  function closeDeleteDialog(): void {
+    setDeletingBinding(undefined);
+  }
 
   const overallStatus: "ok" | "warn" | "degraded" = DEMO_QUEUES.some((q) => q.trend === "alert")
     ? "degraded"
     : DEMO_QUEUES.some((q) => q.trend === "warn")
       ? "warn"
       : "ok";
+
+  const hasRealBindings = bindings.length > 0;
 
   return (
     <div className="space-y-4">
@@ -260,38 +380,64 @@ export function SystemPage(): React.JSX.Element {
         {/* Storage */}
         <Card>
           <CardHeader>
-            <CardTitle>{t("pages.system.storage.title")}</CardTitle>
-            <CardMeta>{t("pages.system.storage.meta")}</CardMeta>
+            <CardTitle>
+              {t("pages.system.storageBindings.title")}
+              {!hasRealBindings ? (
+                <span className="text-muted-foreground ml-2 text-[10.5px] font-normal">
+                  {t("pages.system.storageBindings.demoLabel")}
+                </span>
+              ) : null}
+            </CardTitle>
+            <div className="ml-auto flex items-center gap-2">
+              <CardMeta className="ml-0">{t("pages.system.storage.meta")}</CardMeta>
+              <Button type="button" variant="outline" size="sm" onClick={openCreateDrawer}>
+                <Plus size={ICON_XS} />
+                {t("pages.system.storageBindings.addBinding")}
+              </Button>
+            </div>
           </CardHeader>
-          <div className="space-y-3 px-5 py-4">
-            {DEMO_STORAGE_BINDINGS.map((b) => (
-              <div key={b.name}>
-                <div className="flex justify-between text-[12px]">
-                  <span className="font-mono">{b.name}</span>
-                  <span className="text-muted-foreground font-mono">{b.delta}</span>
+          {hasRealBindings ? (
+            <div className="py-1">
+              {bindings.map((binding) => (
+                <RealStorageBindingRow
+                  key={binding.name}
+                  binding={binding}
+                  onEdit={openEditDrawer}
+                  onDelete={openDeleteDialog}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3 px-5 py-4">
+              {DEMO_STORAGE_BINDINGS.map((b) => (
+                <div key={b.name}>
+                  <div className="flex justify-between text-[12px]">
+                    <span className="font-mono">{b.name}</span>
+                    <span className="text-muted-foreground font-mono">{b.delta}</span>
+                  </div>
+                  <div className="bg-secondary mt-1 h-2 overflow-hidden rounded">
+                    <div
+                      className={cn(
+                        "h-full",
+                        b.pct > PROGRESS_ALERT
+                          ? "bg-alert"
+                          : b.pct > PROGRESS_WARN
+                            ? "bg-warn"
+                            : "bg-latam-indigo",
+                      )}
+                      style={{ width: `${b.pct}%` }}
+                    />
+                  </div>
+                  <div className="text-muted-foreground mt-1 flex justify-between font-mono text-[10.5px]">
+                    <span>{b.region}</span>
+                    <span>
+                      {b.used} / {b.quota}
+                    </span>
+                  </div>
                 </div>
-                <div className="bg-secondary mt-1 h-2 overflow-hidden rounded">
-                  <div
-                    className={cn(
-                      "h-full",
-                      b.pct > PROGRESS_ALERT
-                        ? "bg-alert"
-                        : b.pct > PROGRESS_WARN
-                          ? "bg-warn"
-                          : "bg-latam-indigo",
-                    )}
-                    style={{ width: `${b.pct}%` }}
-                  />
-                </div>
-                <div className="text-muted-foreground mt-1 flex justify-between font-mono text-[10.5px]">
-                  <span>{b.region}</span>
-                  <span>
-                    {b.used} / {b.quota}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
 
         {/* Dependencies */}
@@ -336,6 +482,19 @@ export function SystemPage(): React.JSX.Element {
           ))}
         </div>
       </Card>
+
+      {/* Drawer + delete dialog */}
+      <StorageBindingDrawer
+        open={drawerOpen}
+        mode={drawerMode}
+        binding={editingBinding}
+        onClose={closeDrawer}
+      />
+      <DeleteStorageBindingDialog
+        open={deletingBinding !== undefined}
+        binding={deletingBinding}
+        onClose={closeDeleteDialog}
+      />
     </div>
   );
 }

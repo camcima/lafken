@@ -1,21 +1,43 @@
+import type { StorageBindingResponseDTO } from "@shared/backend-api";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
 
 import { SystemPage } from "./SystemPage";
 
+const mutationStub = {
+  mutate: vi.fn(),
+  mutateAsync: vi.fn().mockResolvedValue(undefined),
+  isPending: false,
+  isError: false,
+  error: null,
+};
+
+const storageBindingsState: { value: StorageBindingResponseDTO[] } = { value: [] };
+
 vi.mock("@/features/system/hooks/useSystem", () => ({
-  useStorageBindings: () => ({ data: [], isLoading: false }),
+  useStorageBindings: () => ({ data: storageBindingsState.value, isLoading: false }),
   useStorageBinding: () => ({ data: undefined, isLoading: false }),
   useIntegrations: () => ({ data: [], isLoading: false }),
   useSystemHealth: () => ({
     data: { overall: "unknown", indicators: [], integrations: [] },
     isLoading: false,
   }),
+  useCreateStorageBinding: () => mutationStub,
+  useUpdateStorageBinding: () => mutationStub,
+  useDeleteStorageBinding: () => mutationStub,
 }));
 
 describe("SystemPage", () => {
+  beforeEach(() => {
+    storageBindingsState.value = [];
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("renders the title heading", () => {
     render(
       <I18nProvider>
@@ -38,7 +60,7 @@ describe("SystemPage", () => {
     expect(screen.getByText("transform")).toBeInTheDocument();
   });
 
-  it("renders the storage section with 3 binding rows", () => {
+  it("renders the demo storage section with 3 binding rows when no real bindings exist", () => {
     render(
       <I18nProvider>
         <SystemPage />
@@ -88,5 +110,33 @@ describe("SystemPage", () => {
       </I18nProvider>,
     );
     expect(screen.getByRole("button", { name: /public status page/i })).toBeInTheDocument();
+  });
+
+  it("renders the Add binding button", () => {
+    render(
+      <I18nProvider>
+        <SystemPage />
+      </I18nProvider>,
+    );
+    expect(screen.getByRole("button", { name: /add binding/i })).toBeInTheDocument();
+  });
+
+  it("renders real bindings when useStorageBindings returns data", () => {
+    storageBindingsState.value = [
+      {
+        name: "lafken-prod",
+        adapterType: "gcs",
+        config: { bucket: "lafken-bucket", projectId: "lafken-prj-1" },
+        createdAt: "2026-01-15T00:00:00.000Z",
+      },
+    ];
+    render(
+      <I18nProvider>
+        <SystemPage />
+      </I18nProvider>,
+    );
+    expect(screen.getByText("lafken-prod")).toBeInTheDocument();
+    // The demo binding name should NOT be visible when real data is present
+    expect(screen.queryByText("gcs-prod-aircraft-evidence")).not.toBeInTheDocument();
   });
 });
