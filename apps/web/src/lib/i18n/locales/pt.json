@@ -949,5 +949,78 @@
     "jumpToPage": "Pular para a página",
     "rowsPerPage": "Linhas por página",
     "range": "{{from}}–{{to}} de {{total}}"
+  },
+  "languages": {
+    "en": "English",
+    "es": "Español",
+    "pt": "Português",
+    "displayLanguage": "Idioma de exibição",
+    "perUserAuditLogged": "Por usuário · alteração registrada em auditoria",
+    "label": "Idioma",
+    "region": {
+      "en": "Estados Unidos",
+      "es": "América Latina",
+      "pt": "Brasil"
+    }
+  },
+  "notifications": {
+    "title": "Notificações",
+    "newCountBadge": "{{count}} novas",
+    "markAllRead": "Marcar todas como lidas",
+    "close": "Fechar",
+    "tabs": {
+      "all": "Todas",
+      "unread": "Não lidas",
+      "review": "Revisão",
+      "system": "Sistema",
+      "workspace": "Workspace"
+    },
+    "categories": {
+      "review": "Revisão",
+      "system": "Sistema",
+      "workspace": "Workspace"
+    },
+    "empty": {
+      "title": "Você está em dia",
+      "subtitle": "Nada nesta visualização."
+    },
+    "footer": {
+      "viewAll": "Ver tudo no log de auditoria",
+      "settings": "Configurações de notificações"
+    },
+    "items": {
+      "n_01": {
+        "title": "Estágio de transformação degradado",
+        "body": "p95 está acima de 1,50s há 14 minutos. Profundidade da fila: 4.811 e crescendo."
+      },
+      "n_02": {
+        "title": "5 ativos em quarentena com mais de 24h",
+        "body": "SLO do revisor é 4h. O mais antigo tem 36h (cargo-damage / violência 0,78)."
+      },
+      "n_03": {
+        "title": "Retenção legal aplicada a aircraft-photos",
+        "body": "lh_01HX7 · aplicado por a.bravo@latam.com · caso CHL-2025-AVN-077"
+      },
+      "n_04": {
+        "title": "Sua revisão foi substituída",
+        "body": "01HXJ002KQZ · liberado por p.estrada@latam.com após sua decisão de rejeição."
+      },
+      "n_05": {
+        "title": "Worker processor-12 inacessível",
+        "body": "Visto pela última vez há 3m · pool Memphis · tentativa de reinício automático 2/3."
+      },
+      "n_06": {
+        "title": "Policy v8 publicada para ground-ops-incidents",
+        "body": "Retenção 10a → 12a. Novo campo obrigatório: incident_severity. Vigência imediata."
+      },
+      "n_07": {
+        "title": "Chave de API rotacionada · cargo-ingest-svc",
+        "body": "Rotacionada por m.fernandez@latam.com. Chave anterior desativada em 24h."
+      },
+      "n_08": {
+        "title": "Escalação: correspondência de categoria médica",
+        "body": "01HXJ003UWQZ · pontuação 0,72 (limite 0,65) · aguardando revisor com habilitação médica."
+      }
+    }
   }
 }

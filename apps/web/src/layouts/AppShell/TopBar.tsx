@@ -1,6 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Bell, ChevronRight, RefreshCw } from "lucide-react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+
+import { DEMO_NOTIFICATIONS } from "@/lib/demo/lafken-notifications";
+import { cn } from "@/lib/utils";
+
+import { LanguageSelector } from "./LanguageSelector";
+import { NotificationsPanel } from "./NotificationsPanel";
 
 interface IBreadcrumb {
   label: string;
@@ -31,6 +38,10 @@ export function TopBar(): React.ReactElement {
   const pathname = useRouterState({ select: (routerState) => routerState.location.pathname });
   const crumbs = buildCrumbs(pathname, t);
 
+  const [notifOpen, setNotifOpen] = useState(false);
+  const bellRef = useRef<HTMLButtonElement>(null);
+  const hasUnread = DEMO_NOTIFICATIONS.some((notif) => notif.unread);
+
   return (
     <header className="border-border bg-card sticky top-0 z-20 flex h-[52px] flex-none items-center gap-4 border-b px-6">
       <nav
@@ -56,6 +67,8 @@ export function TopBar(): React.ReactElement {
 
       <div className="flex-1" />
 
+      <LanguageSelector />
+
       <button
         type="button"
         title={t("topBar.refresh")}
@@ -63,13 +76,34 @@ export function TopBar(): React.ReactElement {
       >
         <RefreshCw size={14} />
       </button>
-      <button
-        type="button"
-        title={t("topBar.notifications")}
-        className="border-border bg-card text-muted-foreground hover:border-latam-indigo/30 hover:bg-secondary hover:text-latam-indigo relative grid size-8 cursor-pointer place-items-center rounded border"
-      >
-        <Bell size={14} />
-      </button>
+
+      <div className="relative">
+        <button
+          ref={bellRef}
+          type="button"
+          onClick={() => {
+            setNotifOpen((prev) => !prev);
+          }}
+          title={t("topBar.notifications")}
+          aria-expanded={notifOpen}
+          className={cn(
+            "border-border bg-card text-muted-foreground hover:border-latam-indigo/30 hover:bg-secondary hover:text-latam-indigo relative grid size-8 cursor-pointer place-items-center rounded border",
+            notifOpen && "border-latam-indigo/40 bg-secondary text-latam-indigo",
+          )}
+        >
+          <Bell size={14} />
+          {hasUnread && (
+            <span className="bg-latam-pink absolute top-1 right-1 size-1.5 rounded-full" />
+          )}
+        </button>
+        <NotificationsPanel
+          open={notifOpen}
+          onClose={() => {
+            setNotifOpen(false);
+          }}
+          anchorRef={bellRef}
+        />
+      </div>
     </header>
   );
 }
