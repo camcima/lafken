@@ -1,3 +1,5 @@
+name: lafken-backend
+
 services:
   postgres:
     image: postgres:18-alpine
@@ -34,6 +36,25 @@ services:
       test:
         - CMD-SHELL
         - "wget -q -O- http://127.0.0.1:8095/.well-known/openid-configuration > /dev/null || exit 1"
+      interval: 5s
+      timeout: 2s
+      retries: 10
+
+  fake-gcs:
+    image: fsouza/fake-gcs-server:latest
+    restart: unless-stopped
+    command:
+      - "-scheme=http"
+      - "-public-host=localhost:4443"
+      - "-port=4443"
+    ports:
+      - "4443:4443"
+    volumes:
+      - ./dev-data/gcs:/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "wget -q -O- http://127.0.0.1:4443/storage/v1/b > /dev/null || exit 1"
       interval: 5s
       timeout: 2s
       retries: 10

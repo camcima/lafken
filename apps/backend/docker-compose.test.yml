@@ -1,3 +1,4 @@
+name: lafken-backend-test
 services:
   postgres-e2e:
     image: postgres:18-alpine
@@ -9,3 +10,22 @@ services:
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5434:5432"
+
+  fake-gcs:
+    image: fsouza/fake-gcs-server:latest
+    restart: unless-stopped
+    command:
+      - "-scheme=http"
+      - "-public-host=localhost:4444"
+      - "-port=4443"
+    ports:
+      - "4444:4443"
+    volumes:
+      - ./dev-data/gcs:/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "wget -q -O- http://127.0.0.1:4443/storage/v1/b > /dev/null || exit 1"
+      interval: 5s
+      timeout: 2s
+      retries: 10
