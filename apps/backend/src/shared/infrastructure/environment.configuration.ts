@@ -95,6 +95,11 @@ const environmentSchema = z
     OIDC_AUDIENCE: z.string().optional(),
     OIDC_PRINCIPAL_CLAIM: z.string().default("preferred_username"),
     OIDC_ROLES_CLAIM: z.string().default("roles"),
+
+    /** Service account JSON (stringified) for GCS. Optional; omit for fake-gcs / dev. */
+    GCS_SERVICE_ACCOUNT_JSON: z.string().optional(),
+    /** Override GCS endpoint (e.g. http://localhost:4444 for fake-gcs-server). */
+    STORAGE_GCS_ENDPOINT: z.string().url().optional(),
   })
   .refine(
     (data) => {
