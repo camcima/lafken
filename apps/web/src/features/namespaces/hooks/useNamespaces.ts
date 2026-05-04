@@ -1,4 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import type {
+  CreateNamespaceRequestDTO,
+  UpdateNamespaceMetadataRequestDTO,
+} from "@shared/backend-api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { namespacesKeys } from "@/features/namespaces/keys";
 import { namespacesService } from "@/services";
@@ -32,5 +36,49 @@ export function useNamespacePresets(slug: string) {
     queryKey: namespacesKeys.presets(slug),
     queryFn: () => namespacesService.listPresets(slug),
     enabled: Boolean(slug),
+  });
+}
+
+export function useCreateNamespace() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateNamespaceRequestDTO) => namespacesService.createNamespace(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: namespacesKeys.lists() });
+    },
+  });
+}
+
+export function useUpdateNamespaceMetadata() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (variables: { slug: string; input: UpdateNamespaceMetadataRequestDTO }) =>
+      namespacesService.updateNamespaceMetadata(variables.slug, variables.input),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: namespacesKeys.detail(variables.slug) });
+      void queryClient.invalidateQueries({ queryKey: namespacesKeys.lists() });
+    },
+  });
+}
+
+export function useArchiveNamespace() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (slug: string) => namespacesService.archiveNamespace(slug),
+    onSuccess: (_data, slug) => {
+      void queryClient.invalidateQueries({ queryKey: namespacesKeys.detail(slug) });
+      void queryClient.invalidateQueries({ queryKey: namespacesKeys.lists() });
+    },
+  });
+}
+
+export function useUnarchiveNamespace() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (slug: string) => namespacesService.unarchiveNamespace(slug),
+    onSuccess: (_data, slug) => {
+      void queryClient.invalidateQueries({ queryKey: namespacesKeys.detail(slug) });
+      void queryClient.invalidateQueries({ queryKey: namespacesKeys.lists() });
+    },
   });
 }
