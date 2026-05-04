@@ -533,7 +533,7 @@
       },
       "demoLabel": "(demo)",
       "actions": {
-        "newNamespace": "+ New namespace",
+        "newNamespace": "New namespace",
         "editMetadata": "Edit metadata",
         "editPolicy": "Edit policy",
         "editPolicyDeferred": "Policy editing arrives in the next slice.",

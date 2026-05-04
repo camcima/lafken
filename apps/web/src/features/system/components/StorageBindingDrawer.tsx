@@ -375,6 +375,7 @@ export function StorageBindingDrawer({
           </FieldLabel>
           <TextInput
             id="storage-binding-bucket"
+            placeholder="lafken-dev"
             aria-invalid={errors.bucket ? true : undefined}
             aria-describedby={
               errors.bucket ? "storage-binding-bucket-error" : "storage-binding-bucket-help"
@@ -395,6 +396,7 @@ export function StorageBindingDrawer({
           </FieldLabel>
           <TextInput
             id="storage-binding-project-id"
+            placeholder="lafken-dev"
             aria-invalid={errors.projectId ? true : undefined}
             aria-describedby={errors.projectId ? "storage-binding-project-id-error" : undefined}
             {...register("projectId")}

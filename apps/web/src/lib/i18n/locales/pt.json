@@ -464,7 +464,7 @@
         "description": "Crie o primeiro namespace para começar."
       },
       "actions": {
-        "newNamespace": "+ Novo namespace",
+        "newNamespace": "Novo namespace",
         "editMetadata": "Editar metadados",
         "editPolicy": "Editar política",
         "editPolicyDeferred": "A edição de política chegará na próxima entrega.",
