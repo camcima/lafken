@@ -103,9 +103,7 @@ export class InMemoryNamespaceWriteRepository extends NamespaceWriteRepositoryPo
     return Promise.resolve(updated);
   }
 
-  createPolicyVersion(
-    _input: ICreatePolicyVersionInput,
-  ): Promise<ICreatePolicyVersionResult> {
+  createPolicyVersion(_input: ICreatePolicyVersionInput): Promise<ICreatePolicyVersionResult> {
     return Promise.reject(new Error("Not implemented yet — Task 2"));
   }
 }

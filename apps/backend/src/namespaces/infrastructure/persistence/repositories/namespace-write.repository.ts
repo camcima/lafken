@@ -121,10 +121,8 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
     return NamespaceDbMapper.toDomain(row);
   }
 
-  async createPolicyVersion(
-    _input: ICreatePolicyVersionInput,
-  ): Promise<ICreatePolicyVersionResult> {
-    throw new Error("Not implemented yet — Task 3");
+  createPolicyVersion(_input: ICreatePolicyVersionInput): Promise<ICreatePolicyVersionResult> {
+    return Promise.reject(new Error("Not implemented yet — Task 3"));
   }
 
   private isStorageBindingFkViolation(err: unknown): boolean {

@@ -48,5 +48,7 @@ export abstract class NamespaceWriteRepositoryPort {
   abstract updateMetadata(input: IUpdateNamespaceMetadataInput): Promise<Namespace>;
   abstract archive(slug: string): Promise<Namespace>;
   abstract unarchive(slug: string): Promise<Namespace>;
-  abstract createPolicyVersion(input: ICreatePolicyVersionInput): Promise<ICreatePolicyVersionResult>;
+  abstract createPolicyVersion(
+    input: ICreatePolicyVersionInput,
+  ): Promise<ICreatePolicyVersionResult>;
 }
