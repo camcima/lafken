@@ -56,8 +56,8 @@ describe("StorageBindingWriteRepository", () => {
       .executeTakeFirst();
 
     expect(row).toBeDefined();
-    expect((row as any).adapter_type).toBe("gcs");
-    expect((row as any).config).toEqual({ bucket: "my-bucket" });
+    expect(row!.adapter_type).toBe("gcs");
+    expect(row!.config).toEqual({ bucket: "my-bucket" });
   });
 
   it("updates an existing row's config", async () => {
@@ -88,7 +88,7 @@ describe("StorageBindingWriteRepository", () => {
       .executeTakeFirst();
 
     expect(row).toBeDefined();
-    expect((row as any).config).toEqual({ bucket: "new-bucket" });
+    expect(row!.config).toEqual({ bucket: "new-bucket" });
   });
 
   it("throws when updating a row that does not exist", async () => {
