@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, type ApiErrorBody } from "@/lib/api/api-error";
 import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
@@ -100,10 +100,6 @@ describe("NewNamespacePage", () => {
     mockBindingsLoading = false;
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("renders all six sections with secure defaults pre-filled", () => {
     renderPage();
 
@@ -131,9 +127,9 @@ describe("NewNamespacePage", () => {
     renderPage();
 
     // Warning alert is displayed
-    const alert = screen.getByRole("alert");
+    const alert = screen.getByText(/no storage bindings configured/i);
     expect(alert).toBeInTheDocument();
-    expect(alert.textContent).toMatch(/no storage bindings configured/i);
+    expect(alert.closest("[role='alert']")).not.toBeNull();
 
     // Save button is disabled
     const saveButton = screen.getByRole("button", { name: /create namespace/i });

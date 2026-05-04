@@ -19,7 +19,7 @@ const MAX_DISPLAY_NAME_LENGTH = 200;
 const MAX_DESCRIPTION_LENGTH = 2000;
 const MAX_FILE_SIZE_BYTES = 5_368_709_120;
 const MAX_TTL_SECONDS = 604_800;
-const MAX_BUCKET_SIZE = 86_400;
+const MAX_SIGNED_URL_BUCKET_SECONDS = 86_400;
 const MAX_RETENTION_DAYS = 36_500;
 const PROBLEM_TYPE_PREFIX = "https://lafken.dev/problems/";
 const DEFAULT_MAX_FILE_SIZE = 52_428_800;
@@ -234,8 +234,10 @@ export function NewNamespacePage(): React.JSX.Element {
           .refine(
             (val) =>
               val === "" ||
-              (Number.isInteger(Number(val)) && Number(val) >= 1 && Number(val) <= MAX_BUCKET_SIZE),
-            { message: `Must be between 1 and ${MAX_BUCKET_SIZE}` },
+              (Number.isInteger(Number(val)) &&
+                Number(val) >= 1 &&
+                Number(val) <= MAX_SIGNED_URL_BUCKET_SECONDS),
+            { message: `Must be between 1 and ${MAX_SIGNED_URL_BUCKET_SECONDS}` },
           ),
         contentModerationRaw: z.string().refine((val) => val === "" || isValidJson(val), {
           message: t("pages.namespaces.errors.invalidJson"),
@@ -408,7 +410,7 @@ export function NewNamespacePage(): React.JSX.Element {
       });
       await navigate({
         to: "/namespaces/$slug",
-        params: { slug: (created as { slug: string }).slug },
+        params: { slug: created.slug },
       });
     } catch (err) {
       applyApiError(err);
@@ -775,7 +777,7 @@ export function NewNamespacePage(): React.JSX.Element {
                 id="ns-signed-url-bucket-size"
                 type="number"
                 min={1}
-                max={MAX_BUCKET_SIZE}
+                max={MAX_SIGNED_URL_BUCKET_SECONDS}
                 aria-invalid={errors.signedUrlBucketSize ? true : undefined}
                 aria-describedby={
                   errors.signedUrlBucketSize ? "ns-signed-url-bucket-size-error" : undefined
