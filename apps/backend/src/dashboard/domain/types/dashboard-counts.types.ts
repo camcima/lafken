@@ -5,4 +5,5 @@ export interface IDashboardCounts {
   quarantine: number;
   legalHolds: number;
   failedProcessing: number;
+  namespaces: number;
 }

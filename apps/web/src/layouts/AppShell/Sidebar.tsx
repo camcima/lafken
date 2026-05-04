@@ -167,13 +167,11 @@ export function Sidebar(): React.ReactElement {
       | undefined
   )?.counts;
 
-  // Slice 0: BE returns 0 for empty tables; fall back to demo data so badges
-  // show meaningful counts. Switch to `??` once BE returns real values.
   const getCount = (key: string): number | undefined => {
-    if (key === "quarantine") return counts?.quarantine || DEMO_QUARANTINE.length;
-    if (key === "legalHolds") return counts?.legalHolds || DEMO_LEGAL_HOLDS.length;
-    if (key === "assets") return counts?.totalAssets || DEMO_TOTAL_ASSETS;
-    if (key === "namespaces") return counts?.namespaces || DEMO_NAMESPACES.length;
+    if (key === "quarantine") return counts?.quarantine ?? DEMO_QUARANTINE.length;
+    if (key === "legalHolds") return counts?.legalHolds ?? DEMO_LEGAL_HOLDS.length;
+    if (key === "assets") return counts?.totalAssets ?? DEMO_TOTAL_ASSETS;
+    if (key === "namespaces") return counts?.namespaces ?? DEMO_NAMESPACES.length;
     return undefined;
   };
 

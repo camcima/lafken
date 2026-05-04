@@ -13,6 +13,7 @@ describe("DashboardOverviewResponseMapper", () => {
       quarantine: 3,
       legalHolds: 0,
       failedProcessing: 1,
+      namespaces: 5,
     },
     health: {
       overall: "ok",
@@ -29,6 +30,7 @@ describe("DashboardOverviewResponseMapper", () => {
     expect(dto.counts.quarantine).toBe(3);
     expect(dto.counts.legalHolds).toBe(0);
     expect(dto.counts.failedProcessing).toBe(1);
+    expect(dto.counts.namespaces).toBe(5);
   });
 
   it("maps health overall and indicators", () => {

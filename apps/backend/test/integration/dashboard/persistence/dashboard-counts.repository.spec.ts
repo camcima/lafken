@@ -22,6 +22,9 @@ describe("DashboardCountsRepository", () => {
       await tx.deleteFrom("assets").execute();
       await tx.deleteFrom("legal_hold_assets").execute();
       await tx.deleteFrom("legal_holds").execute();
+      await tx.deleteFrom("namespace_presets").execute();
+      await tx.deleteFrom("namespace_policies").execute();
+      await tx.deleteFrom("namespaces").execute();
     });
   });
 
@@ -39,6 +42,7 @@ describe("DashboardCountsRepository", () => {
       quarantine: 0,
       legalHolds: 0,
       failedProcessing: 0,
+      namespaces: 0,
     });
   });
 });

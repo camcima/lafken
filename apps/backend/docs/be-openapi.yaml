@@ -1846,6 +1846,8 @@ components:
           type: number
         failedProcessing:
           type: number
+        namespaces:
+          type: number
       required:
         - totalAssets
         - inFlight
@@ -1853,6 +1855,7 @@ components:
         - quarantine
         - legalHolds
         - failedProcessing
+        - namespaces
     DashboardOverviewResponseDTO:
       type: object
       properties:

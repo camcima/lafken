@@ -8,6 +8,7 @@ const DEFAULT_COUNTS: IDashboardCounts = {
   quarantine: 0,
   legalHolds: 0,
   failedProcessing: 0,
+  namespaces: 0,
 };
 
 export class InMemoryDashboardCountsRepository extends DashboardCountsRepositoryPort {

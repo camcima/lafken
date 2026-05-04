@@ -28,6 +28,7 @@ describe("GetDashboardOverviewUseCase", () => {
       quarantine: 0,
       legalHolds: 0,
       failedProcessing: 0,
+      namespaces: 0,
     });
     expect(result.health.overall).toBe("ok");
   });
@@ -40,6 +41,7 @@ describe("GetDashboardOverviewUseCase", () => {
       quarantine: 2,
       legalHolds: 1,
       failedProcessing: 4,
+      namespaces: 7,
     };
     countsRepo.seed(seedCounts);
 

@@ -20,6 +20,9 @@ export class DashboardCountsDTO {
 
   @ApiProperty()
   failedProcessing!: number;
+
+  @ApiProperty()
+  namespaces!: number;
 }
 
 export class DashboardOverviewResponseDTO {

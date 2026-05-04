@@ -46,6 +46,7 @@ describe("[E2E] Dashboard controller", () => {
         quarantine: 0,
         legalHolds: 0,
         failedProcessing: 0,
+        namespaces: 0,
       });
       expect(response.body.health).toMatchObject({
         overall: "ok",
