@@ -1,6 +1,6 @@
 // Slice 0: BE returns empty arrays; rendering against typed demo data
 import { Check, Download, ExternalLink, Flag, Info, Shield, X } from "lucide-react";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/common/Badge";
@@ -151,6 +151,7 @@ const REJECT_MIN_CHARS = 12;
 function RejectModal({ onClose, onConfirm }: IRejectModalProps): React.JSX.Element {
   const { t } = useTranslation();
   const [note, setNote] = useState("");
+  const titleId = useId();
 
   return (
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
@@ -158,15 +159,18 @@ function RejectModal({ onClose, onConfirm }: IRejectModalProps): React.JSX.Eleme
       className="bg-foreground/30 fixed inset-0 z-40 grid place-items-center backdrop-blur-sm"
       onClick={onClose}
     >
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         className="border-border bg-card w-[440px] rounded-lg border shadow-2xl"
         onClick={(e) => {
           e.stopPropagation();
         }}
       >
         <div className="border-border flex items-center justify-between border-b px-5 py-3">
-          <div className="flex items-center gap-2 text-[14px] font-semibold">
+          <div id={titleId} className="flex items-center gap-2 text-[14px] font-semibold">
             <X size={ICON_MD} className="text-danger" />
             {t("pages.quarantine.rejectModal.title")}
           </div>
@@ -234,6 +238,13 @@ type IFilterType = "all" | "moderation" | "virus";
 
 const TOAST_DURATION_MS = 2800;
 
+// ── Uploader history demo constants ───────────────────────
+const DEMO_UPLOADER_HISTORY = {
+  uploaded: 412,
+  flagged: 3,
+  flagRate: "0.7%",
+} as const;
+
 // ── Main page ─────────────────────────────────────────────
 
 export function QuarantinePage(): React.JSX.Element {
@@ -245,6 +256,16 @@ export function QuarantinePage(): React.JSX.Element {
   const [decided, setDecided] = useState<Record<string, IDecision>>({});
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [toast, setToast] = useState<IToast | null>(null);
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cancel any pending toast timer on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
 
   const filtered = DEMO_QUARANTINE.filter((a) => {
     if (decided[a.id]) return false;
@@ -267,14 +288,18 @@ export function QuarantinePage(): React.JSX.Element {
             ? t("pages.quarantine.toast.released", { id: selected.id })
             : t("pages.quarantine.toast.rejected", { id: selected.id }),
       });
-      setTimeout(() => {
-        setToast(null);
-      }, TOAST_DURATION_MS);
-      const idx = filtered.findIndex((a) => a.id === selected.id);
-      const next = filtered[idx + 1] ?? filtered[0];
-      if (next && next.id !== selected.id) {
-        setSelectedId(next.id);
+      if (toastTimerRef.current !== null) {
+        clearTimeout(toastTimerRef.current);
       }
+      toastTimerRef.current = setTimeout(() => {
+        setToast(null);
+        toastTimerRef.current = null;
+      }, TOAST_DURATION_MS);
+      // Compute next selection from the post-decision filtered list
+      const remaining = filtered.filter((a) => a.id !== selected.id);
+      const idx = filtered.findIndex((a) => a.id === selected.id);
+      const next = remaining[idx] ?? remaining[idx - 1] ?? null;
+      setSelectedId(next?.id ?? undefined);
     },
     [selected, filtered, t],
   );
@@ -301,7 +326,7 @@ export function QuarantinePage(): React.JSX.Element {
     return () => {
       window.removeEventListener("keydown", onKey);
     };
-  });
+  }, [filtered, selectedId, selected, decide]);
 
   const moderationCount = DEMO_QUARANTINE.filter(
     (a) => a.state === "quarantined_moderation" && !decided[a.id],
@@ -441,9 +466,9 @@ export function QuarantinePage(): React.JSX.Element {
               </div>
             </div>
           ) : (
-            filtered.map((a, idx) => (
+            filtered.map((a) => (
               <button
-                key={`${a.id}_${idx}`}
+                key={a.id}
                 type="button"
                 aria-current={selected?.id === a.id ? "true" : undefined}
                 onClick={() => {
@@ -648,19 +673,25 @@ export function QuarantinePage(): React.JSX.Element {
                 <CardContent className="p-5 text-[12px]">
                   <div className="grid grid-cols-3 gap-3 text-center">
                     <div className="border-border bg-secondary/30 rounded border px-2 py-3">
-                      <div className="font-mono text-[20px] tabular-nums">412</div>
+                      <div className="font-mono text-[20px] tabular-nums">
+                        {DEMO_UPLOADER_HISTORY.uploaded}
+                      </div>
                       <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
                         {t("pages.quarantine.uploaderHistory.uploaded")}
                       </div>
                     </div>
                     <div className="border-border bg-secondary/30 rounded border px-2 py-3">
-                      <div className="text-warn font-mono text-[20px] tabular-nums">3</div>
+                      <div className="text-warn font-mono text-[20px] tabular-nums">
+                        {DEMO_UPLOADER_HISTORY.flagged}
+                      </div>
                       <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
                         {t("pages.quarantine.uploaderHistory.flagged")}
                       </div>
                     </div>
                     <div className="border-border bg-secondary/30 rounded border px-2 py-3">
-                      <div className="text-ok font-mono text-[20px] tabular-nums">0.7%</div>
+                      <div className="text-ok font-mono text-[20px] tabular-nums">
+                        {DEMO_UPLOADER_HISTORY.flagRate}
+                      </div>
                       <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
                         {t("pages.quarantine.uploaderHistory.flagRate")}
                       </div>
