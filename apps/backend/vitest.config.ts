@@ -74,6 +74,13 @@ export default defineConfig({
           include: ["**/*.spec.ts"],
 
           setupFiles: ["./test/integration/setup.ts"],
+
+          // All integration specs share the same Postgres instance and clean the
+          // same tables in beforeEach. Running files in parallel causes cleanup
+          // transactions in one spec to race with seed transactions in another,
+          // producing transient FK violations. Serialising file execution
+          // eliminates the race entirely.
+          fileParallelism: false,
         },
       },
       {
