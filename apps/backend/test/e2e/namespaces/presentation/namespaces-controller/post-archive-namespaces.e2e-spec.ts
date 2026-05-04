@@ -137,4 +137,16 @@ describe("[E2E] POST /v1/namespaces/:slug/archive", () => {
 
     expect(response.status).toBe(403);
   });
+
+  it("returns RFC 9457 404 with type=namespace-not-found-error when slug does not exist", async () => {
+    const response = await request(app.getHttpServer())
+      .post("/v1/namespaces/ghost-namespace/archive")
+      .set("Authorization", "Bearer test-token");
+
+    expect(response.status).toBe(404);
+    expect(response.headers["content-type"]).toMatch(/application\/problem\+json/);
+    expect(response.body.type).toMatch(/namespace-not-found-error/);
+    expect(response.body.status).toBe(404);
+    expect(response.body.detail).toContain("ghost-namespace");
+  });
 });

@@ -1,11 +1,10 @@
 import { Injectable } from "@nestjs/common";
 
+import type { NamespaceWithMetadata } from "@/namespaces/application/namespace-with-metadata.type";
 import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import { NamespaceWriteRepositoryPort } from "@/namespaces/domain/repositories/namespace-write.repository.port";
-
-import type { NamespaceWithMetadata } from "./list-namespaces.use-case";
 
 @Injectable()
 export class ArchiveNamespaceUseCase {

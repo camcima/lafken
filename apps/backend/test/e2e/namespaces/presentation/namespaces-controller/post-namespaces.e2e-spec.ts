@@ -110,6 +110,7 @@ describe("[E2E] POST /v1/namespaces", () => {
       type: "https://lafken.dev/problems/namespace-already-exists-error",
       status: 409,
     });
+    expect(second.body.detail).toContain("duplicate-ns");
   });
 
   it("returns RFC 9457 422 with type=storage-binding-missing-error when binding id is unknown", async () => {
@@ -130,6 +131,7 @@ describe("[E2E] POST /v1/namespaces", () => {
       type: "https://lafken.dev/problems/storage-binding-missing-error",
       status: 422,
     });
+    expect(response.body.detail).toContain("999999999");
   });
 
   it("returns 400 when slug fails the regex", async () => {

@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
+import type { NamespaceWithMetadata } from "@/namespaces/application/namespace-with-metadata.type";
 import { NamespaceAlreadyExistsError } from "@/namespaces/domain/errors/namespace-already-exists.error";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import {
@@ -7,8 +8,6 @@ import {
   NamespaceWriteRepositoryPort,
 } from "@/namespaces/domain/repositories/namespace-write.repository.port";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
-
-import type { NamespaceWithMetadata } from "./list-namespaces.use-case";
 
 @Injectable()
 export class CreateNamespaceUseCase {

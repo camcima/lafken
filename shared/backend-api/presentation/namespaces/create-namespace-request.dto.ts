@@ -6,6 +6,7 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  IsNumberString,
   IsObject,
   IsOptional,
   IsString,
@@ -111,6 +112,7 @@ export class CreateNamespaceRequestDTO {
   description!: string | null;
 
   @IsString()
+  @IsNumberString()
   @ApiProperty({ description: "ID of an existing storage binding (string for bigint-safety)" })
   storageBindingId!: string;
 

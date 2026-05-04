@@ -1,16 +1,12 @@
 import { Injectable } from "@nestjs/common";
 
-import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
+import type { NamespaceWithMetadata } from "@/namespaces/application/namespace-with-metadata.type";
 import {
   ListNamespacesInput,
   NamespaceQueryRepositoryPort,
 } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 
-export interface NamespaceWithMetadata {
-  namespace: Namespace;
-  storageBindingName: string;
-  currentPolicyVersion: number;
-}
+export type { NamespaceWithMetadata } from "@/namespaces/application/namespace-with-metadata.type";
 
 export interface NamespaceWithMetadataPage {
   data: NamespaceWithMetadata[];
