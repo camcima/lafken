@@ -113,4 +113,33 @@ describe("QuarantinePage", () => {
     const modalConfirm = confirmBtns[confirmBtns.length - 1];
     expect(modalConfirm).toBeDisabled();
   });
+
+  it("j/k keyboard navigation moves selection between queue items", async () => {
+    const user = userEvent.setup();
+    render(
+      <I18nProvider>
+        <QuarantinePage />
+      </I18nProvider>,
+    );
+
+    // Initially the first item is selected
+    const selectedButtons = () =>
+      screen.getAllByRole("button").filter((btn) => btn.getAttribute("aria-current") === "true");
+
+    const firstSelected = selectedButtons();
+    expect(firstSelected).toHaveLength(1);
+    const firstItemText = firstSelected[0]?.textContent ?? "";
+
+    // Press j — second item should become selected
+    await user.keyboard("j");
+    const afterJ = selectedButtons();
+    expect(afterJ).toHaveLength(1);
+    expect(afterJ[0]?.textContent).not.toBe(firstItemText);
+
+    // Press k — first item should be selected again
+    await user.keyboard("k");
+    const afterK = selectedButtons();
+    expect(afterK).toHaveLength(1);
+    expect(afterK[0]?.textContent).toBe(firstItemText);
+  });
 });

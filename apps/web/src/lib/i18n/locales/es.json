@@ -774,7 +774,13 @@
       },
       "workers": {
         "title": "Flota de workers",
-        "meta": "{{count}} workers · 2 pools"
+        "meta": "{{count}} workers · 2 pools",
+        "statusDown": "CAÍDO",
+        "metrics": {
+          "cpu": "cpu",
+          "mem": "mem",
+          "flight": "vuelo"
+        }
       }
     },
     "settings": {

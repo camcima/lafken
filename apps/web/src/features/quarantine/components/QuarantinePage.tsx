@@ -445,6 +445,7 @@ export function QuarantinePage(): React.JSX.Element {
               <button
                 key={`${a.id}_${idx}`}
                 type="button"
+                aria-current={selected?.id === a.id ? "true" : undefined}
                 onClick={() => {
                   setSelectedId(a.id);
                 }}
@@ -623,10 +624,10 @@ export function QuarantinePage(): React.JSX.Element {
                           {selected.tail}
                         </span>,
                       ],
-                      [t("pages.quarantine.context.inspectionType"), "pre-flight"],
-                      [t("pages.quarantine.context.defectArea"), "fuselage-aft"],
-                      [t("pages.quarantine.context.capturedAt"), "2026-05-03 05:11 UTC-3"],
-                      [t("pages.quarantine.context.device"), "iPhone 15 Pro · iOS 17.4"],
+                      [t("pages.quarantine.context.inspectionType"), selected.inspectionType],
+                      [t("pages.quarantine.context.defectArea"), selected.defectArea],
+                      [t("pages.quarantine.context.capturedAt"), selected.capturedAtLocal],
+                      [t("pages.quarantine.context.device"), selected.device],
                     ] as Array<[string, React.ReactNode]>
                   ).map(([rowKey, rowVal]) => (
                     <React.Fragment key={rowKey}>

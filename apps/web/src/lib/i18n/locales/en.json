@@ -774,7 +774,13 @@
       },
       "workers": {
         "title": "Worker fleet",
-        "meta": "{{count}} workers · 2 pools"
+        "meta": "{{count}} workers · 2 pools",
+        "statusDown": "DOWN",
+        "metrics": {
+          "cpu": "cpu",
+          "mem": "mem",
+          "flight": "flight"
+        }
       }
     },
     "settings": {

@@ -399,6 +399,10 @@ export interface DemoQuarantineItem {
   thumbHue: number;
   minutesAgo: number;
   sizeBytes: number;
+  inspectionType: string;
+  defectArea: string;
+  capturedAtLocal: string;
+  device: string;
 }
 
 // Quarantine generation constants
@@ -412,6 +416,33 @@ const QUARANTINE_SIZE_RANGE_MB = 6;
 const QUARANTINE_THUMB_HUE_BASE = 15;
 const QUARANTINE_THUMB_HUE_RANGE = 30;
 const QUARANTINE_SEED = 7;
+
+const QUARANTINE_INSPECTION_TYPES = [
+  "pre-flight",
+  "post-flight",
+  "line-check",
+  "a-check",
+  "c-check",
+  "transit",
+  "borescope",
+  "on-wing",
+];
+
+const QUARANTINE_DEVICES = [
+  "iPhone 15 Pro · iOS 17.4",
+  "iPhone 14 · iOS 17.2",
+  "Samsung Galaxy S23 · Android 14",
+  "iPad Pro 12.9 · iPadOS 17.3",
+  "iPhone 13 · iOS 16.7",
+  "Google Pixel 7 · Android 14",
+];
+
+const QUARANTINE_UTC_OFFSETS = ["-3", "-4", "-5", "-3", "-3", "-4"];
+const QUARANTINE_CAPTURE_HOUR_BASE = 5;
+const QUARANTINE_CAPTURE_HOUR_RANGE = 12;
+const QUARANTINE_CAPTURE_MIN_RANGE = 60;
+const QUARANTINE_CAPTURE_DAY_BASE = 1;
+const QUARANTINE_CAPTURE_DAY_RANGE = 3;
 
 export const DEMO_QUARANTINE: DemoQuarantineItem[] = (() => {
   const rnd = seedRand(QUARANTINE_SEED);
@@ -480,6 +511,21 @@ export const DEMO_QUARANTINE: DemoQuarantineItem[] = (() => {
       .padStart(ASSET_ID_PAD, "0");
     const id = "01HXJ" + idTail + "QZ";
     const minutesAgo = Math.floor(rnd() * QUARANTINE_MINUTES_MAX);
+    const inspectionType =
+      QUARANTINE_INSPECTION_TYPES[Math.floor(rnd() * QUARANTINE_INSPECTION_TYPES.length)] ??
+      "pre-flight";
+    const defectArea = DEFECT_AREAS[Math.floor(rnd() * DEFECT_AREAS.length)] ?? "fuselage-aft";
+    const device =
+      QUARANTINE_DEVICES[Math.floor(rnd() * QUARANTINE_DEVICES.length)] ??
+      "iPhone 15 Pro · iOS 17.4";
+    const captureHour =
+      QUARANTINE_CAPTURE_HOUR_BASE + Math.floor(rnd() * QUARANTINE_CAPTURE_HOUR_RANGE);
+    const captureMin = Math.floor(rnd() * QUARANTINE_CAPTURE_MIN_RANGE);
+    const captureDay =
+      QUARANTINE_CAPTURE_DAY_BASE + Math.floor(rnd() * QUARANTINE_CAPTURE_DAY_RANGE);
+    const utcOffset =
+      QUARANTINE_UTC_OFFSETS[Math.floor(rnd() * QUARANTINE_UTC_OFFSETS.length)] ?? "-3";
+    const capturedAtLocal = `2026-05-0${String(captureDay)} ${String(captureHour).padStart(2, "0")}:${String(captureMin).padStart(2, "0")} UTC${utcOffset}`;
     if (!flag || !ns || !tail) continue;
     out.push({
       id,
@@ -497,6 +543,10 @@ export const DEMO_QUARANTINE: DemoQuarantineItem[] = (() => {
       sizeBytes: Math.floor(
         (QUARANTINE_SIZE_MIN_MB + rnd() * QUARANTINE_SIZE_RANGE_MB) * BYTES_PER_MB,
       ),
+      inspectionType,
+      defectArea,
+      capturedAtLocal,
+      device,
     });
   }
   return out;

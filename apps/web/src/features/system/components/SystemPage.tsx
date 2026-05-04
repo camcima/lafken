@@ -159,6 +159,8 @@ function PipelineRow({ q }: { q: DemoQueue }): React.JSX.Element {
 }
 
 function WorkerCard({ w: worker }: { w: DemoWorker }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div
       className={cn(
@@ -182,14 +184,16 @@ function WorkerCard({ w: worker }: { w: DemoWorker }): React.JSX.Element {
         />
       </div>
       {worker.status === "down" ? (
-        <div className="text-alert mt-1 font-medium tracking-wider uppercase">DOWN</div>
+        <div className="text-alert mt-1 font-medium tracking-wider uppercase">
+          {t("pages.system.workers.statusDown")}
+        </div>
       ) : (
         <div className="mt-1 grid grid-cols-2 gap-x-2 font-mono tabular-nums">
-          <span className="text-muted-foreground">cpu</span>
+          <span className="text-muted-foreground">{t("pages.system.workers.metrics.cpu")}</span>
           <span className="text-right">{worker.cpu}%</span>
-          <span className="text-muted-foreground">mem</span>
+          <span className="text-muted-foreground">{t("pages.system.workers.metrics.mem")}</span>
           <span className="text-right">{worker.mem}%</span>
-          <span className="text-muted-foreground">flight</span>
+          <span className="text-muted-foreground">{t("pages.system.workers.metrics.flight")}</span>
           <span className="text-right">{worker.inflight}</span>
         </div>
       )}

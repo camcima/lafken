@@ -774,7 +774,13 @@
       },
       "workers": {
         "title": "Frota de workers",
-        "meta": "{{count}} workers · 2 pools"
+        "meta": "{{count}} workers · 2 pools",
+        "statusDown": "FORA",
+        "metrics": {
+          "cpu": "cpu",
+          "mem": "mem",
+          "flight": "voo"
+        }
       }
     },
     "settings": {
