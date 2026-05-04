@@ -88,6 +88,16 @@ function extractErrorTypeSuffix(body: { type?: string }): string | undefined {
   return body.type.slice(PROBLEM_TYPE_PREFIX.length);
 }
 
+// ── Form schema ───────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const baseSchema = z.object({
+  displayName: z.string().min(1).max(DISPLAY_NAME_MAX),
+  description: z.string().max(DESCRIPTION_MAX).optional(),
+});
+
+type FormValues = z.infer<typeof baseSchema>;
+
 // ── Component ─────────────────────────────────────────────
 
 export function NamespaceMetadataDrawer({
@@ -99,7 +109,7 @@ export function NamespaceMetadataDrawer({
 
   const updateMutation = useUpdateNamespaceMetadata();
 
-  const schema = useMemo(
+  const resolverSchema = useMemo(
     () =>
       z.object({
         displayName: z
@@ -114,10 +124,8 @@ export function NamespaceMetadataDrawer({
     [t],
   );
 
-  type FormValues = z.infer<typeof schema>;
-
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(resolverSchema),
     defaultValues: { displayName: "", description: "" },
     mode: "onBlur",
   });
@@ -209,7 +217,7 @@ export function NamespaceMetadataDrawer({
         slug: namespace.slug,
         input: {
           displayName: values.displayName,
-          description: values.description ?? null,
+          description: values.description?.trim() || null,
         },
       });
       onClose();
