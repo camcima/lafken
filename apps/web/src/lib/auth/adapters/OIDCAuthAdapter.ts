@@ -130,9 +130,13 @@ export class OIDCAuthAdapter implements IAuthProvider {
 
   async logout(options: LogoutOptions = {}): Promise<void> {
     logger.auth("[OIDC] Signing out");
-    await this.manager.signoutRedirect({
-      post_logout_redirect_uri: options.postLogoutRedirectUri,
-    });
+    // When postLogoutRedirectUri is undefined, omit it so oidc-client-ts uses
+    // the constructor-level setting instead of falling back to window.location.origin.
+    await this.manager.signoutRedirect(
+      options.postLogoutRedirectUri
+        ? { post_logout_redirect_uri: options.postLogoutRedirectUri }
+        : {},
+    );
   }
 
   async getUser(): Promise<AuthUser | null> {

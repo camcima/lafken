@@ -167,9 +167,9 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       logger.clearUser();
 
       const authProvider = await getAuthProvider();
-      await authProvider.logout({
-        postLogoutRedirectUri: globalThis.location.origin,
-      });
+      // No override — let the provider use its configured post-logout redirect
+      // (OIDC_POST_LOGOUT_REDIRECT_URI from runtime config).
+      await authProvider.logout();
     } catch (error) {
       const errorInstance = error instanceof Error ? error : new Error(String(error));
 

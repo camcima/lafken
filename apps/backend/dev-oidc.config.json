@@ -11,7 +11,7 @@
         "http://localhost:5173/auth/callback"
       ],
       "postLogoutRedirectUris": [
-        "http://localhost:5173/login"
+        "http://localhost:5173/auth/login"
       ],
       "audience": "lafken-api"
     }
