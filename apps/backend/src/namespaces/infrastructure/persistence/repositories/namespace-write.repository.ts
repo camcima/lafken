@@ -120,11 +120,11 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
   private isStorageBindingFkViolation(err: unknown): boolean {
     if (!err || typeof err !== "object") return false;
     const code = (err as { code?: unknown }).code;
-    const message = (err as { message?: unknown }).message;
+    const detail = (err as { detail?: unknown }).detail;
     return (
       code === PG_FK_VIOLATION &&
-      typeof message === "string" &&
-      message.includes(STORAGE_BINDING_FK_HINT)
+      typeof detail === "string" &&
+      detail.includes(STORAGE_BINDING_FK_HINT)
     );
   }
 }
