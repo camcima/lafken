@@ -5,6 +5,7 @@ import type { StorageBinding } from "@/system/domain/entities/storage-binding.en
 export class StorageBindingResponseMapper {
   static fromDomain(binding: StorageBinding): StorageBindingResponseDTO {
     return {
+      id: binding.props.id.toString(),
       name: binding.props.name,
       adapterType: binding.props.adapterType,
       config: binding.props.config,

@@ -84,6 +84,7 @@ function renderDrawer(props: {
 }
 
 const sampleBinding: StorageBindingResponseDTO = {
+  id: "1",
   name: "lafken-prod",
   adapterType: "gcs",
   config: { bucket: "lafken-bucket", projectId: "lafken-prj-1" },

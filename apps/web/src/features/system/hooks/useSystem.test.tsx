@@ -33,6 +33,7 @@ function makeQueryClient() {
 }
 
 const sampleBinding: StorageBindingResponseDTO = {
+  id: "1",
   name: "lafken-prod",
   adapterType: "gcs",
   config: { bucket: "lafken-dev", projectId: "lafken-prod-1" },

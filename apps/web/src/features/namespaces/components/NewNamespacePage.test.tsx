@@ -17,6 +17,7 @@ let mockBindings: StorageBindingResponseDTO[] = [];
 let mockBindingsLoading = false;
 
 const sampleBinding: StorageBindingResponseDTO = {
+  id: "1",
   name: "gcs-prod-main",
   adapterType: "gcs",
   config: { bucket: "lafken-bucket", projectId: "lafken-project" },
@@ -158,7 +159,7 @@ describe("NewNamespacePage", () => {
         expect.objectContaining({
           slug: "aircraft-photos",
           displayName: "Aircraft Photos",
-          storageBindingId: "gcs-prod-main",
+          storageBindingId: "1",
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           policy: expect.objectContaining({
             maxFileSizeBytes: 52_428_800,

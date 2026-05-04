@@ -536,7 +536,7 @@ export function NewNamespacePage(): React.JSX.Element {
                 {t("pages.namespaces.form.fields.storageBindingPlaceholder")}
               </option>
               {bindings.map((b) => (
-                <option key={b.name} value={b.name}>
+                <option key={b.id} value={b.id}>
                   {b.name}
                 </option>
               ))}

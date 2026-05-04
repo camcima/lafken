@@ -1729,6 +1729,9 @@ components:
     StorageBindingResponseDTO:
       type: object
       properties:
+        id:
+          type: string
+          description: Numeric ID as string for bigint-safety
         name:
           type: string
         adapterType:
@@ -1740,6 +1743,7 @@ components:
         createdAt:
           type: string
       required:
+        - id
         - name
         - adapterType
         - config

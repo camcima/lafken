@@ -17,6 +17,7 @@ describe("StorageBindingResponseMapper", () => {
 
     const dto = StorageBindingResponseMapper.fromDomain(binding);
 
+    expect(dto.id).toBe("1");
     expect(dto.name).toBe("gcs-prod");
     expect(dto.adapterType).toBe("gcs");
     expect(dto.config).toEqual({ bucket: "my-bucket" });

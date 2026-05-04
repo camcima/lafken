@@ -124,6 +124,7 @@ describe("SystemPage", () => {
   it("renders real bindings when useStorageBindings returns data", () => {
     storageBindingsState.value = [
       {
+        id: "1",
         name: "lafken-prod",
         adapterType: "gcs",
         config: { bucket: "lafken-bucket", projectId: "lafken-prj-1" },

@@ -1,6 +1,9 @@
 import { ApiProperty } from "@nestjs/swagger";
 
 export class StorageBindingResponseDTO {
+  @ApiProperty({ description: "Numeric ID as string for bigint-safety" })
+  id!: string;
+
   @ApiProperty()
   name!: string;
 
