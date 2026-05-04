@@ -524,6 +524,7 @@
       },
       "footer": "Retenções impedem exclusão e expiração de retenção. Liberar uma retenção requer aprovação jurídica e é registrado na trilha de auditoria.",
       "drawer": {
+        "close": "Fechar painel",
         "caption": "Retenção legal",
         "holdId": "ID da retenção",
         "scope": "Escopo",
@@ -588,6 +589,7 @@
         "exportCsv": "Exportar CSV"
       },
       "drawer": {
+        "close": "Fechar painel",
         "copyJson": "Copiar JSON",
         "openTarget": "Abrir alvo"
       },

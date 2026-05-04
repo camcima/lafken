@@ -45,8 +45,9 @@ describe("LegalHoldsListPage", () => {
     const statusSelect = screen.getByDisplayValue(/all statuses/i);
     fireEvent.change(statusSelect, { target: { value: "pending_release" } });
 
-    // Only CHL-2025-AVN-077 has pending_release status in demo data
-    expect(screen.getByText("CHL-2025-AVN-077")).toBeInTheDocument();
+    // Only CHL-2025-AVN-077 has pending_release status in demo data.
+    // It appears in both the table row and the oldest-hold stat card.
+    expect(screen.getAllByText("CHL-2025-AVN-077").length).toBeGreaterThan(0);
     expect(screen.queryByText("CHL-2026-AVN-014")).not.toBeInTheDocument();
   });
 

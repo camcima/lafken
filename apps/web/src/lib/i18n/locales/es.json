@@ -524,6 +524,7 @@
       },
       "footer": "Las retenciones impiden la eliminación y la expiración de retención. Liberar una retención requiere aprobación legal y se registra en la pista de auditoría.",
       "drawer": {
+        "close": "Cerrar panel",
         "caption": "Retención legal",
         "holdId": "ID de retención",
         "scope": "Alcance",
@@ -588,6 +589,7 @@
         "exportCsv": "Exportar CSV"
       },
       "drawer": {
+        "close": "Cerrar panel",
         "copyJson": "Copiar JSON",
         "openTarget": "Abrir objetivo"
       },

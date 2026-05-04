@@ -524,6 +524,7 @@
       },
       "footer": "Holds prevent deletion and retention expiry. Lifting a hold requires counsel sign-off and is logged to the audit trail.",
       "drawer": {
+        "close": "Close drawer",
         "caption": "Legal hold",
         "holdId": "Hold ID",
         "scope": "Scope",
@@ -588,6 +589,7 @@
         "exportCsv": "Export CSV"
       },
       "drawer": {
+        "close": "Close drawer",
         "copyJson": "Copy JSON",
         "openTarget": "Open target"
       },

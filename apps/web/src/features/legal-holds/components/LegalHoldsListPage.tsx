@@ -123,7 +123,7 @@ function HoldDrawer({ hold, onClose }: IHoldDrawerProps): React.JSX.Element {
             type="button"
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground"
-            aria-label="Close drawer"
+            aria-label={t("pages.legalHolds.drawer.close")}
           >
             <X size={X_ICON_SIZE} />
           </button>
@@ -234,6 +234,20 @@ function HoldDrawer({ hold, onClose }: IHoldDrawerProps): React.JSX.Element {
   );
 }
 
+// Slice 0: oldest-hold stat — derived from demo data, not hardcoded.
+// Computed once at module load so Date.now() is stable across renders.
+const MS_PER_DAY = 86_400_000;
+const _oldestHold = DEMO_LEGAL_HOLDS.slice().sort((a, b) =>
+  a.placedAt.localeCompare(b.placedAt),
+)[0];
+const OLDEST_HOLD_STAT: { days: number; caseRef: string } =
+  _oldestHold === undefined
+    ? { days: 0, caseRef: "" }
+    : {
+        days: Math.floor((Date.now() - new Date(_oldestHold.placedAt).getTime()) / MS_PER_DAY),
+        caseRef: _oldestHold.caseRef,
+      };
+
 export function LegalHoldsListPage(): React.JSX.Element {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
@@ -333,10 +347,10 @@ export function LegalHoldsListPage(): React.JSX.Element {
           <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
             {t("pages.legalHolds.stats.oldestHold.label")}
           </div>
-          <div className="mt-0.5 font-mono text-[24px] leading-tight tabular-nums">182d</div>
-          <div className="text-muted-foreground text-[11px]">
-            {t("pages.legalHolds.stats.oldestHold.sub")}
+          <div className="mt-0.5 font-mono text-[24px] leading-tight tabular-nums">
+            {OLDEST_HOLD_STAT.days}d
           </div>
+          <div className="text-muted-foreground text-[11px]">{OLDEST_HOLD_STAT.caseRef}</div>
         </Card>
       </div>
 
@@ -444,7 +458,7 @@ export function LegalHoldsListPage(): React.JSX.Element {
                 ) : (
                   <Badge variant="info">
                     <Clock size={BADGE_ICON_SIZE} />
-                    {t("pages.legalHolds.statuses.pending")}
+                    {t("pages.legalHolds.statuses.pendingRelease")}
                   </Badge>
                 )}
               </div>

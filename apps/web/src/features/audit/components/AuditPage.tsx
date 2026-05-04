@@ -25,6 +25,9 @@ import { cn } from "@/lib/utils";
 // Slice 0: BE returns empty arrays; rendering against typed demo data
 const DISPLAY_LIMIT = 60;
 
+// Slice 0: from CLAUDE.md spec; future: read from policy
+const AUDIT_RETENTION = "10y";
+
 // Icon sizes
 const TYPE_ICON_DEFAULT_SIZE = 12;
 const TYPE_ICON_DRAWER_SIZE = 14;
@@ -119,7 +122,7 @@ function AuditDrawer({ entry, onClose }: IAuditDrawerProps): React.JSX.Element {
             type="button"
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground"
-            aria-label="Close drawer"
+            aria-label={t("pages.audit.drawer.close")}
           >
             <X size={X_ICON_SIZE} />
           </button>
@@ -179,7 +182,10 @@ export function AuditPage(): React.JSX.Element {
         <div>
           <h1 className="m-0 text-[22px] font-bold tracking-tight">{t("pages.audit.title")}</h1>
           <div className="text-muted-foreground mt-1 text-[12.5px]">
-            {t("pages.audit.subtitle", { retention: "10y", anchor: "2m ago" })}
+            {t("pages.audit.subtitle", {
+              retention: AUDIT_RETENTION,
+              anchor: fmtMinAgo(DEMO_AUDIT[0]?.minutesAgo ?? 2),
+            })}
           </div>
         </div>
         <div className="flex items-center gap-2">
