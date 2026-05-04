@@ -33,9 +33,11 @@ export class InMemoryNamespaceWriteRepository extends NamespaceWriteRepositoryPo
     return this.namespaces.size;
   }
 
-  async createWithInitialPolicy(input: ICreateNamespaceInput): Promise<Namespace> {
+  createWithInitialPolicy(input: ICreateNamespaceInput): Promise<Namespace> {
     if (this.missingStorageBindings.has(input.storageBindingId)) {
-      throw new StorageBindingMissingError({ storageBindingId: input.storageBindingId });
+      return Promise.reject(
+        new StorageBindingMissingError({ storageBindingId: input.storageBindingId }),
+      );
     }
     const now = new Date();
     const policyId = this.nextPolicyId;
@@ -54,12 +56,13 @@ export class InMemoryNamespaceWriteRepository extends NamespaceWriteRepositoryPo
       updatedAt: now,
     });
     this.namespaces.set(input.slug, namespace);
-    return namespace;
+    return Promise.resolve(namespace);
   }
 
-  async updateMetadata(input: IUpdateNamespaceMetadataInput): Promise<Namespace> {
+  updateMetadata(input: IUpdateNamespaceMetadataInput): Promise<Namespace> {
     const existing = this.namespaces.get(input.slug);
-    if (!existing) throw new Error("InMemoryNamespaceWriteRepository: namespace not found");
+    if (!existing)
+      return Promise.reject(new Error("InMemoryNamespaceWriteRepository: namespace not found"));
     const updated = Namespace.fromProps({
       ...existing.props,
       displayName: input.displayName,
@@ -67,30 +70,32 @@ export class InMemoryNamespaceWriteRepository extends NamespaceWriteRepositoryPo
       updatedAt: new Date(),
     });
     this.namespaces.set(input.slug, updated);
-    return updated;
+    return Promise.resolve(updated);
   }
 
-  async archive(slug: string): Promise<Namespace> {
+  archive(slug: string): Promise<Namespace> {
     const existing = this.namespaces.get(slug);
-    if (!existing) throw new Error("InMemoryNamespaceWriteRepository: namespace not found");
+    if (!existing)
+      return Promise.reject(new Error("InMemoryNamespaceWriteRepository: namespace not found"));
     const updated = Namespace.fromProps({
       ...existing.props,
       archivedAt: existing.props.archivedAt ?? new Date(),
       updatedAt: new Date(),
     });
     this.namespaces.set(slug, updated);
-    return updated;
+    return Promise.resolve(updated);
   }
 
-  async unarchive(slug: string): Promise<Namespace> {
+  unarchive(slug: string): Promise<Namespace> {
     const existing = this.namespaces.get(slug);
-    if (!existing) throw new Error("InMemoryNamespaceWriteRepository: namespace not found");
+    if (!existing)
+      return Promise.reject(new Error("InMemoryNamespaceWriteRepository: namespace not found"));
     const updated = Namespace.fromProps({
       ...existing.props,
       archivedAt: null,
       updatedAt: new Date(),
     });
     this.namespaces.set(slug, updated);
-    return updated;
+    return Promise.resolve(updated);
   }
 }
