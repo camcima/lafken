@@ -51,9 +51,11 @@ export class UpdateNamespacePolicyUseCase {
       }
     }
 
+    // lastError is always set: the loop only exits here after catching
+    // at least one PolicyVersionConflictError in every iteration.
     throw new PolicyVersionConflictError({
       slug: input.slug,
-      attemptedVersion: (lastError?.params?.["attemptedVersion"] as number | undefined) ?? 0,
+      attemptedVersion: lastError!.attemptedVersion,
     });
   }
 }
