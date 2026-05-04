@@ -12,6 +12,8 @@ export * from "./presentation/auth/forbidden-error-response.dto";
 export * from "./presentation/namespaces/namespace-response.dto";
 export * from "./presentation/namespaces/namespace-policy-response.dto";
 export * from "./presentation/namespaces/namespace-preset-response.dto";
+export * from "./presentation/namespaces/create-namespace-request.dto";
+export * from "./presentation/namespaces/update-namespace-metadata-request.dto";
 
 export * from "./presentation/assets/asset-response.dto";
 export * from "./presentation/assets/asset-state-transition-response.dto";

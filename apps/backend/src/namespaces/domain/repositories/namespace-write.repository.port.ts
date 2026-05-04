@@ -1,9 +1,5 @@
+import type { EXIFHandling, RetentionMode, ServingMode } from "../entities/namespace-policy.entity";
 import type { Namespace } from "../entities/namespace.entity";
-import type {
-  EXIFHandling,
-  RetentionMode,
-  ServingMode,
-} from "../entities/namespace-policy.entity";
 
 export interface ICreateNamespaceInput {
   slug: string;

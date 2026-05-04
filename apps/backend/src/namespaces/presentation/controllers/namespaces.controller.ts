@@ -1,17 +1,49 @@
-import { Controller, Get, NotFoundException, Param, Query } from "@nestjs/common";
-import { ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
+  Body,
+  ConflictException,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from "@nestjs/common";
+import {
+  ApiBadRequestResponse,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnprocessableEntityResponse,
+} from "@nestjs/swagger";
+import {
+  CreateNamespaceRequestDTO,
   NamespacePolicyResponseDTO,
   NamespacePresetResponseDTO,
   NamespaceResponseDTO,
+  UpdateNamespaceMetadataRequestDTO,
 } from "@shared/backend-api";
 
+import { ArchiveNamespaceUseCase } from "@/namespaces/application/use-cases/archive-namespace.use-case";
+import { CreateNamespaceUseCase } from "@/namespaces/application/use-cases/create-namespace.use-case";
 import { GetNamespaceBySlugUseCase } from "@/namespaces/application/use-cases/get-namespace-by-slug.use-case";
 import { ListNamespacePoliciesUseCase } from "@/namespaces/application/use-cases/list-namespace-policies.use-case";
 import { ListNamespacePresetsUseCase } from "@/namespaces/application/use-cases/list-namespace-presets.use-case";
 import { ListNamespacesUseCase } from "@/namespaces/application/use-cases/list-namespaces.use-case";
+import { UnarchiveNamespaceUseCase } from "@/namespaces/application/use-cases/unarchive-namespace.use-case";
+import { UpdateNamespaceMetadataUseCase } from "@/namespaces/application/use-cases/update-namespace-metadata.use-case";
+import { NamespaceAlreadyExistsError } from "@/namespaces/domain/errors/namespace-already-exists.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
+import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 import { AuthenticatedEndpoint } from "@/shared/presentation/auth/decorators/authenticated-endpoint.decorator";
+import { AuthenticatedUser } from "@/shared/presentation/auth/decorators/authenticated-user.decorator";
+import { EndpointRequiredRoles } from "@/shared/presentation/auth/decorators/endpoint-required-roles.decorator";
+import type { CurrentAuthenticatedUserDTO } from "@/shared/presentation/auth/dto/current-authenticated-user.dto";
 
 import {
   ListNamespacesQueryDTO,
@@ -29,6 +61,10 @@ export class NamespacesController {
     private readonly getNamespaceBySlugUseCase: GetNamespaceBySlugUseCase,
     private readonly listNamespacePoliciesUseCase: ListNamespacePoliciesUseCase,
     private readonly listNamespacePresetsUseCase: ListNamespacePresetsUseCase,
+    private readonly createNamespaceUseCase: CreateNamespaceUseCase,
+    private readonly updateNamespaceMetadataUseCase: UpdateNamespaceMetadataUseCase,
+    private readonly archiveNamespaceUseCase: ArchiveNamespaceUseCase,
+    private readonly unarchiveNamespaceUseCase: UnarchiveNamespaceUseCase,
   ) {}
 
   @Get()
@@ -99,6 +135,128 @@ export class NamespacesController {
     try {
       const presets = await this.listNamespacePresetsUseCase.execute({ slug });
       return presets.map((preset) => NamespacePresetResponseMapper.fromDomain(preset));
+    } catch (err) {
+      if (err instanceof NamespaceNotFoundError) {
+        throw new NotFoundException(err.message, { cause: err });
+      }
+      throw err;
+    }
+  }
+
+  @Post()
+  @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: "Create a namespace with its initial policy" })
+  @ApiCreatedResponse({ type: NamespaceResponseDTO })
+  @ApiBadRequestResponse()
+  @ApiConflictResponse()
+  @ApiUnprocessableEntityResponse()
+  async createNamespace(
+    @Body() body: CreateNamespaceRequestDTO,
+    @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+  ): Promise<NamespaceResponseDTO> {
+    try {
+      const result = await this.createNamespaceUseCase.execute({
+        slug: body.slug,
+        displayName: body.displayName,
+        description: body.description,
+        storageBindingId: BigInt(body.storageBindingId),
+        createdBy: user.emailAddress,
+        policy: {
+          retentionDays: body.policy.retentionDays,
+          retentionMode: body.policy.retentionMode,
+          maxFileSizeBytes: BigInt(body.policy.maxFileSizeBytes),
+          allowedMimeTypes: body.policy.allowedMimeTypes,
+          exifHandling: body.policy.exifHandling,
+          virusScanRequired: body.policy.virusScanRequired,
+          contentModeration: body.policy.contentModeration,
+          requiredMetadataSchema: body.policy.requiredMetadataSchema,
+          immutable: body.policy.immutable,
+          servingMode: body.policy.servingMode,
+          signedUrlTtlSeconds: body.policy.signedUrlTtlSeconds,
+          signedUrlBucketSize: body.policy.signedUrlBucketSize,
+          retryConfig: body.policy.retryConfig,
+        },
+      });
+      return NamespaceResponseMapper.fromDomain(
+        result.namespace,
+        result.storageBindingName,
+        result.currentPolicyVersion,
+      );
+    } catch (err) {
+      if (err instanceof NamespaceAlreadyExistsError) {
+        throw new ConflictException(err.message, { cause: err });
+      }
+      throw err;
+    }
+  }
+
+  @Patch(":slug")
+  @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
+  @ApiOperation({ summary: "Update namespace metadata" })
+  @ApiOkResponse({ type: NamespaceResponseDTO })
+  @ApiNotFoundResponse()
+  @ApiBadRequestResponse()
+  @ApiUnprocessableEntityResponse()
+  async updateNamespaceMetadata(
+    @Param("slug") slug: string,
+    @Body() body: UpdateNamespaceMetadataRequestDTO,
+  ): Promise<NamespaceResponseDTO> {
+    try {
+      const result = await this.updateNamespaceMetadataUseCase.execute({
+        slug,
+        displayName: body.displayName,
+        description: body.description,
+      });
+      return NamespaceResponseMapper.fromDomain(
+        result.namespace,
+        result.storageBindingName,
+        result.currentPolicyVersion,
+      );
+    } catch (err) {
+      if (err instanceof NamespaceNotFoundError) {
+        throw new NotFoundException(err.message, { cause: err });
+      }
+      throw err;
+    }
+  }
+
+  @Post(":slug/archive")
+  @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Archive a namespace (soft)" })
+  @ApiOkResponse({ type: NamespaceResponseDTO })
+  @ApiNotFoundResponse()
+  async archiveNamespace(@Param("slug") slug: string): Promise<NamespaceResponseDTO> {
+    try {
+      const result = await this.archiveNamespaceUseCase.execute({ slug });
+      return NamespaceResponseMapper.fromDomain(
+        result.namespace,
+        result.storageBindingName,
+        result.currentPolicyVersion,
+      );
+    } catch (err) {
+      if (err instanceof NamespaceNotFoundError) {
+        throw new NotFoundException(err.message, { cause: err });
+      }
+      throw err;
+    }
+  }
+
+  @Post(":slug/unarchive")
+  @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Unarchive a namespace" })
+  @ApiOkResponse({ type: NamespaceResponseDTO })
+  @ApiNotFoundResponse()
+  async unarchiveNamespace(@Param("slug") slug: string): Promise<NamespaceResponseDTO> {
+    try {
+      const result = await this.unarchiveNamespaceUseCase.execute({ slug });
+      return NamespaceResponseMapper.fromDomain(
+        result.namespace,
+        result.storageBindingName,
+        result.currentPolicyVersion,
+      );
     } catch (err) {
       if (err instanceof NamespaceNotFoundError) {
         throw new NotFoundException(err.message, { cause: err });

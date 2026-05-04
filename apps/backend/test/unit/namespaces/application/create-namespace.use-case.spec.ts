@@ -45,8 +45,8 @@ describe("CreateNamespaceUseCase", () => {
   });
 
   it("creates a namespace and returns it when the slug is unique and binding exists", async () => {
-    const namespace = await useCase.execute(VALID_INPUT);
-    expect(namespace.props.slug.value).toBe("aircraft-photos");
+    const result = await useCase.execute(VALID_INPUT);
+    expect(result.namespace.props.slug.value).toBe("aircraft-photos");
     expect(writeRepo.has("aircraft-photos")).toBe(true);
   });
 

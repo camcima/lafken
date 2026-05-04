@@ -5,6 +5,8 @@ import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import { NamespaceWriteRepositoryPort } from "@/namespaces/domain/repositories/namespace-write.repository.port";
 
+import type { NamespaceWithMetadata } from "./list-namespaces.use-case";
+
 @Injectable()
 export class ArchiveNamespaceUseCase {
   constructor(
@@ -12,14 +14,26 @@ export class ArchiveNamespaceUseCase {
     private readonly writeRepository: NamespaceWriteRepositoryPort,
   ) {}
 
-  async execute(input: { slug: string }): Promise<Namespace> {
+  async execute(input: { slug: string }): Promise<NamespaceWithMetadata> {
     const existing = await this.queryRepository.findBySlug(input.slug);
     if (!existing) {
       throw new NamespaceNotFoundError({ slug: input.slug });
     }
-    if (existing.props.archivedAt !== null) {
-      return existing;
-    }
-    return this.writeRepository.archive(input.slug);
+
+    const namespace: Namespace =
+      existing.props.archivedAt !== null
+        ? existing
+        : await this.writeRepository.archive(input.slug);
+
+    const [storageBindingName, currentPolicyVersion] = await Promise.all([
+      this.queryRepository.findStorageBindingName(namespace.props.storageBindingId),
+      this.queryRepository.findCurrentPolicyVersion(namespace.props.id),
+    ]);
+
+    return {
+      namespace,
+      storageBindingName: storageBindingName ?? "unknown",
+      currentPolicyVersion: currentPolicyVersion ?? 0,
+    };
   }
 }

@@ -40,7 +40,7 @@ describe("ArchiveNamespaceUseCase", () => {
 
     const result = await useCase.execute({ slug: "my-namespace" });
 
-    expect(result.props.archivedAt).toBeInstanceOf(Date);
+    expect(result.namespace.props.archivedAt).toBeInstanceOf(Date);
     expect(writeRepo.get("my-namespace")?.props.archivedAt).toBeInstanceOf(Date);
   });
 
@@ -52,8 +52,8 @@ describe("ArchiveNamespaceUseCase", () => {
 
     const result = await useCase.execute({ slug: "my-namespace" });
 
-    expect(result).toBe(alreadyArchived);
-    expect(result.props.archivedAt).toBe(originalDate);
+    expect(result.namespace).toBe(alreadyArchived);
+    expect(result.namespace.props.archivedAt).toBe(originalDate);
   });
 
   it("throws NamespaceNotFoundError when the namespace does not exist", async () => {

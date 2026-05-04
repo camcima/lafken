@@ -1,11 +1,11 @@
 import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
 import { StorageBindingMissingError } from "@/namespaces/domain/errors/storage-binding-missing.error";
-import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 import {
   ICreateNamespaceInput,
   IUpdateNamespaceMetadataInput,
   NamespaceWriteRepositoryPort,
 } from "@/namespaces/domain/repositories/namespace-write.repository.port";
+import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
 const INITIAL_NAMESPACE_ID = 1n;
 const INITIAL_POLICY_ID = 1n;

@@ -44,8 +44,8 @@ describe("UpdateNamespaceMetadataUseCase", () => {
       description: "A fresh description",
     });
 
-    expect(result.props.displayName).toBe("New Name");
-    expect(result.props.description).toBe("A fresh description");
+    expect(result.namespace.props.displayName).toBe("New Name");
+    expect(result.namespace.props.description).toBe("A fresh description");
     expect(writeRepo.get("my-namespace")?.props.displayName).toBe("New Name");
   });
 
