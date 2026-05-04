@@ -17,6 +17,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Card } from "@/components/common/Card";
+import { Paginator } from "@/components/common/Paginator";
 import { StatePill } from "@/components/common/StatePill";
 import { DEMO_ASSET_LIST, DEMO_NAMESPACES, fmtMinAgo } from "@/lib/demo/lafken-demo-data";
 import type { DemoAsset } from "@/lib/demo/lafken-demo-data";
@@ -25,15 +26,28 @@ import { cn } from "@/lib/utils";
 // ── View-mode constants ───────────────────────────────────────────────────
 type ViewMode = "rows" | "hybrid" | "grid";
 
-const PAGE_SIZE_GRID = 24;
-const PAGE_SIZE_HYBRID = 16;
-const PAGE_SIZE_ROWS = 18;
+const AUTO_PAGE_SIZE_GRID = 24;
+const AUTO_PAGE_SIZE_HYBRID = 16;
+const AUTO_PAGE_SIZE_ROWS = 18;
 
-function getPageSize(view: ViewMode): number {
-  if (view === "grid") return PAGE_SIZE_GRID;
-  if (view === "hybrid") return PAGE_SIZE_HYBRID;
-  return PAGE_SIZE_ROWS;
+function getAutoPageSize(view: ViewMode): number {
+  if (view === "grid") return AUTO_PAGE_SIZE_GRID;
+  if (view === "hybrid") return AUTO_PAGE_SIZE_HYBRID;
+  return AUTO_PAGE_SIZE_ROWS;
 }
+
+// Custom-arrow select class (shared with page-size dropdowns)
+const SELECT_CLASS =
+  "h-9 appearance-none rounded-md border border-input bg-card pl-3 pr-8 text-[12.5px]";
+
+// Rows-per-page select (compact variant for pagination footer)
+const PAGE_SIZE_SELECT_CLASS =
+  "h-7 appearance-none rounded border border-input bg-card px-2 pr-6 text-[12px] leading-none";
+
+// Page-size options for the rows-per-page selector
+/* eslint-disable no-magic-numbers */
+const PAGE_SIZE_OPTIONS = [18, 24, 50, 100, 200] as const;
+/* eslint-enable no-magic-numbers */
 
 // ── Thumbnail ─────────────────────────────────────────────────────────────
 type ThumbSize = "sm" | "md" | "lg";
@@ -123,7 +137,7 @@ function RowsView({ pageRows, selected, onToggleOne, onToggleAll }: IRowsViewPro
           <span>{t("pages.assets.table.asset")}</span>
           <span>{t("pages.assets.table.namespaceWo")}</span>
           <span>{t("pages.assets.table.state")}</span>
-          <span>{t("pages.assets.table.areaSeverity")}</span>
+          <span>{t("pages.assets.table.formatDimensions")}</span>
           <span>{t("pages.assets.table.uploadedBy")}</span>
           <span className="text-right">{t("pages.assets.table.size")}</span>
           <span className="text-right">{t("pages.assets.table.age")}</span>
@@ -172,9 +186,9 @@ function RowsView({ pageRows, selected, onToggleOne, onToggleAll }: IRowsViewPro
             </div>
             <StatePill state={asset.state} />
             <div className="min-w-0">
-              <div className="truncate text-[12px]">{asset.area}</div>
-              <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
-                {asset.severity}
+              <div className="font-mono text-[11.5px] tracking-wider uppercase">{asset.format}</div>
+              <div className="text-muted-foreground font-mono text-[10.5px] tabular-nums">
+                {asset.dimensions}
               </div>
             </div>
             <div className="min-w-0">
@@ -225,10 +239,14 @@ function GridView({ pageRows }: IGridViewProps) {
                 {fmtMinAgo(asset.minutesAgo)}
               </span>
             </div>
-            <div className="mt-1 truncate text-[12px]">{asset.area}</div>
+            <div className="mt-1 truncate font-mono text-[11.5px] tracking-wider uppercase">
+              {asset.format} <span className="text-muted-foreground">· {asset.dimensions}</span>
+            </div>
             <div className="mt-0.5 flex items-center justify-between text-[10.5px]">
               <span className="text-muted-foreground font-mono">{asset.namespace}</span>
-              <span className="text-muted-foreground">{asset.severity}</span>
+              <span className="text-muted-foreground font-mono tabular-nums">
+                {(asset.sizeBytes / BYTES_PER_MIB).toFixed(1)} MB
+              </span>
             </div>
           </div>
         </Link>
@@ -260,8 +278,8 @@ function HybridView({ pageRows }: IHybridViewProps) {
               <span className="text-foreground font-mono text-[12px]">{asset.id}…</span>
               <StatePill state={asset.state} />
             </div>
-            <div className="mt-1 truncate text-[12.5px]">
-              {asset.area} · {asset.severity}
+            <div className="mt-1 truncate font-mono text-[12px] tracking-wider uppercase">
+              {asset.format} <span className="text-muted-foreground">· {asset.dimensions}</span>
             </div>
             <div className="text-muted-foreground mt-1 flex items-center justify-between text-[11px]">
               <span className="font-mono">{asset.namespace}</span>
@@ -320,7 +338,7 @@ function ViewToggle({ view, onChange }: IViewToggleProps) {
 const QUICK_FILTER_KEYS = [
   "last24h",
   "hasLegalHold",
-  "majorSeverity",
+  "quarantined",
   "failedPipelines",
   "mine",
 ] as const;
@@ -337,10 +355,12 @@ export function AssetsListPage() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(() => new Set<string>());
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(0); // 0 => use AUTO_PAGE_SIZE
 
-  const pageSize = getPageSize(view);
+  const autoPageSize = getAutoPageSize(view);
+  const PAGE_SIZE = pageSize || autoPageSize;
 
-  const filtered = useMemo<DemoAsset[]>(() => {
+  const filtered = useMemo(() => {
     // Slice 0: BE returns empty arrays; rendering against typed demo data
     return DEMO_ASSET_LIST.filter((asset) => {
       if (stateFilter !== "all" && asset.state !== stateFilter) return false;
@@ -350,8 +370,7 @@ export function AssetsListPage() {
         if (
           !asset.id.toLowerCase().includes(q) &&
           !asset.tail.toLowerCase().includes(q) &&
-          !asset.wo.toLowerCase().includes(q) &&
-          !asset.area.toLowerCase().includes(q)
+          !asset.wo.toLowerCase().includes(q)
         )
           return false;
       }
@@ -359,8 +378,8 @@ export function AssetsListPage() {
     });
   }, [stateFilter, namespaceFilter, query]);
 
-  const pageRows = filtered.slice(page * pageSize, (page + 1) * pageSize);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageRows = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 
   const hasActiveFilters = stateFilter !== "all" || namespaceFilter !== "all" || query !== "";
 
@@ -414,8 +433,17 @@ export function AssetsListPage() {
 
   function handleViewChange(nextView: ViewMode): void {
     setView(nextView);
-    setPage(0);
+    setPageSize(0);
   }
+
+  function handlePageChange(newPage: number): void {
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // Range display values (1-indexed)
+  const rangeFrom = filtered.length === 0 ? 0 : page * PAGE_SIZE + 1;
+  const rangeTo = Math.min((page + 1) * PAGE_SIZE, filtered.length);
 
   return (
     <div className="space-y-4">
@@ -476,7 +504,7 @@ export function AssetsListPage() {
             onChange={(e) => {
               handleStateFilter(e.target.value);
             }}
-            className="border-input bg-card h-9 appearance-none rounded-md border pr-8 pl-3 text-[12.5px]"
+            className={SELECT_CLASS}
             aria-label={t("pages.assets.filterByState")}
           >
             <option value="all">{t("pages.assets.filters.allStates")}</option>
@@ -496,7 +524,7 @@ export function AssetsListPage() {
             onChange={(e) => {
               handleNamespaceFilter(e.target.value);
             }}
-            className="border-input bg-card h-9 appearance-none rounded-md border pr-8 pl-3 text-[12.5px]"
+            className={SELECT_CLASS}
             aria-label={t("pages.assets.filterByNamespace")}
           >
             <option value="all">{t("pages.assets.filters.allNamespaces")}</option>
@@ -587,41 +615,15 @@ export function AssetsListPage() {
         </div>
       )}
 
-      {/* ── Stats + pagination ──────────────────────────────── */}
-      <div className="text-muted-foreground mb-3 flex flex-wrap items-center justify-between gap-3 text-[12px]">
-        <div>
-          {t("pages.assets.summary", {
-            shown: pageRows.length,
-            total: filtered.length,
-          })}
-        </div>
-        <div className="inline-flex items-center gap-1">
-          <button
-            type="button"
-            disabled={page === 0}
-            onClick={() => {
-              setPage((prev) => prev - 1);
-            }}
-            className="text-muted-foreground hover:bg-secondary rounded p-1.5 disabled:opacity-30"
-            aria-label="Previous page"
-          >
-            <ChevronRight size={13} className="rotate-180" />
-          </button>
-          <span className="font-mono text-[11.5px] tabular-nums">
-            {t("pages.assets.paginationPage", { page: page + 1, total: totalPages })}
-          </span>
-          <button
-            type="button"
-            disabled={page >= totalPages - 1}
-            onClick={() => {
-              setPage((prev) => prev + 1);
-            }}
-            className="text-muted-foreground hover:bg-secondary rounded p-1.5 disabled:opacity-30"
-            aria-label="Next page"
-          >
-            <ChevronRight size={13} />
-          </button>
-        </div>
+      {/* ── Stats line ──────────────────────────────────────── */}
+      <div className="text-muted-foreground mb-3 text-[12px]">
+        {filtered.length === 0
+          ? t("pages.assets.summaryEmpty")
+          : t("pages.assets.summaryRange", {
+              from: rangeFrom.toLocaleString(),
+              to: rangeTo.toLocaleString(),
+              total: filtered.length.toLocaleString(),
+            })}
       </div>
 
       {/* ── Content area ──────────────────────────────────────── */}
@@ -647,6 +649,37 @@ export function AssetsListPage() {
           )}
           {view === "hybrid" && <HybridView pageRows={pageRows} />}
           {view === "grid" && <GridView pageRows={pageRows} />}
+
+          {/* ── Bottom paginator ──────────────────────────────── */}
+          <div className="border-border mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+            <div className="text-muted-foreground flex items-center gap-2 text-[12px]">
+              <span>{t("paginator.rowsPerPage")}</span>
+              <select
+                value={PAGE_SIZE}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(0);
+                }}
+                className={PAGE_SIZE_SELECT_CLASS}
+                aria-label={t("paginator.rowsPerPage")}
+              >
+                {PAGE_SIZE_OPTIONS.map((pageOpt) => (
+                  <option key={pageOpt} value={pageOpt}>
+                    {pageOpt}
+                  </option>
+                ))}
+              </select>
+              <span className="hidden sm:inline">·</span>
+              <span className="hidden font-mono tabular-nums sm:inline">
+                {t("paginator.range", {
+                  from: rangeFrom.toLocaleString(),
+                  to: rangeTo.toLocaleString(),
+                  total: filtered.length.toLocaleString(),
+                })}
+              </span>
+            </div>
+            <Paginator page={page} totalPages={totalPages} onChange={handlePageChange} />
+          </div>
         </>
       )}
     </div>

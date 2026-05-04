@@ -237,9 +237,9 @@
         "quickFilters": {
           "last24h": "Últimas 24h",
           "hasLegalHold": "Con retención legal",
-          "majorSeverity": "Severidad mayor",
           "failedPipelines": "Pipelines fallidos",
-          "mine": "Míos"
+          "mine": "Míos",
+          "quarantined": "En cuarentena"
         }
       },
       "viewToggle": {
@@ -265,11 +265,11 @@
         "state": "Estado",
         "size": "Tamaño",
         "uploaded": "Subido",
-        "areaSeverity": "Área · severidad",
         "namespaceWo": "Namespace · OT",
         "uploadedBy": "Subido por",
         "age": "Antigüedad",
-        "selectAll": "Seleccionar todo"
+        "selectAll": "Seleccionar todo",
+        "formatDimensions": "Formato · dimensiones"
       },
       "row": {
         "hold": "Retención legal"
@@ -285,7 +285,9 @@
       "bulkActions": {
         "label": "Acciones masivas",
         "comingSoon": "Las acciones masivas estarán disponibles en un slice posterior"
-      }
+      },
+      "summaryRange": "Mostrando {{from}}–{{to}} de {{total}} activos",
+      "summaryEmpty": "No hay activos que coincidan"
     },
     "assetDetail": {
       "title": "Activo",
@@ -690,7 +692,9 @@
       "empty": {
         "title": "No hay retenciones legales activas",
         "description": "Las retenciones que apliques aparecerán aquí."
-      }
+      },
+      "rowsPerPage": "Filas por página",
+      "range": "{{from}}–{{to}} de {{total}}"
     },
     "audit": {
       "title": "Registro de auditoría",
@@ -735,7 +739,9 @@
       },
       "empty": {
         "title": "Ninguna entrada de auditoría coincide"
-      }
+      },
+      "rowsPerPage": "Filas por página",
+      "range": "{{from}}–{{to}} de {{total}}"
     },
     "system": {
       "title": "Estado del sistema",
@@ -801,14 +807,37 @@
       },
       "workspace": {
         "fields": {
-          "name": { "label": "Nombre del workspace", "value": "LATAM Lafken (prod)" },
-          "slug": { "label": "Slug del workspace", "value": "latam-lafken-prod" },
-          "region": { "label": "Región", "value": "sa-east-1 (São Paulo, primaria)" },
-          "replica": { "label": "Réplica", "value": "sa-east-1c (tibia)" },
-          "defaultNamespace": { "label": "Namespace predeterminado", "value": "aircraft-photos" },
-          "reviewerSlo": { "label": "SLO del revisor predeterminado", "value": "4 horas" },
-          "created": { "label": "Creado", "value": "2024-08-12 por p.estrada@latam.com" },
-          "plan": { "label": "Plan" }
+          "name": {
+            "label": "Nombre del workspace",
+            "value": "LATAM Lafken (prod)"
+          },
+          "slug": {
+            "label": "Slug del workspace",
+            "value": "latam-lafken-prod"
+          },
+          "region": {
+            "label": "Región",
+            "value": "sa-east-1 (São Paulo, primaria)"
+          },
+          "replica": {
+            "label": "Réplica",
+            "value": "sa-east-1c (tibia)"
+          },
+          "defaultNamespace": {
+            "label": "Namespace predeterminado",
+            "value": "aircraft-photos"
+          },
+          "reviewerSlo": {
+            "label": "SLO del revisor predeterminado",
+            "value": "4 horas"
+          },
+          "created": {
+            "label": "Creado",
+            "value": "2024-08-12 por p.estrada@latam.com"
+          },
+          "plan": {
+            "label": "Plan"
+          }
         },
         "plan": {
           "label": "Enterprise · personalizado"
@@ -855,12 +884,36 @@
       "policies": {
         "title": "Valores predeterminados para nuevos namespaces",
         "defaults": {
-          "retention": { "label": "Retención predeterminada", "value": "7 años", "note": "Anulable por namespace en YAML de política." },
-          "maxUpload": { "label": "Tamaño máximo de carga predeterminado", "value": "26 MB", "note": "Techo absoluto 200 MB." },
-          "allowedMimes": { "label": "Tipos MIME permitidos", "value": "image/jpeg, image/png, image/heic, application/pdf", "note": "" },
-          "moderation": { "label": "Moderación", "value": "habilitada (v2)", "note": "Umbral 0,65 en todas las categorías." },
-          "exif": { "label": "Política EXIF", "value": "eliminar de los bytes; preservar GPS en capture_context", "note": "" },
-          "retentionWarning": { "label": "Aviso previo de retención", "value": "60 días", "note": "Correo + banner del consola antes de la expiración." }
+          "retention": {
+            "label": "Retención predeterminada",
+            "value": "7 años",
+            "note": "Anulable por namespace en YAML de política."
+          },
+          "maxUpload": {
+            "label": "Tamaño máximo de carga predeterminado",
+            "value": "26 MB",
+            "note": "Techo absoluto 200 MB."
+          },
+          "allowedMimes": {
+            "label": "Tipos MIME permitidos",
+            "value": "image/jpeg, image/png, image/heic, application/pdf",
+            "note": ""
+          },
+          "moderation": {
+            "label": "Moderación",
+            "value": "habilitada (v2)",
+            "note": "Umbral 0,65 en todas las categorías."
+          },
+          "exif": {
+            "label": "Política EXIF",
+            "value": "eliminar de los bytes; preservar GPS en capture_context",
+            "note": ""
+          },
+          "retentionWarning": {
+            "label": "Aviso previo de retención",
+            "value": "60 días",
+            "note": "Correo + banner del consola antes de la expiración."
+          }
         },
         "edit": "Editar"
       },
@@ -885,5 +938,16 @@
         }
       }
     }
+  },
+  "paginator": {
+    "label": "Paginación",
+    "firstPage": "Primera página",
+    "previousPage": "Página anterior",
+    "nextPage": "Página siguiente",
+    "lastPage": "Última página",
+    "goTo": "Ir a",
+    "jumpToPage": "Saltar a la página",
+    "rowsPerPage": "Filas por página",
+    "range": "{{from}}–{{to}} de {{total}}"
   }
 }

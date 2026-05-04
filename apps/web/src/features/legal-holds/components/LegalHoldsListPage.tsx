@@ -19,6 +19,7 @@ import { Badge } from "@/components/common/Badge";
 import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
 import { Label } from "@/components/common/Label";
+import { Paginator } from "@/components/common/Paginator";
 import { RightDrawer } from "@/components/common/RightDrawer";
 import { DEMO_LEGAL_HOLDS } from "@/lib/demo/lafken-demo-data";
 import type { DemoLegalHold } from "@/lib/demo/lafken-demo-data";
@@ -204,6 +205,16 @@ function HoldDrawer({ hold, onClose }: IHoldDrawerProps): React.JSX.Element {
   );
 }
 
+// Page-size options for the rows-per-page selector
+/* eslint-disable no-magic-numbers */
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 25;
+/* eslint-enable no-magic-numbers */
+
+// Rows-per-page select (compact variant for pagination footer)
+const PAGE_SIZE_SELECT_CLASS =
+  "h-7 appearance-none rounded border border-input bg-card px-2 pr-6 text-[12px] leading-none";
+
 // Slice 0: oldest-hold stat — derived from demo data, not hardcoded.
 // Computed once at module load so Date.now() is stable across renders.
 const MS_PER_DAY = 86_400_000;
@@ -224,6 +235,8 @@ export function LegalHoldsListPage(): React.JSX.Element {
   const [scopeFilter, setScopeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const filtered: DemoLegalHold[] = DEMO_LEGAL_HOLDS.filter((hold) => {
     if (statusFilter !== "all" && hold.status !== statusFilter) return false;
@@ -240,8 +253,14 @@ export function LegalHoldsListPage(): React.JSX.Element {
     return true;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageRows = filtered.slice(page * pageSize, (page + 1) * pageSize);
+
   const totalAssets: number = filtered.reduce((sum, hold) => sum + hold.assets, 0);
   const openHold: DemoLegalHold | undefined = DEMO_LEGAL_HOLDS.find((hold) => hold.id === openId);
+
+  const rangeFrom = filtered.length === 0 ? 0 : page * pageSize + 1;
+  const rangeTo = Math.min((page + 1) * pageSize, filtered.length);
 
   const scopeLabels: Record<string, string> = {
     asset: t("pages.legalHolds.scopes.asset"),
@@ -338,6 +357,7 @@ export function LegalHoldsListPage(): React.JSX.Element {
               value={query}
               onChange={(ev: React.ChangeEvent<HTMLInputElement>) => {
                 setQuery(ev.target.value);
+                setPage(0);
               }}
               className="border-input bg-card focus:ring-ring h-9 w-full rounded-md border pr-3 pl-9 text-[12.5px] outline-none focus:ring-1"
             />
@@ -346,6 +366,7 @@ export function LegalHoldsListPage(): React.JSX.Element {
             value={scopeFilter}
             onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
               setScopeFilter(ev.target.value);
+              setPage(0);
             }}
             className={SELECT_CLASS}
           >
@@ -359,6 +380,7 @@ export function LegalHoldsListPage(): React.JSX.Element {
             value={statusFilter}
             onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
               setStatusFilter(ev.target.value);
+              setPage(0);
             }}
             className={SELECT_CLASS}
           >
@@ -387,7 +409,7 @@ export function LegalHoldsListPage(): React.JSX.Element {
             <span>{t("pages.legalHolds.table.status")}</span>
             <span />
           </div>
-          {filtered.map((hold) => (
+          {pageRows.map((hold) => (
             <button
               key={hold.id}
               type="button"
@@ -446,8 +468,50 @@ export function LegalHoldsListPage(): React.JSX.Element {
         </div>
       </Card>
 
-      {/* Footer */}
-      <div className="text-muted-foreground mt-3 text-[11.5px]">{t("pages.legalHolds.footer")}</div>
+      {/* Footer paginator */}
+      <div className="text-muted-foreground mt-3 flex flex-wrap items-center justify-between gap-3 text-[11.5px]">
+        <div className="flex items-center gap-2">
+          <span>{t("paginator.rowsPerPage")}</span>
+          <select
+            value={pageSize}
+            onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
+              setPageSize(Number(ev.target.value));
+              setPage(0);
+            }}
+            className={PAGE_SIZE_SELECT_CLASS}
+            aria-label={t("paginator.rowsPerPage")}
+          >
+            {PAGE_SIZE_OPTIONS.map((pageOpt) => (
+              <option key={pageOpt} value={pageOpt}>
+                {pageOpt}
+              </option>
+            ))}
+          </select>
+          {filtered.length > 0 && (
+            <>
+              <span className="hidden sm:inline">·</span>
+              <span className="hidden font-mono tabular-nums sm:inline">
+                {t("paginator.range", {
+                  from: rangeFrom.toLocaleString(),
+                  to: rangeTo.toLocaleString(),
+                  total: filtered.length.toLocaleString(),
+                })}
+              </span>
+            </>
+          )}
+        </div>
+        <Paginator
+          page={page}
+          totalPages={totalPages}
+          onChange={(newPage) => {
+            setPage(newPage);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
+      </div>
+
+      {/* Footer note */}
+      <div className="text-muted-foreground mt-4 text-[11.5px]">{t("pages.legalHolds.footer")}</div>
 
       {/* Detail drawer */}
       {openHold !== undefined && (

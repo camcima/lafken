@@ -224,6 +224,8 @@ export interface DemoAsset {
   tail: string;
   area: string;
   severity: string;
+  format: string;
+  dimensions: string;
   sizeBytes: number;
   uploadedBy: string;
   uploadedDisplay: string;
@@ -316,7 +318,7 @@ function seedRand(seed: number): () => number {
 }
 
 // Asset generation constants
-const ASSET_COUNT = 64;
+const ASSET_COUNT = 312;
 const ASSET_NAMESPACE_MOD = 4;
 const ASSET_MINUTES_MAX = 7_200; // 5 days in minutes (60*24*5)
 const ASSET_SIZE_MIN_MB = 0.4;
@@ -337,6 +339,17 @@ const ASSET_CHARS_MOD = 12;
 const ASSET_SEED = 42;
 const ASSET_WO_SEQ_PAD = 3;
 
+const FORMATS = ["JPEG", "JPEG", "JPEG", "PNG", "HEIC", "RAW", "MP4", "TIFF"];
+const DIMENSIONS = [
+  "6048×4032",
+  "4032×3024",
+  "3840×2160",
+  "5472×3648",
+  "1920×1080",
+  "8192×5464",
+  "2048×1536",
+];
+
 export const DEMO_ASSET_LIST: DemoAsset[] = (() => {
   const rnd = seedRand(ASSET_SEED);
   const out: DemoAsset[] = [];
@@ -349,6 +362,8 @@ export const DEMO_ASSET_LIST: DemoAsset[] = (() => {
     const area = DEFECT_AREAS[Math.floor(rnd() * DEFECT_AREAS.length)];
     const mech = MECHANICS[Math.floor(rnd() * MECHANICS.length)];
     const sizeMb = ASSET_SIZE_MIN_MB + rnd() * ASSET_SIZE_RANGE_MB;
+    const fmt = FORMATS[Math.floor(rnd() * FORMATS.length)] ?? "JPEG";
+    const dim = DIMENSIONS[Math.floor(rnd() * DIMENSIONS.length)] ?? "4032×3024";
     const idTail = (ASSET_ID_BASE + idx * ASSET_ID_STEP)
       .toString(ASSET_ID_RADIX)
       .toUpperCase()
@@ -366,6 +381,8 @@ export const DEMO_ASSET_LIST: DemoAsset[] = (() => {
       tail: tail ?? "N12345",
       area: area ?? "landing-gear",
       severity: SEVERITIES[sevIdx] ?? "minor",
+      format: fmt,
+      dimensions: dim,
       sizeBytes: Math.floor(sizeMb * BYTES_PER_MB),
       uploadedBy,
       uploadedDisplay:

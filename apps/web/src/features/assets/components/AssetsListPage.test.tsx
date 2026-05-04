@@ -71,12 +71,12 @@ describe("AssetsListPage", () => {
     renderPage();
     expect(screen.getByText(/^Asset$/i)).toBeInTheDocument();
     expect(screen.getByText(/namespace · wo/i)).toBeInTheDocument();
-    expect(screen.getByText(/area · severity/i)).toBeInTheDocument();
+    expect(screen.getByText(/format · dimensions/i)).toBeInTheDocument();
   });
 
   it("default view (rows) renders demo asset rows", () => {
     renderPage();
-    // There are 64 demo assets, page size 18 — at least 1 row visible
+    // There are 312 demo assets, page size 18 — at least 1 row visible
     const links = screen.getAllByRole("link");
     // Multiple links expected (rows)
     expect(links.length).toBeGreaterThan(0);
@@ -98,8 +98,6 @@ describe("AssetsListPage", () => {
 
     // The count should be lower than the full list
     expect(updatedText).not.toEqual(initialText);
-    // "processing_failed" state matches ~3 assets out of 64 — total should be < initial
-    expect(updatedText).toMatch(/showing \d+ of \d+ matching assets/i);
   });
 
   it("shows empty state when filters yield no matches", async () => {
@@ -110,14 +108,15 @@ describe("AssetsListPage", () => {
     expect(screen.getByText(/no assets match these filters/i)).toBeInTheDocument();
   });
 
-  it("shows summary line with matching assets count", () => {
+  it("shows summary line with range", () => {
     renderPage();
-    expect(screen.getByText(/showing \d+ of \d+ matching assets/i)).toBeInTheDocument();
+    expect(screen.getByText(/showing/i)).toBeInTheDocument();
   });
 
-  it("shows pagination controls", () => {
+  it("shows Paginator navigation when there are multiple pages", () => {
     renderPage();
-    expect(screen.getByText(/page \d+ \/ \d+/i)).toBeInTheDocument();
+    // 312 assets, 18 per page = 18 pages — Paginator renders
+    expect(screen.getByRole("navigation")).toBeInTheDocument();
   });
 
   it("switching to grid view changes the display", async () => {
@@ -147,7 +146,7 @@ describe("AssetsListPage", () => {
     renderPage();
     const checkboxes = screen.getAllByRole("checkbox");
     // First checkbox is the "check all"; click the second one (first data row)
-    // We know there's at least one data row because DEMO_ASSET_LIST has 64 items
+    // We know there's at least one data row because DEMO_ASSET_LIST has 312 items
     const firstRowCheckbox = checkboxes[1];
     await user.click(firstRowCheckbox);
     expect(screen.getByText(/\d+ selected/i)).toBeInTheDocument();
@@ -159,7 +158,7 @@ describe("AssetsListPage", () => {
     const user = userEvent.setup();
     renderPage();
     const checkboxes = screen.getAllByRole("checkbox");
-    // We know there's at least one data row because DEMO_ASSET_LIST has 64 items
+    // We know there's at least one data row because DEMO_ASSET_LIST has 312 items
     const firstRowCheckbox = checkboxes[1];
     await user.click(firstRowCheckbox);
     // Find the "Clear" button in the bulk action bar

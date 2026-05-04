@@ -18,13 +18,11 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/common/Badge";
 import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
+import { Paginator } from "@/components/common/Paginator";
 import { RightDrawer } from "@/components/common/RightDrawer";
 import { DEMO_AUDIT, fmtMinAgo } from "@/lib/demo/lafken-demo-data";
 import type { DemoAuditEntry } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
-
-// Slice 0: BE returns empty arrays; rendering against typed demo data
-const DISPLAY_LIMIT = 60;
 
 // Slice 0: from CLAUDE.md spec; future: read from policy
 const AUDIT_RETENTION = "10y";
@@ -131,12 +129,24 @@ function AuditDrawer({ entry, onClose }: IAuditDrawerProps): React.JSX.Element {
 const SELECT_CLASS =
   "h-9 appearance-none rounded-md border border-input bg-card pl-3 pr-8 text-[12.5px]";
 
+// Page-size options for the rows-per-page selector
+/* eslint-disable no-magic-numbers */
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const;
+const DEFAULT_PAGE_SIZE = 50;
+/* eslint-enable no-magic-numbers */
+
+// Rows-per-page select (compact variant for pagination footer)
+const PAGE_SIZE_SELECT_CLASS =
+  "h-7 appearance-none rounded border border-input bg-card px-2 pr-6 text-[12px] leading-none";
+
 export function AuditPage(): React.JSX.Element {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [resultFilter, setResultFilter] = useState("all");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const filtered: DemoAuditEntry[] = DEMO_AUDIT.filter((entry) => {
     if (resultFilter !== "all" && entry.result !== resultFilter) return false;
@@ -154,7 +164,13 @@ export function AuditPage(): React.JSX.Element {
     return true;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageRows = filtered.slice(page * pageSize, (page + 1) * pageSize);
+
   const openEntry: DemoAuditEntry | undefined = DEMO_AUDIT.find((entry) => entry.id === openId);
+
+  const rangeFrom = filtered.length === 0 ? 0 : page * pageSize + 1;
+  const rangeTo = Math.min((page + 1) * pageSize, filtered.length);
 
   return (
     <div className="space-y-4">
@@ -191,6 +207,7 @@ export function AuditPage(): React.JSX.Element {
               value={query}
               onChange={(ev: React.ChangeEvent<HTMLInputElement>) => {
                 setQuery(ev.target.value);
+                setPage(0);
               }}
               className="border-input bg-card focus:ring-ring h-9 w-full rounded-md border pr-3 pl-9 text-[12.5px] outline-none focus:ring-1"
             />
@@ -199,6 +216,7 @@ export function AuditPage(): React.JSX.Element {
             value={typeFilter}
             onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
               setTypeFilter(ev.target.value);
+              setPage(0);
             }}
             className={SELECT_CLASS}
           >
@@ -216,6 +234,7 @@ export function AuditPage(): React.JSX.Element {
             value={resultFilter}
             onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
               setResultFilter(ev.target.value);
+              setPage(0);
             }}
             className={SELECT_CLASS}
           >
@@ -243,7 +262,7 @@ export function AuditPage(): React.JSX.Element {
             <span>{t("pages.audit.table.result")}</span>
             <span />
           </div>
-          {filtered.slice(0, DISPLAY_LIMIT).map((entry) => (
+          {pageRows.map((entry) => (
             <button
               key={entry.id}
               type="button"
@@ -293,12 +312,46 @@ export function AuditPage(): React.JSX.Element {
         </div>
       </Card>
 
-      {/* Footer */}
-      <div className="text-muted-foreground mt-3 text-[11.5px]">
-        {t("pages.audit.footer.showing", {
-          shown: Math.min(DISPLAY_LIMIT, filtered.length),
-          total: filtered.length,
-        })}
+      {/* Footer paginator */}
+      <div className="text-muted-foreground mt-3 flex flex-wrap items-center justify-between gap-3 text-[11.5px]">
+        <div className="flex items-center gap-2">
+          <span>{t("paginator.rowsPerPage")}</span>
+          <select
+            value={pageSize}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+              setPageSize(Number(e.target.value));
+              setPage(0);
+            }}
+            className={PAGE_SIZE_SELECT_CLASS}
+            aria-label={t("paginator.rowsPerPage")}
+          >
+            {PAGE_SIZE_OPTIONS.map((pageOpt) => (
+              <option key={pageOpt} value={pageOpt}>
+                {pageOpt}
+              </option>
+            ))}
+          </select>
+          {filtered.length > 0 && (
+            <>
+              <span className="hidden sm:inline">·</span>
+              <span className="hidden font-mono tabular-nums sm:inline">
+                {t("paginator.range", {
+                  from: rangeFrom.toLocaleString(),
+                  to: rangeTo.toLocaleString(),
+                  total: filtered.length.toLocaleString(),
+                })}
+              </span>
+            </>
+          )}
+        </div>
+        <Paginator
+          page={page}
+          totalPages={totalPages}
+          onChange={(newPage) => {
+            setPage(newPage);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
       </div>
 
       {/* Detail drawer */}

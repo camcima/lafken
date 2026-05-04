@@ -237,9 +237,9 @@
         "quickFilters": {
           "last24h": "Last 24h",
           "hasLegalHold": "Has legal hold",
-          "majorSeverity": "Major severity",
           "failedPipelines": "Failed pipelines",
-          "mine": "Mine"
+          "mine": "Mine",
+          "quarantined": "Quarantined"
         }
       },
       "viewToggle": {
@@ -265,11 +265,11 @@
         "state": "State",
         "size": "Size",
         "uploaded": "Uploaded",
-        "areaSeverity": "Area · severity",
         "namespaceWo": "Namespace · WO",
         "uploadedBy": "Uploaded by",
         "age": "Age",
-        "selectAll": "Select all"
+        "selectAll": "Select all",
+        "formatDimensions": "Format · dimensions"
       },
       "row": {
         "hold": "Legal hold"
@@ -285,7 +285,9 @@
       "bulkActions": {
         "label": "Bulk actions",
         "comingSoon": "Bulk actions come in a later slice"
-      }
+      },
+      "summaryRange": "Showing {{from}}–{{to}} of {{total}} assets",
+      "summaryEmpty": "No matching assets"
     },
     "assetDetail": {
       "title": "Asset",
@@ -690,7 +692,9 @@
       "empty": {
         "title": "No active legal holds",
         "description": "Holds you place will appear here."
-      }
+      },
+      "rowsPerPage": "Rows per page",
+      "range": "{{from}}–{{to}} of {{total}}"
     },
     "audit": {
       "title": "Audit log",
@@ -735,7 +739,9 @@
       },
       "empty": {
         "title": "No audit entries match"
-      }
+      },
+      "rowsPerPage": "Rows per page",
+      "range": "{{from}}–{{to}} of {{total}}"
     },
     "system": {
       "title": "System status",
@@ -801,14 +807,37 @@
       },
       "workspace": {
         "fields": {
-          "name": { "label": "Workspace name", "value": "LATAM Lafken (prod)" },
-          "slug": { "label": "Workspace slug", "value": "latam-lafken-prod" },
-          "region": { "label": "Region", "value": "sa-east-1 (São Paulo, primary)" },
-          "replica": { "label": "Replica", "value": "sa-east-1c (warm)" },
-          "defaultNamespace": { "label": "Default namespace", "value": "aircraft-photos" },
-          "reviewerSlo": { "label": "Default reviewer SLO", "value": "4 hours" },
-          "created": { "label": "Created", "value": "2024-08-12 by p.estrada@latam.com" },
-          "plan": { "label": "Plan" }
+          "name": {
+            "label": "Workspace name",
+            "value": "LATAM Lafken (prod)"
+          },
+          "slug": {
+            "label": "Workspace slug",
+            "value": "latam-lafken-prod"
+          },
+          "region": {
+            "label": "Region",
+            "value": "sa-east-1 (São Paulo, primary)"
+          },
+          "replica": {
+            "label": "Replica",
+            "value": "sa-east-1c (warm)"
+          },
+          "defaultNamespace": {
+            "label": "Default namespace",
+            "value": "aircraft-photos"
+          },
+          "reviewerSlo": {
+            "label": "Default reviewer SLO",
+            "value": "4 hours"
+          },
+          "created": {
+            "label": "Created",
+            "value": "2024-08-12 by p.estrada@latam.com"
+          },
+          "plan": {
+            "label": "Plan"
+          }
         },
         "plan": {
           "label": "Enterprise · custom"
@@ -855,12 +884,36 @@
       "policies": {
         "title": "Defaults applied to new namespaces",
         "defaults": {
-          "retention": { "label": "Default retention", "value": "7 years", "note": "Override per-namespace in policy YAML." },
-          "maxUpload": { "label": "Default max upload size", "value": "26 MB", "note": "Hard ceiling 200 MB." },
-          "allowedMimes": { "label": "Allowed MIME types", "value": "image/jpeg, image/png, image/heic, application/pdf", "note": "" },
-          "moderation": { "label": "Moderation", "value": "enabled (v2)", "note": "Threshold 0.65 across all categories." },
-          "exif": { "label": "EXIF policy", "value": "strip from bytes; preserve GPS in capture_context", "note": "" },
-          "retentionWarning": { "label": "Retention warning lead", "value": "60 days", "note": "Email + console banner before expiry." }
+          "retention": {
+            "label": "Default retention",
+            "value": "7 years",
+            "note": "Override per-namespace in policy YAML."
+          },
+          "maxUpload": {
+            "label": "Default max upload size",
+            "value": "26 MB",
+            "note": "Hard ceiling 200 MB."
+          },
+          "allowedMimes": {
+            "label": "Allowed MIME types",
+            "value": "image/jpeg, image/png, image/heic, application/pdf",
+            "note": ""
+          },
+          "moderation": {
+            "label": "Moderation",
+            "value": "enabled (v2)",
+            "note": "Threshold 0.65 across all categories."
+          },
+          "exif": {
+            "label": "EXIF policy",
+            "value": "strip from bytes; preserve GPS in capture_context",
+            "note": ""
+          },
+          "retentionWarning": {
+            "label": "Retention warning lead",
+            "value": "60 days",
+            "note": "Email + console banner before expiry."
+          }
         },
         "edit": "Edit"
       },
@@ -885,5 +938,16 @@
         }
       }
     }
+  },
+  "paginator": {
+    "label": "Pagination",
+    "firstPage": "First page",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "lastPage": "Last page",
+    "goTo": "Go to",
+    "jumpToPage": "Jump to page",
+    "rowsPerPage": "Rows per page",
+    "range": "{{from}}–{{to}} of {{total}}"
   }
 }
