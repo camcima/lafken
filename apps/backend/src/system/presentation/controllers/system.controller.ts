@@ -12,12 +12,15 @@ import {
   Post,
 } from "@nestjs/common";
 import {
+  ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiUnprocessableEntityResponse,
 } from "@nestjs/swagger";
 import {
   CreateStorageBindingRequestDTO,
@@ -88,6 +91,9 @@ export class SystemController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: "Create a storage binding" })
   @ApiCreatedResponse({ type: StorageBindingResponseDTO })
+  @ApiConflictResponse()
+  @ApiUnprocessableEntityResponse()
+  @ApiBadRequestResponse()
   async createStorageBinding(
     @Body() body: CreateStorageBindingRequestDTO,
   ): Promise<StorageBindingResponseDTO> {
@@ -110,6 +116,9 @@ export class SystemController {
   @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
   @ApiOperation({ summary: "Update a storage binding's config" })
   @ApiOkResponse({ type: StorageBindingResponseDTO })
+  @ApiNotFoundResponse()
+  @ApiUnprocessableEntityResponse()
+  @ApiBadRequestResponse()
   async updateStorageBinding(
     @Param("name") name: string,
     @Body() body: UpdateStorageBindingRequestDTO,
@@ -133,6 +142,7 @@ export class SystemController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Delete a storage binding" })
   @ApiNoContentResponse()
+  @ApiNotFoundResponse()
   async deleteStorageBinding(@Param("name") name: string): Promise<void> {
     try {
       await this.deleteStorageBindingUseCase.execute({ name });

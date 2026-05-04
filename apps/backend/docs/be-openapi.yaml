@@ -661,6 +661,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StorageBindingResponseDTO'
+        '400':
+          description: ''
         '401':
           content:
             application/problem+json:
@@ -672,6 +674,10 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
+          description: ''
+        '409':
+          description: ''
+        '422':
           description: ''
       security:
         - bearer: []
@@ -728,6 +734,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StorageBindingResponseDTO'
+        '400':
+          description: ''
         '401':
           content:
             application/problem+json:
@@ -739,6 +747,10 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+        '422':
           description: ''
       security:
         - bearer: []
@@ -767,6 +779,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
+          description: ''
+        '404':
           description: ''
       security:
         - bearer: []
