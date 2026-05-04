@@ -45,7 +45,7 @@ describe("[E2E] GET /v1/assets", () => {
     });
   });
 
-  it("returns RFC 7807 404 for an unknown public ID", async () => {
+  it("returns RFC 9457 404 for an unknown public ID", async () => {
     const response = await request(app.getHttpServer())
       .get("/v1/assets/missing-public-id")
       .set("Authorization", "Bearer test-token");
@@ -53,7 +53,7 @@ describe("[E2E] GET /v1/assets", () => {
     expect(response.status).toBe(404);
     expect(response.headers["content-type"]).toContain("application/problem+json");
     expect(response.body).toMatchObject({
-      type: "about:blank",
+      type: "https://lafken.dev/problems/asset-not-found-error",
       title: "AssetNotFoundError",
       status: 404,
       detail: expect.stringContaining("missing-public-id"),

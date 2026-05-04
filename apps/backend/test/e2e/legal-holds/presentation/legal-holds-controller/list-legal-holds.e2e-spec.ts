@@ -43,7 +43,7 @@ describe("[E2E] GET /v1/legal-holds", () => {
     });
   });
 
-  it("returns RFC 7807 404 for an unknown id", async () => {
+  it("returns RFC 9457 404 for an unknown id", async () => {
     const response = await request(app.getHttpServer())
       .get("/v1/legal-holds/99999")
       .set("Authorization", "Bearer test-token");
@@ -51,7 +51,7 @@ describe("[E2E] GET /v1/legal-holds", () => {
     expect(response.status).toBe(404);
     expect(response.headers["content-type"]).toContain("application/problem+json");
     expect(response.body).toMatchObject({
-      type: "about:blank",
+      type: "https://lafken.dev/problems/legal-hold-not-found-error",
       title: "LegalHoldNotFoundError",
       status: 404,
       detail: expect.stringContaining("99999"),

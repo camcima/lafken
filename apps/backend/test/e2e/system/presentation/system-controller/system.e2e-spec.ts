@@ -44,7 +44,7 @@ describe("[E2E] System controller", () => {
   });
 
   describe("GET /v1/system/storage-bindings/:name", () => {
-    it("returns RFC 7807 404 for an unknown name", async () => {
+    it("returns RFC 9457 404 for an unknown name", async () => {
       const response = await request(app.getHttpServer())
         .get("/v1/system/storage-bindings/missing-name")
         .set("Authorization", "Bearer test-token");
@@ -52,7 +52,7 @@ describe("[E2E] System controller", () => {
       expect(response.status).toBe(404);
       expect(response.headers["content-type"]).toContain("application/problem+json");
       expect(response.body).toMatchObject({
-        type: "about:blank",
+        type: "https://lafken.dev/problems/storage-binding-not-found-error",
         status: 404,
         detail: expect.stringContaining("missing-name"),
       });

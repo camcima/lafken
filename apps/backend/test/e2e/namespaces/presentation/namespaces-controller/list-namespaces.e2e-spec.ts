@@ -51,16 +51,16 @@ describe("[E2E] GET /v1/namespaces", () => {
     });
   });
 
-  it("returns RFC 7807 404 for an unknown slug", async () => {
+  it("returns RFC 9457 404 for an unknown slug", async () => {
     const response = await request(app.getHttpServer())
       .get("/v1/namespaces/missing-slug")
       .set("Authorization", "Bearer test-token");
 
     expect(response.status).toBe(404);
     expect(response.headers["content-type"]).toContain("application/problem+json");
-    // The global filter propagates the domain error's title when the cause is a DomainError.
+    // The global filter propagates the domain error's identity when the cause is a DomainError.
     expect(response.body).toMatchObject({
-      type: "about:blank",
+      type: "https://lafken.dev/problems/namespace-not-found-error",
       title: "NamespaceNotFoundError",
       status: 404,
       detail: expect.stringContaining("missing-slug"),
