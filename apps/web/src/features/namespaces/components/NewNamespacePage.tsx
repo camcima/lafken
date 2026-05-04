@@ -10,6 +10,7 @@ import { Button } from "@/components/common/Button";
 import { useCreateNamespace } from "@/features/namespaces/hooks/useNamespaces";
 import { useStorageBindings } from "@/features/system/hooks/useSystem";
 import { ApiError } from "@/lib/api/api-error";
+import { extractProblemTypeSuffix } from "@/lib/api/problem-types";
 import { cn } from "@/lib/utils";
 
 // ── Constants ─────────────────────────────────────────────
@@ -21,7 +22,6 @@ const MAX_FILE_SIZE_BYTES = 5_368_709_120;
 const MAX_TTL_SECONDS = 604_800;
 const MAX_SIGNED_URL_BUCKET_SECONDS = 86_400;
 const MAX_RETENTION_DAYS = 36_500;
-const PROBLEM_TYPE_PREFIX = "https://lafken.dev/problems/";
 const DEFAULT_MAX_FILE_SIZE = 52_428_800;
 const DEFAULT_SIGNED_URL_TTL = 3600;
 const DEFAULT_SIGNED_URL_BUCKET_SIZE = 300;
@@ -170,11 +170,6 @@ function isValidJson(jsonStr: string): boolean {
   }
 }
 
-function extractErrorTypeSuffix(body: { type?: string }): string | undefined {
-  if (!body.type || !body.type.startsWith(PROBLEM_TYPE_PREFIX)) return undefined;
-  return body.type.slice(PROBLEM_TYPE_PREFIX.length);
-}
-
 // ── Main component ─────────────────────────────────────────
 export function NewNamespacePage(): React.JSX.Element {
   const { t } = useTranslation();
@@ -297,7 +292,7 @@ export function NewNamespacePage(): React.JSX.Element {
       return;
     }
 
-    const suffix = extractErrorTypeSuffix(err.body);
+    const suffix = extractProblemTypeSuffix(err.body.type);
     const params = err.body.params ?? {};
 
     if (suffix === "namespace-already-exists-error") {

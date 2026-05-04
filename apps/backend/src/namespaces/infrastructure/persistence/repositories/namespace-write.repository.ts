@@ -30,7 +30,7 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
           .values({
             slug: input.slug,
             display_name: input.displayName,
-            description: input.description ?? undefined,
+            description: input.description ?? null,
             current_policy_id: BigInt(0),
             storage_binding_id: input.storageBindingId,
           })
@@ -86,7 +86,7 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
       .updateTable("namespaces")
       .set({
         display_name: input.displayName,
-        description: input.description ?? undefined,
+        description: input.description,
       })
       .where("slug", "=", input.slug)
       .returningAll()

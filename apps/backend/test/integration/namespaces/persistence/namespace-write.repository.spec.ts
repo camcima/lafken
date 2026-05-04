@@ -155,6 +155,31 @@ describe("NamespaceWriteRepository", () => {
     expect((row as { description: string | null }).description).toBe("New description");
   });
 
+  it("clears description when updateMetadata is called with description: null", async () => {
+    const bindingId = await seedStorageBinding();
+    await repository.createWithInitialPolicy({
+      slug: "aircraft-photos",
+      displayName: "Aircraft Photos",
+      description: "Some description",
+      storageBindingId: bindingId,
+      policy: basePolicy,
+      createdBy: null,
+    });
+
+    await repository.updateMetadata({
+      slug: "aircraft-photos",
+      displayName: "Aircraft Photos",
+      description: null,
+    });
+
+    const row = await db.connection
+      .selectFrom("namespaces")
+      .selectAll()
+      .where("slug", "=", "aircraft-photos")
+      .executeTakeFirstOrThrow();
+    expect((row as { description: string | null }).description).toBeNull();
+  });
+
   it("archives a namespace by setting archived_at to a non-null timestamp", async () => {
     const storageBindingId = await seedStorageBinding();
 

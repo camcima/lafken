@@ -9,12 +9,12 @@ import { Button } from "@/components/common/Button";
 import { RightDrawer } from "@/components/common/RightDrawer";
 import { useUpdateNamespaceMetadata } from "@/features/namespaces/hooks/useNamespaces";
 import { ApiError } from "@/lib/api/api-error";
+import { extractProblemTypeSuffix } from "@/lib/api/problem-types";
 import { cn } from "@/lib/utils";
 
 // ── Constants ─────────────────────────────────────────────
 const DISPLAY_NAME_MAX = 200;
 const DESCRIPTION_MAX = 2000;
-const PROBLEM_TYPE_PREFIX = "https://lafken.dev/problems/";
 const HTTP_BAD_REQUEST = 400;
 
 interface INamespaceMetadataDrawerProps {
@@ -83,20 +83,12 @@ function FieldMessage({
   );
 }
 
-function extractErrorTypeSuffix(body: { type?: string }): string | undefined {
-  if (!body.type || !body.type.startsWith(PROBLEM_TYPE_PREFIX)) return undefined;
-  return body.type.slice(PROBLEM_TYPE_PREFIX.length);
-}
-
 // ── Form schema ───────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const baseSchema = z.object({
-  displayName: z.string().min(1).max(DISPLAY_NAME_MAX),
-  description: z.string().max(DESCRIPTION_MAX).optional(),
-});
-
-type FormValues = z.infer<typeof baseSchema>;
+interface FormValues {
+  displayName: string;
+  description?: string;
+}
 
 // ── Component ─────────────────────────────────────────────
 
@@ -163,7 +155,7 @@ export function NamespaceMetadataDrawer({
       return;
     }
 
-    const suffix = extractErrorTypeSuffix(err.body);
+    const suffix = extractProblemTypeSuffix(err.body.type);
 
     if (suffix === "namespace-not-found-error") {
       setError("root", {
