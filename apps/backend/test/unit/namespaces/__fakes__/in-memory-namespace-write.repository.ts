@@ -1,4 +1,5 @@
 import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
+import { PolicyVersionConflictError } from "@/namespaces/domain/errors/policy-version-conflict.error";
 import { StorageBindingMissingError } from "@/namespaces/domain/errors/storage-binding-missing.error";
 import type {
   ICreatePolicyVersionInput,
@@ -18,6 +19,8 @@ const ID_INCREMENT = 1n;
 export class InMemoryNamespaceWriteRepository extends NamespaceWriteRepositoryPort {
   readonly namespaces = new Map<string, Namespace>();
   readonly missingStorageBindings = new Set<bigint>();
+  readonly policyVersionsByNamespace = new Map<bigint, number>();
+  collisionsRemaining = 0;
   private nextNamespaceId = INITIAL_NAMESPACE_ID;
   private nextPolicyId = INITIAL_POLICY_ID;
 
@@ -103,7 +106,32 @@ export class InMemoryNamespaceWriteRepository extends NamespaceWriteRepositoryPo
     return Promise.resolve(updated);
   }
 
-  createPolicyVersion(_input: ICreatePolicyVersionInput): Promise<ICreatePolicyVersionResult> {
-    return Promise.reject(new Error("Not implemented yet — Task 2"));
+  createPolicyVersion(input: ICreatePolicyVersionInput): Promise<ICreatePolicyVersionResult> {
+    if (this.collisionsRemaining > 0) {
+      this.collisionsRemaining -= 1;
+      const attempted = (this.policyVersionsByNamespace.get(input.namespaceId) ?? 0) + 1;
+      return Promise.reject(
+        new PolicyVersionConflictError({ slug: "<simulated>", attemptedVersion: attempted }),
+      );
+    }
+    const current = this.policyVersionsByNamespace.get(input.namespaceId) ?? 0;
+    const next = current + 1;
+    this.policyVersionsByNamespace.set(input.namespaceId, next);
+
+    const found = Array.from(this.namespaces.values()).find(
+      (ns) => ns.props.id === input.namespaceId,
+    );
+    if (!found) {
+      return Promise.reject(
+        new Error("InMemoryNamespaceWriteRepository: namespace not found by id"),
+      );
+    }
+    const updated = Namespace.fromProps({
+      ...found.props,
+      currentPolicyId: BigInt(next),
+      updatedAt: new Date(),
+    });
+    this.namespaces.set(found.props.slug.value, updated);
+    return Promise.resolve({ namespace: updated, newPolicyVersion: next });
   }
 }
