@@ -270,7 +270,6 @@ export class NamespacesController {
   }
 
   @Post(":slug/policy-versions")
-  @AuthenticatedEndpoint()
   @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Create a new policy version for a namespace" })
