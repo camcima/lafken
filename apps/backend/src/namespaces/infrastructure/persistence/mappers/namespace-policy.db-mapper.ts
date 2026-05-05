@@ -8,8 +8,8 @@ import {
 export class NamespacePolicyDbMapper {
   static toDomain(row: Record<string, any>): NamespacePolicy {
     return NamespacePolicy.fromProps({
-      id: BigInt(row["id"]),
-      namespaceId: BigInt(row["namespace_id"]),
+      id: row["id"] as string,
+      namespaceId: row["namespace_id"] as string,
       version: row["version"] as number,
       retentionDays: (row["retention_days"] as number | null) ?? null,
       retentionMode: row["retention_mode"] as RetentionMode,

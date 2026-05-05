@@ -53,7 +53,7 @@ export class NamespaceQueryRepository implements NamespaceQueryRepositoryPort {
     return row ? NamespaceDbMapper.toDomain(row) : null;
   }
 
-  async listPolicies(namespaceId: bigint): Promise<NamespacePolicy[]> {
+  async listPolicies(namespaceId: string): Promise<NamespacePolicy[]> {
     const rows = await this.db.connection
       .selectFrom("namespace_policies")
       .selectAll()
@@ -63,7 +63,7 @@ export class NamespaceQueryRepository implements NamespaceQueryRepositoryPort {
     return rows.map((row) => NamespacePolicyDbMapper.toDomain(row));
   }
 
-  async listPresets(namespaceId: bigint): Promise<NamespacePreset[]> {
+  async listPresets(namespaceId: string): Promise<NamespacePreset[]> {
     const rows = await this.db.connection
       .selectFrom("namespace_presets")
       .selectAll()
@@ -75,7 +75,7 @@ export class NamespaceQueryRepository implements NamespaceQueryRepositoryPort {
     return rows.map((row) => NamespacePresetDbMapper.toDomain(row));
   }
 
-  async findStorageBindingName(storageBindingId: bigint): Promise<string | null> {
+  async findStorageBindingName(storageBindingId: string): Promise<string | null> {
     const row = await this.db.connection
       .selectFrom("storage_bindings")
       .select("name")
@@ -84,7 +84,7 @@ export class NamespaceQueryRepository implements NamespaceQueryRepositoryPort {
     return (row as { name?: string } | undefined)?.name ?? null;
   }
 
-  async findCurrentPolicyVersion(namespaceId: bigint): Promise<number | null> {
+  async findCurrentPolicyVersion(namespaceId: string): Promise<number | null> {
     const row = await this.db.connection
       .selectFrom("namespaces as n")
       .innerJoin("namespace_policies as p", "p.id", "n.current_policy_id")

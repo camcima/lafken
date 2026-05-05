@@ -10,7 +10,7 @@ function toAdapterType(raw: string): "gcs" {
 export class StorageBindingDbMapper {
   static toDomain(row: Record<string, any>): StorageBinding {
     return StorageBinding.fromProps({
-      id: BigInt(row["id"]),
+      id: row["id"] as string,
       name: row["name"] as string,
       adapterType: toAdapterType(row["adapter_type"] as string),
       config: (row["config"] as Record<string, unknown>) ?? {},

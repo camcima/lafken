@@ -4,11 +4,11 @@ import type { AssetState } from "@/assets/domain/value-objects/asset-state.value
 export class AssetDbMapper {
   static toDomain(row: Record<string, any>): Asset {
     return Asset.fromProps({
-      id: BigInt(row["id"]),
+      id: row["id"] as string,
       publicId: row["public_id"] as string,
-      namespaceId: BigInt(row["namespace_id"]),
-      policyVersionId: BigInt(row["policy_version_id"]),
-      storageBindingId: BigInt(row["storage_binding_id"]),
+      namespaceId: row["namespace_id"] as string,
+      policyVersionId: row["policy_version_id"] as string,
+      storageBindingId: row["storage_binding_id"] as string,
       storageKey: row["storage_key"] as string,
       state: row["state"] as AssetState,
       stateReason: (row["state_reason"] as string | null) ?? null,

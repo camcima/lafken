@@ -3,8 +3,8 @@ import { AssetAnalysis } from "@/assets/domain/entities/asset-analysis.entity";
 export class AssetAnalysisDbMapper {
   static toDomain(row: Record<string, any>): AssetAnalysis {
     return AssetAnalysis.fromProps({
-      id: BigInt(row["id"]),
-      assetId: BigInt(row["asset_id"]),
+      id: row["id"] as string,
+      assetId: row["asset_id"] as string,
       analyzer: row["analyzer"] as string,
       analyzerVersion: (row["analyzer_version"] as string | null) ?? null,
       findings: (row["findings"] as Record<string, unknown>) ?? {},

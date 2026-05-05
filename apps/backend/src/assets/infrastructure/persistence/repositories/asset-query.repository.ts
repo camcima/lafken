@@ -100,7 +100,7 @@ export class AssetQueryRepository implements AssetQueryRepositoryPort {
     return row ? AssetDbMapper.toDomain(row as Record<string, any>) : null;
   }
 
-  async listStateTransitions(assetId: bigint): Promise<AssetStateTransition[]> {
+  async listStateTransitions(assetId: string): Promise<AssetStateTransition[]> {
     const rows = await this.db.connection
       .selectFrom("asset_state_transitions")
       .selectAll()
@@ -110,7 +110,7 @@ export class AssetQueryRepository implements AssetQueryRepositoryPort {
     return rows.map((row) => AssetStateTransitionDbMapper.toDomain(row as Record<string, any>));
   }
 
-  async listAnalyses(assetId: bigint): Promise<AssetAnalysis[]> {
+  async listAnalyses(assetId: string): Promise<AssetAnalysis[]> {
     const rows = await this.db.connection
       .selectFrom("asset_analyses")
       .selectAll()
@@ -120,7 +120,7 @@ export class AssetQueryRepository implements AssetQueryRepositoryPort {
     return rows.map((row) => AssetAnalysisDbMapper.toDomain(row as Record<string, any>));
   }
 
-  async findProcessingJob(assetId: bigint): Promise<ProcessingJob | null> {
+  async findProcessingJob(assetId: string): Promise<ProcessingJob | null> {
     const row = await this.db.connection
       .selectFrom("processing_jobs")
       .selectAll()
@@ -129,7 +129,7 @@ export class AssetQueryRepository implements AssetQueryRepositoryPort {
     return row ? ProcessingJobDbMapper.toDomain(row as Record<string, any>) : null;
   }
 
-  async findNamespaceSlug(namespaceId: bigint): Promise<string | null> {
+  async findNamespaceSlug(namespaceId: string): Promise<string | null> {
     const row = await this.db.connection
       .selectFrom("namespaces")
       .select("slug")
@@ -138,7 +138,7 @@ export class AssetQueryRepository implements AssetQueryRepositoryPort {
     return (row as { slug?: string } | undefined)?.slug ?? null;
   }
 
-  async findPolicyVersion(policyVersionId: bigint): Promise<number | null> {
+  async findPolicyVersion(policyVersionId: string): Promise<number | null> {
     const row = await this.db.connection
       .selectFrom("namespace_policies")
       .select("version")

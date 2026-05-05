@@ -40,7 +40,7 @@ export class LegalHoldQueryRepository implements LegalHoldQueryRepositoryPort {
     };
   }
 
-  async findById(id: bigint): Promise<LegalHold | null> {
+  async findById(id: string): Promise<LegalHold | null> {
     const row = await this.db.connection
       .selectFrom("legal_holds")
       .selectAll()
@@ -49,7 +49,7 @@ export class LegalHoldQueryRepository implements LegalHoldQueryRepositoryPort {
     return row ? LegalHoldDbMapper.toDomain(row) : null;
   }
 
-  async countAffectedAssets(holdId: bigint): Promise<number> {
+  async countAffectedAssets(holdId: string): Promise<number> {
     const row = await this.db.connection
       .selectFrom("legal_hold_assets")
       .select((eb) => eb.fn.countAll<string>().as("count"))

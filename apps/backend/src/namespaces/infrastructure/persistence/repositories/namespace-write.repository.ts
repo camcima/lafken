@@ -13,6 +13,7 @@ import {
   NamespaceWriteRepositoryPort,
 } from "@/namespaces/domain/repositories/namespace-write.repository.port";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import { NIL_UUID } from "@/shared/infrastructure/persistence/nil-uuid.constant";
 
 import { NamespaceDbMapper } from "../mappers/namespace.db-mapper";
 
@@ -37,13 +38,13 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
             slug: input.slug,
             display_name: input.displayName,
             description: input.description ?? null,
-            current_policy_id: BigInt(0),
+            current_policy_id: NIL_UUID,
             storage_binding_id: input.storageBindingId,
           })
           .returningAll()
           .executeTakeFirstOrThrow();
 
-        const namespaceId = BigInt((nsRow as { id: bigint }).id);
+        const namespaceId = (nsRow as { id: string }).id;
 
         const policyRow = await tx
           .insertInto("namespace_policies")
@@ -68,7 +69,7 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
           .returningAll()
           .executeTakeFirstOrThrow();
 
-        const policyId = BigInt((policyRow as { id: bigint }).id);
+        const policyId = (policyRow as { id: string }).id;
 
         const updatedNsRow = await tx
           .updateTable("namespaces")
@@ -164,7 +165,7 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
           .returningAll()
           .executeTakeFirstOrThrow();
 
-        const policyId = BigInt((policyRow as { id: bigint }).id);
+        const policyId = (policyRow as { id: string }).id;
 
         const nsRow = await tx
           .updateTable("namespaces")

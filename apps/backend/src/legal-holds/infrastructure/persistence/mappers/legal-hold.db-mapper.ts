@@ -3,7 +3,7 @@ import { LegalHold } from "@/legal-holds/domain/entities/legal-hold.entity";
 export class LegalHoldDbMapper {
   static toDomain(row: Record<string, any>): LegalHold {
     return LegalHold.fromProps({
-      id: BigInt(row["id"]),
+      id: row["id"] as string,
       caseReference: row["case_reference"] as string,
       description: row["description"] as string,
       scopeSummary: row["scope_summary"] as string,

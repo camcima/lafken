@@ -3,7 +3,7 @@ import { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
 export class ProcessingJobDbMapper {
   static toDomain(row: Record<string, any>): ProcessingJob {
     return ProcessingJob.fromProps({
-      assetId: BigInt(row["asset_id"]),
+      assetId: row["asset_id"] as string,
       state: row["state"] as string,
       workerId: (row["worker_id"] as string | null) ?? null,
       currentStep: (row["current_step"] as string | null) ?? null,

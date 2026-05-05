@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
+import { NIL_UUID } from "@/shared/infrastructure/persistence/nil-uuid.constant";
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 import { DuplicateStorageBindingNameError } from "@/system/domain/errors/duplicate-storage-binding-name.error";
 import {
@@ -51,7 +52,7 @@ export class CreateStorageBindingUseCase {
 
     const now: Date = new Date();
     const binding: StorageBinding = StorageBinding.fromProps({
-      id: 0n,
+      id: NIL_UUID,
       name: name.value,
       adapterType: input.adapterType,
       config: parsed.data,

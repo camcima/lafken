@@ -3,7 +3,7 @@ import { AuditEntry } from "@/audit/domain/entities/audit-entry.entity";
 export class AuditEntryDbMapper {
   static toDomain(row: Record<string, any>): AuditEntry {
     return AuditEntry.fromProps({
-      id: BigInt(row["id"] as string),
+      id: row["id"] as string,
       entityType: row["entity_type"] as string,
       entityId: row["entity_id"] as string,
       action: row["action"] as string,

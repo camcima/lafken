@@ -4,8 +4,8 @@ import type { AssetState } from "@/assets/domain/value-objects/asset-state.value
 export class AssetStateTransitionDbMapper {
   static toDomain(row: Record<string, any>): AssetStateTransition {
     return AssetStateTransition.fromProps({
-      id: BigInt(row["id"]),
-      assetId: BigInt(row["asset_id"]),
+      id: row["id"] as string,
+      assetId: row["asset_id"] as string,
       fromState: (row["from_state"] as AssetState | null) ?? null,
       toState: row["to_state"] as AssetState,
       reason: (row["reason"] as string | null) ?? null,

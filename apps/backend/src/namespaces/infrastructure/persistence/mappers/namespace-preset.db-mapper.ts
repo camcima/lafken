@@ -3,8 +3,8 @@ import { NamespacePreset } from "@/namespaces/domain/entities/namespace-preset.e
 export class NamespacePresetDbMapper {
   static toDomain(row: Record<string, any>): NamespacePreset {
     return NamespacePreset.fromProps({
-      id: BigInt(row["id"]),
-      namespaceId: BigInt(row["namespace_id"]),
+      id: row["id"] as string,
+      namespaceId: row["namespace_id"] as string,
       name: row["name"] as string,
       version: row["version"] as number,
       transformation: row["transformation"] as Record<string, unknown>,
