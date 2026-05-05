@@ -618,6 +618,8 @@
       "policy": {
         "currentVersion": "Policy v{{version}}",
         "currentVersionMeta": "Current active policy",
+        "configured": "Configured",
+        "notConfigured": "—",
         "pastVersions": {
           "title": "Version history",
           "empty": "No past versions.",

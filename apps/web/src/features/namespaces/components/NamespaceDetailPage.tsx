@@ -271,6 +271,50 @@ function RealPolicyTab({
           </span>,
         ],
         [
+          t("pages.namespaceDetail.policy.fields.contentModeration"),
+          <span key="contentModeration" className="font-mono">
+            {displayPolicy.contentModeration !== null &&
+            displayPolicy.contentModeration !== undefined
+              ? t("pages.namespaceDetail.policy.configured")
+              : t("pages.namespaceDetail.policy.notConfigured")}
+          </span>,
+        ],
+        [
+          t("pages.namespaceDetail.policy.fields.requiredMetadataSchema"),
+          <span key="requiredMetadataSchema" className="font-mono">
+            {displayPolicy.requiredMetadataSchema !== null &&
+            displayPolicy.requiredMetadataSchema !== undefined
+              ? t("pages.namespaceDetail.policy.configured")
+              : t("pages.namespaceDetail.policy.notConfigured")}
+          </span>,
+        ],
+        [
+          t("pages.namespaceDetail.policy.fields.signedUrlTtlSeconds"),
+          <span key="signedUrlTtlSeconds" className="font-mono">
+            {displayPolicy.signedUrlTtlSeconds !== null &&
+            displayPolicy.signedUrlTtlSeconds !== undefined
+              ? `${displayPolicy.signedUrlTtlSeconds} s`
+              : "—"}
+          </span>,
+        ],
+        [
+          t("pages.namespaceDetail.policy.fields.signedUrlBucketSize"),
+          <span key="signedUrlBucketSize" className="font-mono">
+            {displayPolicy.signedUrlBucketSize !== null &&
+            displayPolicy.signedUrlBucketSize !== undefined
+              ? String(displayPolicy.signedUrlBucketSize)
+              : "—"}
+          </span>,
+        ],
+        [
+          t("pages.namespaceDetail.policy.fields.retryConfig"),
+          <span key="retryConfig" className="font-mono">
+            {displayPolicy.retryConfig !== null && displayPolicy.retryConfig !== undefined
+              ? t("pages.namespaceDetail.policy.configured")
+              : t("pages.namespaceDetail.policy.notConfigured")}
+          </span>,
+        ],
+        [
           t("pages.namespaceDetail.policy.fields.createdAt"),
           <span key="createdAt" className="font-mono">
             {new Date(displayPolicy.createdAt).toLocaleString()}
