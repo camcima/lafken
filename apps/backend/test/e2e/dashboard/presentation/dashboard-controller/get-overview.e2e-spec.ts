@@ -29,6 +29,9 @@ describe("[E2E] Dashboard controller", () => {
       await tx.deleteFrom("assets").execute();
       await tx.deleteFrom("legal_hold_assets").execute();
       await tx.deleteFrom("legal_holds").execute();
+      await tx.deleteFrom("namespace_policies").execute();
+      await tx.deleteFrom("namespaces").execute();
+      await tx.deleteFrom("storage_bindings").execute();
     });
   });
 
