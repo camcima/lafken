@@ -18,8 +18,8 @@ export interface ListNamespacesInput {
 export abstract class NamespaceQueryRepositoryPort {
   abstract list(input: ListNamespacesInput): Promise<NamespacePage>;
   abstract findBySlug(slug: string): Promise<Namespace | null>;
-  abstract listPolicies(namespaceId: bigint): Promise<NamespacePolicy[]>;
-  abstract listPresets(namespaceId: bigint): Promise<NamespacePreset[]>;
-  abstract findStorageBindingName(storageBindingId: bigint): Promise<string | null>;
-  abstract findCurrentPolicyVersion(namespaceId: bigint): Promise<number | null>;
+  abstract listPolicies(namespaceId: string): Promise<NamespacePolicy[]>;
+  abstract listPresets(namespaceId: string): Promise<NamespacePreset[]>;
+  abstract findStorageBindingName(storageBindingId: string): Promise<string | null>;
+  abstract findCurrentPolicyVersion(namespaceId: string): Promise<number | null>;
 }

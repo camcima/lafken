@@ -1,5 +1,5 @@
 export interface IStorageBindingProps {
-  id: bigint;
+  id: string;
   name: string;
   adapterType: "gcs";
   config: Record<string, unknown>;

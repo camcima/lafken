@@ -1,6 +1,6 @@
 export interface INamespacePresetProps {
-  id: bigint;
-  namespaceId: bigint;
+  id: string;
+  namespaceId: string;
   name: string;
   version: number;
   transformation: Record<string, unknown>;

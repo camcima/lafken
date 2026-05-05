@@ -1,5 +1,5 @@
 export interface LegalHoldProps {
-  id: bigint;
+  id: string;
   caseReference: string;
   description: string;
   scopeSummary: string;

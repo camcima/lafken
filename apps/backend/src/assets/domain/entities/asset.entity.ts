@@ -1,11 +1,11 @@
 import type { AssetState } from "../value-objects/asset-state.value-object";
 
 export interface IAssetProps {
-  id: bigint;
+  id: string;
   publicId: string;
-  namespaceId: bigint;
-  policyVersionId: bigint;
-  storageBindingId: bigint;
+  namespaceId: string;
+  policyVersionId: string;
+  storageBindingId: string;
   storageKey: string;
   state: AssetState;
   stateReason: string | null;

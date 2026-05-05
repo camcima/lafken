@@ -1,5 +1,5 @@
 export interface IAuditEntryProps {
-  id: bigint;
+  id: string;
   entityType: string;
   entityId: string;
   action: string;

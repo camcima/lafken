@@ -1,8 +1,8 @@
 import type { AssetState } from "../value-objects/asset-state.value-object";
 
 export interface IAssetStateTransitionProps {
-  id: bigint;
-  assetId: bigint;
+  id: string;
+  assetId: string;
   fromState: AssetState | null;
   toState: AssetState;
   reason: string | null;

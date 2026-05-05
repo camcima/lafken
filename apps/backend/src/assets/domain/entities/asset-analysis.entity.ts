@@ -1,6 +1,6 @@
 export interface IAssetAnalysisProps {
-  id: bigint;
-  assetId: bigint;
+  id: string;
+  assetId: string;
   analyzer: string;
   analyzerVersion: string | null;
   findings: Record<string, unknown>;

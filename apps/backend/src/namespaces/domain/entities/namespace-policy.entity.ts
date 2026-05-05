@@ -3,8 +3,8 @@ export type EXIFHandling = "strip" | "preserve" | "extract_then_strip";
 export type ServingMode = "public" | "signed" | "proxied";
 
 export interface INamespacePolicyProps {
-  id: bigint;
-  namespaceId: bigint;
+  id: string;
+  namespaceId: string;
   version: number;
   retentionDays: number | null;
   retentionMode: RetentionMode;

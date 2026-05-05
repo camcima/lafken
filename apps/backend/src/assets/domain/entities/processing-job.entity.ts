@@ -1,5 +1,5 @@
 export interface IProcessingJobProps {
-  assetId: bigint;
+  assetId: string;
   state: string;
   workerId: string | null;
   currentStep: string | null;

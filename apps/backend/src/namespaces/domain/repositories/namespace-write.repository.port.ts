@@ -5,7 +5,7 @@ export interface ICreateNamespaceInput {
   slug: string;
   displayName: string;
   description: string | null;
-  storageBindingId: bigint;
+  storageBindingId: string;
   policy: ICreateNamespaceInitialPolicyInput;
   createdBy: string | null;
 }
@@ -33,7 +33,7 @@ export interface IUpdateNamespaceMetadataInput {
 }
 
 export interface ICreatePolicyVersionInput {
-  namespaceId: bigint;
+  namespaceId: string;
   policy: ICreateNamespaceInitialPolicyInput;
   createdBy: string | null;
 }

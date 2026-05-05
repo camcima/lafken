@@ -27,9 +27,9 @@ export interface AssetPage {
 export abstract class AssetQueryRepositoryPort {
   abstract list(input: ListAssetsInput): Promise<AssetPage>;
   abstract findByPublicId(publicId: string): Promise<Asset | null>;
-  abstract listStateTransitions(assetId: bigint): Promise<AssetStateTransition[]>;
-  abstract listAnalyses(assetId: bigint): Promise<AssetAnalysis[]>;
-  abstract findProcessingJob(assetId: bigint): Promise<ProcessingJob | null>;
-  abstract findNamespaceSlug(namespaceId: bigint): Promise<string | null>;
-  abstract findPolicyVersion(policyVersionId: bigint): Promise<number | null>;
+  abstract listStateTransitions(assetId: string): Promise<AssetStateTransition[]>;
+  abstract listAnalyses(assetId: string): Promise<AssetAnalysis[]>;
+  abstract findProcessingJob(assetId: string): Promise<ProcessingJob | null>;
+  abstract findNamespaceSlug(namespaceId: string): Promise<string | null>;
+  abstract findPolicyVersion(policyVersionId: string): Promise<number | null>;
 }
