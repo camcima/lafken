@@ -548,6 +548,15 @@
         }
       },
       "presets": {
+        "title": "Presets",
+        "empty": "No presets defined yet.",
+        "newPreset": "New preset",
+        "editPreset": "Edit",
+        "archivedTooltip": "Unarchive to manage presets.",
+        "active": "Active",
+        "inactive": "Inactive",
+        "version": "v{{version}}",
+        "summaryFormat": "{{width}}×{{height}} {{format}} q{{quality}}",
         "new": {
           "title": "New preset",
           "subtitle": "Add an image transformation preset to namespace {{slug}}.",
@@ -569,6 +578,11 @@
           "format": "Format",
           "quality": "Quality (1–100)",
           "dpr": "DPR (optional)"
+        },
+        "history": {
+          "title": "Past versions",
+          "empty": "No past versions.",
+          "backToLatest": "Back to latest"
         },
         "errors": {
           "generic": "Could not save the preset. Please try again.",

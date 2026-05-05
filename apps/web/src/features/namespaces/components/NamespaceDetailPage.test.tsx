@@ -18,7 +18,8 @@ vi.mock("@/features/namespaces/hooks/useNamespaces", () => ({
   }),
   useNamespace: () => ({ data: undefined, isLoading: false, error: new Error("Not found") }),
   useNamespacePolicies: () => ({ data: undefined, isLoading: false }),
-  useNamespacePresets: () => ({ data: undefined, isLoading: false }),
+  useNamespacePresets: () => ({ data: [], isLoading: false }),
+  useSetPresetActive: () => ({ mutate: vi.fn(), isPending: false }),
   useUpdateNamespaceMetadata: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useArchiveNamespace: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUnarchiveNamespace: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -181,6 +182,46 @@ describe("NamespaceDetailPage — archived namespace", () => {
     expect(editPolicyBtn.getAttribute("title")).toMatch(/archived/i);
 
     spy.mockRestore();
+  });
+});
+
+describe("NamespaceDetailPage — presets tab", () => {
+  it("renders RealPresetsTab when slug is not in demo data", () => {
+    const nsSpy = vi.spyOn(useNamespacesModule, "useNamespace").mockReturnValue({
+      data: {
+        slug: "real-namespace",
+        displayName: "Real Namespace",
+        description: undefined,
+        currentPolicyVersion: 1,
+        storageBindingName: "gcs-prod",
+        archivedAt: undefined,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+      isLoading: false,
+    } as ReturnType<typeof useNamespacesModule.useNamespace>);
+
+    const presetsSpy = vi
+      .spyOn(useNamespacesModule, "useNamespacePresets")
+      .mockReturnValue({ data: [], isLoading: false } as unknown as ReturnType<
+        typeof useNamespacesModule.useNamespacePresets
+      >);
+
+    renderPage({ slug: "real-namespace", tab: "presets" });
+
+    // RealPresetsTab renders the empty state CTA when no presets
+    expect(screen.getByText(/no presets defined yet/i)).toBeInTheDocument();
+
+    nsSpy.mockRestore();
+    presetsSpy.mockRestore();
+  });
+
+  it("renders DemoPresetsTab when slug is in demo data", () => {
+    renderPage({ slug: "aircraft-photos", tab: "presets" });
+
+    // DemoPresetsTab renders a div containing "Presets — aircraft-photos (demo)"
+    // Multiple elements may have "presets" text (tab + content), so check for demo label
+    expect(screen.getByText(/\(demo\)/i)).toBeInTheDocument();
   });
 });
 

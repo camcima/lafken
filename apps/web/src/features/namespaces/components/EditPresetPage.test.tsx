@@ -258,4 +258,54 @@ describe("EditPresetPage", () => {
       });
     });
   });
+
+  it("renders the past versions panel with version history", async () => {
+    const v1Preset: NamespacePresetResponseDTO = {
+      name: PRESET_NAME,
+      version: 1,
+      params: { fit: "cover", format: "webp", quality: 60, width: 400, height: 300 },
+      active: false,
+      preGenerate: false,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    };
+    mockPresets = [samplePreset, v1Preset];
+    renderPage();
+
+    await waitFor(() => {
+      // Panel header
+      expect(screen.getByText(/past versions/i)).toBeInTheDocument();
+    });
+
+    // Both versions listed as buttons (sorted desc: v2, v1)
+    const versionButtons = screen.getAllByRole("button", { name: /^v\d/ });
+    expect(versionButtons.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("shows 'Back to latest' in panel when a past version is selected", async () => {
+    const user = userEvent.setup();
+    const v1Preset: NamespacePresetResponseDTO = {
+      name: PRESET_NAME,
+      version: 1,
+      params: { fit: "cover", format: "webp", quality: 60, width: 400, height: 300 },
+      active: false,
+      preGenerate: false,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    };
+    mockPresets = [samplePreset, v1Preset];
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText(/past versions/i)).toBeInTheDocument();
+    });
+
+    // Initially no "Back to latest" (we are already on v2)
+    expect(screen.queryByText(/back to latest/i)).not.toBeInTheDocument();
+
+    // Click v1 in the panel
+    const v1Btn = screen.getByRole("button", { name: /v1/ });
+    await user.click(v1Btn);
+
+    // "Back to latest" should now appear
+    expect(screen.getByText(/back to latest/i)).toBeInTheDocument();
+  });
 });

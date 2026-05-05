@@ -486,6 +486,50 @@
           }
         }
       },
+      "presets": {
+        "title": "Presets",
+        "empty": "Aún no hay presets definidos.",
+        "newPreset": "Nuevo preset",
+        "editPreset": "Editar",
+        "archivedTooltip": "Desarchive para gestionar presets.",
+        "active": "Activo",
+        "inactive": "Inactivo",
+        "version": "v{{version}}",
+        "summaryFormat": "{{width}}×{{height}} {{format}} q{{quality}}",
+        "new": {
+          "title": "Nuevo preset",
+          "subtitle": "Agregar un preset de transformación de imagen al namespace {{slug}}.",
+          "submit": "Crear preset",
+          "cancel": "Cancelar"
+        },
+        "edit": {
+          "title": "Editar preset",
+          "subtitle": "Actualizar preset {{name}} en el namespace {{slug}}.",
+          "submit": "Guardar preset",
+          "cancel": "Cancelar"
+        },
+        "form": {
+          "name": "Nombre",
+          "nameHelp": "Identificador kebab-case en minúsculas, p. ej. thumbnail-sm",
+          "width": "Ancho (px, opcional)",
+          "height": "Alto (px, opcional)",
+          "fit": "Ajuste",
+          "format": "Formato",
+          "quality": "Calidad (1–100)",
+          "dpr": "DPR (opcional)"
+        },
+        "history": {
+          "title": "Versiones anteriores",
+          "empty": "No hay versiones anteriores.",
+          "backToLatest": "Volver a la última"
+        },
+        "errors": {
+          "generic": "No se pudo guardar el preset. Inténtelo de nuevo.",
+          "duplicateName": "Ya existe un preset con este nombre en este namespace.",
+          "presetNotFound": "Este preset fue eliminado; actualice la página.",
+          "versionConflict": "Otro operador editó este preset. Actualice y vuelva a aplicar sus cambios."
+        }
+      },
       "form": {
         "title": "Nuevo namespace",
         "subtitle": "Configure la identidad, almacenamiento y política del namespace.",

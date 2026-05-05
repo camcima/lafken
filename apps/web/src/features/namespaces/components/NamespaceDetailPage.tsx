@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { ArchiveNamespaceDialog } from "./ArchiveNamespaceDialog";
 import { NamespaceMetadataDrawer } from "./NamespaceMetadataDrawer";
 import { PastVersionsPanel } from "./PastVersionsPanel";
+import { RealPresetsTab } from "./RealPresetsTab";
 
 const BACK_ICON_SIZE = 14;
 const RECENT_AUDIT_COUNT = 5;
@@ -189,6 +190,19 @@ function SliceLaterTab({ label }: { label: string }): React.JSX.Element {
     <Card>
       <div className="px-6 py-12 text-center">
         <div className="text-muted-foreground text-[14px] font-medium">{label}</div>
+      </div>
+    </Card>
+  );
+}
+
+function DemoPresetsTab({ ns }: { ns: DemoNamespace }): React.JSX.Element {
+  const { t } = useTranslation();
+  return (
+    <Card>
+      <div className="px-6 py-12 text-center">
+        <div className="text-muted-foreground text-[14px] font-medium">
+          {t("pages.namespaces.presets.title")} — {ns.slug} {t("pages.namespaces.demoLabel")}
+        </div>
       </div>
     </Card>
   );
@@ -552,9 +566,8 @@ export function NamespaceDetailPage({
             onSelectVersion={setSelectedVersion}
           />
         ))}
-      {activeTab === "presets" && (
-        <SliceLaterTab label={t("pages.namespaceDetail.empty.presets")} />
-      )}
+      {activeTab === "presets" &&
+        (demoNs ? <DemoPresetsTab ns={demoNs} /> : <RealPresetsTab namespace={namespace} />)}
       {activeTab === "assets" && <SliceLaterTab label={t("pages.namespaceDetail.empty.assets")} />}
       {activeTab === "webhooks" && (
         <SliceLaterTab label={t("pages.namespaceDetail.empty.webhooks")} />

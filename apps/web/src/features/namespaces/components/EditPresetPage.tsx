@@ -1,10 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/common/Button";
+import { PastPresetVersionsPanel } from "@/features/namespaces/components/PastPresetVersionsPanel";
 import {
   useNamespace,
   useNamespacePresets,
@@ -137,6 +138,20 @@ export function EditPresetPage(): React.JSX.Element {
       void navigate({ to: "/namespaces/$slug", params: { slug }, search: { tab: "presets" } });
     }
   }, [presetsLoaded, latestPreset, navigate, slug]);
+
+  // All versions of this preset (for the history panel)
+  const presetVersions = useMemo(() => {
+    const presets = presetsQuery.data ?? [];
+    return presets.filter((preset) => preset.name === name).sort((a, b) => b.version - a.version);
+  }, [presetsQuery.data, name]);
+
+  const latestVersion = presetVersions[0]?.version ?? 1;
+  const [selectedVersion, setSelectedVersion] = useState(latestVersion);
+
+  // Reset selected version when latest changes (e.g. after a successful save)
+  useEffect(() => {
+    setSelectedVersion(latestVersion);
+  }, [latestVersion]);
 
   const updateMutation = useUpdatePresetVersion();
 
@@ -454,6 +469,15 @@ export function EditPresetPage(): React.JSX.Element {
           </Button>
         </div>
       </form>
+
+      {/* Past versions panel (read-only history) */}
+      {presetVersions.length > 0 && (
+        <PastPresetVersionsPanel
+          presets={presetVersions}
+          selectedVersion={selectedVersion}
+          onSelectVersion={setSelectedVersion}
+        />
+      )}
     </div>
   );
 }
