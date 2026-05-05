@@ -50,6 +50,7 @@ import {
   type IPreviewSpec,
   PreviewUrlSignerPort,
 } from "@/assets/domain/services/preview-url-signer.port";
+import { SYSTEM_PRESETS } from "@/assets/infrastructure/services/system-presets";
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
@@ -113,6 +114,11 @@ export class AssetsController {
         // older version can't clobber the latest one in the resulting URL map.
         const list = await namespaceRepo.listPresets(namespaceId);
         const latestByName: Map<string, IPreviewSpec> = new Map();
+        // System presets first; namespace can never collide due to prefix
+        // validation, but the dedupe pass remains as defense-in-depth.
+        for (const sys of SYSTEM_PRESETS) {
+          latestByName.set(sys.name, sys.spec);
+        }
         for (const preset of list) {
           if (!latestByName.has(preset.props.name)) {
             latestByName.set(preset.props.name, preset.props.params.props);
