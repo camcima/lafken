@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
-import { NIL_UUID } from "@/shared/infrastructure/persistence/nil-uuid.constant";
+import { NIL_UUID } from "@/shared/kernel/domain/nil-uuid.constant";
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 import { DuplicateStorageBindingNameError } from "@/system/domain/errors/duplicate-storage-binding-name.error";
 import {
