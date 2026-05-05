@@ -22,6 +22,19 @@ vi.mock("@/services", () => ({
   },
 }));
 
+// AssetsListView renders <Link> from TanStack Router; mock it so tests
+// don't need a router context.
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({
+    children,
+    ...props
+  }: {
+    children: React.ReactNode;
+    to?: string;
+    params?: Record<string, string>;
+  }) => <a href={props.to ?? "#"}>{children}</a>,
+}));
+
 vi.mock("./UploadAssetsDialog", () => ({
   UploadAssetsDialog: () => null,
 }));
@@ -83,9 +96,12 @@ describe("NamespaceAssetsTab", () => {
       limit: 50,
       lastPage: 1,
     });
-    render(withClient(<NamespaceAssetsTab namespace={NAMESPACE} />));
+    const { container } = render(withClient(<NamespaceAssetsTab namespace={NAMESPACE} />));
     await waitFor(() => {
-      expect(screen.getByText(/uploaded/i)).toBeInTheDocument();
+      // StatePill renders the asset state with data-state="uploaded"
+      expect(container.querySelector('[data-state="uploaded"]')).toBeInTheDocument();
     });
+    // The shortId (first 8 chars of the publicId) is rendered in the row
+    expect(screen.getByText(/11111111/)).toBeInTheDocument();
   });
 });
