@@ -122,13 +122,16 @@ describe("NamespacePresetWriteRepository", () => {
   });
 
   it("createVersion bumps version and inherits active from latest", async () => {
-    await repository.createPreset({
-      namespaceId,
-      name: "thumbnail",
-      params: VALID_PARAMS,
-      createdBy: null,
-    });
-    await repository.setActive({ namespaceId, name: "thumbnail", active: false });
+    await db.connection
+      .insertInto("namespace_presets")
+      .values({
+        namespace_id: namespaceId,
+        name: "thumbnail",
+        version: 1,
+        params: VALID_PARAMS.toJSON(),
+        active: false,
+      })
+      .execute();
 
     const v2 = await repository.createVersion({
       namespaceId,
@@ -179,18 +182,25 @@ describe("NamespacePresetWriteRepository", () => {
   });
 
   it("setActive updates only the latest version row", async () => {
-    await repository.createPreset({
-      namespaceId,
-      name: "thumbnail",
-      params: VALID_PARAMS,
-      createdBy: null,
-    });
-    await repository.createVersion({
-      namespaceId,
-      name: "thumbnail",
-      params: VALID_PARAMS,
-      createdBy: null,
-    });
+    await db.connection
+      .insertInto("namespace_presets")
+      .values([
+        {
+          namespace_id: namespaceId,
+          name: "thumbnail",
+          version: 1,
+          params: VALID_PARAMS.toJSON(),
+          active: true,
+        },
+        {
+          namespace_id: namespaceId,
+          name: "thumbnail",
+          version: 2,
+          params: VALID_PARAMS.toJSON(),
+          active: true,
+        },
+      ])
+      .execute();
 
     await repository.setActive({ namespaceId, name: "thumbnail", active: false });
 

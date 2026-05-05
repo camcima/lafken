@@ -85,7 +85,7 @@ export class NamespaceQueryRepository implements NamespaceQueryRepositoryPort {
       .limit(1)
       .executeTakeFirst();
     if (!row) return null;
-    return NamespacePresetDbMapper.toDomain(row as Record<string, unknown>);
+    return NamespacePresetDbMapper.toDomain(row);
   }
 
   async findStorageBindingName(storageBindingId: string): Promise<string | null> {

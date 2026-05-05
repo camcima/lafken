@@ -32,7 +32,7 @@ export class NamespacePresetWriteRepository implements NamespacePresetWriteRepos
       })
       .returningAll()
       .executeTakeFirstOrThrow();
-    return NamespacePresetDbMapper.toDomain(row as Record<string, unknown>);
+    return NamespacePresetDbMapper.toDomain(row);
   }
 
   async createVersion(input: ICreatePresetVersionInput): Promise<NamespacePreset> {
@@ -57,8 +57,8 @@ export class NamespacePresetWriteRepository implements NamespacePresetWriteRepos
         if (!latest) {
           throw new PresetNotFoundError({ slug: "<unknown>", name: input.name });
         }
-        nextVersion = (latest as { version: number }).version + 1;
-        const inheritedActive = (latest as { active: boolean }).active;
+        nextVersion = latest.version + 1;
+        const inheritedActive = latest.active;
 
         const row = await tx
           .insertInto("namespace_presets")
@@ -72,7 +72,7 @@ export class NamespacePresetWriteRepository implements NamespacePresetWriteRepos
           })
           .returningAll()
           .executeTakeFirstOrThrow();
-        return NamespacePresetDbMapper.toDomain(row as Record<string, unknown>);
+        return NamespacePresetDbMapper.toDomain(row);
       });
     } catch (err) {
       if (err instanceof PresetNotFoundError) throw err;
@@ -106,10 +106,10 @@ export class NamespacePresetWriteRepository implements NamespacePresetWriteRepos
       const row = await tx
         .updateTable("namespace_presets")
         .set({ active: input.active })
-        .where("id", "=", (latest as { id: string }).id)
+        .where("id", "=", latest.id)
         .returningAll()
         .executeTakeFirstOrThrow();
-      return NamespacePresetDbMapper.toDomain(row as Record<string, unknown>);
+      return NamespacePresetDbMapper.toDomain(row);
     });
   }
 
