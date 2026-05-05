@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS namespace_presets (
   namespace_id         uuid NOT NULL REFERENCES namespaces(id) ON DELETE RESTRICT,
   name                 text NOT NULL,
   version              integer NOT NULL,
-  transformation       jsonb NOT NULL,
+  params               jsonb NOT NULL,
   cdn_max_age          integer,
   signed_url_ttl       integer,
   pre_generate         boolean NOT NULL DEFAULT false,
@@ -70,7 +70,7 @@ CREATE TRIGGER set_namespace_presets_updated_at
   FOR EACH ROW EXECUTE FUNCTION update_timestamp_function();
 
 CREATE INDEX IF NOT EXISTS idx_namespace_policies_namespace_id ON namespace_policies(namespace_id);
-CREATE INDEX IF NOT EXISTS idx_namespace_presets_namespace_id ON namespace_presets(namespace_id);
+CREATE INDEX IF NOT EXISTS idx_namespace_presets_namespace_id_name ON namespace_presets(namespace_id, name);
 
 -- migrate:down
 
