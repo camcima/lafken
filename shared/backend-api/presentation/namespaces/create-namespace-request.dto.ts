@@ -6,10 +6,10 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
-  IsNumberString,
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   Max,
   MaxLength,
@@ -111,9 +111,8 @@ export class CreateNamespaceRequestDTO {
   @ApiProperty({ required: false, type: String, nullable: true })
   description!: string | null;
 
-  @IsString()
-  @IsNumberString()
-  @ApiProperty({ description: "ID of an existing storage binding (string for bigint-safety)" })
+  @IsUUID()
+  @ApiProperty({ description: "ID of an existing storage binding (UUID)" })
   storageBindingId!: string;
 
   @ValidateNested()

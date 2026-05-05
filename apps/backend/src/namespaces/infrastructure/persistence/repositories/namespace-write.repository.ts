@@ -12,8 +12,8 @@ import {
   IUpdateNamespaceMetadataInput,
   NamespaceWriteRepositoryPort,
 } from "@/namespaces/domain/repositories/namespace-write.repository.port";
-import { NIL_UUID } from "@/shared/kernel/domain/nil-uuid.constant";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import { NIL_UUID } from "@/shared/kernel/domain/nil-uuid.constant";
 
 import { NamespaceDbMapper } from "../mappers/namespace.db-mapper";
 

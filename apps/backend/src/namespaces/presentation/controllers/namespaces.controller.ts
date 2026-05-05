@@ -164,7 +164,7 @@ export class NamespacesController {
         slug: body.slug,
         displayName: body.displayName,
         description: body.description,
-        storageBindingId: BigInt(body.storageBindingId),
+        storageBindingId: body.storageBindingId,
         createdBy: user.emailAddress,
         policy: {
           retentionDays: body.policy.retentionDays,

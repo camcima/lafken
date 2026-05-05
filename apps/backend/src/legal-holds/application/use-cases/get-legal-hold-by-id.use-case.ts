@@ -10,17 +10,7 @@ export class GetLegalHoldByIdUseCase {
   constructor(private readonly repository: LegalHoldQueryRepositoryPort) {}
 
   async execute(input: { id: string }): Promise<LegalHoldWithMetadata> {
-    let id: bigint;
-    try {
-      id = BigInt(input.id);
-    } catch (err) {
-      if (err instanceof SyntaxError) {
-        throw new LegalHoldNotFoundError({ id: input.id });
-      }
-      throw err;
-    }
-
-    const legalHold = await this.repository.findById(id);
+    const legalHold = await this.repository.findById(input.id);
     if (!legalHold) {
       throw new LegalHoldNotFoundError({ id: input.id });
     }
