@@ -10,7 +10,7 @@ export {
   type IUploadDropzoneProps,
   type IUploadDropzoneRenderProps,
 } from "./upload-dropzone";
-export { AssetImage, type IAssetImageAsset, type IAssetImageProps } from "./asset-image";
+export { AssetImage, _resetAssetImageCache, type IAssetImageProps } from "./asset-image";
 export {
   LafkenProvider,
   useLafkenClient,

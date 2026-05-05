@@ -1,94 +1,129 @@
-import { fireEvent, render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, waitFor } from "@testing-library/react";
+import React from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AssetImage } from "../src/index";
+import { _resetAssetImageCache, AssetImage, LafkenProvider } from "../src/index";
 
-describe("AssetImage", () => {
-  it("renders <img> with the named preset's URL", () => {
+function makeStubClient(impl: {
+  getPreviewUrl: (i: { publicId: string; preset: string }) => Promise<string>;
+}) {
+  return impl as unknown as Parameters<typeof LafkenProvider>[0]["client"];
+}
+
+afterEach(() => {
+  _resetAssetImageCache();
+});
+
+describe("<AssetImage>", () => {
+  it("renders an <img> with the resolved URL", async () => {
+    const client = makeStubClient({
+      getPreviewUrl: vi.fn().mockResolvedValue("https://cdn/x.webp"),
+    });
     const { container } = render(
-      <AssetImage
-        asset={{
-          previewUrls: {
-            thumbnail: "https://cdn.example/thumb.webp",
-            preview: "https://cdn.example/preview.webp",
-          },
-        }}
-        preset="thumbnail"
-        alt="cover"
-      />,
+      <LafkenProvider client={client}>
+        <AssetImage publicId="abc" preset="lafken:thumbnail" alt="a" />
+      </LafkenProvider>,
     );
-    const img = container.querySelector("img");
-    expect(img).not.toBeNull();
-    expect(img!.getAttribute("src")).toBe("https://cdn.example/thumb.webp");
-    expect(img!.getAttribute("alt")).toBe("cover");
-    expect(img!.getAttribute("loading")).toBe("lazy");
-    expect(img!.getAttribute("decoding")).toBe("async");
+    await waitFor(() => {
+      expect(container.querySelector("img")).not.toBeNull();
+    });
+    const img = container.querySelector("img")!;
+    expect(img.getAttribute("src")).toBe("https://cdn/x.webp");
+    expect(img.getAttribute("alt")).toBe("a");
+    expect(img.getAttribute("loading")).toBe("lazy");
+    expect(img.getAttribute("decoding")).toBe("async");
   });
 
-  it("falls back to the first preview URL when preset is omitted", () => {
+  it("renders nothing while loading", () => {
+    const client = makeStubClient({
+      getPreviewUrl: vi.fn().mockReturnValue(new Promise(() => {})),
+    });
     const { container } = render(
-      <AssetImage
-        asset={{ previewUrls: { thumbnail: "https://cdn.example/first.webp" } }}
-        alt=""
-      />,
+      <LafkenProvider client={client}>
+        <AssetImage publicId="abc" preset="lafken:thumbnail" alt="" />
+      </LafkenProvider>,
     );
-    expect(container.querySelector("img")?.getAttribute("src")).toBe(
-      "https://cdn.example/first.webp",
-    );
-  });
-
-  it("falls back to the first URL when the named preset is missing", () => {
-    const { container } = render(
-      <AssetImage
-        asset={{ previewUrls: { thumbnail: "https://cdn.example/thumb.webp" } }}
-        preset="missing"
-        alt=""
-      />,
-    );
-    expect(container.querySelector("img")?.getAttribute("src")).toBe(
-      "https://cdn.example/thumb.webp",
-    );
-  });
-
-  it("renders nothing when asset has no previewUrls", () => {
-    const { container } = render(<AssetImage asset={{}} alt="" />);
     expect(container.querySelector("img")).toBeNull();
   });
 
-  it("renders nothing when previewUrls is empty", () => {
-    const { container } = render(<AssetImage asset={{ previewUrls: {} }} alt="" />);
+  it("renders nothing on error (e.g., 404)", async () => {
+    const fn = vi.fn().mockRejectedValue(new Error("404"));
+    const client = makeStubClient({ getPreviewUrl: fn });
+    const { container } = render(
+      <LafkenProvider client={client}>
+        <AssetImage publicId="abc" preset="missing" alt="" />
+      </LafkenProvider>,
+    );
+    await waitFor(() => {
+      expect(fn.mock.calls.length).toBe(1);
+    });
     expect(container.querySelector("img")).toBeNull();
   });
 
-  it("renders nothing when asset is null", () => {
-    const { container } = render(<AssetImage asset={null} alt="" />);
-    expect(container.querySelector("img")).toBeNull();
+  it("dedupes concurrent fetches across multiple mounts of the same key", async () => {
+    const fn = vi.fn().mockResolvedValue("https://cdn/x.webp");
+    const client = makeStubClient({ getPreviewUrl: fn });
+    render(
+      <LafkenProvider client={client}>
+        <AssetImage publicId="abc" preset="lafken:thumbnail" alt="" />
+        <AssetImage publicId="abc" preset="lafken:thumbnail" alt="" />
+        <AssetImage publicId="abc" preset="lafken:thumbnail" alt="" />
+      </LafkenProvider>,
+    );
+    await waitFor(() => {
+      expect(fn.mock.calls.length).toBe(1);
+    });
   });
 
-  it("hides the image after onError fires", () => {
+  it("accepts a client prop override (no provider)", async () => {
+    const client = makeStubClient({
+      getPreviewUrl: vi.fn().mockResolvedValue("https://cdn/y.webp"),
+    });
     const { container } = render(
       <AssetImage
-        asset={{ previewUrls: { thumbnail: "https://cdn.example/broken.webp" } }}
+        client={client as Parameters<typeof AssetImage>[0]["client"]}
+        publicId="abc"
+        preset="lafken:thumbnail"
         alt=""
       />,
     );
-    const img = container.querySelector("img");
-    expect(img).not.toBeNull();
-    fireEvent.error(img!);
-    expect(container.querySelector("img")).toBeNull();
+    await waitFor(() => {
+      expect(container.querySelector("img")).not.toBeNull();
+    });
   });
 
-  it("forwards arbitrary <img> attributes", () => {
+  it("throws when used without a provider and without a client prop", () => {
+    // Suppress the noisy React error boundary log.
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect(() => render(<AssetImage publicId="abc" preset="lafken:thumbnail" alt="" />)).toThrow(
+        /LafkenProvider|client/u,
+      );
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("forwards arbitrary <img> attributes", async () => {
+    const client = makeStubClient({
+      getPreviewUrl: vi.fn().mockResolvedValue("https://cdn/x.webp"),
+    });
     const { container } = render(
-      <AssetImage
-        asset={{ previewUrls: { thumbnail: "https://cdn.example/thumb.webp" } }}
-        className="foo"
-        data-testid="bar"
-        alt=""
-      />,
+      <LafkenProvider client={client}>
+        <AssetImage
+          publicId="abc"
+          preset="lafken:thumbnail"
+          className="foo"
+          data-testid="bar"
+          alt=""
+        />
+      </LafkenProvider>,
     );
-    const img = container.querySelector("img");
-    expect(img?.getAttribute("class")).toBe("foo");
-    expect(img?.getAttribute("data-testid")).toBe("bar");
+    await waitFor(() => {
+      expect(container.querySelector("img")).not.toBeNull();
+    });
+    const img = container.querySelector("img")!;
+    expect(img.getAttribute("class")).toBe("foo");
+    expect(img.getAttribute("data-testid")).toBe("bar");
   });
 });
