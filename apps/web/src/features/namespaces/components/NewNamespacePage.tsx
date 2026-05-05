@@ -189,7 +189,7 @@ export function NewNamespacePage(): React.JSX.Element {
           .regex(SLUG_PATTERN, t("pages.namespaces.errors.invalidSlug")),
         displayName: z.string().min(1).max(MAX_DISPLAY_NAME_LENGTH),
         description: z.string().max(MAX_DESCRIPTION_LENGTH),
-        storageBindingId: z.string().min(1),
+        storageBindingId: z.uuid(),
         maxFileSizeBytes: z
           .string()
           .refine(

@@ -61,7 +61,7 @@ describe("useCreateNamespace", () => {
       slug: "aircraft-photos",
       displayName: "Aircraft Photos",
       description: null,
-      storageBindingId: "1",
+      storageBindingId: "01900000-0000-7000-8000-000000000001",
       policy: {
         retentionDays: null,
         retentionMode: "none",
@@ -100,7 +100,7 @@ describe("useCreateNamespace", () => {
       slug: "aircraft-photos",
       displayName: "Aircraft Photos",
       description: null,
-      storageBindingId: "1",
+      storageBindingId: "01900000-0000-7000-8000-000000000001",
       policy: {
         retentionDays: null,
         retentionMode: "none",
