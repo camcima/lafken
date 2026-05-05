@@ -67,6 +67,7 @@ const ASSET: AssetResponseDTO = {
   stateChangedAt: new Date().toISOString(),
   createdAt: new Date().toISOString(),
   mimeType: "image/jpeg",
+  previewUrls: {},
 };
 
 const NAMESPACE: NamespaceResponseDTO = {

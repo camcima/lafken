@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronRight, Image, LayoutGrid, Lock, Shield, Sliders } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Card } from "@/components/common/Card";
@@ -50,8 +51,13 @@ interface IThumbProps {
 }
 
 function Thumb({ asset, size = "md" }: IThumbProps): React.JSX.Element {
+  const [imgFailed, setImgFailed] = useState(false);
   const isQuarantined =
     asset.state === "quarantined_moderation" || asset.state === "quarantined_virus";
+  // Don't display the image for states whose bytes shouldn't be exposed; the
+  // BE already returns an empty previewUrls map for those, but defend anyway.
+  const showImage: boolean =
+    asset.thumbUrl !== undefined && !imgFailed && !isQuarantined && asset.state !== "rejected";
   return (
     <div
       className={cn("border-border relative overflow-hidden rounded border", THUMB_DIMS[size])}
@@ -59,6 +65,18 @@ function Thumb({ asset, size = "md" }: IThumbProps): React.JSX.Element {
         background: `linear-gradient(135deg, hsl(${asset.thumbHue} 50% 55%), hsl(${asset.thumbHue} 60% 35%))`,
       }}
     >
+      {showImage && (
+        <img
+          src={asset.thumbUrl}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={(): void => {
+            setImgFailed(true);
+          }}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      )}
       {/* Static processing scan stripe (no animation per React port spec) */}
       {asset.state === "processing" && (
         <span className="absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.18)_0_4px,transparent_4px_8px)]" />

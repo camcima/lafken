@@ -26,6 +26,11 @@ export interface IAsset {
   uploadedBy: string | null;
   confirmedAt: string | null;
   createdAt: string;
+  /**
+   * Map of preset name to a fully-signed preview URL the browser can fetch
+   * directly. Empty when no presets are active or no signer is configured.
+   */
+  previewUrls?: Record<string, string>;
 }
 
 export interface IProblemDetails {

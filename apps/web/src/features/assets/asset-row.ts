@@ -25,6 +25,12 @@ export interface IAssetRow {
   /** 0-360 hue for the thumbnail gradient (deterministic). */
   thumbHue: number;
   legalHold: boolean;
+  /**
+   * Signed preview URL the browser can fetch directly. Picked from the BE's
+   * `previewUrls` map; undefined when the asset has no active presets or the
+   * BE is not configured to mint preview URLs.
+   */
+  thumbUrl: string | undefined;
   /** Demo-only fields; empty string when not available. */
   tail: string;
   wo: string;
@@ -65,6 +71,13 @@ function minutesSince(iso: string | undefined): number {
 
 const SHORT_ID_LENGTH = 8;
 
+function pickFirstPreviewUrl(previewUrls: Record<string, string> | undefined): string | undefined {
+  if (!previewUrls) return undefined;
+  const keys: string[] = Object.keys(previewUrls);
+  if (keys.length === 0) return undefined;
+  return previewUrls[keys[0]];
+}
+
 export function assetResponseToRow(dto: AssetResponseDTO): IAssetRow {
   const uploadedAt: string = dto.confirmedAt ?? dto.createdAt;
   return {
@@ -82,6 +95,7 @@ export function assetResponseToRow(dto: AssetResponseDTO): IAssetRow {
     dimensions: formatDimensions(dto.width, dto.height),
     thumbHue: hashHue(dto.publicId),
     legalHold: dto.legalHold,
+    thumbUrl: pickFirstPreviewUrl(dto.previewUrls),
     tail: "",
     wo: "",
   };
@@ -103,6 +117,7 @@ export function demoAssetToRow(demo: DemoAsset): IAssetRow {
     dimensions: demo.dimensions,
     thumbHue: demo.thumbHue,
     legalHold: demo.hasLegalHold,
+    thumbUrl: undefined,
     tail: demo.tail,
     wo: demo.wo,
   };

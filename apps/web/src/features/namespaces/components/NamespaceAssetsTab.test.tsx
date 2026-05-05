@@ -88,6 +88,7 @@ describe("NamespaceAssetsTab", () => {
       legalHold: false,
       stateChangedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
+      previewUrls: {},
     };
     listMock.mockResolvedValue({
       data: [asset],
