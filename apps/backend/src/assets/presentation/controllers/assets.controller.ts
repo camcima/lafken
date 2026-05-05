@@ -37,6 +37,7 @@ import { GetAssetProcessingJobUseCase } from "@/assets/application/use-cases/get
 import { ListAssetAnalysesUseCase } from "@/assets/application/use-cases/list-asset-analyses.use-case";
 import { ListAssetStateTransitionsUseCase } from "@/assets/application/use-cases/list-asset-state-transitions.use-case";
 import { ListAssetsUseCase } from "@/assets/application/use-cases/list-assets.use-case";
+import type { Asset } from "@/assets/domain/entities/asset.entity";
 import { AssetNotFoundError } from "@/assets/domain/errors/asset-not-found.error";
 import { FileSizeExceedsPolicyError } from "@/assets/domain/errors/file-size-exceeds-policy.error";
 import { MimeTypeNotAllowedError } from "@/assets/domain/errors/mime-type-not-allowed.error";
@@ -45,8 +46,14 @@ import { UploadIntentExpiredError } from "@/assets/domain/errors/upload-intent-e
 import { UploadIntentNotFoundError } from "@/assets/domain/errors/upload-intent-not-found.error";
 import { UploadedObjectMissingError } from "@/assets/domain/errors/uploaded-object-missing.error";
 import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-query.repository.port";
+import {
+  type IPreviewSpec,
+  PreviewUrlSignerPort,
+} from "@/assets/domain/services/preview-url-signer.port";
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
+import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
+import { environmentConfiguration } from "@/shared/infrastructure/environment.configuration";
 import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 import { AuthenticatedEndpoint } from "@/shared/presentation/auth/decorators/authenticated-endpoint.decorator";
 import {
@@ -54,11 +61,12 @@ import {
   type AuthenticatedUser as AuthenticatedUserType,
 } from "@/shared/presentation/auth/decorators/authenticated-user.decorator";
 import { EndpointRequiredRoles } from "@/shared/presentation/auth/decorators/endpoint-required-roles.decorator";
+import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 import { PaginatedAssetResponseDTO } from "../dto/list-assets-paginated-response.dto";
 import { AssetAnalysisResponseMapper } from "../mappers/asset-analysis.response-mapper";
 import { AssetStateTransitionResponseMapper } from "../mappers/asset-state-transition.response-mapper";
-import { AssetResponseMapper } from "../mappers/asset.response-mapper";
+import { AssetResponseMapper, type IPreviewSignContext } from "../mappers/asset.response-mapper";
 import { ProcessingJobResponseMapper } from "../mappers/processing-job.response-mapper";
 
 @Controller({ path: "assets" })
@@ -73,7 +81,56 @@ export class AssetsController {
     private readonly createUploadIntentUseCase: CreateUploadIntentUseCase,
     private readonly confirmUploadUseCase: ConfirmUploadUseCase,
     private readonly assetQueryRepository: AssetQueryRepositoryPort,
+    private readonly previewUrlSigner: PreviewUrlSignerPort,
+    private readonly namespaceQueryRepository: NamespaceQueryRepositoryPort,
+    private readonly storageBindingQueryRepository: StorageBindingQueryRepositoryPort,
   ) {}
+
+  /**
+   * Builds a per-asset preview-sign context, caching per-namespace presets and
+   * per-binding bucket lookups across the loop. Returns null when no preview
+   * source base URL is configured (signer is a no-op in that case anyway).
+   */
+  private buildSignContextResolver(): (asset: Asset) => Promise<IPreviewSignContext | null> {
+    const sourceBaseUrl: string | undefined = environmentConfiguration.IMGPROXY_SOURCE_BASE_URL;
+    if (!sourceBaseUrl) {
+      return (): Promise<null> => Promise.resolve(null);
+    }
+    const trimmedBaseUrl: string = sourceBaseUrl.replace(/\/+$/u, "");
+    const presetsCache: Map<string, Array<{ name: string; spec: IPreviewSpec }>> = new Map();
+    const bucketCache: Map<string, string | null> = new Map();
+    const signer: PreviewUrlSignerPort = this.previewUrlSigner;
+    const namespaceRepo: NamespaceQueryRepositoryPort = this.namespaceQueryRepository;
+    const bindingRepo: StorageBindingQueryRepositoryPort = this.storageBindingQueryRepository;
+
+    return async (asset: Asset): Promise<IPreviewSignContext | null> => {
+      const namespaceId: string = asset.props.namespaceId;
+      let presets: Array<{ name: string; spec: IPreviewSpec }> | undefined =
+        presetsCache.get(namespaceId);
+      if (!presets) {
+        const list = await namespaceRepo.listPresets(namespaceId);
+        presets = list.map((preset) => ({
+          name: preset.props.name,
+          spec: preset.props.params.props,
+        }));
+        presetsCache.set(namespaceId, presets);
+      }
+      if (presets.length === 0) {
+        return null;
+      }
+      const bindingId: string = asset.props.storageBindingId;
+      let bucket: string | null | undefined = bucketCache.get(bindingId);
+      if (bucket === undefined) {
+        const binding = await bindingRepo.findById(bindingId);
+        bucket = binding ? binding.getGcsConfig().bucket : null;
+        bucketCache.set(bindingId, bucket);
+      }
+      if (!bucket) {
+        return null;
+      }
+      return { signer, presets, sourceBaseUrl: trimmedBaseUrl, bucket };
+    };
+  }
 
   @Get()
   @AuthenticatedEndpoint()
@@ -92,8 +149,17 @@ export class AssetsController {
       uploadedTo: query.uploadedTo,
     });
 
-    const data = page.data.map((item) =>
-      AssetResponseMapper.fromDomain(item.asset, item.namespaceSlug, item.policyVersion),
+    const resolveSignCtx = this.buildSignContextResolver();
+    const data = await Promise.all(
+      page.data.map(async (item) => {
+        const signCtx: IPreviewSignContext | null = await resolveSignCtx(item.asset);
+        return AssetResponseMapper.fromDomain(
+          item.asset,
+          item.namespaceSlug,
+          item.policyVersion,
+          signCtx,
+        );
+      }),
     );
 
     return { data, total: page.total, page: page.page, limit: page.limit, lastPage: page.lastPage };
@@ -107,10 +173,13 @@ export class AssetsController {
   async getOne(@Param("publicId") publicId: string): Promise<AssetResponseDTO> {
     try {
       const result = await this.getAssetByPublicIdUseCase.execute({ publicId });
+      const resolveSignCtx = this.buildSignContextResolver();
+      const signCtx: IPreviewSignContext | null = await resolveSignCtx(result.asset);
       return AssetResponseMapper.fromDomain(
         result.asset,
         result.namespaceSlug,
         result.policyVersion,
+        signCtx,
       );
     } catch (err) {
       if (err instanceof AssetNotFoundError) {
@@ -238,7 +307,9 @@ export class AssetsController {
         (await this.assetQueryRepository.findNamespaceSlug(asset.props.namespaceId)) ?? "unknown";
       const policyVersion =
         (await this.assetQueryRepository.findPolicyVersion(asset.props.policyVersionId)) ?? 0;
-      return AssetResponseMapper.fromDomain(asset, namespaceSlug, policyVersion);
+      const resolveSignCtx = this.buildSignContextResolver();
+      const signCtx: IPreviewSignContext | null = await resolveSignCtx(asset);
+      return AssetResponseMapper.fromDomain(asset, namespaceSlug, policyVersion, signCtx);
     } catch (err) {
       if (err instanceof UploadIntentNotFoundError) {
         throw new NotFoundException(err.message, { cause: err });

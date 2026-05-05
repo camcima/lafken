@@ -1753,6 +1753,12 @@ components:
           type: string
         createdAt:
           type: string
+        previewUrls:
+          type: object
+          description: >-
+            Map of preset name to fully-signed preview URL the browser can use
+            as <img src>. Empty when no presets are active or no signer is
+            configured.
       required:
         - publicId
         - namespaceSlug
@@ -1762,6 +1768,7 @@ components:
         - legalHold
         - stateChangedAt
         - createdAt
+        - previewUrls
     PaginatedAssetResponseDTO:
       type: object
       properties:
@@ -1973,6 +1980,12 @@ components:
           type: string
         createdAt:
           type: string
+        previewUrls:
+          type: object
+          description: >-
+            Map of preset name to fully-signed preview URL the browser can use
+            as <img src>. Empty when no presets are active or no signer is
+            configured.
         quarantineKind:
           type: string
           enum:
@@ -1995,6 +2008,7 @@ components:
         - legalHold
         - stateChangedAt
         - createdAt
+        - previewUrls
         - quarantineKind
         - flaggedAt
     PaginatedQuarantinedAssetResponseDTO:
