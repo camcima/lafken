@@ -19,6 +19,10 @@ import { NamespaceWriteRepository } from "./persistence/repositories/namespace-w
     NamespacePresetWriteRepository,
     { provide: NamespacePresetWriteRepositoryPort, useExisting: NamespacePresetWriteRepository },
   ],
-  exports: [NamespaceQueryRepositoryPort, NamespaceWriteRepositoryPort, NamespacePresetWriteRepositoryPort],
+  exports: [
+    NamespaceQueryRepositoryPort,
+    NamespaceWriteRepositoryPort,
+    NamespacePresetWriteRepositoryPort,
+  ],
 })
 export class NamespacesInfrastructureModule {}

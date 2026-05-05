@@ -15,6 +15,10 @@ export * from "./presentation/namespaces/namespace-preset-response.dto";
 export * from "./presentation/namespaces/create-namespace-request.dto";
 export * from "./presentation/namespaces/create-policy-version-request.dto";
 export * from "./presentation/namespaces/update-namespace-metadata-request.dto";
+export * from "./presentation/namespaces/preset-params-input.dto";
+export * from "./presentation/namespaces/create-preset-request.dto";
+export * from "./presentation/namespaces/update-preset-version-request.dto";
+export * from "./presentation/namespaces/set-preset-active-request.dto";
 
 export * from "./presentation/assets/asset-response.dto";
 export * from "./presentation/assets/asset-state-transition-response.dto";

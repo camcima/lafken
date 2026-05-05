@@ -5,8 +5,8 @@ import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-arc
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { PresetNotFoundError } from "@/namespaces/domain/errors/preset-not-found.error";
 import { PresetVersionConflictError } from "@/namespaces/domain/errors/preset-version-conflict.error";
-import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import { NamespacePresetWriteRepositoryPort } from "@/namespaces/domain/repositories/namespace-preset-write.repository.port";
+import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import type { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
 
 const RETRY_LIMIT = 1;
@@ -34,10 +34,7 @@ export class UpdatePresetVersionUseCase {
       throw new NamespaceArchivedError({ slug: input.slug });
     }
 
-    const existing = await this.queryRepository.findPresetByName(
-      namespace.props.id,
-      input.name,
-    );
+    const existing = await this.queryRepository.findPresetByName(namespace.props.id, input.name);
     if (!existing) {
       throw new PresetNotFoundError({ slug: input.slug, name: input.name });
     }

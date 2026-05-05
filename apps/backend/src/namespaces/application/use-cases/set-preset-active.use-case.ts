@@ -4,8 +4,8 @@ import { NamespacePreset } from "@/namespaces/domain/entities/namespace-preset.e
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { PresetNotFoundError } from "@/namespaces/domain/errors/preset-not-found.error";
-import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import { NamespacePresetWriteRepositoryPort } from "@/namespaces/domain/repositories/namespace-preset-write.repository.port";
+import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 
 export interface ISetPresetActiveInput {
   slug: string;
@@ -28,10 +28,7 @@ export class SetPresetActiveUseCase {
     if (namespace.props.archivedAt !== null) {
       throw new NamespaceArchivedError({ slug: input.slug });
     }
-    const existing = await this.queryRepository.findPresetByName(
-      namespace.props.id,
-      input.name,
-    );
+    const existing = await this.queryRepository.findPresetByName(namespace.props.id, input.name);
     if (!existing) {
       throw new PresetNotFoundError({ slug: input.slug, name: input.name });
     }

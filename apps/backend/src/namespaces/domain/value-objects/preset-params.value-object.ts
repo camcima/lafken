@@ -1,4 +1,4 @@
-import { ValidationError } from "@/shared/kernel/domain/errors/validation-error.interface";
+import { InvalidPresetParamsError } from "@/namespaces/domain/errors/invalid-preset-params.error";
 
 export type PresetFit = "cover" | "contain" | "fill" | "inside" | "outside";
 export type PresetFormat = "webp" | "avif" | "jpeg" | "png" | "auto";
@@ -15,14 +15,14 @@ export interface IPresetParamsProps {
 const FITS: readonly PresetFit[] = ["cover", "contain", "fill", "inside", "outside"];
 const FORMATS: readonly PresetFormat[] = ["webp", "avif", "jpeg", "png", "auto"];
 
-export class InvalidPresetParamsError extends ValidationError {
-  constructor(props: { violations: Array<{ field: string; message: string }> }) {
-    super({
-      message: `Invalid preset params: ${props.violations.map((v) => `${v.field}: ${v.message}`).join("; ")}`,
-      params: props,
-    });
-  }
-}
+const DIMENSION_MIN = 1;
+const DIMENSION_MAX = 10_000;
+const QUALITY_MIN = 1;
+const QUALITY_MAX = 100;
+const DPR_MIN = 0.5;
+const DPR_MAX = 4;
+
+export { InvalidPresetParamsError };
 
 export class PresetParams {
   private constructor(public readonly props: IPresetParamsProps) {}
@@ -33,27 +33,44 @@ export class PresetParams {
         violations: [{ field: "params", message: "must be an object" }],
       });
     }
-    const v = value as Record<string, unknown>;
+    const raw = value as Record<string, unknown>;
     const violations: Array<{ field: string; message: string }> = [];
 
-    const width = PresetParams.parseOptionalInt(v["width"], "width", 1, 10000, violations);
-    const height = PresetParams.parseOptionalInt(v["height"], "height", 1, 10000, violations);
+    const width = PresetParams.parseOptionalInt(
+      raw["width"],
+      "width",
+      DIMENSION_MIN,
+      DIMENSION_MAX,
+      violations,
+    );
+    const height = PresetParams.parseOptionalInt(
+      raw["height"],
+      "height",
+      DIMENSION_MIN,
+      DIMENSION_MAX,
+      violations,
+    );
     const fit =
-      typeof v["fit"] === "string" && (FITS as readonly string[]).includes(v["fit"] as string)
-        ? (v["fit"] as PresetFit)
+      typeof raw["fit"] === "string" && (FITS as readonly string[]).includes(raw["fit"])
+        ? (raw["fit"] as PresetFit)
         : (violations.push({ field: "fit", message: `must be one of ${FITS.join(", ")}` }),
           "cover" as PresetFit);
     const format =
-      typeof v["format"] === "string" &&
-      (FORMATS as readonly string[]).includes(v["format"] as string)
-        ? (v["format"] as PresetFormat)
+      typeof raw["format"] === "string" && (FORMATS as readonly string[]).includes(raw["format"])
+        ? (raw["format"] as PresetFormat)
         : (violations.push({
             field: "format",
             message: `must be one of ${FORMATS.join(", ")}`,
           }),
           "auto" as PresetFormat);
-    const quality = PresetParams.parseRequiredInt(v["quality"], "quality", 1, 100, violations);
-    const dpr = PresetParams.parseOptionalNumber(v["dpr"], "dpr", 0.5, 4, violations);
+    const quality = PresetParams.parseRequiredInt(
+      raw["quality"],
+      "quality",
+      QUALITY_MIN,
+      QUALITY_MAX,
+      violations,
+    );
+    const dpr = PresetParams.parseOptionalNumber(raw["dpr"], "dpr", DPR_MIN, DPR_MAX, violations);
 
     if (violations.length > 0) {
       throw new InvalidPresetParamsError({ violations });

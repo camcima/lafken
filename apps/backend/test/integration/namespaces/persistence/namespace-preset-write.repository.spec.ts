@@ -212,11 +212,11 @@ describe("NamespacePresetWriteRepository", () => {
       .orderBy("version", "asc")
       .execute();
     expect(rows).toHaveLength(2);
-    expect((rows[0] as { version: number; active: boolean })).toMatchObject({
+    expect(rows[0] as { version: number; active: boolean }).toMatchObject({
       version: 1,
       active: true,
     });
-    expect((rows[1] as { version: number; active: boolean })).toMatchObject({
+    expect(rows[1] as { version: number; active: boolean }).toMatchObject({
       version: 2,
       active: false,
     });

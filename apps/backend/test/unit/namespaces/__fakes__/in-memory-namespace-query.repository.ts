@@ -45,15 +45,19 @@ export class InMemoryNamespaceQueryRepository implements NamespaceQueryRepositor
   }
 
   listPresets(namespaceId: string): Promise<NamespacePreset[]> {
-    return Promise.resolve(this.presets.filter((p) => p.props.namespaceId === namespaceId));
+    return Promise.resolve(
+      this.presets.filter((preset) => preset.props.namespaceId === namespaceId),
+    );
   }
 
   findPresetByName(namespaceId: string, name: string): Promise<NamespacePreset | null> {
     const matches = this.presets.filter(
-      (p) => p.props.namespaceId === namespaceId && p.props.name === name,
+      (preset) => preset.props.namespaceId === namespaceId && preset.props.name === name,
     );
     if (matches.length === 0) return Promise.resolve(null);
-    const latest = matches.reduce((a, b) => (a.props.version >= b.props.version ? a : b));
+    const latest = matches.reduce((acc, cur) =>
+      acc.props.version >= cur.props.version ? acc : cur,
+    );
     return Promise.resolve(latest);
   }
 

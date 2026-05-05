@@ -52,12 +52,12 @@ export class InMemoryNamespacePresetWriteRepository extends NamespacePresetWrite
 
   createVersion(input: ICreatePresetVersionInput): Promise<NamespacePreset> {
     const versions = this.rows.filter(
-      (r) => r.namespaceId === input.namespaceId && r.name === input.name,
+      (row) => row.namespaceId === input.namespaceId && row.name === input.name,
     );
     if (versions.length === 0) {
       return Promise.reject(new PresetNotFoundError({ slug: "<unknown>", name: input.name }));
     }
-    const latest = versions.reduce((a, b) => (a.version >= b.version ? a : b));
+    const latest = versions.reduce((acc, cur) => (acc.version >= cur.version ? acc : cur));
     const nextVersion = latest.version + 1;
     if (this.collisionsRemaining > 0) {
       this.collisionsRemaining -= 1;
@@ -96,12 +96,12 @@ export class InMemoryNamespacePresetWriteRepository extends NamespacePresetWrite
 
   setActive(input: ISetPresetActiveInput): Promise<NamespacePreset> {
     const versions = this.rows.filter(
-      (r) => r.namespaceId === input.namespaceId && r.name === input.name,
+      (row) => row.namespaceId === input.namespaceId && row.name === input.name,
     );
     if (versions.length === 0) {
       return Promise.reject(new PresetNotFoundError({ slug: "<unknown>", name: input.name }));
     }
-    const latest = versions.reduce((a, b) => (a.version >= b.version ? a : b));
+    const latest = versions.reduce((acc, cur) => (acc.version >= cur.version ? acc : cur));
     const updated = NamespacePreset.fromProps({ ...latest.preset.props, active: input.active });
     latest.preset = updated;
     return Promise.resolve(updated);

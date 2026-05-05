@@ -28,7 +28,9 @@ describe("PresetParams", () => {
   });
 
   it("rejects width below 1", () => {
-    expect(() => PresetParams.fromUnknown({ ...VALID, width: 0 })).toThrow(InvalidPresetParamsError);
+    expect(() => PresetParams.fromUnknown({ ...VALID, width: 0 })).toThrow(
+      InvalidPresetParamsError,
+    );
   });
 
   it("rejects unknown fit", () => {
@@ -53,8 +55,12 @@ describe("PresetParams", () => {
   });
 
   it("rejects dpr 0.4 and 4.1", () => {
-    expect(() => PresetParams.fromUnknown({ ...VALID, dpr: 0.4 })).toThrow(InvalidPresetParamsError);
-    expect(() => PresetParams.fromUnknown({ ...VALID, dpr: 4.1 })).toThrow(InvalidPresetParamsError);
+    expect(() => PresetParams.fromUnknown({ ...VALID, dpr: 0.4 })).toThrow(
+      InvalidPresetParamsError,
+    );
+    expect(() => PresetParams.fromUnknown({ ...VALID, dpr: 4.1 })).toThrow(
+      InvalidPresetParamsError,
+    );
   });
 
   it("aggregates multiple violations into one error", () => {

@@ -24,24 +24,33 @@ import {
 import {
   CreateNamespaceRequestDTO,
   CreatePolicyVersionRequestDTO,
+  CreatePresetRequestDTO,
   NamespacePolicyResponseDTO,
   NamespacePresetResponseDTO,
   NamespaceResponseDTO,
+  SetPresetActiveRequestDTO,
   UpdateNamespaceMetadataRequestDTO,
+  UpdatePresetVersionRequestDTO,
 } from "@shared/backend-api";
 
 import { ArchiveNamespaceUseCase } from "@/namespaces/application/use-cases/archive-namespace.use-case";
 import { CreateNamespaceUseCase } from "@/namespaces/application/use-cases/create-namespace.use-case";
+import { CreatePresetUseCase } from "@/namespaces/application/use-cases/create-preset.use-case";
 import { GetNamespaceBySlugUseCase } from "@/namespaces/application/use-cases/get-namespace-by-slug.use-case";
 import { ListNamespacePoliciesUseCase } from "@/namespaces/application/use-cases/list-namespace-policies.use-case";
 import { ListNamespacePresetsUseCase } from "@/namespaces/application/use-cases/list-namespace-presets.use-case";
 import { ListNamespacesUseCase } from "@/namespaces/application/use-cases/list-namespaces.use-case";
+import { SetPresetActiveUseCase } from "@/namespaces/application/use-cases/set-preset-active.use-case";
 import { UnarchiveNamespaceUseCase } from "@/namespaces/application/use-cases/unarchive-namespace.use-case";
 import { UpdateNamespaceMetadataUseCase } from "@/namespaces/application/use-cases/update-namespace-metadata.use-case";
 import { UpdateNamespacePolicyUseCase } from "@/namespaces/application/use-cases/update-namespace-policy.use-case";
+import { UpdatePresetVersionUseCase } from "@/namespaces/application/use-cases/update-preset-version.use-case";
 import { NamespaceAlreadyExistsError } from "@/namespaces/domain/errors/namespace-already-exists.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { PolicyVersionConflictError } from "@/namespaces/domain/errors/policy-version-conflict.error";
+import { PresetNotFoundError } from "@/namespaces/domain/errors/preset-not-found.error";
+import { PresetVersionConflictError } from "@/namespaces/domain/errors/preset-version-conflict.error";
+import { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
 import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 import { AuthenticatedEndpoint } from "@/shared/presentation/auth/decorators/authenticated-endpoint.decorator";
 import { AuthenticatedUser } from "@/shared/presentation/auth/decorators/authenticated-user.decorator";
@@ -69,6 +78,9 @@ export class NamespacesController {
     private readonly archiveNamespaceUseCase: ArchiveNamespaceUseCase,
     private readonly unarchiveNamespaceUseCase: UnarchiveNamespaceUseCase,
     private readonly updateNamespacePolicyUseCase: UpdateNamespacePolicyUseCase,
+    private readonly createPresetUseCase: CreatePresetUseCase,
+    private readonly updatePresetVersionUseCase: UpdatePresetVersionUseCase,
+    private readonly setPresetActiveUseCase: SetPresetActiveUseCase,
   ) {}
 
   @Get()
@@ -318,6 +330,99 @@ export class NamespacesController {
         throw new ConflictException(err.message, { cause: err });
       }
       throw err; // NamespaceArchivedError → 422 via global filter
+    }
+  }
+
+  @Post(":slug/presets")
+  @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: "Create a new preset for a namespace" })
+  @ApiCreatedResponse({ type: NamespacePresetResponseDTO })
+  @ApiBadRequestResponse()
+  @ApiNotFoundResponse()
+  @ApiUnprocessableEntityResponse()
+  async createPreset(
+    @Param("slug") slug: string,
+    @Body() body: CreatePresetRequestDTO,
+    @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+  ): Promise<NamespacePresetResponseDTO> {
+    try {
+      const params = PresetParams.fromUnknown(body.params);
+      const preset = await this.createPresetUseCase.execute({
+        slug,
+        name: body.name,
+        params,
+        createdBy: user.emailAddress,
+      });
+      return NamespacePresetResponseMapper.fromDomain(preset);
+    } catch (err) {
+      if (err instanceof NamespaceNotFoundError) {
+        throw new NotFoundException(err.message, { cause: err });
+      }
+      throw err;
+    }
+  }
+
+  @Post(":slug/presets/:name/versions")
+  @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: "Create a new version of an existing preset" })
+  @ApiCreatedResponse({ type: NamespacePresetResponseDTO })
+  @ApiBadRequestResponse()
+  @ApiNotFoundResponse()
+  @ApiConflictResponse()
+  @ApiUnprocessableEntityResponse()
+  async updatePresetVersion(
+    @Param("slug") slug: string,
+    @Param("name") name: string,
+    @Body() body: UpdatePresetVersionRequestDTO,
+    @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+  ): Promise<NamespacePresetResponseDTO> {
+    try {
+      const params = PresetParams.fromUnknown(body.params);
+      const preset = await this.updatePresetVersionUseCase.execute({
+        slug,
+        name,
+        params,
+        createdBy: user.emailAddress,
+      });
+      return NamespacePresetResponseMapper.fromDomain(preset);
+    } catch (err) {
+      if (err instanceof NamespaceNotFoundError || err instanceof PresetNotFoundError) {
+        throw new NotFoundException(err.message, { cause: err });
+      }
+      if (err instanceof PresetVersionConflictError) {
+        throw new ConflictException(err.message, { cause: err });
+      }
+      throw err;
+    }
+  }
+
+  @Patch(":slug/presets/:name")
+  @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Activate or deactivate a preset" })
+  @ApiOkResponse({ type: NamespacePresetResponseDTO })
+  @ApiBadRequestResponse()
+  @ApiNotFoundResponse()
+  @ApiUnprocessableEntityResponse()
+  async setPresetActive(
+    @Param("slug") slug: string,
+    @Param("name") name: string,
+    @Body() body: SetPresetActiveRequestDTO,
+  ): Promise<NamespacePresetResponseDTO> {
+    try {
+      const preset = await this.setPresetActiveUseCase.execute({
+        slug,
+        name,
+        active: body.active,
+      });
+      return NamespacePresetResponseMapper.fromDomain(preset);
+    } catch (err) {
+      if (err instanceof NamespaceNotFoundError || err instanceof PresetNotFoundError) {
+        throw new NotFoundException(err.message, { cause: err });
+      }
+      throw err;
     }
   }
 }

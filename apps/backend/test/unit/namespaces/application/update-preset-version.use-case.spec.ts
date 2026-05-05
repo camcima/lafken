@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { UpdatePresetVersionUseCase } from "@/namespaces/application/use-cases/update-preset-version.use-case";
-import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
 import { NamespacePreset } from "@/namespaces/domain/entities/namespace-preset.entity";
+import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { PresetNotFoundError } from "@/namespaces/domain/errors/preset-not-found.error";
@@ -10,8 +10,8 @@ import { PresetVersionConflictError } from "@/namespaces/domain/errors/preset-ve
 import { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
-import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
 import { InMemoryNamespacePresetWriteRepository } from "../__fakes__/in-memory-namespace-preset-write.repository";
+import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
 
 const VALID_PARAMS = PresetParams.fromUnknown({
   width: 800,
