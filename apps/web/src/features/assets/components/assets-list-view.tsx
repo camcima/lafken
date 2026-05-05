@@ -55,9 +55,7 @@ function Thumb({ asset, size = "md" }: IThumbProps): React.JSX.Element {
   const isQuarantined =
     asset.state === "quarantined_moderation" || asset.state === "quarantined_virus";
   const previewable =
-    !isQuarantined &&
-    asset.state !== "rejected" &&
-    (asset.state === "uploaded" || asset.state === "processing" || asset.state === "ready");
+    asset.state === "uploaded" || asset.state === "processing" || asset.state === "ready";
   return (
     <div
       className={cn("border-border relative overflow-hidden rounded border", THUMB_DIMS[size])}
