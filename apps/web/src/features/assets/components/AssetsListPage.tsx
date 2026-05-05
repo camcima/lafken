@@ -1,3 +1,5 @@
+import type { AssetState, NamespaceResponseDTO } from "@shared/backend-api";
+import { useQuery } from "@tanstack/react-query";
 import { Download, Filter, Lock, Plus, Search, Tag, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -6,22 +8,25 @@ import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
 import { Paginator } from "@/components/common/Paginator";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
-import { demoAssetToRow, type IAssetRow } from "@/features/assets/asset-row";
+import { assetResponseToRow, demoAssetToRow, type IAssetRow } from "@/features/assets/asset-row";
 import {
   AssetsListView,
   getAutoPageSize,
   type ViewMode,
   ViewToggle,
 } from "@/features/assets/components/assets-list-view";
+import { isDemoMode } from "@/lib/demo/demo-mode";
 import { DEMO_ASSET_LIST, DEMO_NAMESPACES } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
+import { assetsService, namespacesService } from "@/services";
 
 // Page-size options for the rows-per-page selector
 /* eslint-disable no-magic-numbers */
 const PAGE_SIZE_OPTIONS = [18, 24, 50, 100, 200] as const;
 /* eslint-enable no-magic-numbers */
 
-// Slice 0: BE returns empty arrays; rendering against typed demo data
+const NAMESPACE_FILTER_LIMIT = 100;
+
 const QUICK_FILTER_KEYS = [
   "last24h",
   "hasLegalHold",
@@ -32,6 +37,11 @@ const QUICK_FILTER_KEYS = [
 
 // Slice 1: wire to active more-filters count
 const MORE_FILTERS_BADGE_PLACEHOLDER = 2;
+
+interface INamespaceOption {
+  slug: string;
+  label: string;
+}
 
 export function AssetsListPage(): React.JSX.Element {
   const { t } = useTranslation();
@@ -47,10 +57,42 @@ export function AssetsListPage(): React.JSX.Element {
   const autoPageSize = getAutoPageSize(view);
   const PAGE_SIZE = pageSize || autoPageSize;
 
-  const allRows: IAssetRow[] = useMemo(() => DEMO_ASSET_LIST.map(demoAssetToRow), []);
+  // ── Real-API queries (skipped when in demo mode) ────────────────────────
+  const { data: realAssetsPage, isLoading: realAssetsLoading } = useQuery({
+    queryKey: [
+      "assets",
+      {
+        page: page + 1,
+        limit: PAGE_SIZE,
+        namespaceSlug: namespaceFilter !== "all" ? namespaceFilter : undefined,
+        states: stateFilter !== "all" ? [stateFilter as AssetState] : undefined,
+      },
+    ] as const,
+    queryFn: () =>
+      assetsService.list({
+        page: page + 1,
+        limit: PAGE_SIZE,
+        namespaceSlug: namespaceFilter !== "all" ? namespaceFilter : undefined,
+        states: stateFilter !== "all" ? [stateFilter as AssetState] : undefined,
+      }),
+    enabled: !isDemoMode,
+  });
 
-  const filtered: IAssetRow[] = useMemo(() => {
-    return allRows.filter((row) => {
+  const { data: realNamespacesPage } = useQuery({
+    queryKey: ["namespaces", "all-for-filter"] as const,
+    queryFn: () => namespacesService.list({ page: 1, limit: NAMESPACE_FILTER_LIMIT }),
+    enabled: !isDemoMode,
+  });
+
+  // ── Data sourcing ───────────────────────────────────────────────────────
+  const demoRows: IAssetRow[] = useMemo(() => DEMO_ASSET_LIST.map(demoAssetToRow), []);
+
+  // In demo mode the page applies state/namespace/query filters client-side
+  // and slices for pagination locally. In real-API mode the BE handles
+  // state/namespace/page/limit; only the free-text search is applied
+  // client-side over the loaded page (matches `shortId` only).
+  const demoFiltered: IAssetRow[] = useMemo(() => {
+    return demoRows.filter((row) => {
       if (stateFilter !== "all" && row.state !== stateFilter) return false;
       if (namespaceFilter !== "all" && row.namespaceSlug !== namespaceFilter) return false;
       if (query) {
@@ -64,10 +106,39 @@ export function AssetsListPage(): React.JSX.Element {
       }
       return true;
     });
-  }, [allRows, stateFilter, namespaceFilter, query]);
+  }, [demoRows, stateFilter, namespaceFilter, query]);
 
-  const pageRows = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const realRows: IAssetRow[] = useMemo(
+    () => (realAssetsPage?.data ?? []).map(assetResponseToRow),
+    [realAssetsPage],
+  );
+
+  const realFiltered: IAssetRow[] = useMemo(() => {
+    if (!query) return realRows;
+    const q = query.toLowerCase();
+    return realRows.filter((row) => row.shortId.toLowerCase().includes(q));
+  }, [realRows, query]);
+
+  // Visible page rows + total counts vary by mode.
+  const pageRows: IAssetRow[] = isDemoMode
+    ? demoFiltered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+    : realFiltered;
+
+  const totalItems: number = isDemoMode ? demoFiltered.length : (realAssetsPage?.total ?? 0);
+  const totalPages: number = isDemoMode
+    ? Math.max(1, Math.ceil(demoFiltered.length / PAGE_SIZE))
+    : Math.max(1, realAssetsPage?.lastPage ?? 1);
+
+  const namespaceOptions: INamespaceOption[] = useMemo(() => {
+    if (isDemoMode) {
+      return DEMO_NAMESPACES.map((ns) => ({ slug: ns.slug, label: ns.slug }));
+    }
+    const real: NamespaceResponseDTO[] = realNamespacesPage?.data ?? [];
+    return real.map((ns) => ({ slug: ns.slug, label: ns.slug }));
+  }, [realNamespacesPage]);
+
+  const isLoading = !isDemoMode && realAssetsLoading;
+  const isEmpty = !isLoading && pageRows.length === 0;
 
   const hasActiveFilters = stateFilter !== "all" || namespaceFilter !== "all" || query !== "";
 
@@ -130,8 +201,20 @@ export function AssetsListPage(): React.JSX.Element {
   }
 
   // Range display values (1-indexed)
-  const rangeFrom = filtered.length === 0 ? 0 : page * PAGE_SIZE + 1;
-  const rangeTo = Math.min((page + 1) * PAGE_SIZE, filtered.length);
+  const rangeFrom: number = isDemoMode
+    ? demoFiltered.length === 0
+      ? 0
+      : page * PAGE_SIZE + 1
+    : totalItems === 0
+      ? 0
+      : page * PAGE_SIZE + 1;
+  const rangeTo: number = isDemoMode
+    ? Math.min((page + 1) * PAGE_SIZE, demoFiltered.length)
+    : Math.min((page + 1) * PAGE_SIZE, totalItems);
+
+  // Header subtitle counters
+  const headerTotal: number = isDemoMode ? DEMO_ASSET_LIST.length : totalItems;
+  const headerNsCount: number = isDemoMode ? DEMO_NAMESPACES.length : namespaceOptions.length;
 
   return (
     <div className="space-y-4">
@@ -142,8 +225,8 @@ export function AssetsListPage(): React.JSX.Element {
             <h1 className="m-0 text-[22px] font-bold tracking-tight">{t("pages.assets.title")}</h1>
             <div className="text-muted-foreground mt-1 text-[12.5px]">
               {t("pages.assets.subtitle", {
-                total: DEMO_ASSET_LIST.length.toLocaleString(),
-                nsCount: DEMO_NAMESPACES.length,
+                total: headerTotal.toLocaleString(),
+                nsCount: headerNsCount,
               })}
             </div>
           </div>
@@ -210,9 +293,9 @@ export function AssetsListPage(): React.JSX.Element {
             aria-label={t("pages.assets.filterByNamespace")}
           >
             <option value="all">{t("pages.assets.filters.allNamespaces")}</option>
-            {DEMO_NAMESPACES.map((ns) => (
+            {namespaceOptions.map((ns) => (
               <option key={ns.slug} value={ns.slug}>
-                {ns.slug}
+                {ns.label}
               </option>
             ))}
           </select>
@@ -299,17 +382,23 @@ export function AssetsListPage(): React.JSX.Element {
 
       {/* ── Stats line ──────────────────────────────────────── */}
       <div className="text-muted-foreground mb-3 text-[12px]">
-        {filtered.length === 0
+        {totalItems === 0
           ? t("pages.assets.summaryEmpty")
           : t("pages.assets.summaryRange", {
               from: rangeFrom.toLocaleString(),
               to: rangeTo.toLocaleString(),
-              total: filtered.length.toLocaleString(),
+              total: totalItems.toLocaleString(),
             })}
       </div>
 
       {/* ── Content area ──────────────────────────────────────── */}
-      {filtered.length === 0 ? (
+      {isLoading ? (
+        <Card className="px-8 py-16 text-center">
+          <div className="text-muted-foreground text-[12.5px]">
+            {t("pages.namespaceDetail.loading")}
+          </div>
+        </Card>
+      ) : isEmpty ? (
         <Card className="px-8 py-16 text-center">
           <div className="bg-secondary text-muted-foreground mx-auto mb-3 grid size-12 place-items-center rounded-full">
             <Search size={20} />
@@ -353,7 +442,7 @@ export function AssetsListPage(): React.JSX.Element {
                 {t("paginator.range", {
                   from: rangeFrom.toLocaleString(),
                   to: rangeTo.toLocaleString(),
-                  total: filtered.length.toLocaleString(),
+                  total: totalItems.toLocaleString(),
                 })}
               </span>
             </div>

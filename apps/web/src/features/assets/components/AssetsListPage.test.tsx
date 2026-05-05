@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -5,6 +6,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
 
 import { AssetsListPage } from "./AssetsListPage";
+
+// Pin demo mode on so the page renders the demo client-side flow. The
+// real-API path is exercised in AssetsListPage.real-api.test.tsx.
+vi.mock("@/lib/demo/demo-mode", () => ({ isDemoMode: true }));
 
 // TanStack Router Link mock
 vi.mock("@tanstack/react-router", () => ({
@@ -19,9 +24,12 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 function renderPage() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <I18nProvider>
-      <AssetsListPage />
+      <QueryClientProvider client={client}>
+        <AssetsListPage />
+      </QueryClientProvider>
     </I18nProvider>,
   );
 }
