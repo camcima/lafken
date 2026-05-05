@@ -25,6 +25,8 @@ export * from "./presentation/assets/asset-state-transition-response.dto";
 export * from "./presentation/assets/asset-analysis-response.dto";
 export * from "./presentation/assets/processing-job-response.dto";
 export * from "./presentation/assets/list-assets-query.dto";
+export * from "./presentation/assets/create-upload-intent-request.dto";
+export * from "./presentation/assets/create-upload-intent-response.dto";
 
 export * from "./presentation/quarantine/quarantined-asset-response.dto";
 export * from "./presentation/quarantine/list-quarantine-query.dto";

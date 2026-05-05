@@ -726,6 +726,83 @@ paths:
       summary: Get the processing job for an asset
       tags:
         - Assets
+  /v1/assets/upload-intents:
+    post:
+      operationId: AssetsController_createUploadIntent_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUploadIntentRequestDTO'
+      responses:
+        '201':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUploadIntentResponseDTO'
+        '400':
+          description: ''
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+        '422':
+          description: ''
+      security:
+        - bearer: []
+      summary: Issue a signed URL for a new asset upload
+      tags:
+        - Assets
+  /v1/assets/{publicId}/confirm:
+    post:
+      operationId: AssetsController_confirmUpload_v1
+      parameters:
+        - name: publicId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+        '422':
+          description: ''
+      security:
+        - bearer: []
+      summary: Confirm a successful upload to a signed URL
+      tags:
+        - Assets
   /v1/quarantine:
     get:
       operationId: QuarantineController_list_v1
@@ -1128,6 +1205,8 @@ paths:
           description: ''
         '404':
           description: ''
+        '409':
+          description: ''
       security:
         - bearer: []
       summary: Delete a storage binding
@@ -1202,8 +1281,8 @@ paths:
       tags:
         - Dashboard
 info:
-  title: Lafken Backend API
-  description: Backend API for Lafken
+  title: BE - Template eMantto Project
+  description: Backend API for template-emantto-project monorepo
   version: 0.0.0
   contact:
     name: grp_emx_platform_eng@latam.com
@@ -1217,7 +1296,7 @@ components:
       scheme: bearer
       bearerFormat: JWT
       type: http
-      description: OIDC bearer token authorization
+      description: Azure AD Bearer token authorization
   schemas:
     HealthIndicatorStatusDTO:
       type: object
@@ -1791,6 +1870,42 @@ components:
         - state
         - attemptNumber
         - createdAt
+    CreateUploadIntentRequestDTO:
+      type: object
+      properties:
+        namespaceSlug:
+          type: string
+          example: aircraft-photos
+        declaredMimeType:
+          type: string
+          example: image/jpeg
+        declaredSizeBytes:
+          type: number
+          example: 102400
+          minimum: 1
+      required:
+        - namespaceSlug
+        - declaredMimeType
+        - declaredSizeBytes
+    CreateUploadIntentResponseDTO:
+      type: object
+      properties:
+        publicId:
+          type: string
+        uploadUrl:
+          type: string
+        uploadHeaders:
+          type: object
+          additionalProperties:
+            type: string
+        expiresAt:
+          type: string
+          description: ISO-8601 timestamp when the URL expires
+      required:
+        - publicId
+        - uploadUrl
+        - uploadHeaders
+        - expiresAt
     QuarantinedAssetResponseDTO:
       type: object
       properties:
