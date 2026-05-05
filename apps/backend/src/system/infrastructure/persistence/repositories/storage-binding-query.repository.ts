@@ -29,4 +29,14 @@ export class StorageBindingQueryRepository implements StorageBindingQueryReposit
 
     return row ? StorageBindingDbMapper.toDomain(row) : null;
   }
+
+  async findById(id: string): Promise<StorageBinding | null> {
+    const row = await this.db.connection
+      .selectFrom("storage_bindings")
+      .selectAll()
+      .where("id", "=", id)
+      .executeTakeFirst();
+
+    return row ? StorageBindingDbMapper.toDomain(row) : null;
+  }
 }

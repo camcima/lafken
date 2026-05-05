@@ -23,4 +23,8 @@ export abstract class NamespaceQueryRepositoryPort {
   abstract findPresetByName(namespaceId: string, name: string): Promise<NamespacePreset | null>;
   abstract findStorageBindingName(storageBindingId: string): Promise<string | null>;
   abstract findCurrentPolicyVersion(namespaceId: string): Promise<number | null>;
+  /** Returns the active policy (the one referenced by namespaces.current_policy_id) or null. */
+  abstract findActivePolicy(namespaceId: string): Promise<NamespacePolicy | null>;
+  /** Direct lookup by namespace_policies.id. */
+  abstract findPolicyById(policyVersionId: string): Promise<NamespacePolicy | null>;
 }

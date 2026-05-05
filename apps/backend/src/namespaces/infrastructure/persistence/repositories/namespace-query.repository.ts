@@ -106,4 +106,23 @@ export class NamespaceQueryRepository implements NamespaceQueryRepositoryPort {
       .executeTakeFirst();
     return (row as { version?: number } | undefined)?.version ?? null;
   }
+
+  async findActivePolicy(namespaceId: string): Promise<NamespacePolicy | null> {
+    const row = await this.db.connection
+      .selectFrom("namespaces as n")
+      .innerJoin("namespace_policies as p", "p.id", "n.current_policy_id")
+      .selectAll("p")
+      .where("n.id", "=", namespaceId)
+      .executeTakeFirst();
+    return row ? NamespacePolicyDbMapper.toDomain(row) : null;
+  }
+
+  async findPolicyById(policyVersionId: string): Promise<NamespacePolicy | null> {
+    const row = await this.db.connection
+      .selectFrom("namespace_policies")
+      .selectAll()
+      .where("id", "=", policyVersionId)
+      .executeTakeFirst();
+    return row ? NamespacePolicyDbMapper.toDomain(row) : null;
+  }
 }

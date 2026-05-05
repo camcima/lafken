@@ -15,4 +15,8 @@ export class InMemoryStorageBindingQueryRepository implements StorageBindingQuer
   findByName(name: string): Promise<StorageBinding | null> {
     return Promise.resolve(this.bindings.find((b) => b.props.name === name) ?? null);
   }
+
+  findById(id: string): Promise<StorageBinding | null> {
+    return Promise.resolve(this.bindings.find((b) => b.props.id === id) ?? null);
+  }
 }
