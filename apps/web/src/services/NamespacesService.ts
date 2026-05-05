@@ -1,11 +1,14 @@
 import type {
   CreateNamespaceRequestDTO,
   CreatePolicyVersionRequestDTO,
+  CreatePresetRequestDTO,
   NamespacePolicyResponseDTO,
   NamespacePresetResponseDTO,
   NamespaceResponseDTO,
   PaginatedResult,
+  SetPresetActiveRequestDTO,
   UpdateNamespaceMetadataRequestDTO,
+  UpdatePresetVersionRequestDTO,
 } from "@shared/backend-api";
 
 import { BaseService } from "./BaseService";
@@ -80,6 +83,42 @@ export class NamespacesService extends BaseService {
   ): Promise<NamespaceResponseDTO> {
     return this.getApiClient().post<CreatePolicyVersionRequestDTO, NamespaceResponseDTO>(
       this.getServiceUrl(`${this.basePath}/${encodeURIComponent(slug)}/policy-versions`),
+      input,
+    );
+  }
+
+  async createPreset(
+    slug: string,
+    input: CreatePresetRequestDTO,
+  ): Promise<NamespacePresetResponseDTO> {
+    return this.getApiClient().post<CreatePresetRequestDTO, NamespacePresetResponseDTO>(
+      this.getServiceUrl(`${this.basePath}/${encodeURIComponent(slug)}/presets`),
+      input,
+    );
+  }
+
+  async updatePresetVersion(
+    slug: string,
+    name: string,
+    input: UpdatePresetVersionRequestDTO,
+  ): Promise<NamespacePresetResponseDTO> {
+    return this.getApiClient().post<UpdatePresetVersionRequestDTO, NamespacePresetResponseDTO>(
+      this.getServiceUrl(
+        `${this.basePath}/${encodeURIComponent(slug)}/presets/${encodeURIComponent(name)}/versions`,
+      ),
+      input,
+    );
+  }
+
+  async setPresetActive(
+    slug: string,
+    name: string,
+    input: SetPresetActiveRequestDTO,
+  ): Promise<NamespacePresetResponseDTO> {
+    return this.getApiClient().patch<SetPresetActiveRequestDTO, NamespacePresetResponseDTO>(
+      this.getServiceUrl(
+        `${this.basePath}/${encodeURIComponent(slug)}/presets/${encodeURIComponent(name)}`,
+      ),
       input,
     );
   }

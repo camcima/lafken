@@ -1,7 +1,10 @@
 import type {
   CreateNamespaceRequestDTO,
   CreatePolicyVersionRequestDTO,
+  CreatePresetRequestDTO,
+  SetPresetActiveRequestDTO,
   UpdateNamespaceMetadataRequestDTO,
+  UpdatePresetVersionRequestDTO,
 } from "@shared/backend-api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -92,6 +95,53 @@ export function useUpdateNamespacePolicy() {
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.detail(variables.slug) });
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.policies(variables.slug) });
+    },
+  });
+}
+
+export function useCreatePreset() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ slug, input }: { slug: string; input: CreatePresetRequestDTO }) =>
+      namespacesService.createPreset(slug, input),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: namespacesKeys.presets(variables.slug) });
+    },
+  });
+}
+
+export function useUpdatePresetVersion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      slug,
+      name,
+      input,
+    }: {
+      slug: string;
+      name: string;
+      input: UpdatePresetVersionRequestDTO;
+    }) => namespacesService.updatePresetVersion(slug, name, input),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: namespacesKeys.presets(variables.slug) });
+    },
+  });
+}
+
+export function useSetPresetActive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      slug,
+      name,
+      input,
+    }: {
+      slug: string;
+      name: string;
+      input: SetPresetActiveRequestDTO;
+    }) => namespacesService.setPresetActive(slug, name, input),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: namespacesKeys.presets(variables.slug) });
     },
   });
 }

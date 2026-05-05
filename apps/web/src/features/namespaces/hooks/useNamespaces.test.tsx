@@ -1,8 +1,12 @@
 import type {
   CreateNamespaceRequestDTO,
   CreatePolicyVersionRequestDTO,
+  CreatePresetRequestDTO,
+  NamespacePresetResponseDTO,
   NamespaceResponseDTO,
+  SetPresetActiveRequestDTO,
   UpdateNamespaceMetadataRequestDTO,
+  UpdatePresetVersionRequestDTO,
 } from "@shared/backend-api";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -15,9 +19,12 @@ import { namespacesService } from "@/services";
 import {
   useArchiveNamespace,
   useCreateNamespace,
+  useCreatePreset,
+  useSetPresetActive,
   useUnarchiveNamespace,
   useUpdateNamespaceMetadata,
   useUpdateNamespacePolicy,
+  useUpdatePresetVersion,
 } from "./useNamespaces";
 
 function createWrapper(client: QueryClient) {
@@ -311,6 +318,209 @@ describe("useUpdateNamespacePolicy", () => {
       await expect(result.current.mutateAsync({ slug, input: VALID_POLICY })).rejects.toThrow(
         "policy update failed",
       );
+    });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(result.current.error).toBe(failure);
+    expect(invalidateSpy).not.toHaveBeenCalled();
+  });
+});
+
+const samplePreset: NamespacePresetResponseDTO = {
+  name: "thumbnail",
+  version: 1,
+  params: { width: 200, height: 200, fit: "cover", format: "webp", quality: 80 },
+  preGenerate: false,
+  active: true,
+  createdAt: "2026-01-01T00:00:00.000Z",
+};
+
+const VALID_PRESET_PARAMS: CreatePresetRequestDTO = {
+  name: "thumbnail",
+  params: {
+    width: 200,
+    height: 200,
+    fit: "cover",
+    format: "webp",
+    quality: 80,
+  },
+};
+
+describe("useCreatePreset", () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    queryClient = makeQueryClient();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("calls NamespacesService.createPreset and invalidates the presets key on success", async () => {
+    const slug = "aircraft-photos";
+    const createPresetSpy = vi
+      .spyOn(namespacesService, "createPreset")
+      .mockResolvedValue(samplePreset);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useCreatePreset(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({ slug, input: VALID_PRESET_PARAMS });
+    });
+
+    expect(createPresetSpy).toHaveBeenCalledWith(slug, VALID_PRESET_PARAMS);
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.presets(slug) });
+  });
+
+  it("surfaces the error and does not invalidate the cache when the service throws", async () => {
+    const slug = "aircraft-photos";
+    const failure = new Error("create preset failed");
+    vi.spyOn(namespacesService, "createPreset").mockRejectedValueOnce(failure);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useCreatePreset(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({ slug, input: VALID_PRESET_PARAMS }),
+      ).rejects.toThrow("create preset failed");
+    });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(result.current.error).toBe(failure);
+    expect(invalidateSpy).not.toHaveBeenCalled();
+  });
+});
+
+const VALID_PRESET_VERSION: UpdatePresetVersionRequestDTO = {
+  params: {
+    width: 400,
+    height: 400,
+    fit: "contain",
+    format: "avif",
+    quality: 90,
+  },
+};
+
+describe("useUpdatePresetVersion", () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    queryClient = makeQueryClient();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("calls NamespacesService.updatePresetVersion and invalidates the presets key on success", async () => {
+    const slug = "aircraft-photos";
+    const name = "thumbnail";
+    const updateVersionSpy = vi
+      .spyOn(namespacesService, "updatePresetVersion")
+      .mockResolvedValue(samplePreset);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useUpdatePresetVersion(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({ slug, name, input: VALID_PRESET_VERSION });
+    });
+
+    expect(updateVersionSpy).toHaveBeenCalledWith(slug, name, VALID_PRESET_VERSION);
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.presets(slug) });
+  });
+
+  it("surfaces the error and does not invalidate the cache when the service throws", async () => {
+    const slug = "aircraft-photos";
+    const name = "thumbnail";
+    const failure = new Error("update preset version failed");
+    vi.spyOn(namespacesService, "updatePresetVersion").mockRejectedValueOnce(failure);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useUpdatePresetVersion(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({ slug, name, input: VALID_PRESET_VERSION }),
+      ).rejects.toThrow("update preset version failed");
+    });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(result.current.error).toBe(failure);
+    expect(invalidateSpy).not.toHaveBeenCalled();
+  });
+});
+
+const VALID_SET_ACTIVE: SetPresetActiveRequestDTO = {
+  active: true,
+};
+
+describe("useSetPresetActive", () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    queryClient = makeQueryClient();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("calls NamespacesService.setPresetActive and invalidates the presets key on success", async () => {
+    const slug = "aircraft-photos";
+    const name = "thumbnail";
+    const setActiveSpy = vi
+      .spyOn(namespacesService, "setPresetActive")
+      .mockResolvedValue(samplePreset);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useSetPresetActive(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({ slug, name, input: VALID_SET_ACTIVE });
+    });
+
+    expect(setActiveSpy).toHaveBeenCalledWith(slug, name, VALID_SET_ACTIVE);
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.presets(slug) });
+  });
+
+  it("surfaces the error and does not invalidate the cache when the service throws", async () => {
+    const slug = "aircraft-photos";
+    const name = "thumbnail";
+    const failure = new Error("set preset active failed");
+    vi.spyOn(namespacesService, "setPresetActive").mockRejectedValueOnce(failure);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useSetPresetActive(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({ slug, name, input: VALID_SET_ACTIVE }),
+      ).rejects.toThrow("set preset active failed");
     });
 
     await waitFor(() => {
