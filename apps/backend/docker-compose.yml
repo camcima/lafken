@@ -47,10 +47,14 @@ services:
       - "-scheme=http"
       - "-public-host=localhost:4443"
       - "-port=4443"
+      # The same RSA key used by the backend's GCS_SERVICE_ACCOUNT_JSON, so
+      # fake-gcs can verify v4-signed PUT URLs end-to-end in dev.
+      - "-private-key-location=/config/fake-gcs-signer.pem"
     ports:
       - "4443:4443"
     volumes:
       - ./dev-data/gcs:/data
+      - ./test/fixtures/fake-gcs-signer.pem:/config/fake-gcs-signer.pem:ro
     healthcheck:
       test:
         - CMD-SHELL
