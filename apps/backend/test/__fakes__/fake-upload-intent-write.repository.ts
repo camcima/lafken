@@ -4,11 +4,10 @@ import {
   UploadIntentWriteRepositoryPort,
 } from "@/assets/domain/repositories/upload-intent-write.repository.port";
 
-let idCounter = 1;
-
 export class FakeUploadIntentWriteRepository extends UploadIntentWriteRepositoryPort {
   readonly inserted: UploadIntent[] = [];
   private intents: UploadIntent[] = [];
+  private nextId = 1;
 
   seed(intents: UploadIntent[]): void {
     this.intents = [...intents];
@@ -16,7 +15,7 @@ export class FakeUploadIntentWriteRepository extends UploadIntentWriteRepository
 
   insert(input: IInsertUploadIntentInput): Promise<UploadIntent> {
     const intent = UploadIntent.fromProps({
-      id: `fake-intent-id-${String(idCounter++)}`,
+      id: `fake-intent-id-${String(this.nextId++)}`,
       publicId: input.publicId,
       namespaceId: input.namespaceId,
       policyVersionId: input.policyVersionId,

@@ -73,13 +73,14 @@ export class InMemoryNamespaceQueryRepository implements NamespaceQueryRepositor
     const namespace = this.namespaces.find((ns) => ns.props.id === namespaceId);
     if (!namespace) return Promise.resolve(null);
     const allPolicies = this.policies.get(namespaceId) ?? [];
-    const active = allPolicies.find((p) => p.props.id === namespace.props.currentPolicyId) ?? null;
+    const active =
+      allPolicies.find((policy) => policy.props.id === namespace.props.currentPolicyId) ?? null;
     return Promise.resolve(active);
   }
 
   findPolicyById(policyVersionId: string): Promise<NamespacePolicy | null> {
     for (const policies of this.policies.values()) {
-      const found = policies.find((p) => p.props.id === policyVersionId);
+      const found = policies.find((policy) => policy.props.id === policyVersionId);
       if (found) return Promise.resolve(found);
     }
     return Promise.resolve(null);

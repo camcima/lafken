@@ -9,10 +9,10 @@ import { UploadedObjectMissingError } from "@/assets/domain/errors/uploaded-obje
 import { NamespacePolicy } from "@/namespaces/domain/entities/namespace-policy.entity";
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 
-import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { FakeAssetStorage } from "../../../__fakes__/fake-asset-storage";
 import { FakeAssetWriteRepository } from "../../../__fakes__/fake-asset-write.repository";
 import { FakeUploadIntentWriteRepository } from "../../../__fakes__/fake-upload-intent-write.repository";
+import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryAssetQueryRepository } from "../../assets/__fakes__/in-memory-asset-query.repository";
 import { InMemoryNamespaceQueryRepository } from "../../namespaces/__fakes__/in-memory-namespace-query.repository";
 import { InMemoryStorageBindingQueryRepository } from "../../system/__fakes__/in-memory-storage-binding-query.repository";
@@ -20,11 +20,13 @@ import { InMemoryStorageBindingQueryRepository } from "../../system/__fakes__/in
 const FUTURE = new Date(Date.now() + 1_800_000);
 const PAST = new Date(Date.now() - 1_000);
 
-function makeIntent(overrides: Partial<{
-  publicId: string;
-  consumedAt: Date | null;
-  uploadUrlExpiresAt: Date;
-}> = {}): UploadIntent {
+function makeIntent(
+  overrides: Partial<{
+    publicId: string;
+    consumedAt: Date | null;
+    uploadUrlExpiresAt: Date;
+  }> = {},
+): UploadIntent {
   return UploadIntent.fromProps({
     id: "intent-id-1",
     publicId: overrides.publicId ?? TEST_UUIDS.asset1,

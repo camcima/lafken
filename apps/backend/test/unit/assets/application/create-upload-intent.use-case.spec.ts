@@ -10,9 +10,9 @@ import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 
-import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { FakeAssetStorage } from "../../../__fakes__/fake-asset-storage";
 import { FakeUploadIntentWriteRepository } from "../../../__fakes__/fake-upload-intent-write.repository";
+import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryNamespaceQueryRepository } from "../../namespaces/__fakes__/in-memory-namespace-query.repository";
 import { InMemoryStorageBindingQueryRepository } from "../../system/__fakes__/in-memory-storage-binding-query.repository";
 
@@ -30,7 +30,9 @@ function makeNamespace(opts: { slug: string; archived?: boolean }): Namespace {
   });
 }
 
-function makePolicy(overrides: Partial<{ allowedMimeTypes: string[]; maxFileSizeBytes: bigint }> = {}): NamespacePolicy {
+function makePolicy(
+  overrides: Partial<{ allowedMimeTypes: string[]; maxFileSizeBytes: bigint }> = {},
+): NamespacePolicy {
   return NamespacePolicy.fromProps({
     id: TEST_UUIDS.policy1,
     namespaceId: TEST_UUIDS.namespace1,
@@ -99,13 +101,18 @@ describe("CreateUploadIntentUseCase", () => {
       createdBy: "user@example.com",
     });
 
-    expect(result.publicId).toBeTypeOf("string");
+    expect(result.publicId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
     expect(result.uploadUrl).toContain("fake-gcs.local");
     expect(result.uploadHeaders["Content-Type"]).toBe("image/jpeg");
     expect(result.expiresAt).toBeInstanceOf(Date);
     expect(intentWriteRepo.inserted).toHaveLength(1);
     expect(intentWriteRepo.inserted[0]?.props.declaredMimeType).toBe("image/jpeg");
     expect(intentWriteRepo.inserted[0]?.props.namespaceId).toBe(TEST_UUIDS.namespace1);
+    expect(assetStorage.issued).toHaveLength(1);
+    const issuedCall = assetStorage.issued[0];
+    expect(issuedCall?.storageKey).toBe(`aircraft-photos/assets/${result.publicId}/source`);
   });
 
   it("throws NamespaceNotFoundError when the slug does not match any namespace", async () => {

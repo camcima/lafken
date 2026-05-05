@@ -4,16 +4,15 @@ import {
   ICreateUploadedAssetInput,
 } from "@/assets/domain/repositories/asset-write.repository.port";
 
-let idCounter = 1;
-
 export class FakeAssetWriteRepository extends AssetWriteRepositoryPort {
   readonly createdAssets: ICreateUploadedAssetInput[] = [];
+  private nextId = 1;
 
   createUploadedAsset(input: ICreateUploadedAssetInput): Promise<Asset> {
     this.createdAssets.push(input);
     const now = new Date();
     const asset = Asset.fromProps({
-      id: `fake-asset-id-${String(idCounter++)}`,
+      id: `fake-asset-id-${String(this.nextId++)}`,
       publicId: input.publicId,
       namespaceId: input.namespaceId,
       policyVersionId: input.policyVersionId,

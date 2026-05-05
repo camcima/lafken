@@ -76,11 +76,11 @@ export class CreateUploadIntentUseCase {
       );
     }
 
-    const config = binding.props.config as { bucket: string; projectId: string };
+    const gcsConfig = binding.getGcsConfig();
     const publicId = randomUUID();
     const storageKey = `${input.namespaceSlug}/assets/${publicId}/source`;
     const signed = await this.assetStorage.issueSignedUploadUrl({
-      binding: { bucket: config.bucket, projectId: config.projectId },
+      binding: { bucket: gcsConfig.bucket, projectId: gcsConfig.projectId },
       storageKey,
       contentType: input.declaredMimeType,
       maxBytes: policy.props.maxFileSizeBytes,

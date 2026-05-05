@@ -11,6 +11,8 @@ import { AssetStoragePort } from "@/assets/domain/services/asset-storage.service
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
+const DEFAULT_SIGNED_URL_TTL_SECONDS = 3600;
+
 export interface IConfirmUploadInput {
   publicId: string;
   uploadedBy: string | null;
@@ -58,9 +60,9 @@ export class ConfirmUploadUseCase {
       );
     }
 
-    const config = binding.props.config as { bucket: string; projectId: string };
+    const gcsConfig = binding.getGcsConfig();
     const exists = await this.assetStorage.objectExists({
-      binding: { bucket: config.bucket, projectId: config.projectId },
+      binding: { bucket: gcsConfig.bucket, projectId: gcsConfig.projectId },
       storageKey: intent.props.storageKey,
     });
     if (!exists) {
@@ -87,7 +89,7 @@ export class ConfirmUploadUseCase {
       declaredSizeBytes: intent.props.declaredSizeBytes,
       uploadedBy: input.uploadedBy,
       effectiveMaxSizeBytes: policy.props.maxFileSizeBytes,
-      effectiveUrlTtl: policy.props.signedUrlTtlSeconds ?? 3600,
+      effectiveUrlTtl: policy.props.signedUrlTtlSeconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS,
       intentId: intent.props.id,
     });
   }
