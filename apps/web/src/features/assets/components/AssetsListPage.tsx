@@ -1,18 +1,4 @@
-import { Link } from "@tanstack/react-router";
-import {
-  ChevronRight,
-  Download,
-  Filter,
-  Image,
-  LayoutGrid,
-  Lock,
-  Plus,
-  Search,
-  Shield,
-  Sliders,
-  Tag,
-  X,
-} from "lucide-react";
+import { Download, Filter, Lock, Plus, Search, Tag, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -20,314 +6,21 @@ import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
 import { Paginator } from "@/components/common/Paginator";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
-import { StatePill } from "@/components/common/StatePill";
-import { DEMO_ASSET_LIST, DEMO_NAMESPACES, fmtMinAgo } from "@/lib/demo/lafken-demo-data";
-import type { DemoAsset } from "@/lib/demo/lafken-demo-data";
+import { demoAssetToRow, type IAssetRow } from "@/features/assets/asset-row";
+import {
+  AssetsListView,
+  getAutoPageSize,
+  type ViewMode,
+  ViewToggle,
+} from "@/features/assets/components/assets-list-view";
+import { DEMO_ASSET_LIST, DEMO_NAMESPACES } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
-
-// ── View-mode constants ───────────────────────────────────────────────────
-type ViewMode = "rows" | "hybrid" | "grid";
-
-const AUTO_PAGE_SIZE_GRID = 24;
-const AUTO_PAGE_SIZE_HYBRID = 16;
-const AUTO_PAGE_SIZE_ROWS = 18;
-
-function getAutoPageSize(view: ViewMode): number {
-  if (view === "grid") return AUTO_PAGE_SIZE_GRID;
-  if (view === "hybrid") return AUTO_PAGE_SIZE_HYBRID;
-  return AUTO_PAGE_SIZE_ROWS;
-}
 
 // Page-size options for the rows-per-page selector
 /* eslint-disable no-magic-numbers */
 const PAGE_SIZE_OPTIONS = [18, 24, 50, 100, 200] as const;
 /* eslint-enable no-magic-numbers */
 
-// ── Thumbnail ─────────────────────────────────────────────────────────────
-type ThumbSize = "sm" | "md" | "lg";
-
-const THUMB_DIMS: Record<ThumbSize, string> = {
-  sm: "h-9 w-12",
-  md: "h-14 w-20",
-  lg: "h-32 w-full",
-};
-
-// Shield icon sizes for thumbnails
-const THUMB_SHIELD_SM = 12;
-const THUMB_SHIELD_MD = 16;
-
-// 1024 * 1024 — bytes per mebibyte for size display
-const BYTES_PER_MIB = 1_048_576;
-
-interface IThumbProps {
-  asset: DemoAsset;
-  size?: ThumbSize;
-}
-
-function Thumb({ asset, size = "md" }: IThumbProps) {
-  const isQuarantined =
-    asset.state === "quarantined_moderation" || asset.state === "quarantined_virus";
-  return (
-    <div
-      className={cn("border-border relative overflow-hidden rounded border", THUMB_DIMS[size])}
-      style={{
-        background: `linear-gradient(135deg, hsl(${asset.thumbHue} 50% 55%), hsl(${asset.thumbHue} 60% 35%))`,
-      }}
-    >
-      {/* Static processing scan stripe (no animation per React port spec) */}
-      {asset.state === "processing" && (
-        <span className="absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.18)_0_4px,transparent_4px_8px)]" />
-      )}
-      {/* Quarantine hazard stripe */}
-      {isQuarantined && (
-        <span className="absolute inset-0 grid place-items-center bg-[repeating-linear-gradient(45deg,rgba(138,66,9,0.85)_0_8px,rgba(138,66,9,0.7)_8px_16px)] text-[10px] font-bold tracking-wider text-white uppercase">
-          <Shield size={size === "sm" ? THUMB_SHIELD_SM : THUMB_SHIELD_MD} />
-        </span>
-      )}
-      {/* Tail chip */}
-      {size !== "sm" && (
-        <span className="absolute bottom-1 left-1 rounded-sm bg-black/45 px-1 font-mono text-[9.5px] tracking-wider text-white uppercase">
-          {asset.tail}
-        </span>
-      )}
-    </div>
-  );
-}
-
-// ── Rows view ─────────────────────────────────────────────────────────────
-const ROWS_COLS =
-  "grid-cols-[34px_60px_minmax(0,1.6fr)_minmax(0,1.2fr)_120px_120px_minmax(0,1.4fr)_85px_60px_34px]";
-
-interface IRowsViewProps {
-  pageRows: DemoAsset[];
-  selected: Set<string>;
-  onToggleOne: (id: string, checked: boolean) => void;
-  onToggleAll: (checked: boolean) => void;
-}
-
-function RowsView({ pageRows, selected, onToggleOne, onToggleAll }: IRowsViewProps) {
-  const { t } = useTranslation();
-  const allChecked = pageRows.length > 0 && pageRows.every((row) => selected.has(row.id));
-  return (
-    <Card className="overflow-x-auto">
-      <div className="min-w-[1080px]">
-        {/* Header row */}
-        <div
-          className={cn(
-            "border-border bg-secondary/40 text-muted-foreground grid items-center gap-3 border-b px-4 py-2 text-[10.5px] font-medium tracking-wider uppercase",
-            ROWS_COLS,
-          )}
-        >
-          <input
-            type="checkbox"
-            checked={allChecked}
-            onChange={(e) => {
-              onToggleAll(e.target.checked);
-            }}
-            className="accent-latam-indigo"
-            aria-label={t("pages.assets.table.selectAll")}
-          />
-          <span />
-          <span>{t("pages.assets.table.asset")}</span>
-          <span>{t("pages.assets.table.namespaceWo")}</span>
-          <span>{t("pages.assets.table.state")}</span>
-          <span>{t("pages.assets.table.formatDimensions")}</span>
-          <span>{t("pages.assets.table.uploadedBy")}</span>
-          <span className="text-right">{t("pages.assets.table.size")}</span>
-          <span className="text-right">{t("pages.assets.table.age")}</span>
-          <span />
-        </div>
-        {/* Data rows */}
-        {pageRows.map((asset) => (
-          <Link
-            key={asset.id}
-            to="/assets/$publicId"
-            params={{ publicId: asset.publicId }}
-            className={cn(
-              "border-border/40 hover:bg-secondary/30 grid items-center gap-3 border-b px-4 py-2 text-[12.5px] no-underline last:border-b-0",
-              ROWS_COLS,
-            )}
-          >
-            <input
-              type="checkbox"
-              checked={selected.has(asset.id)}
-              onChange={(e) => {
-                e.stopPropagation();
-                onToggleOne(asset.id, e.target.checked);
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-              className="accent-latam-indigo"
-              aria-label={asset.id}
-            />
-            <Thumb asset={asset} size="sm" />
-            <div className="min-w-0">
-              <div className="text-foreground font-mono text-[12px]">{asset.id}…</div>
-              {asset.hasLegalHold && (
-                <span className="text-warn mt-0.5 inline-flex items-center gap-1 text-[10px]">
-                  <Lock size={10} /> {t("pages.assets.row.hold")}
-                </span>
-              )}
-            </div>
-            <div className="min-w-0">
-              <div className="text-latam-indigo-deep truncate font-mono text-[11.5px]">
-                {asset.namespace}
-              </div>
-              <div className="text-muted-foreground truncate font-mono text-[10.5px]">
-                {asset.wo}
-              </div>
-            </div>
-            <StatePill state={asset.state} />
-            <div className="min-w-0">
-              <div className="font-mono text-[11.5px] tracking-wider uppercase">{asset.format}</div>
-              <div className="text-muted-foreground font-mono text-[10.5px] tabular-nums">
-                {asset.dimensions}
-              </div>
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-[12px]">{asset.uploadedDisplay}</div>
-              <div className="text-muted-foreground truncate font-mono text-[10.5px]">
-                {asset.uploadedBy}
-              </div>
-            </div>
-            <div className="text-muted-foreground text-right font-mono text-[11.5px] tabular-nums">
-              {(asset.sizeBytes / BYTES_PER_MIB).toFixed(1)} MB
-            </div>
-            <div className="text-muted-foreground text-right font-mono text-[11.5px] tabular-nums">
-              {fmtMinAgo(asset.minutesAgo)}
-            </div>
-            <ChevronRight size={12} className="text-muted-foreground" />
-          </Link>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
-// ── Grid view ─────────────────────────────────────────────────────────────
-interface IGridViewProps {
-  pageRows: DemoAsset[];
-}
-
-function GridView({ pageRows }: IGridViewProps) {
-  return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
-      {pageRows.map((asset) => (
-        <Link
-          key={asset.id}
-          to="/assets/$publicId"
-          params={{ publicId: asset.publicId }}
-          className="group border-border bg-card hover:border-latam-indigo/30 block overflow-hidden rounded-md border no-underline transition-all hover:shadow-md"
-        >
-          <div className="relative">
-            <Thumb asset={asset} size="lg" />
-            <span className="absolute top-1.5 right-1.5">
-              <StatePill state={asset.state} />
-            </span>
-          </div>
-          <div className="border-border border-t px-3 py-2.5">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-foreground font-mono text-[11.5px]">{asset.id}…</span>
-              <span className="text-muted-foreground font-mono text-[10.5px]">
-                {fmtMinAgo(asset.minutesAgo)}
-              </span>
-            </div>
-            <div className="mt-1 truncate font-mono text-[11.5px] tracking-wider uppercase">
-              {asset.format} <span className="text-muted-foreground">· {asset.dimensions}</span>
-            </div>
-            <div className="mt-0.5 flex items-center justify-between text-[10.5px]">
-              <span className="text-muted-foreground font-mono">{asset.namespace}</span>
-              <span className="text-muted-foreground font-mono tabular-nums">
-                {(asset.sizeBytes / BYTES_PER_MIB).toFixed(1)} MB
-              </span>
-            </div>
-          </div>
-        </Link>
-      ))}
-    </div>
-  );
-}
-
-// ── Hybrid view ───────────────────────────────────────────────────────────
-interface IHybridViewProps {
-  pageRows: DemoAsset[];
-}
-
-function HybridView({ pageRows }: IHybridViewProps) {
-  return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-      {pageRows.map((asset) => (
-        <Link
-          key={asset.id}
-          to="/assets/$publicId"
-          params={{ publicId: asset.publicId }}
-          className="border-border bg-card hover:border-latam-indigo/30 flex gap-3 overflow-hidden rounded-md border p-2.5 no-underline transition-all hover:shadow-sm"
-        >
-          <div className="flex-none">
-            <Thumb asset={asset} size="md" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-foreground font-mono text-[12px]">{asset.id}…</span>
-              <StatePill state={asset.state} />
-            </div>
-            <div className="mt-1 truncate font-mono text-[12px] tracking-wider uppercase">
-              {asset.format} <span className="text-muted-foreground">· {asset.dimensions}</span>
-            </div>
-            <div className="text-muted-foreground mt-1 flex items-center justify-between text-[11px]">
-              <span className="font-mono">{asset.namespace}</span>
-              <span>{fmtMinAgo(asset.minutesAgo)}</span>
-            </div>
-            <div className="text-muted-foreground mt-0.5 flex items-center justify-between text-[10.5px]">
-              <span className="truncate">{asset.uploadedDisplay}</span>
-              <span className="font-mono">{(asset.sizeBytes / BYTES_PER_MIB).toFixed(1)} MB</span>
-            </div>
-          </div>
-        </Link>
-      ))}
-    </div>
-  );
-}
-
-// ── ViewToggle ────────────────────────────────────────────────────────────
-interface IViewToggleProps {
-  view: ViewMode;
-  onChange: (v: ViewMode) => void;
-}
-
-function ViewToggle({ view, onChange }: IViewToggleProps) {
-  const { t } = useTranslation();
-  const opts: Array<{ id: ViewMode; label: string; icon: React.ReactNode }> = [
-    { id: "rows", label: t("pages.assets.viewToggle.rows"), icon: <Sliders size={13} /> },
-    { id: "hybrid", label: t("pages.assets.viewToggle.hybrid"), icon: <Image size={13} /> },
-    { id: "grid", label: t("pages.assets.viewToggle.grid"), icon: <LayoutGrid size={13} /> },
-  ];
-  return (
-    <div className="border-border bg-card inline-flex rounded-md border p-0.5 text-[12px]">
-      {opts.map((opt) => (
-        <button
-          key={opt.id}
-          type="button"
-          onClick={() => {
-            onChange(opt.id);
-          }}
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded px-2.5 py-1 transition-colors",
-            view === opt.id
-              ? "bg-latam-indigo text-white"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-          aria-pressed={view === opt.id}
-        >
-          {opt.icon} {opt.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// ── Main page ─────────────────────────────────────────────────────────────
 // Slice 0: BE returns empty arrays; rendering against typed demo data
 const QUICK_FILTER_KEYS = [
   "last24h",
@@ -340,7 +33,7 @@ const QUICK_FILTER_KEYS = [
 // Slice 1: wire to active more-filters count
 const MORE_FILTERS_BADGE_PLACEHOLDER = 2;
 
-export function AssetsListPage() {
+export function AssetsListPage(): React.JSX.Element {
   const { t } = useTranslation();
 
   const [view, setView] = useState<ViewMode>("rows");
@@ -354,23 +47,24 @@ export function AssetsListPage() {
   const autoPageSize = getAutoPageSize(view);
   const PAGE_SIZE = pageSize || autoPageSize;
 
-  const filtered = useMemo(() => {
-    // Slice 0: BE returns empty arrays; rendering against typed demo data
-    return DEMO_ASSET_LIST.filter((asset) => {
-      if (stateFilter !== "all" && asset.state !== stateFilter) return false;
-      if (namespaceFilter !== "all" && asset.namespace !== namespaceFilter) return false;
+  const allRows: IAssetRow[] = useMemo(() => DEMO_ASSET_LIST.map(demoAssetToRow), []);
+
+  const filtered: IAssetRow[] = useMemo(() => {
+    return allRows.filter((row) => {
+      if (stateFilter !== "all" && row.state !== stateFilter) return false;
+      if (namespaceFilter !== "all" && row.namespaceSlug !== namespaceFilter) return false;
       if (query) {
         const q = query.toLowerCase();
         if (
-          !asset.id.toLowerCase().includes(q) &&
-          !asset.tail.toLowerCase().includes(q) &&
-          !asset.wo.toLowerCase().includes(q)
+          !row.shortId.toLowerCase().includes(q) &&
+          !row.tail.toLowerCase().includes(q) &&
+          !row.wo.toLowerCase().includes(q)
         )
           return false;
       }
       return true;
     });
-  }, [stateFilter, namespaceFilter, query]);
+  }, [allRows, stateFilter, namespaceFilter, query]);
 
   const pageRows = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -403,12 +97,12 @@ export function AssetsListPage() {
     setSelected(new Set());
   }
 
-  function handleToggleOne(id: string, checked: boolean): void {
+  function handleToggleOne(rowKey: string, checked: boolean): void {
     const next = new Set(selected);
     if (checked) {
-      next.add(id);
+      next.add(rowKey);
     } else {
-      next.delete(id);
+      next.delete(rowKey);
     }
     setSelected(next);
   }
@@ -417,9 +111,9 @@ export function AssetsListPage() {
     const next = new Set(selected);
     pageRows.forEach((row) => {
       if (checked) {
-        next.add(row.id);
+        next.add(row.rowKey);
       } else {
-        next.delete(row.id);
+        next.delete(row.rowKey);
       }
     });
     setSelected(next);
@@ -466,7 +160,7 @@ export function AssetsListPage() {
       </div>
 
       {/* ── Filter bar ─────────────────────────────────────── */}
-      <Card className="mb-4 p-3">
+      <Card className={cn("mb-4 p-3")}>
         <div className="flex flex-wrap items-center gap-2">
           {/* Search */}
           <div className="relative min-w-[260px] flex-1">
@@ -627,16 +321,13 @@ export function AssetsListPage() {
         </Card>
       ) : (
         <>
-          {view === "rows" && (
-            <RowsView
-              pageRows={pageRows}
-              selected={selected}
-              onToggleOne={handleToggleOne}
-              onToggleAll={handleToggleAll}
-            />
-          )}
-          {view === "hybrid" && <HybridView pageRows={pageRows} />}
-          {view === "grid" && <GridView pageRows={pageRows} />}
+          <AssetsListView
+            rows={pageRows}
+            view={view}
+            selected={selected}
+            onToggleOne={handleToggleOne}
+            onToggleAll={handleToggleAll}
+          />
 
           {/* ── Bottom paginator ──────────────────────────────── */}
           <div className="border-border mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
