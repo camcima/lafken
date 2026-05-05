@@ -21,7 +21,11 @@ describe("NamespaceQueryRepository", () => {
     // namespaces before their referenced policies.
     await db.connection.transaction().execute(async (tx) => {
       await tx.deleteFrom("namespace_presets").execute();
+      await tx.deleteFrom("asset_analyses").execute();
+      await tx.deleteFrom("asset_state_transitions").execute();
+      await tx.deleteFrom("processing_jobs").execute();
       await tx.deleteFrom("assets").execute();
+      await tx.deleteFrom("upload_intents").execute();
       // Delete policies before namespaces (deferred FK namespaces.current_policy_id
       // checked at commit; RESTRICT FK namespace_policies.namespace_id requires
       // policies deleted before namespaces).
