@@ -272,7 +272,9 @@
         "formatDimensions": "Formato · dimensiones"
       },
       "row": {
-        "hold": "Retención legal"
+        "hold": "Retención legal",
+        "copyId": "Copiar ID del asset",
+        "copiedId": "Copiado"
       },
       "empty": {
         "noMatches": {

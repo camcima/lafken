@@ -93,6 +93,7 @@ export function NamespaceAssetsTab({ namespace }: INamespaceAssetsTabProps): Rea
           selected={selected}
           onToggleOne={handleToggleOne}
           onToggleAll={handleToggleAll}
+          hideNamespace
         />
       )}
 

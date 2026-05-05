@@ -272,7 +272,9 @@
         "formatDimensions": "Formato · dimensões"
       },
       "row": {
-        "hold": "Bloqueio legal"
+        "hold": "Bloqueio legal",
+        "copyId": "Copiar ID do ativo",
+        "copiedId": "Copiado"
       },
       "empty": {
         "noMatches": {

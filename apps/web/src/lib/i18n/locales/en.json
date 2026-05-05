@@ -272,7 +272,9 @@
         "formatDimensions": "Format · dimensions"
       },
       "row": {
-        "hold": "Legal hold"
+        "hold": "Legal hold",
+        "copyId": "Copy asset ID",
+        "copiedId": "Copied"
       },
       "empty": {
         "noMatches": {

@@ -90,7 +90,7 @@ export function AssetsListPage(): React.JSX.Element {
   // In demo mode the page applies state/namespace/query filters client-side
   // and slices for pagination locally. In real-API mode the BE handles
   // state/namespace/page/limit; only the free-text search is applied
-  // client-side over the loaded page (matches `shortId` only).
+  // client-side over the loaded page (matches the full publicId).
   const demoFiltered: IAssetRow[] = useMemo(() => {
     return demoRows.filter((row) => {
       if (stateFilter !== "all" && row.state !== stateFilter) return false;
@@ -98,7 +98,7 @@ export function AssetsListPage(): React.JSX.Element {
       if (query) {
         const q = query.toLowerCase();
         if (
-          !row.shortId.toLowerCase().includes(q) &&
+          !row.publicId.toLowerCase().includes(q) &&
           !row.tail.toLowerCase().includes(q) &&
           !row.wo.toLowerCase().includes(q)
         )
@@ -116,7 +116,7 @@ export function AssetsListPage(): React.JSX.Element {
   const realFiltered: IAssetRow[] = useMemo(() => {
     if (!query) return realRows;
     const q = query.toLowerCase();
-    return realRows.filter((row) => row.shortId.toLowerCase().includes(q));
+    return realRows.filter((row) => row.publicId.toLowerCase().includes(q));
   }, [realRows, query]);
 
   // Visible page rows + total counts vary by mode.

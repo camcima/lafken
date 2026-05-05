@@ -1,6 +1,7 @@
 import { AssetImage } from "@lafken/react";
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, Image, LayoutGrid, Lock, Shield, Sliders } from "lucide-react";
+import { Check, ChevronRight, Copy, Image, LayoutGrid, Lock, Shield, Sliders } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Card } from "@/components/common/Card";
@@ -101,9 +102,48 @@ function fmtMinAgo(minutes: number): string {
   return `${days}d`;
 }
 
+// ── Copy-id button ────────────────────────────────────────────────────────
+const COPIED_FEEDBACK_MS = 1200;
+
+interface ICopyIdButtonProps {
+  publicId: string;
+}
+
+function CopyIdButton({ publicId }: ICopyIdButtonProps): React.JSX.Element {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void navigator.clipboard.writeText(publicId).then(() => {
+          setCopied(true);
+          window.setTimeout(() => {
+            setCopied(false);
+          }, COPIED_FEEDBACK_MS);
+        });
+      }}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+      }}
+      title={copied ? t("pages.assets.row.copiedId") : t("pages.assets.row.copyId")}
+      aria-label={t("pages.assets.row.copyId")}
+      className="text-muted-foreground hover:text-foreground inline-flex h-4 w-4 items-center justify-center rounded p-0 leading-none"
+    >
+      {copied ? <Check size={11} /> : <Copy size={11} />}
+    </button>
+  );
+}
+
 // ── Rows view ─────────────────────────────────────────────────────────────
-const ROWS_COLS =
-  "grid-cols-[34px_60px_minmax(0,1.6fr)_minmax(0,1.2fr)_120px_120px_minmax(0,1.4fr)_85px_60px_34px]";
+const ROWS_COLS_WITH_NS =
+  "grid-cols-[34px_60px_minmax(290px,1.4fr)_minmax(0,1fr)_120px_120px_minmax(0,1.2fr)_85px_60px_34px]";
+const ROWS_COLS_NO_NS =
+  "grid-cols-[34px_60px_minmax(290px,1.6fr)_120px_120px_minmax(0,1.2fr)_85px_60px_34px]";
+const ROWS_MIN_W_WITH_NS = "min-w-[1180px]";
+const ROWS_MIN_W_NO_NS = "min-w-[1060px]";
 
 interface IRowsViewProps {
   pageRows: IAssetRow[];
@@ -111,6 +151,7 @@ interface IRowsViewProps {
   onToggleOne: (rowKey: string, checked: boolean) => void;
   onToggleAll: (checked: boolean) => void;
   hideSelection: boolean;
+  hideNamespace: boolean;
 }
 
 function RowsView({
@@ -119,17 +160,20 @@ function RowsView({
   onToggleOne,
   onToggleAll,
   hideSelection,
+  hideNamespace,
 }: IRowsViewProps): React.JSX.Element {
   const { t } = useTranslation();
   const allChecked = pageRows.length > 0 && pageRows.every((row) => selected.has(row.rowKey));
+  const colsClass = hideNamespace ? ROWS_COLS_NO_NS : ROWS_COLS_WITH_NS;
+  const minWClass = hideNamespace ? ROWS_MIN_W_NO_NS : ROWS_MIN_W_WITH_NS;
   return (
     <Card className="overflow-x-auto">
-      <div className="min-w-[1080px]">
+      <div className={minWClass}>
         {/* Header row */}
         <div
           className={cn(
             "border-border bg-secondary/40 text-muted-foreground grid items-center gap-3 border-b px-4 py-2 text-[10.5px] font-medium tracking-wider uppercase",
-            ROWS_COLS,
+            colsClass,
           )}
         >
           {hideSelection ? (
@@ -147,7 +191,7 @@ function RowsView({
           )}
           <span />
           <span>{t("pages.assets.table.asset")}</span>
-          <span>{t("pages.assets.table.namespaceWo")}</span>
+          {!hideNamespace && <span>{t("pages.assets.table.namespaceWo")}</span>}
           <span>{t("pages.assets.table.state")}</span>
           <span>{t("pages.assets.table.formatDimensions")}</span>
           <span>{t("pages.assets.table.uploadedBy")}</span>
@@ -163,7 +207,7 @@ function RowsView({
             params={{ publicId: asset.publicId }}
             className={cn(
               "border-border/40 hover:bg-secondary/30 grid items-center gap-3 border-b px-4 py-2 text-[12.5px] no-underline last:border-b-0",
-              ROWS_COLS,
+              colsClass,
             )}
           >
             {hideSelection ? (
@@ -180,28 +224,33 @@ function RowsView({
                   e.stopPropagation();
                 }}
                 className="accent-latam-indigo"
-                aria-label={asset.shortId}
+                aria-label={asset.publicId}
               />
             )}
             <Thumb asset={asset} size="sm" />
             <div className="min-w-0">
-              <div className="text-foreground font-mono text-[12px]">{asset.shortId}…</div>
+              <div className="text-foreground flex items-center gap-1.5 font-mono text-[11px]">
+                <span className="truncate">{asset.publicId}</span>
+                <CopyIdButton publicId={asset.publicId} />
+              </div>
               {asset.legalHold && (
                 <span className="text-warn mt-0.5 inline-flex items-center gap-1 text-[10px]">
                   <Lock size={10} /> {t("pages.assets.row.hold")}
                 </span>
               )}
             </div>
-            <div className="min-w-0">
-              <div className="text-latam-indigo-deep truncate font-mono text-[11.5px]">
-                {asset.namespaceSlug}
-              </div>
-              {asset.wo !== "" && (
-                <div className="text-muted-foreground truncate font-mono text-[10.5px]">
-                  {asset.wo}
+            {!hideNamespace && (
+              <div className="min-w-0">
+                <div className="text-latam-indigo-deep truncate font-mono text-[11.5px]">
+                  {asset.namespaceSlug}
                 </div>
-              )}
-            </div>
+                {asset.wo !== "" && (
+                  <div className="text-muted-foreground truncate font-mono text-[10.5px]">
+                    {asset.wo}
+                  </div>
+                )}
+              </div>
+            )}
             <StatePill state={asset.state} />
             <div className="min-w-0">
               <div className="font-mono text-[11.5px] tracking-wider uppercase">{asset.format}</div>
@@ -234,11 +283,12 @@ function RowsView({
 // ── Grid view ─────────────────────────────────────────────────────────────
 interface IGridViewProps {
   pageRows: IAssetRow[];
+  hideNamespace: boolean;
 }
 
-function GridView({ pageRows }: IGridViewProps): React.JSX.Element {
+function GridView({ pageRows, hideNamespace }: IGridViewProps): React.JSX.Element {
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
       {pageRows.map((asset) => (
         <Link
           key={asset.rowKey}
@@ -253,11 +303,11 @@ function GridView({ pageRows }: IGridViewProps): React.JSX.Element {
             </span>
           </div>
           <div className="border-border border-t px-3 py-2.5">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-foreground font-mono text-[11.5px]">{asset.shortId}…</span>
-              <span className="text-muted-foreground font-mono text-[10.5px]">
-                {fmtMinAgo(asset.minutesAgo)}
+            <div className="flex items-center gap-1.5">
+              <span className="text-foreground truncate font-mono text-[10.5px]">
+                {asset.publicId}
               </span>
+              <CopyIdButton publicId={asset.publicId} />
             </div>
             <div className="mt-1 truncate font-mono text-[11.5px] tracking-wider uppercase">
               {asset.format}
@@ -266,7 +316,13 @@ function GridView({ pageRows }: IGridViewProps): React.JSX.Element {
               )}
             </div>
             <div className="mt-0.5 flex items-center justify-between text-[10.5px]">
-              <span className="text-muted-foreground font-mono">{asset.namespaceSlug}</span>
+              {hideNamespace ? (
+                <span className="text-muted-foreground font-mono">
+                  {fmtMinAgo(asset.minutesAgo)}
+                </span>
+              ) : (
+                <span className="text-muted-foreground font-mono">{asset.namespaceSlug}</span>
+              )}
               <span className="text-muted-foreground font-mono tabular-nums">
                 {formatSize(asset.sizeBytes)}
               </span>
@@ -281,9 +337,10 @@ function GridView({ pageRows }: IGridViewProps): React.JSX.Element {
 // ── Hybrid view ───────────────────────────────────────────────────────────
 interface IHybridViewProps {
   pageRows: IAssetRow[];
+  hideNamespace: boolean;
 }
 
-function HybridView({ pageRows }: IHybridViewProps): React.JSX.Element {
+function HybridView({ pageRows, hideNamespace }: IHybridViewProps): React.JSX.Element {
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
       {pageRows.map((asset) => (
@@ -297,8 +354,13 @@ function HybridView({ pageRows }: IHybridViewProps): React.JSX.Element {
             <Thumb asset={asset} size="md" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-foreground font-mono text-[12px]">{asset.shortId}…</span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span className="text-foreground truncate font-mono text-[11px]">
+                  {asset.publicId}
+                </span>
+                <CopyIdButton publicId={asset.publicId} />
+              </div>
               <StatePill state={asset.state} />
             </div>
             <div className="mt-1 truncate font-mono text-[12px] tracking-wider uppercase">
@@ -307,14 +369,21 @@ function HybridView({ pageRows }: IHybridViewProps): React.JSX.Element {
                 <span className="text-muted-foreground"> · {asset.dimensions}</span>
               )}
             </div>
-            <div className="text-muted-foreground mt-1 flex items-center justify-between text-[11px]">
-              <span className="font-mono">{asset.namespaceSlug}</span>
-              <span>{fmtMinAgo(asset.minutesAgo)}</span>
-            </div>
+            {!hideNamespace && (
+              <div className="text-muted-foreground mt-1 flex items-center justify-between text-[11px]">
+                <span className="font-mono">{asset.namespaceSlug}</span>
+                <span>{fmtMinAgo(asset.minutesAgo)}</span>
+              </div>
+            )}
             <div className="text-muted-foreground mt-0.5 flex items-center justify-between text-[10.5px]">
               <span className="truncate">{asset.uploadedDisplay}</span>
               <span className="font-mono">{formatSize(asset.sizeBytes)}</span>
             </div>
+            {hideNamespace && (
+              <div className="text-muted-foreground mt-0.5 text-right text-[10.5px]">
+                {fmtMinAgo(asset.minutesAgo)}
+              </div>
+            )}
           </div>
         </Link>
       ))}
@@ -368,6 +437,11 @@ export interface IAssetsListViewProps {
   onToggleAll: (checked: boolean) => void;
   /** When true, hide the per-row checkbox and the "all" checkbox. */
   hideSelection?: boolean;
+  /**
+   * When true, hide the namespace column / line. Use inside a namespace's own
+   * Assets tab where every row is implicitly the same namespace.
+   */
+  hideNamespace?: boolean;
 }
 
 export function AssetsListView({
@@ -377,12 +451,13 @@ export function AssetsListView({
   onToggleOne,
   onToggleAll,
   hideSelection = false,
+  hideNamespace = false,
 }: IAssetsListViewProps): React.JSX.Element {
   if (view === "grid") {
-    return <GridView pageRows={rows} />;
+    return <GridView pageRows={rows} hideNamespace={hideNamespace} />;
   }
   if (view === "hybrid") {
-    return <HybridView pageRows={rows} />;
+    return <HybridView pageRows={rows} hideNamespace={hideNamespace} />;
   }
   return (
     <RowsView
@@ -391,6 +466,7 @@ export function AssetsListView({
       onToggleOne={onToggleOne}
       onToggleAll={onToggleAll}
       hideSelection={hideSelection}
+      hideNamespace={hideNamespace}
     />
   );
 }
