@@ -9,9 +9,9 @@ export type Generated<T> =
     ? ColumnType<S, I | undefined, U>
     : ColumnType<T, T | undefined, T>;
 
-export type Int8 = ColumnType<string, bigint | number | string, bigint | number | string>;
+export type Int8 = ColumnType<bigint, bigint | number | string, bigint | number | string>;
 
-export type Json = JsonValue;
+export type Json = ColumnType<JsonValue, unknown, unknown>;
 
 export type JsonArray = JsonValue[];
 
@@ -27,202 +27,202 @@ export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface AssetAnalyses {
   analyzer: string;
-  analyzerVersion: string | null;
-  assetId: string;
-  createdAt: Generated<Timestamp>;
+  analyzer_version: string | null;
+  asset_id: string;
+  created_at: Generated<Timestamp>;
   decision: string | null;
   findings: Json;
   id: Generated<string>;
-  occurredAt: Generated<Timestamp>;
-  updatedAt: Generated<Timestamp>;
+  occurred_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface Assets {
-  captureContext: Json | null;
-  clientOverrides: Generated<Json>;
-  confirmedAt: Timestamp | null;
-  contentHash: Buffer | null;
-  createdAt: Generated<Timestamp>;
-  customMetadata: Generated<Json>;
-  declaredMimeType: string | null;
-  deletedAt: Timestamp | null;
-  effectiveExpiresAt: Timestamp | null;
-  effectiveMaxSizeBytes: Int8;
-  effectiveUrlTtl: number;
+  capture_context: Json | null;
+  client_overrides: Generated<Json>;
+  confirmed_at: Timestamp | null;
+  content_hash: Buffer | null;
+  created_at: Generated<Timestamp>;
+  custom_metadata: Generated<Json>;
+  declared_mime_type: string | null;
+  deleted_at: Timestamp | null;
+  effective_expires_at: Timestamp | null;
+  effective_max_size_bytes: Int8;
+  effective_url_ttl: number;
   height: number | null;
   id: Generated<string>;
-  legalHold: Generated<boolean>;
-  legalHoldReference: string | null;
-  mimeType: string | null;
-  namespaceId: string;
-  owningRecordId: string | null;
-  owningRecordType: string | null;
-  policyVersionId: string;
-  publicId: Generated<string>;
-  sizeBytes: Int8 | null;
+  legal_hold: Generated<boolean>;
+  legal_hold_reference: string | null;
+  mime_type: string | null;
+  namespace_id: string;
+  owning_record_id: string | null;
+  owning_record_type: string | null;
+  policy_version_id: string;
+  public_id: Generated<string>;
+  size_bytes: Int8 | null;
   state: string;
-  stateChangedAt: Generated<Timestamp>;
-  stateReason: string | null;
-  storageBindingId: string;
-  storageKey: string;
-  updatedAt: Generated<Timestamp>;
-  uploadedBy: string | null;
+  state_changed_at: Generated<Timestamp>;
+  state_reason: string | null;
+  storage_binding_id: string;
+  storage_key: string;
+  updated_at: Generated<Timestamp>;
+  uploaded_by: string | null;
   width: number | null;
 }
 
 export interface AssetStateTransitions {
-  assetId: string;
-  createdAt: Generated<Timestamp>;
-  fromState: string | null;
+  asset_id: string;
+  created_at: Generated<Timestamp>;
+  from_state: string | null;
   id: Generated<string>;
   metadata: Json | null;
-  occurredAt: Generated<Timestamp>;
-  occurredBy: string | null;
+  occurred_at: Generated<Timestamp>;
+  occurred_by: string | null;
   reason: string | null;
-  toState: string;
-  updatedAt: Generated<Timestamp>;
+  to_state: string;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface ConfigurationAuditLog {
   action: string;
-  afterState: Json | null;
-  beforeState: Json | null;
-  createdAt: Generated<Timestamp>;
-  entityId: string;
-  entityType: string;
+  after_state: Json | null;
+  before_state: Json | null;
+  created_at: Generated<Timestamp>;
+  entity_id: string;
+  entity_type: string;
   id: Generated<string>;
-  occurredAt: Generated<Timestamp>;
-  occurredBy: string;
+  occurred_at: Generated<Timestamp>;
+  occurred_by: string;
   reason: string | null;
-  updatedAt: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface LegalHoldAssets {
-  addedAt: Generated<Timestamp>;
-  assetId: string;
-  legalHoldId: string;
+  added_at: Generated<Timestamp>;
+  asset_id: string;
+  legal_hold_id: string;
 }
 
 export interface LegalHolds {
   active: Generated<boolean>;
-  caseReference: string;
-  createdAt: Generated<Timestamp>;
+  case_reference: string;
+  created_at: Generated<Timestamp>;
   description: string;
   id: Generated<string>;
-  liftedAt: Timestamp | null;
-  liftedBy: string | null;
-  liftReason: string | null;
-  placedAt: Generated<Timestamp>;
-  placedBy: string;
-  scopeSummary: string;
-  updatedAt: Generated<Timestamp>;
+  lifted_at: Timestamp | null;
+  lifted_by: string | null;
+  lift_reason: string | null;
+  placed_at: Generated<Timestamp>;
+  placed_by: string;
+  scope_summary: string;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface NamespacePolicies {
-  allowedMimeTypes: string[];
-  contentModeration: Json | null;
-  createdAt: Generated<Timestamp>;
-  createdBy: string | null;
-  exifHandling: string;
+  allowed_mime_types: string[];
+  content_moderation: Json | null;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  exif_handling: string;
   id: Generated<string>;
   immutable: boolean;
-  maxFileSizeBytes: Int8;
-  namespaceId: string;
-  requiredMetadataSchema: Json | null;
-  retentionDays: number | null;
-  retentionMode: string;
-  retryConfig: Json | null;
-  servingMode: string;
-  signedUrlBucketSize: number | null;
-  signedUrlTtlSeconds: number | null;
-  updatedAt: Generated<Timestamp>;
+  max_file_size_bytes: Int8;
+  namespace_id: string;
+  required_metadata_schema: Json | null;
+  retention_days: number | null;
+  retention_mode: string;
+  retry_config: Json | null;
+  serving_mode: string;
+  signed_url_bucket_size: number | null;
+  signed_url_ttl_seconds: number | null;
+  updated_at: Generated<Timestamp>;
   version: number;
-  virusScanRequired: boolean;
+  virus_scan_required: boolean;
 }
 
 export interface NamespacePresets {
   active: Generated<boolean>;
-  cdnMaxAge: number | null;
-  createdAt: Generated<Timestamp>;
-  createdBy: string | null;
+  cdn_max_age: number | null;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
   description: string | null;
   id: Generated<string>;
   name: string;
-  namespaceId: string;
+  namespace_id: string;
   params: Json;
-  preGenerate: Generated<boolean>;
-  requiredPermission: string | null;
-  signedUrlTtl: number | null;
-  updatedAt: Generated<Timestamp>;
+  pre_generate: Generated<boolean>;
+  required_permission: string | null;
+  signed_url_ttl: number | null;
+  updated_at: Generated<Timestamp>;
   version: number;
 }
 
 export interface Namespaces {
-  archivedAt: Timestamp | null;
-  createdAt: Generated<Timestamp>;
-  currentPolicyId: string;
+  archived_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  current_policy_id: string;
   description: string | null;
-  displayName: string;
+  display_name: string;
   id: Generated<string>;
   slug: string;
-  storageBindingId: string;
-  updatedAt: Generated<Timestamp>;
+  storage_binding_id: string;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface ProcessingJobs {
-  assetId: string;
-  attemptNumber: Generated<number>;
-  claimedAt: Timestamp | null;
-  createdAt: Generated<Timestamp>;
-  currentStep: string | null;
-  heartbeatAt: Timestamp | null;
-  lastError: string | null;
-  lastErrorAt: Timestamp | null;
-  notBefore: Timestamp | null;
+  asset_id: string;
+  attempt_number: Generated<number>;
+  claimed_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  current_step: string | null;
+  heartbeat_at: Timestamp | null;
+  last_error: string | null;
+  last_error_at: Timestamp | null;
+  not_before: Timestamp | null;
   state: string;
-  updatedAt: Generated<Timestamp>;
-  workerId: string | null;
+  updated_at: Generated<Timestamp>;
+  worker_id: string | null;
 }
 
 export interface StorageBindings {
-  adapterType: string;
+  adapter_type: string;
   config: Json;
-  createdAt: Generated<Timestamp>;
+  created_at: Generated<Timestamp>;
   id: Generated<string>;
   name: string;
-  updatedAt: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface UploadIntents {
-  consumedAt: Timestamp | null;
-  createdAt: Generated<Timestamp>;
-  createdBy: string | null;
-  declaredContentHash: Buffer | null;
-  declaredMimeType: string | null;
-  declaredSizeBytes: Int8 | null;
-  expiredAt: Timestamp | null;
+  consumed_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  declared_content_hash: Buffer | null;
+  declared_mime_type: string | null;
+  declared_size_bytes: Int8 | null;
+  expired_at: Timestamp | null;
   id: Generated<string>;
-  namespaceId: string;
-  policyVersionId: string;
-  publicId: Generated<string>;
-  storageBindingId: string;
-  storageKey: string;
-  updatedAt: Generated<Timestamp>;
-  uploadUrl: string;
-  uploadUrlExpiresAt: Timestamp;
+  namespace_id: string;
+  policy_version_id: string;
+  public_id: Generated<string>;
+  storage_binding_id: string;
+  storage_key: string;
+  updated_at: Generated<Timestamp>;
+  upload_url: string;
+  upload_url_expires_at: Timestamp;
 }
 
 export interface DB {
-  assetAnalyses: AssetAnalyses;
+  asset_analyses: AssetAnalyses;
   assets: Assets;
-  assetStateTransitions: AssetStateTransitions;
-  configurationAuditLog: ConfigurationAuditLog;
-  legalHoldAssets: LegalHoldAssets;
-  legalHolds: LegalHolds;
-  namespacePolicies: NamespacePolicies;
-  namespacePresets: NamespacePresets;
+  asset_state_transitions: AssetStateTransitions;
+  configuration_audit_log: ConfigurationAuditLog;
+  legal_hold_assets: LegalHoldAssets;
+  legal_holds: LegalHolds;
+  namespace_policies: NamespacePolicies;
+  namespace_presets: NamespacePresets;
   namespaces: Namespaces;
-  processingJobs: ProcessingJobs;
-  storageBindings: StorageBindings;
-  uploadIntents: UploadIntents;
+  processing_jobs: ProcessingJobs;
+  storage_bindings: StorageBindings;
+  upload_intents: UploadIntents;
 }

@@ -36,7 +36,7 @@
     "migrate:new": "dbmate --no-dump-schema --env DATABASE_URL new",
     "migrate:status": "dbmate --no-dump-schema --env DATABASE_URL status",
     "migrate:rollback": "dbmate --no-dump-schema --env DATABASE_URL down",
-    "kysely-codegen": "node --env-file=.env ../../node_modules/kysely-codegen/dist/cli/bin.js --dialect postgres --out-file ./src/shared/infrastructure/persistence/db.types.ts --camel-case --default-schema public --exclude-pattern schema_migrations"
+    "kysely-codegen": "node --env-file=.env ../../node_modules/kysely-codegen/dist/cli/bin.js --dialect postgres --out-file ./src/shared/infrastructure/persistence/db.types.ts --default-schema public --exclude-pattern schema_migrations"
   },
   "dependencies": {
     "@camcima/nestjs-rfc9457": "^0.3.1",

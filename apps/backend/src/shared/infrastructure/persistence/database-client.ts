@@ -4,6 +4,8 @@ import { lastValueFrom } from "rxjs";
 
 import { retryAsyncFunction } from "@/shared/utils/misc.utils";
 
+import type { DB } from "./db.types";
+
 // Init default mappers
 pg.types.setTypeParser(pg.types.builtins.INT8, (val: string) => BigInt(val));
 pg.types.setTypeParser(pg.types.builtins.TIMESTAMP, (val: string) => new Date(val));
@@ -11,7 +13,7 @@ pg.types.setTypeParser(pg.types.builtins.TIMESTAMPTZ, (val: string) => new Date(
 pg.types.setTypeParser(pg.types.builtins.TIMETZ, (val: string) => new Date(val));
 
 export class DatabaseClient {
-  connection: Kysely<any>; // no database schema as we are not enforcing the query builder usage
+  connection: Kysely<DB>;
   private pool: Pool;
 
   async isConnected(params: { retryAttempts: number; retryDelayMs: number }): Promise<
@@ -93,7 +95,7 @@ export class DatabaseClient {
       database: connectionParams.database,
     });
 
-    const db = new Kysely({
+    const db = new Kysely<DB>({
       dialect: new PostgresDialect({
         pool,
       }),
