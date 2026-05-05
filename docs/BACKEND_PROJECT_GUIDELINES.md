@@ -277,8 +277,8 @@ Instead, we will use the Node.js CLI feature: `--env-file` for local development
 
 ## Error Handling
 
-All the non 2xx HTTP responses will be formated as defined by RFC 7807 Problem Details.  
-To achieve that, the `CatchAllExceptionsForHttp` exception filter is globally applied.
+All non-2xx HTTP responses are formatted as RFC 9457 Problem Details.
+The backend registers `Rfc9457Module` globally instead of the older custom `CatchAllExceptionsForHttp` filter.
 
 All domain errors (ie, exceptions that inherits from `DomainError`) are mapped into 422 HTTP response by default.
 All validation errors (ie, exceptions that inherits from `ValidationError`) are mapped into 400 HTTP response by default.

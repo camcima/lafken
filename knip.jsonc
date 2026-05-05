@@ -48,10 +48,9 @@
         "test/__mocks__/**",
         // Files expected for a base template setup that might not be used in the project
         "**/base-repository.ts",
-        // EndpointRequiredRoles + Azure JWT payload type are scaffolding for
-        // role-protected endpoints and azure_ad strategy customization.
-        "src/shared/presentation/auth/decorators/endpoint-required-roles.decorator.ts",
-        "src/shared/presentation/auth/azure-ad/azure-ad-bearer-authn.strategy.ts"
+        // EndpointRequiredRoles is scaffolding for role-protected endpoints
+        // that are adopted incrementally by feature slices.
+        "src/shared/presentation/auth/decorators/endpoint-required-roles.decorator.ts"
       ]
     },
     "apps/web": {

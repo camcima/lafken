@@ -32,7 +32,7 @@ sequenceDiagram
 3. Traffic reaches the **ESPv2 container** (main container, port 8080), which is the service's entry point.
 4. ESPv2 fetches the service configuration from Cloud Endpoints (managed rollout).
 5. ESPv2 proxies the request to the **Backend app sidecar** at `http://127.0.0.1:3000` inside the same revision.
-6. The Backend app processes the request (validates Azure AD token, checks roles, executes business logic, queries the database).
+6. The Backend app processes the request (validates the configured OIDC bearer token, checks roles, executes business logic, queries the database).
 7. The response flows back: Backend app → ESPv2 → LB → client.
 
 ## Technical definitions

@@ -25,5 +25,6 @@
   - This simplifies audits, integrations, and ETL processes, without relying on application code.
 
 - Primary key and UUID:
-  - `id` bigserial as primary key for simplicity and performance.
-  - `uuid` unique to expose externally without using internal IDs, which improves security and decoupling.
+  - `id` uuid as primary key, defaulting to PostgreSQL 18 `uuidv7()` for new tables.
+  - Use uuid foreign keys for relationships.
+  - Use separate UUIDv4 `public_id` columns only when an externally exposed, non-time-ordered identifier is required.

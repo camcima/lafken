@@ -171,10 +171,10 @@ const form = useForm({ resolver: zodResolver(schema) });
 
 ### 5. Authentication
 
-Authentication is handled via MSAL (Microsoft Authentication Library) for Azure AD.
+Authentication is handled through the frontend `AuthProviderFactory`, with OIDC for connected environments and the mock provider for local/test scenarios.
 
 - `AuthContext` provides user state.
-- `AuthenticatedEndpoint` and `AuthenticatedUser` are decorators used in the BE, but in the frontend, we use the token acquired by MSAL to sign requests in the `api-client`.
+- `AuthenticatedEndpoint` and `AuthenticatedUser` are decorators used in the BE, but in the frontend, we use the token acquired by the configured auth provider to sign requests in the `api-client`.
 
 ## 💻 Available Commands
 

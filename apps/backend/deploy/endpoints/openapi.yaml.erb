@@ -1144,8 +1144,8 @@ paths:
       tags:
         - Dashboard
 info:
-  title: BE - Template eMantto Project
-  description: Backend API for template-emantto-project monorepo
+  title: Lafken Backend API
+  description: Backend API for Lafken
   version: 0.0.0
   contact:
     name: grp_emx_platform_eng@latam.com
@@ -1163,7 +1163,7 @@ components:
       scheme: bearer
       bearerFormat: JWT
       type: http
-      description: Azure AD Bearer token authorization
+      description: OIDC bearer token authorization
     azure_ad_jwt:
       type: oauth2
       flows:
@@ -1965,7 +1965,7 @@ components:
       properties:
         id:
           type: string
-          description: Numeric ID as string for bigint-safety
+          description: UUIDv7 storage binding ID
         name:
           type: string
         adapterType:

@@ -5,7 +5,7 @@ High-level summary of how the monorepo components (apps, shared packages, infras
 ## Monorepo Layout
 
 ```
-template-emantto-project/
+lafken/
   apps/
     backend/       NestJS API (public API, hexagonal architecture)
     web/           React 19 SPA (Vite, CSR only)
@@ -80,17 +80,17 @@ Managed with **Turborepo** (task orchestration) and **pnpm workspaces**.
 - **React 19 SPA** built with Vite (client-side rendering only)
 - Routing: TanStack Router (file-based)
 - Server state: TanStack Query via service classes
-- Auth: MSAL (Azure AD) via `AuthProviderFactory` -- acquires tokens, injects into Backend API requests
+- Auth: OIDC or mock via `AuthProviderFactory` -- acquires tokens, injects into Backend API requests
 - Observability: Grafana Faro (RUM, web vitals, distributed tracing)
 - Served by **nginx** on Cloud Run (static files + runtime config injection via `config.js.template`)
 
 ### Backend (`apps/backend`)
 
 - **NestJS** (public API, strict hexagonal architecture)
-- **Handles Azure AD authentication** via `AuthModule`: `@AuthenticatedEndpoint()`, `@EndpointRequiredRoles()`, and `AzureAdBearerAuthnStrategy`
+- **Handles OIDC bearer authentication** via `AuthModule`: `@AuthenticatedEndpoint()`, `@EndpointRequiredRoles()`, and the configured OIDC/mock strategy
 - Database: **Kysely** query builder + **dbmate** migrations against PostgreSQL
 - Follows Ports & Adapters: domain defines abstract ports, infrastructure implements adapters
-- Global error handling: `CatchAllExceptionsForHttp` converts domain/validation errors to RFC 7807
+- Global error handling: `Rfc9457Module` converts domain/validation errors to RFC 9457 Problem Details
 - Cloud Endpoints config (OpenAPI spec) deployed alongside for ESPv2 gateway validation
 - Observability: OpenTelemetry via `nestjs-otel`
 
@@ -129,7 +129,7 @@ Managed via **Terraform Cloud** (organization: `LATAM_AIRLINES`). Two environmen
 | **Global HTTPS Load Balancer** | External managed LB, Akamai SSL cert, HTTPS redirect, Cloud Armor `cloudarmor-corp` policy                                          |
 | **URL Map**                    | Default -> Web backend service, `/be/*` -> Backend backend service                                                                  |
 | **Serverless NEGs**            | One per Cloud Run service (Backend, Web) connecting LB to Cloud Run                                                                 |
-| **Azure App Registration**     | Via `latam-appregister` module for MSAL/Azure AD SPA auth                                                                           |
+| **OIDC client configuration**  | Environment-specific OIDC authority/client/audience settings for SPA auth                                                           |
 
 ### Key Differences: INTG vs PROD
 
@@ -199,7 +199,7 @@ setup:pnpm -> lint -> unit_test -> integration_test -> api_e2e_test -> collect_c
 setup:pnpm -> lint -> test -> web_e2e_test -> quality -> build:pnpm -> package -> deploy
 ```
 
-- E2E tests run with `AUTH_PROVIDER=mock` (no real Azure AD in CI)
+- E2E tests run with `AUTH_PROVIDER=mock` (no real OIDC provider in CI)
 - Uses Playwright for browser-based E2E tests
 
 ### All Apps Share
@@ -231,13 +231,13 @@ Uses `release-conventional@2.8.2` component. On merge to main, it detects Conven
 ```
  Browser                     Backend
     |                            |
-    |-- MSAL login (Azure AD)    |
+    |-- OIDC login               |
     |<- access token             |
     |                            |
     |-- GET /be/... ------------>|
     |   Authorization: Bearer    |
     |                            |-- validate token
-    |                            |   (AzureAdBearerAuthnStrategy)
+    |                            |   (OIDC bearer strategy)
     |                            |-- check roles
     |                            |   (@EndpointRequiredRoles)
     |                            |
@@ -245,9 +245,9 @@ Uses `release-conventional@2.8.2` component. On merge to main, it detects Conven
     |<- response ----------------|
 ```
 
-- **Web**: Acquires Azure AD tokens via MSAL, sends as Bearer token to Backend
-- **Backend**: Validates tokens directly using `AzureAdBearerAuthnStrategy`, enforces role-based access via `@EndpointRequiredRoles`
-- **Azure App Registration**: Provisioned by Terraform (`latam-appregister` module), one per environment
+- **Web**: Acquires OIDC tokens via the configured auth provider, sends them as Bearer tokens to Backend
+- **Backend**: Validates tokens directly using the configured OIDC strategy, enforces role-based access via `@EndpointRequiredRoles`
+- **OIDC client settings**: Provisioned per environment and injected through runtime configuration
 
 ---
 
@@ -280,18 +280,18 @@ Configured in `pnpm-workspace.yaml`:
 
 The Lafken domain breaks into seven backend modules under `apps/backend/src/`:
 
-| Module        | Owns                                                                                         |
-|---------------|----------------------------------------------------------------------------------------------|
-| `namespaces`  | `namespaces`, `namespace_policies`, `namespace_presets`                                      |
-| `assets`      | `assets`, `upload_intents`, `processing_jobs`, `asset_state_transitions`, `asset_analyses`   |
-| `quarantine`  | (no tables) — read views over `assets`                                                       |
-| `legal-holds` | `legal_holds`, `legal_hold_assets`                                                           |
-| `audit`       | `configuration_audit_log` (+ read views over `asset_state_transitions`)                      |
-| `system`      | `storage_bindings`, integration metadata                                                     |
-| `dashboard`   | (no tables) — aggregates reads from the six modules above for the Home overview endpoint     |
+| Module        | Owns                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| `namespaces`  | `namespaces`, `namespace_policies`, `namespace_presets`                                    |
+| `assets`      | `assets`, `upload_intents`, `processing_jobs`, `asset_state_transitions`, `asset_analyses` |
+| `quarantine`  | (no tables) — read views over `assets`                                                     |
+| `legal-holds` | `legal_holds`, `legal_hold_assets`                                                         |
+| `audit`       | `configuration_audit_log` (+ read views over `asset_state_transitions`)                    |
+| `system`      | `storage_bindings`, integration metadata                                                   |
+| `dashboard`   | (no tables) — aggregates reads from the six modules above for the Home overview endpoint   |
 
 Each module follows the standard four-layer hexagonal layout: `domain/`, `application/`, `infrastructure/`, `presentation/`.
 
 ### Primary key strategy
 
-Lafken uses `bigserial` internal primary keys with UUIDv4 `public_id` columns for externally-facing identifiers (assets and upload intents). This deviates from the project-wide UUIDv7 convention; the rationale is documented in ADR 0001 (`docs/adr/0001-pk-strategy.md`).
+Lafken uses UUIDv7 internal primary keys and UUID foreign keys. Assets and upload intents also expose UUIDv4 `public_id` values for externally-facing identifiers. The rationale is documented in ADR 0001 (`docs/adr/0001-pk-strategy.md`).
