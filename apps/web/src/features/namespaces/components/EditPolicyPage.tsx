@@ -170,7 +170,7 @@ function numToStr(value: number | null | undefined): string {
 export function EditPolicyPage(): React.JSX.Element {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { slug } = useParams({ from: "/_protected/namespaces/$slug/policy/edit" });
+  const { slug } = useParams({ from: "/_protected/namespaces/$slug_/policy/edit" });
 
   const namespaceQuery = useNamespace(slug);
   const policiesQuery = useNamespacePolicies(slug);
