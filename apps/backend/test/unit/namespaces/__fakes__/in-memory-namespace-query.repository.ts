@@ -10,7 +10,7 @@ import {
 export class InMemoryNamespaceQueryRepository implements NamespaceQueryRepositoryPort {
   private namespaces: Namespace[] = [];
   private policies = new Map<string, NamespacePolicy[]>();
-  private presets = new Map<string, NamespacePreset[]>();
+  readonly presets: NamespacePreset[] = [];
 
   seed(namespaces: Namespace[]): void {
     this.namespaces = namespaces;
@@ -20,8 +20,8 @@ export class InMemoryNamespaceQueryRepository implements NamespaceQueryRepositor
     this.policies.set(namespaceId, policies);
   }
 
-  seedPresets(namespaceId: string, presets: NamespacePreset[]): void {
-    this.presets.set(namespaceId, presets);
+  seedPresets(presets: NamespacePreset[]): void {
+    this.presets.push(...presets);
   }
 
   list(input: ListNamespacesInput): Promise<NamespacePage> {
@@ -45,13 +45,16 @@ export class InMemoryNamespaceQueryRepository implements NamespaceQueryRepositor
   }
 
   listPresets(namespaceId: string): Promise<NamespacePreset[]> {
-    return Promise.resolve(this.presets.get(namespaceId) ?? []);
+    return Promise.resolve(this.presets.filter((p) => p.props.namespaceId === namespaceId));
   }
 
   findPresetByName(namespaceId: string, name: string): Promise<NamespacePreset | null> {
-    const preset =
-      (this.presets.get(namespaceId) ?? []).find((p) => p.props.name === name) ?? null;
-    return Promise.resolve(preset);
+    const matches = this.presets.filter(
+      (p) => p.props.namespaceId === namespaceId && p.props.name === name,
+    );
+    if (matches.length === 0) return Promise.resolve(null);
+    const latest = matches.reduce((a, b) => (a.props.version >= b.props.version ? a : b));
+    return Promise.resolve(latest);
   }
 
   findStorageBindingName(): Promise<string | null> {
