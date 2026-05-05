@@ -112,7 +112,7 @@ export class CreateNamespaceRequestDTO {
   description!: string | null;
 
   @IsUUID()
-  @ApiProperty({ description: "ID of an existing storage binding (UUID)" })
+  @ApiProperty({ description: "ID of an existing storage binding (UUID)", format: "uuid" })
   storageBindingId!: string;
 
   @ValidateNested()

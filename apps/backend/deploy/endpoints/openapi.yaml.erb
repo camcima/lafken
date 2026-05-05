@@ -1347,7 +1347,8 @@ components:
           nullable: true
         storageBindingId:
           type: string
-          description: ID of an existing storage binding (string for bigint-safety)
+          description: ID of an existing storage binding (UUID)
+          format: uuid
         policy:
           $ref: '#/components/schemas/CreateNamespacePolicyDTO'
       required:
