@@ -100,6 +100,27 @@ const environmentSchema = z
     GCS_SERVICE_ACCOUNT_JSON: z.string().optional(),
     /** Override GCS endpoint (e.g. http://localhost:4444 for fake-gcs-server). */
     STORAGE_GCS_ENDPOINT: z.string().url().optional(),
+
+    /** Browser-facing imgproxy origin (e.g. http://localhost:8081). */
+    IMGPROXY_BASE_URL: z.string().url().optional(),
+    /**
+     * Source URL prefix imgproxy will fetch from. Must be reachable from the
+     * imgproxy process — in dev that's the fake-gcs container DNS name.
+     * Falls back to "" when omitted (which leaves the signer disabled).
+     */
+    IMGPROXY_SOURCE_BASE_URL: z.string().url().optional(),
+    /** Hex-encoded HMAC-SHA256 key shared with imgproxy. */
+    IMGPROXY_KEY: z
+      .string()
+      .regex(/^[0-9a-fA-F]+$/u)
+      .optional(),
+    /** Hex-encoded HMAC-SHA256 salt shared with imgproxy. */
+    IMGPROXY_SALT: z
+      .string()
+      .regex(/^[0-9a-fA-F]+$/u)
+      .optional(),
+    /** Truncated signature length in base64 chars. Match imgproxy's IMGPROXY_SIGNATURE_SIZE. */
+    IMGPROXY_SIGNATURE_SIZE: z.coerce.number().int().positive().default(32),
   })
   .refine(
     (data) => {
