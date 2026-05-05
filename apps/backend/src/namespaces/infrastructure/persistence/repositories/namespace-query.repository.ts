@@ -75,8 +75,17 @@ export class NamespaceQueryRepository implements NamespaceQueryRepositoryPort {
     return rows.map((row) => NamespacePresetDbMapper.toDomain(row));
   }
 
-  async findPresetByName(_namespaceId: string, _name: string): Promise<NamespacePreset | null> {
-    throw new Error("Not implemented yet — Task 4");
+  async findPresetByName(namespaceId: string, name: string): Promise<NamespacePreset | null> {
+    const row = await this.db.connection
+      .selectFrom("namespace_presets")
+      .selectAll()
+      .where("namespace_id", "=", namespaceId)
+      .where("name", "=", name)
+      .orderBy("version", "desc")
+      .limit(1)
+      .executeTakeFirst();
+    if (!row) return null;
+    return NamespacePresetDbMapper.toDomain(row as Record<string, unknown>);
   }
 
   async findStorageBindingName(storageBindingId: string): Promise<string | null> {
