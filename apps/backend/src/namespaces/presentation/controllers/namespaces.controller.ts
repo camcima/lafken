@@ -23,6 +23,7 @@ import {
 } from "@nestjs/swagger";
 import {
   CreateNamespaceRequestDTO,
+  CreatePolicyVersionRequestDTO,
   NamespacePolicyResponseDTO,
   NamespacePresetResponseDTO,
   NamespaceResponseDTO,
@@ -37,8 +38,10 @@ import { ListNamespacePresetsUseCase } from "@/namespaces/application/use-cases/
 import { ListNamespacesUseCase } from "@/namespaces/application/use-cases/list-namespaces.use-case";
 import { UnarchiveNamespaceUseCase } from "@/namespaces/application/use-cases/unarchive-namespace.use-case";
 import { UpdateNamespaceMetadataUseCase } from "@/namespaces/application/use-cases/update-namespace-metadata.use-case";
+import { UpdateNamespacePolicyUseCase } from "@/namespaces/application/use-cases/update-namespace-policy.use-case";
 import { NamespaceAlreadyExistsError } from "@/namespaces/domain/errors/namespace-already-exists.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
+import { PolicyVersionConflictError } from "@/namespaces/domain/errors/policy-version-conflict.error";
 import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 import { AuthenticatedEndpoint } from "@/shared/presentation/auth/decorators/authenticated-endpoint.decorator";
 import { AuthenticatedUser } from "@/shared/presentation/auth/decorators/authenticated-user.decorator";
@@ -65,6 +68,7 @@ export class NamespacesController {
     private readonly updateNamespaceMetadataUseCase: UpdateNamespaceMetadataUseCase,
     private readonly archiveNamespaceUseCase: ArchiveNamespaceUseCase,
     private readonly unarchiveNamespaceUseCase: UnarchiveNamespaceUseCase,
+    private readonly updateNamespacePolicyUseCase: UpdateNamespacePolicyUseCase,
   ) {}
 
   @Get()
@@ -262,6 +266,59 @@ export class NamespacesController {
         throw new NotFoundException(err.message, { cause: err });
       }
       throw err;
+    }
+  }
+
+  @Post(":slug/policy-versions")
+  @AuthenticatedEndpoint()
+  @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Create a new policy version for a namespace" })
+  @ApiOkResponse({ type: NamespaceResponseDTO })
+  @ApiBadRequestResponse()
+  @ApiNotFoundResponse()
+  @ApiConflictResponse()
+  @ApiUnprocessableEntityResponse()
+  async createPolicyVersion(
+    @Param("slug") slug: string,
+    @Body() body: CreatePolicyVersionRequestDTO,
+    @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+  ): Promise<NamespaceResponseDTO> {
+    try {
+      await this.updateNamespacePolicyUseCase.execute({
+        slug,
+        createdBy: user.emailAddress,
+        policy: {
+          retentionDays: body.policy.retentionDays,
+          retentionMode: body.policy.retentionMode,
+          maxFileSizeBytes: BigInt(body.policy.maxFileSizeBytes),
+          allowedMimeTypes: body.policy.allowedMimeTypes,
+          exifHandling: body.policy.exifHandling,
+          virusScanRequired: body.policy.virusScanRequired,
+          contentModeration: body.policy.contentModeration,
+          requiredMetadataSchema: body.policy.requiredMetadataSchema,
+          immutable: body.policy.immutable,
+          servingMode: body.policy.servingMode,
+          signedUrlTtlSeconds: body.policy.signedUrlTtlSeconds,
+          signedUrlBucketSize: body.policy.signedUrlBucketSize,
+          retryConfig: body.policy.retryConfig,
+        },
+      });
+
+      const refreshed = await this.getNamespaceBySlugUseCase.execute({ slug });
+      return NamespaceResponseMapper.fromDomain(
+        refreshed.namespace,
+        refreshed.storageBindingName,
+        refreshed.currentPolicyVersion,
+      );
+    } catch (err) {
+      if (err instanceof NamespaceNotFoundError) {
+        throw new NotFoundException(err.message, { cause: err });
+      }
+      if (err instanceof PolicyVersionConflictError) {
+        throw new ConflictException(err.message, { cause: err });
+      }
+      throw err; // NamespaceArchivedError → 422 via global filter
     }
   }
 }
