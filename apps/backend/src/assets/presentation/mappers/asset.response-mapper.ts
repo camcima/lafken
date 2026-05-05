@@ -62,9 +62,13 @@ export class AssetResponseMapper {
     if (!AssetResponseMapper.isPreviewable(asset)) {
       return result;
     }
-    // The source URL embeds the bucket + storage key. Imgproxy fetches it
-    // directly from the configured base URL.
-    const sourceUrl: string = `${signCtx.sourceBaseUrl}/${signCtx.bucket}/${asset.props.storageKey}`;
+    // GCS JSON API media path: works against fake-gcs and against public GCS
+    // objects regardless of the request `Host` header. (fake-gcs's plain
+    // `/{bucket}/{key}` route only resolves when Host matches `-public-host`,
+    // so a docker-internal request from imgproxy 404s on that style.)
+    const sourceUrl: string =
+      `${signCtx.sourceBaseUrl}/storage/v1/b/${signCtx.bucket}` +
+      `/o/${encodeURIComponent(asset.props.storageKey)}?alt=media`;
     for (const { name, spec } of signCtx.presets) {
       const url: string | null = signCtx.signer.sign({ sourceUrl, preset: spec });
       if (url !== null) {

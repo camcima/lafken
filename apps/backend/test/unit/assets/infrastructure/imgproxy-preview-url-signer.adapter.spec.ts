@@ -27,8 +27,15 @@ describe("ImgproxyPreviewUrlSigner", () => {
       preset: { fit: "fit", width: 200, height: 200, format: "webp", quality: 80, dpr: null },
     });
     expect(url1).toBe(url2);
+    const expectedB64 = Buffer.from(
+      "http://fake-gcs:4443/lafken-dev/test/assets/abc/source",
+      "utf8",
+    ).toString("base64url");
     expect(url1).toMatch(
-      /^https:\/\/imgproxy\.test\/[A-Za-z0-9_-]+\/rs:fit:200:200\/q:80\/plain\/http:\/\/fake-gcs:4443\/lafken-dev\/test\/assets\/abc\/source@webp$/u,
+      new RegExp(
+        `^https://imgproxy\\.test/[A-Za-z0-9_-]+/rs:fit:200:200/q:80/${expectedB64}\\.webp$`,
+        "u",
+      ),
     );
   });
 
@@ -70,7 +77,7 @@ describe("ImgproxyPreviewUrlSigner", () => {
       sourceUrl: "http://fake-gcs:4443/lafken-dev/x/source",
       preset: { fit: "fit", width: 100, height: 100, format: "avif", quality: null, dpr: null },
     });
-    expect(url.endsWith("@avif")).toBe(true);
+    expect(url.endsWith(".avif")).toBe(true);
   });
 
   it("appends a dpr option when set", () => {

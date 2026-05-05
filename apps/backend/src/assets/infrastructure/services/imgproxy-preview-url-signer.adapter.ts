@@ -23,11 +23,13 @@ export interface IImgproxyOptions {
 /**
  * Mints fully-signed imgproxy URLs of the form:
  *
- *   <base>/<sig>/<processing-options>/plain/<source-url>[@<format>]
+ *   <base>/<sig>/<processing-options>/<base64url-source>[@<format>]
  *
  * where <sig> is the base64-urlsafe HMAC-SHA256 of (salt || path) truncated
  * to `signatureSize` bytes, and <path> is the leading slash plus everything
- * after it.
+ * after it. The source URL is base64url-encoded rather than placed under
+ * /plain/ so query strings (e.g. `?alt=media`) don't collide with HTTP URL
+ * parsing on the imgproxy side.
  *
  * See https://docs.imgproxy.net/usage/signing_url
  */
@@ -47,8 +49,11 @@ export class ImgproxyPreviewUrlSigner extends PreviewUrlSignerPort {
 
   sign(input: ISignPreviewInput): string {
     const options: string = this.buildProcessingOptions(input.preset);
-    const formatSuffix: string = input.preset.format ? `@${input.preset.format}` : "";
-    const path: string = `/${options}/plain/${input.sourceUrl}${formatSuffix}`;
+    const sourceB64: string = Buffer.from(input.sourceUrl, "utf8").toString("base64url");
+    // For base64-encoded source URLs imgproxy expects the format extension as
+    // `.ext`, not the plain-style `@ext` suffix.
+    const formatSuffix: string = input.preset.format ? `.${input.preset.format}` : "";
+    const path: string = `/${options}/${sourceB64}${formatSuffix}`;
     const hmac = createHmac("sha256", this.key);
     hmac.update(this.salt);
     hmac.update(path);

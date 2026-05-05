@@ -123,11 +123,12 @@ describe("AssetResponseMapper", () => {
       ]),
     );
 
+    const expectedSource =
+      "http://fake-gcs:4443/storage/v1/b/lafken-dev/o/" +
+      "aircraft-photos%2Fassets%2Fabc-123%2Fsource?alt=media";
     expect(result.previewUrls).toEqual({
-      "thumb-sm":
-        "https://imgproxy.test/sig/200x200/plain/http://fake-gcs:4443/lafken-dev/aircraft-photos/assets/abc-123/source",
-      "thumb-md":
-        "https://imgproxy.test/sig/400x400/plain/http://fake-gcs:4443/lafken-dev/aircraft-photos/assets/abc-123/source",
+      "thumb-sm": `https://imgproxy.test/sig/200x200/plain/${expectedSource}`,
+      "thumb-md": `https://imgproxy.test/sig/400x400/plain/${expectedSource}`,
     });
   });
 
