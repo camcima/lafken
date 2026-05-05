@@ -30,7 +30,7 @@ export class UpdatePresetVersionUseCase {
   async execute(input: IUpdatePresetVersionInput): Promise<NamespacePreset> {
     if (input.name.toLowerCase().startsWith(SYSTEM_PRESET_NAME_PREFIX)) {
       throw new ReservedPresetNameError({
-        name: input.name,
+        presetName: input.name,
         reservedPrefix: SYSTEM_PRESET_NAME_PREFIX,
       });
     }
