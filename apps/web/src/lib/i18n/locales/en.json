@@ -498,6 +498,7 @@
         "invalidJson": "Must be valid JSON or empty.",
         "generic": "Could not save the namespace. Please try again.",
         "namespaceDeleted": "This namespace was deleted. Please refresh the page.",
+        "namespaceArchived": "This namespace is archived and cannot be modified.",
         "displayNameRequired": "Display name is required.",
         "displayNameTooLong": "Display name must be 200 characters or fewer.",
         "descriptionTooLong": "Description must be 2000 characters or fewer."
@@ -544,6 +545,36 @@
             "namespaceArchived": "This namespace was archived. Please refresh the page.",
             "versionConflict": "Another operator edited this policy. Refresh and re-apply your changes."
           }
+        }
+      },
+      "presets": {
+        "new": {
+          "title": "New preset",
+          "subtitle": "Add an image transformation preset to namespace {{slug}}.",
+          "submit": "Create preset",
+          "cancel": "Cancel"
+        },
+        "edit": {
+          "title": "Edit preset",
+          "subtitle": "Update preset {{name}} in namespace {{slug}}.",
+          "submit": "Save preset",
+          "cancel": "Cancel"
+        },
+        "form": {
+          "name": "Name",
+          "nameHelp": "Lowercase kebab-case identifier, e.g. thumbnail-sm",
+          "width": "Width (px, optional)",
+          "height": "Height (px, optional)",
+          "fit": "Fit",
+          "format": "Format",
+          "quality": "Quality (1–100)",
+          "dpr": "DPR (optional)"
+        },
+        "errors": {
+          "generic": "Could not save the preset. Please try again.",
+          "duplicateName": "A preset with this name already exists in this namespace.",
+          "presetNotFound": "This preset was not found. It may have been deleted.",
+          "versionConflict": "Another operator edited this preset. Refresh and re-apply your changes."
         }
       },
       "actions": {
