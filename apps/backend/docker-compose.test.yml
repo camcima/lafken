@@ -18,10 +18,12 @@ services:
       - "-scheme=http"
       - "-public-host=localhost:4444"
       - "-port=4443"
+      - "-private-key-location=/config/fake-gcs-signer.pem"
     ports:
       - "4444:4443"
     volumes:
       - ./dev-data/gcs:/data
+      - ./test/fixtures/fake-gcs-signer.pem:/config/fake-gcs-signer.pem:ro
     healthcheck:
       test:
         - CMD-SHELL
