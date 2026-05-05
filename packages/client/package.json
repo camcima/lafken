@@ -1,0 +1,28 @@
+{
+  "name": "@lafken/client",
+  "version": "0.1.0",
+  "private": true,
+  "license": "PROPRIETARY",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit --project tsconfig.json",
+    "build": "tsc --project tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint \"./**/*.ts\"",
+    "format": "prettier --write \"./**/*.ts\" --ignore-path ../../.prettierignore",
+    "format-check": "prettier --check \"./**/*.ts\" --ignore-path ../../.prettierignore"
+  },
+  "devDependencies": {
+    "@shared/typescript-config": "workspace:*",
+    "tslib": "^2.8.1",
+    "vitest": "^4.1.2"
+  }
+}

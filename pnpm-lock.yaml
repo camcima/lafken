@@ -481,6 +481,74 @@ importers:
         specifier: ^5.2.0
         version: 5.2.0
 
+  packages/client:
+    devDependencies:
+      '@shared/typescript-config':
+        specifier: workspace:*
+        version: link:../../shared/typescript-config
+      tslib:
+        specifier: ^2.8.1
+        version: 2.8.1
+      vitest:
+        specifier: ^4.1.2
+        version: 4.1.2(@opentelemetry/api@1.9.1)(@types/node@25.3.0)(@vitest/ui@4.1.2)(jsdom@29.0.1(@noble/hashes@1.8.0))(msw@2.13.0(@types/node@25.3.0)(typescript@5.9.3))(vite@8.0.5(@types/node@25.3.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/react:
+    dependencies:
+      '@lafken/client':
+        specifier: workspace:*
+        version: link:../client
+      '@lafken/upload':
+        specifier: workspace:*
+        version: link:../upload
+    devDependencies:
+      '@shared/typescript-config':
+        specifier: workspace:*
+        version: link:../../shared/typescript-config
+      '@testing-library/react':
+        specifier: ^16.3.2
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      jsdom:
+        specifier: ^28.0.0
+        version: 28.1.0(@noble/hashes@1.8.0)
+      react:
+        specifier: ^19.2.4
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.2.4
+        version: 19.2.4(react@19.2.4)
+      tslib:
+        specifier: ^2.8.1
+        version: 2.8.1
+      vitest:
+        specifier: ^4.1.2
+        version: 4.1.2(@opentelemetry/api@1.9.1)(@types/node@25.3.0)(@vitest/ui@4.1.2)(jsdom@28.1.0(@noble/hashes@1.8.0))(msw@2.13.0(@types/node@25.3.0)(typescript@5.9.3))(vite@8.0.5(@types/node@25.3.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/upload:
+    dependencies:
+      '@lafken/client':
+        specifier: workspace:*
+        version: link:../client
+      '@uppy/core':
+        specifier: ^4.0.0
+        version: 4.5.3
+      '@uppy/xhr-upload':
+        specifier: ^4.0.0
+        version: 4.4.2(@uppy/core@4.5.3)
+    devDependencies:
+      '@shared/typescript-config':
+        specifier: workspace:*
+        version: link:../../shared/typescript-config
+      tslib:
+        specifier: ^2.8.1
+        version: 2.8.1
+      vitest:
+        specifier: ^4.1.2
+        version: 4.1.2(@opentelemetry/api@1.9.1)(@types/node@25.3.0)(@vitest/ui@4.1.2)(jsdom@29.0.1(@noble/hashes@1.8.0))(msw@2.13.0(@types/node@25.3.0)(typescript@5.9.3))(vite@8.0.5(@types/node@25.3.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
+
   shared/backend-api:
     dependencies:
       '@nestjs/common':
@@ -3574,6 +3642,9 @@ packages:
     resolution: {integrity: sha512-XCuKFP5PS55gnMVu3dty8KPatLqUoy/ZYzDzAGCQ8JNFCkLXzmI7vNHCR+XpbZaMWQK/vQubr7PkYq8g470J/A==}
     engines: {node: '>= 10'}
 
+  '@transloadit/prettier-bytes@0.3.5':
+    resolution: {integrity: sha512-xF4A3d/ZyX2LJWeQZREZQw+qFX4TGQ8bGVP97OLRt6sPO6T0TNHBFTuRHOJh7RNmYOBmQ9MHxpolD9bXihpuVA==}
+
   '@trivago/prettier-plugin-sort-imports@6.0.2':
     resolution: {integrity: sha512-3DgfkukFyC/sE/VuYjaUUWoFfuVjPK55vOFDsxD56XXynFMCZDYFogH2l/hDfOsQAm1myoU/1xByJ3tWqtulXA==}
     engines: {node: '>= 20'}
@@ -3762,6 +3833,9 @@ packages:
 
   '@types/resolve@1.20.6':
     resolution: {integrity: sha512-A4STmOXPhMUtHH+S6ymgE2GiBSMqf4oTvcQZMcHzokuTLVYzXTB8ttjcgxOVaAp2lGwEdzZ0J+cRbbeevQj1UQ==}
+
+  '@types/retry@0.12.2':
+    resolution: {integrity: sha512-XISRgDJ2Tc5q4TRqvgJtzsRkFYNJzZrhTdtMoGVBttwzzQJkPnS3WWTFc7kuDRoPtPakl+T+OfdEUjYJj7Jbow==}
 
   '@types/send@1.2.1':
     resolution: {integrity: sha512-arsCikDvlU99zl1g69TcAB3mzZPpxgw0UQnaHeC1Nwb015xp8bknZv5rIfri9xTOcMuaVgvabfIRA7PSZVuZIQ==}
@@ -4054,6 +4128,25 @@ packages:
     resolution: {integrity: sha512-lrW200hZdbfRtztbygyaq/6jP6AKE8qQN2KvPcJ+x7wiD038YtnYtZ82IMNJ69GJibV7bwL3y9FgK+5w/pYt6g==}
     cpu: [x64]
     os: [win32]
+
+  '@uppy/companion-client@4.5.2':
+    resolution: {integrity: sha512-hfUsReHM5COhn+5d7CdZgZaG8BtDvtwj7vjXzg8qmgKI901mYUm/Zh420iOKT7eHiofKVTNoa7oijeGrqUEnyg==}
+    peerDependencies:
+      '@uppy/core': ^4.5.2
+
+  '@uppy/core@4.5.3':
+    resolution: {integrity: sha512-52VLeBUY/j904h48lpPGykuWikkOOS4Lz/qkmalDiBQfNALb6iB1MOZs079IM3o/uMLYxzZRL80C3sKpkBUYcw==}
+
+  '@uppy/store-default@4.3.2':
+    resolution: {integrity: sha512-dnY9R2o8fwmO1bF89D0b5jijD7DGED2qVST5hI/j18JreLWzLKH7u6HuNmOvzok8msrQ/qWzQd5Gx4LDQKhBbw==}
+
+  '@uppy/utils@6.2.2':
+    resolution: {integrity: sha512-9mYJtbcngv2HOJIECkyfmdXTI5dW/ObCyvWP1Iti3E5bKtsa4sMmbx5Yh/tGCj8k/lBNhfvWyZuYnvnjmzNLSQ==}
+
+  '@uppy/xhr-upload@4.4.2':
+    resolution: {integrity: sha512-CU66aVn4yghGklEkepCqFPulc6uygznApy2DpD+jCMLNB5q6yT1RPSrQUgRgXsYhpW1YhutZJWsrEnHEDS+Tcw==}
+    peerDependencies:
+      '@uppy/core': ^4.5.2
 
   '@vitejs/plugin-react@6.0.1':
     resolution: {integrity: sha512-l9X/E3cDb+xY3SWzlG1MOGt2usfEHGMNIaegaUGFsLkb3RCn/k8/TOXBcab+OndDI4TBtktT8/9BwwW8Vi9KUQ==}
@@ -5895,6 +5988,10 @@ packages:
     resolution: {integrity: sha512-5KoIu2Ngpyek75jXodFvnafB6DJgr3u8uuK0LEZJjrU19DrMD3EVERaR8sjz8CCGgpZvxPl9SuE1GMVPFHx1mw==}
     engines: {node: '>= 0.4'}
 
+  is-network-error@1.3.1:
+    resolution: {integrity: sha512-6QCxa49rQbmUWLfk0nuGqzql9U8uaV2H6279bRErPBHe/109hCzsLUBUHfbEtvLIHBd6hyXbgedBSHevm43Edw==}
+    engines: {node: '>=16'}
+
   is-node-process@1.2.0:
     resolution: {integrity: sha512-Vg4o6/fqPxIjtxgUH5QLJhwZ7gW5diGCVlXpuUfELC62CuxM1iHcRe51f2W1FDy04Ai4KJkagKjx3XaqyfRKXw==}
 
@@ -6529,6 +6626,9 @@ packages:
     resolution: {integrity: sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ==}
     engines: {node: '>= 0.6'}
 
+  mime-match@1.0.2:
+    resolution: {integrity: sha512-VXp/ugGDVh3eCLOBCiHZMYWQaTNUHv2IJrut+yXA6+JbLPXHglHwfS/5A5L0ll+jkCY7fIzRJcH6OIunF+c6Cg==}
+
   mime-types@2.1.35:
     resolution: {integrity: sha512-ZDY+bPm5zTTF+YpCrAU9nK0UgICYPT0QtT1NZWFv4s++TNkcgVaT0g6+4R2uI4MjQjzysHB1zxuWL50hzaeXiw==}
     engines: {node: '>= 0.6'}
@@ -6613,9 +6713,17 @@ packages:
     resolution: {integrity: sha512-WWdIxpyjEn+FhQJQQv9aQAYlHoNVdzIzUySNV1gHUPDSdZJ3yZn7pAAbQcV7B56Mvu881q9FZV+0Vx2xC44VWA==}
     engines: {node: ^18.17.0 || >=20.5.0}
 
+  namespace-emitter@2.0.1:
+    resolution: {integrity: sha512-N/sMKHniSDJBjfrkbS/tpkPj4RAbvW3mr8UAzvlMHyun93XEm83IAvhWtJVHo+RHn/oO8Job5YN4b+wRjSVp5g==}
+
   nanoid@3.3.11:
     resolution: {integrity: sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
+    hasBin: true
+
+  nanoid@5.1.11:
+    resolution: {integrity: sha512-v+KEsUv2ps74PaSKv0gHTxTCgMXOIfBEbaqa6w6ISIGC7ZsvHN4N9oJ8d4cmf0n5oTzQz2SLmThbQWhjd/8eKg==}
+    engines: {node: ^18 || >=20}
     hasBin: true
 
   napi-postinstall@0.3.4:
@@ -6797,6 +6905,10 @@ packages:
   p-locate@5.0.0:
     resolution: {integrity: sha512-LaNjtRWUBY++zB5nE/NwcaoMylSPk+S+ZHNB1TzdbMJMny6dynpAGt7X/tl/QYq3TIeE6nxHppbo2LGymrG5Pw==}
     engines: {node: '>=10'}
+
+  p-retry@6.2.1:
+    resolution: {integrity: sha512-hEt02O4hUct5wtwg4H4KcWgDdm+l1bOaEy/hWzd8xtXB9BqxTWBBhb+2ImAtH4Cv4rPjV76xN3Zumqk3k3AhhQ==}
+    engines: {node: '>=16.17'}
 
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
@@ -7001,6 +7113,9 @@ packages:
   powershell-utils@0.1.0:
     resolution: {integrity: sha512-dM0jVuXJPsDN6DvRpea484tCUaMiXWjuCn++HGTqUWzGDjv5tZkEZldAJ/UMlqRYGFrD/etByo4/xOuC/snX2A==}
     engines: {node: '>=20'}
+
+  preact@10.29.1:
+    resolution: {integrity: sha512-gQCLc/vWroE8lIpleXtdJhTFDogTdZG9AjMUpVkDf2iTCNwYNWA+u16dL41TqUDJO4gm2IgrcMv3uTpjd4Pwmg==}
 
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
@@ -8321,6 +8436,9 @@ packages:
   widest-line@3.1.0:
     resolution: {integrity: sha512-NsmoXalsWVDMGupxZ5R08ka9flZjjiLvHVAWYOKtiKM8ujtZWr9cRffak+uSE48+Ob8ObalXpwyeUiyDD6QFgg==}
     engines: {node: '>=8'}
+
+  wildcard@1.1.2:
+    resolution: {integrity: sha512-DXukZJxpHA8LuotRwL0pP1+rS6CS7FF2qStDDE1C7DDg2rLud2PXRMuEDYIPhgEezwnlHNL4c+N6MfMTjCGTng==}
 
   word-wrap@1.2.5:
     resolution: {integrity: sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==}
@@ -11538,6 +11656,8 @@ snapshots:
 
   '@tootallnate/once@2.0.0': {}
 
+  '@transloadit/prettier-bytes@0.3.5': {}
+
   '@trivago/prettier-plugin-sort-imports@6.0.2(prettier@3.8.1)':
     dependencies:
       '@babel/generator': 7.29.1
@@ -11753,6 +11873,8 @@ snapshots:
       form-data: 2.5.5
 
   '@types/resolve@1.20.6': {}
+
+  '@types/retry@0.12.2': {}
 
   '@types/send@1.2.1':
     dependencies:
@@ -12113,6 +12235,37 @@ snapshots:
 
   '@unrs/resolver-binding-win32-x64-msvc@1.11.1':
     optional: true
+
+  '@uppy/companion-client@4.5.2(@uppy/core@4.5.3)':
+    dependencies:
+      '@uppy/core': 4.5.3
+      '@uppy/utils': 6.2.2
+      namespace-emitter: 2.0.1
+      p-retry: 6.2.1
+
+  '@uppy/core@4.5.3':
+    dependencies:
+      '@transloadit/prettier-bytes': 0.3.5
+      '@uppy/store-default': 4.3.2
+      '@uppy/utils': 6.2.2
+      lodash: 4.18.1
+      mime-match: 1.0.2
+      namespace-emitter: 2.0.1
+      nanoid: 5.1.11
+      preact: 10.29.1
+
+  '@uppy/store-default@4.3.2': {}
+
+  '@uppy/utils@6.2.2':
+    dependencies:
+      lodash: 4.18.1
+      preact: 10.29.1
+
+  '@uppy/xhr-upload@4.4.2(@uppy/core@4.5.3)':
+    dependencies:
+      '@uppy/companion-client': 4.5.2(@uppy/core@4.5.3)
+      '@uppy/core': 4.5.3
+      '@uppy/utils': 6.2.2
 
   '@vitejs/plugin-react@6.0.1(@rolldown/plugin-babel@0.2.2(@babel/core@7.29.0)(@babel/runtime@7.29.2)(rolldown@1.0.0-rc.12)(vite@8.0.5(@types/node@25.3.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3)))(babel-plugin-react-compiler@1.0.0)(vite@8.0.5(@types/node@25.3.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))':
     dependencies:
@@ -14254,6 +14407,8 @@ snapshots:
 
   is-negative-zero@2.0.3: {}
 
+  is-network-error@1.3.1: {}
+
   is-node-process@1.2.0: {}
 
   is-number-object@1.1.1:
@@ -14812,6 +14967,10 @@ snapshots:
 
   mime-db@1.54.0: {}
 
+  mime-match@1.0.2:
+    dependencies:
+      wildcard: 1.1.2
+
   mime-types@2.1.35:
     dependencies:
       mime-db: 1.52.0
@@ -14920,7 +15079,11 @@ snapshots:
 
   mute-stream@2.0.0: {}
 
+  namespace-emitter@2.0.1: {}
+
   nanoid@3.3.11: {}
+
+  nanoid@5.1.11: {}
 
   napi-postinstall@0.3.4: {}
 
@@ -15162,6 +15325,12 @@ snapshots:
     dependencies:
       p-limit: 3.1.0
 
+  p-retry@6.2.1:
+    dependencies:
+      '@types/retry': 0.12.2
+      is-network-error: 1.3.1
+      retry: 0.13.1
+
   parent-module@1.0.1:
     dependencies:
       callsites: 3.1.0
@@ -15357,6 +15526,8 @@ snapshots:
       xtend: 4.0.2
 
   powershell-utils@0.1.0: {}
+
+  preact@10.29.1: {}
 
   prelude-ls@1.2.1: {}
 
@@ -16683,6 +16854,36 @@ snapshots:
     transitivePeerDependencies:
       - msw
 
+  vitest@4.1.2(@opentelemetry/api@1.9.1)(@types/node@25.3.0)(@vitest/ui@4.1.2)(jsdom@28.1.0(@noble/hashes@1.8.0))(msw@2.13.0(@types/node@25.3.0)(typescript@5.9.3))(vite@8.0.5(@types/node@25.3.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3)):
+    dependencies:
+      '@vitest/expect': 4.1.2
+      '@vitest/mocker': 4.1.2(msw@2.13.0(@types/node@25.3.0)(typescript@5.9.3))(vite@8.0.5(@types/node@25.3.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
+      '@vitest/pretty-format': 4.1.2
+      '@vitest/runner': 4.1.2
+      '@vitest/snapshot': 4.1.2
+      '@vitest/spy': 4.1.2
+      '@vitest/utils': 4.1.2
+      es-module-lexer: 2.0.0
+      expect-type: 1.3.0
+      magic-string: 0.30.21
+      obug: 2.1.1
+      pathe: 2.0.3
+      picomatch: 4.0.4
+      std-env: 4.0.0
+      tinybench: 2.9.0
+      tinyexec: 1.0.2
+      tinyglobby: 0.2.15
+      tinyrainbow: 3.1.0
+      vite: 8.0.5(@types/node@25.3.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@opentelemetry/api': 1.9.1
+      '@types/node': 25.3.0
+      '@vitest/ui': 4.1.2(vitest@4.1.2)
+      jsdom: 28.1.0(@noble/hashes@1.8.0)
+    transitivePeerDependencies:
+      - msw
+
   vitest@4.1.2(@opentelemetry/api@1.9.1)(@types/node@25.3.0)(@vitest/ui@4.1.2)(jsdom@29.0.1(@noble/hashes@1.8.0))(msw@2.13.0(@types/node@25.3.0)(typescript@5.9.3))(vite@8.0.5(@types/node@25.3.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3)):
     dependencies:
       '@vitest/expect': 4.1.2
@@ -16866,6 +17067,8 @@ snapshots:
   widest-line@3.1.0:
     dependencies:
       string-width: 4.2.3
+
+  wildcard@1.1.2: {}
 
   word-wrap@1.2.5: {}
 

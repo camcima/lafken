@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - shared/*
+  - packages/*
 
 # Explicitly allow or disallow lifecycle scripts per package.
 # Replaces onlyBuiltDependencies/ignoredBuiltDependencies with a single map.
