@@ -50,6 +50,10 @@ services:
       # The same RSA key used by the backend's GCS_SERVICE_ACCOUNT_JSON, so
       # fake-gcs can verify v4-signed PUT URLs end-to-end in dev.
       - "-private-key-location=/config/fake-gcs-signer.pem"
+      # Browser CORS preflight for signed PUT URLs sends the
+      # x-goog-content-length-range header, which is not on fake-gcs's
+      # default allowlist; without this the preflight returns 403.
+      - "-cors-headers=x-goog-content-length-range"
     ports:
       - "4443:4443"
     volumes:
