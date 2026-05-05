@@ -23,8 +23,8 @@ import { Route as ProtectedAssetsIndexRouteImport } from './routes/_protected/as
 import { Route as ProtectedNamespacesNewRouteImport } from './routes/_protected/namespaces/new'
 import { Route as ProtectedNamespacesSlugRouteImport } from './routes/_protected/namespaces/$slug'
 import { Route as ProtectedAssetsPublicIdRouteImport } from './routes/_protected/assets/$publicId'
-import { Route as ProtectedNamespacesSlugPolicyEditRouteImport } from './routes/_protected/namespaces/$slug_.policy.edit'
 import { Route as ProtectedNamespacesSlugPresetsNewRouteImport } from './routes/_protected/namespaces/$slug_.presets.new'
+import { Route as ProtectedNamespacesSlugPolicyEditRouteImport } from './routes/_protected/namespaces/$slug_.policy.edit'
 import { Route as ProtectedNamespacesSlugPresetsNameEditRouteImport } from './routes/_protected/namespaces/$slug_.presets.$name_.edit'
 
 const ProtectedRoute = ProtectedRouteImport.update({
@@ -69,11 +69,11 @@ const ProtectedNamespacesSlugRoute = ProtectedNamespacesSlugRouteImport.update({
 const ProtectedAssetsPublicIdRoute = ProtectedAssetsPublicIdRouteImport.update({
             id: '/assets/$publicId',path: '/assets/$publicId',getParentRoute: () => ProtectedRoute
           }as any)
-const ProtectedNamespacesSlugPolicyEditRoute = ProtectedNamespacesSlugPolicyEditRouteImport.update({
-            id: '/namespaces/$slug_/policy/edit',path: '/namespaces/$slug/policy/edit',getParentRoute: () => ProtectedRoute
-          }as any)
 const ProtectedNamespacesSlugPresetsNewRoute = ProtectedNamespacesSlugPresetsNewRouteImport.update({
             id: '/namespaces/$slug_/presets/new',path: '/namespaces/$slug/presets/new',getParentRoute: () => ProtectedRoute
+          }as any)
+const ProtectedNamespacesSlugPolicyEditRoute = ProtectedNamespacesSlugPolicyEditRouteImport.update({
+            id: '/namespaces/$slug_/policy/edit',path: '/namespaces/$slug/policy/edit',getParentRoute: () => ProtectedRoute
           }as any)
 const ProtectedNamespacesSlugPresetsNameEditRoute = ProtectedNamespacesSlugPresetsNameEditRouteImport.update({
             id: '/namespaces/$slug_/presets/$name_/edit',path: '/namespaces/$slug/presets/$name/edit',getParentRoute: () => ProtectedRoute
@@ -201,18 +201,18 @@ declare module '@tanstack/react-router' {
           preLoaderRoute: typeof ProtectedAssetsPublicIdRouteImport
           parentRoute: typeof ProtectedRoute
         }
-'/_protected/namespaces/$slug_/policy/edit': {
-          id: '/_protected/namespaces/$slug_/policy/edit'
-          path: '/namespaces/$slug/policy/edit'
-          fullPath: '/namespaces/$slug/policy/edit'
-          preLoaderRoute: typeof ProtectedNamespacesSlugPolicyEditRouteImport
-          parentRoute: typeof ProtectedRoute
-        }
 '/_protected/namespaces/$slug_/presets/new': {
           id: '/_protected/namespaces/$slug_/presets/new'
           path: '/namespaces/$slug/presets/new'
           fullPath: '/namespaces/$slug/presets/new'
           preLoaderRoute: typeof ProtectedNamespacesSlugPresetsNewRouteImport
+          parentRoute: typeof ProtectedRoute
+        }
+'/_protected/namespaces/$slug_/policy/edit': {
+          id: '/_protected/namespaces/$slug_/policy/edit'
+          path: '/namespaces/$slug/policy/edit'
+          fullPath: '/namespaces/$slug/policy/edit'
+          preLoaderRoute: typeof ProtectedNamespacesSlugPolicyEditRouteImport
           parentRoute: typeof ProtectedRoute
         }
 '/_protected/namespaces/$slug_/presets/$name_/edit': {

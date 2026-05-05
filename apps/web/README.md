@@ -30,18 +30,20 @@ At container startup, `entrypoint.sh` runs `envsubst` on `public/config.js.templ
 **Build-time** (Vite, `import.meta.env`):
 
 - `VITE_MOCKED_API` — Enables MSW mock API (`"true"` to enable)
+- `VITE_DEMO_DATA` — Enables typed demo-data fallbacks (`"true"` to enable)
 
 **Runtime** (`__APP_CONFIG__` via `.env.local` in dev, environment in prod):
 
 | Variable                         | Required  | Description                |
 | -------------------------------- | --------- | -------------------------- |
 | `ENVIRONMENT`                    | Yes       | `intg` or `prod`           |
-| `AUTH_PROVIDER`                  | Yes       | `mock` or `msal`           |
+| `AUTH_PROVIDER`                  | Yes       | `mock` or `oidc`           |
 | `API_URL`                        | Yes       | Backend API URL            |
 | `MONITORING_URL`                 | No        | Grafana Faro collector URL |
-| `AZURE_CLIENT_ID`                | MSAL only | Azure AD client ID (UUID)  |
-| `AZURE_TENANT_ID`                | MSAL only | Azure AD tenant ID (UUID)  |
-| `AZURE_REDIRECT_URI`             | MSAL only | OAuth redirect URI         |
+| `OIDC_AUTHORITY`                 | OIDC only | OIDC issuer URL            |
+| `OIDC_CLIENT_ID`                 | OIDC only | OIDC client ID             |
+| `OIDC_AUDIENCE`                  | OIDC only | API audience               |
+| `OIDC_REDIRECT_URI`              | OIDC only | OAuth redirect URI         |
 | `AZURE_POST_LOGOUT_REDIRECT_URI` | MSAL only | Post-logout redirect URI   |
 
 See [`app-config.ts`](./src/config/app-config.ts) for the Zod schema and validation.

@@ -7,7 +7,7 @@ import type { Plugin, ResolvedConfig } from "vite";
  * Keys that are build-time only (accessed via `import.meta.env`) and should
  * NOT be included in the runtime `__APP_CONFIG__` object.
  */
-const BUILD_TIME_ONLY_KEYS = new Set(["VITE_MOCKED_API"]);
+const BUILD_TIME_ONLY_KEYS = new Set(["VITE_DEMO_DATA", "VITE_MOCKED_API"]);
 
 /**
  * Minimal `.env` parser — handles `KEY=value`, `# comments`, blank lines, and

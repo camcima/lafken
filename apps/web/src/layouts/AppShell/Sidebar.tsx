@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { useDashboardOverview } from "@/features/dashboard/hooks/useDashboardOverview";
 import { useAuth } from "@/hooks/useAuth";
+import { isDemoMode } from "@/lib/demo/demo-mode";
 import {
   DEMO_LEGAL_HOLDS,
   DEMO_NAMESPACES,
@@ -168,10 +169,14 @@ export function Sidebar(): React.ReactElement {
   )?.counts;
 
   const getCount = (key: string): number | undefined => {
-    if (key === "quarantine") return counts?.quarantine ?? DEMO_QUARANTINE.length;
-    if (key === "legalHolds") return counts?.legalHolds ?? DEMO_LEGAL_HOLDS.length;
-    if (key === "assets") return counts?.totalAssets ?? DEMO_TOTAL_ASSETS;
-    if (key === "namespaces") return counts?.namespaces ?? DEMO_NAMESPACES.length;
+    if (key === "quarantine")
+      return counts?.quarantine ?? (isDemoMode ? DEMO_QUARANTINE.length : undefined);
+    if (key === "legalHolds")
+      return counts?.legalHolds ?? (isDemoMode ? DEMO_LEGAL_HOLDS.length : undefined);
+    if (key === "assets")
+      return counts?.totalAssets ?? (isDemoMode ? DEMO_TOTAL_ASSETS : undefined);
+    if (key === "namespaces")
+      return counts?.namespaces ?? (isDemoMode ? DEMO_NAMESPACES.length : undefined);
     return undefined;
   };
 

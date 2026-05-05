@@ -16,6 +16,7 @@ import {
   useNamespacePolicies,
   useNamespacePresets,
 } from "@/features/namespaces/hooks/useNamespaces";
+import { isDemoMode } from "@/lib/demo/demo-mode";
 import { DEMO_AUDIT, DEMO_NAMESPACES, type DemoNamespace } from "@/lib/demo/lafken-demo-data";
 import { fmtAgo } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
@@ -408,8 +409,9 @@ export function NamespaceDetailPage({
   // Consume presets hook
   useNamespacePresets(slug);
 
-  // Find demo namespace for content rendering
-  const demoNs = DEMO_NAMESPACES.find((ns) => ns.slug === slug);
+  // Demo content is only used when explicitly enabled and no API namespace was returned.
+  const demoNs =
+    isDemoMode && !namespaceData ? DEMO_NAMESPACES.find((ns) => ns.slug === slug) : undefined;
 
   // Derive the namespace DTO: prefer real API data, fall back to demo-derived DTO
   const namespace: NamespaceResponseDTO | undefined =

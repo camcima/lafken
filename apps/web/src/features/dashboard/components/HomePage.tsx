@@ -7,6 +7,7 @@ import { Sparkline } from "@/components/common/Sparkline";
 import { getRuntimeValue } from "@/config/app-config";
 import { useDashboardOverview } from "@/features/dashboard/hooks/useDashboardOverview";
 import { useAuth } from "@/hooks/useAuth";
+import { isDemoMode } from "@/lib/demo/demo-mode";
 import {
   DEMO_AUDIT,
   DEMO_NAMESPACES,
@@ -162,8 +163,7 @@ export function HomePage() {
   const { user } = useAuth();
   const { data } = useDashboardOverview();
 
-  // Slice 0: BE returns empty arrays for these; rendering against typed demo data
-  const queues = DEMO_QUEUES;
+  const queues = isDemoMode ? DEMO_QUEUES : [];
 
   const totalDepth = queues.reduce((acc, queue) => acc + queue.depth, 0);
   const totalInflight = queues.reduce((acc, queue) => acc + queue.inflight, 0);
@@ -183,28 +183,34 @@ export function HomePage() {
         ? t("pages.home.attentionBanner.warn")
         : t("pages.home.attentionBanner.ok");
 
-  // Slice 0: BE returns empty arrays for these; rendering against typed demo data
-  const recentEvents = DEMO_AUDIT.slice(0, LIVE_EVENTS_DISPLAY_COUNT);
+  const recentEvents = isDemoMode ? DEMO_AUDIT.slice(0, LIVE_EVENTS_DISPLAY_COUNT) : [];
 
+  const hasApiCounts = data?.counts !== undefined;
   const apiTotalAssets = data?.counts?.totalAssets ?? 0;
-  const totalAssetsValue =
-    apiTotalAssets > 0
+  const totalAssetsValue = hasApiCounts
+    ? apiTotalAssets > 0
       ? (apiTotalAssets / NAMESPACE_ASSET_DIVISOR).toFixed(2) + "M"
-      : t("pages.home.kpi.totalAssets");
+      : "0"
+    : t("pages.home.kpi.totalAssets");
 
   const apiInFlight = data?.counts?.inFlight ?? 0;
-  const inFlightValue =
-    apiInFlight > 0 ? apiInFlight.toLocaleString() : totalInflight.toLocaleString();
+  const inFlightValue = hasApiCounts
+    ? apiInFlight.toLocaleString()
+    : totalInflight.toLocaleString();
 
   const apiQueueDepth = data?.counts?.queueDepth ?? 0;
-  const queueDepthValue =
-    apiQueueDepth > 0 ? apiQueueDepth.toLocaleString() : totalDepth.toLocaleString();
+  const queueDepthValue = hasApiCounts
+    ? apiQueueDepth.toLocaleString()
+    : totalDepth.toLocaleString();
 
   const apiQuarantine = data?.counts?.quarantine ?? 0;
-  const quarantineValue = apiQuarantine > 0 ? apiQuarantine.toString() : DEMO_QUARANTINE_DISPLAY;
+  const quarantineValue = hasApiCounts ? apiQuarantine.toString() : DEMO_QUARANTINE_DISPLAY;
 
   const apiLegalHolds = data?.counts?.legalHolds ?? 0;
-  const legalHoldsValue = apiLegalHolds > 0 ? apiLegalHolds.toString() : DEMO_LEGAL_HOLDS_DISPLAY;
+  const legalHoldsValue = hasApiCounts ? apiLegalHolds.toString() : DEMO_LEGAL_HOLDS_DISPLAY;
+
+  const needsAttentionCount = isDemoMode ? NEEDS_ATTENTION_COUNT : apiQuarantine + apiLegalHolds;
+  const topNamespaces = isDemoMode ? DEMO_NAMESPACES.slice(0, TOP_NAMESPACES_COUNT) : [];
 
   return (
     <div className="space-y-5">
@@ -315,66 +321,80 @@ export function HomePage() {
           <CardHeader>
             <CardTitle>{t("pages.home.needsAttention")}</CardTitle>
             <CardMeta>
-              {NEEDS_ATTENTION_COUNT} {t("pages.home.needsAttentionCount")}
+              {needsAttentionCount} {t("pages.home.needsAttentionCount")}
             </CardMeta>
           </CardHeader>
-          <div className="divide-border/60 divide-y">
-            <Link
-              to="/quarantine"
-              className="hover:bg-secondary/40 flex items-start gap-3 px-5 py-3 no-underline"
-            >
-              <span className="bg-alert-soft text-alert mt-0.5 grid size-7 flex-none place-items-center rounded-md">
-                <ShieldAlert size={14} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[12.5px] font-medium">
-                  {t("pages.home.attention.quarantineTitle", { count: DEMO_QUARANTINE.length })}
-                </div>
-                <div className="text-muted-foreground text-[11.5px]">
-                  {t("pages.home.attention.quarantineDetail")}
-                </div>
-              </div>
-              <ChevronRight size={12} className="text-muted-foreground mt-1" />
-            </Link>
-            <Link
-              to="/system"
-              className="hover:bg-secondary/40 flex items-start gap-3 px-5 py-3 no-underline"
-            >
-              <span className="bg-alert-soft text-alert mt-0.5 grid size-7 flex-none place-items-center rounded-md">
-                <Server size={14} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[12.5px] font-medium">
-                  {t("pages.home.attention.workerDownTitle", {
-                    id: downWorker?.id ?? FALLBACK_DOWN_WORKER_ID,
-                  })}
-                </div>
-                <div className="text-muted-foreground text-[11.5px]">
-                  {t("pages.home.attention.workerDownDetail")}
-                </div>
-              </div>
-              <ChevronRight size={12} className="text-muted-foreground mt-1" />
-            </Link>
-            <Link
-              to="/legal-holds"
-              className="hover:bg-secondary/40 flex items-start gap-3 px-5 py-3 no-underline"
-            >
-              <span className="bg-warn-soft text-warn mt-0.5 grid size-7 flex-none place-items-center rounded-md">
-                <Lock size={14} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[12.5px] font-medium">
-                  {t("pages.home.attention.holdPendingTitle")}
-                </div>
-                <div className="text-muted-foreground text-[11.5px]">
-                  {t("pages.home.attention.holdPendingDetail", {
-                    caseRef: DEMO_PENDING_HOLD_CASE_REF,
-                  })}
-                </div>
-              </div>
-              <ChevronRight size={12} className="text-muted-foreground mt-1" />
-            </Link>
-          </div>
+          {needsAttentionCount > 0 || isDemoMode ? (
+            <div className="divide-border/60 divide-y">
+              {(isDemoMode || apiQuarantine > 0) && (
+                <Link
+                  to="/quarantine"
+                  className="hover:bg-secondary/40 flex items-start gap-3 px-5 py-3 no-underline"
+                >
+                  <span className="bg-alert-soft text-alert mt-0.5 grid size-7 flex-none place-items-center rounded-md">
+                    <ShieldAlert size={14} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12.5px] font-medium">
+                      {t("pages.home.attention.quarantineTitle", {
+                        count: isDemoMode ? DEMO_QUARANTINE.length : apiQuarantine,
+                      })}
+                    </div>
+                    <div className="text-muted-foreground text-[11.5px]">
+                      {t("pages.home.attention.quarantineDetail")}
+                    </div>
+                  </div>
+                  <ChevronRight size={12} className="text-muted-foreground mt-1" />
+                </Link>
+              )}
+              {isDemoMode && (
+                <Link
+                  to="/system"
+                  className="hover:bg-secondary/40 flex items-start gap-3 px-5 py-3 no-underline"
+                >
+                  <span className="bg-alert-soft text-alert mt-0.5 grid size-7 flex-none place-items-center rounded-md">
+                    <Server size={14} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12.5px] font-medium">
+                      {t("pages.home.attention.workerDownTitle", {
+                        id: downWorker?.id ?? FALLBACK_DOWN_WORKER_ID,
+                      })}
+                    </div>
+                    <div className="text-muted-foreground text-[11.5px]">
+                      {t("pages.home.attention.workerDownDetail")}
+                    </div>
+                  </div>
+                  <ChevronRight size={12} className="text-muted-foreground mt-1" />
+                </Link>
+              )}
+              {(isDemoMode || apiLegalHolds > 0) && (
+                <Link
+                  to="/legal-holds"
+                  className="hover:bg-secondary/40 flex items-start gap-3 px-5 py-3 no-underline"
+                >
+                  <span className="bg-warn-soft text-warn mt-0.5 grid size-7 flex-none place-items-center rounded-md">
+                    <Lock size={14} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12.5px] font-medium">
+                      {t("pages.home.attention.holdPendingTitle")}
+                    </div>
+                    <div className="text-muted-foreground text-[11.5px]">
+                      {t("pages.home.attention.holdPendingDetail", {
+                        caseRef: DEMO_PENDING_HOLD_CASE_REF,
+                      })}
+                    </div>
+                  </div>
+                  <ChevronRight size={12} className="text-muted-foreground mt-1" />
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="text-muted-foreground px-5 py-8 text-center text-[12.5px]">
+              {t("pages.home.needsAttentionEmpty")}
+            </div>
+          )}
         </Card>
 
         {/* Top namespaces — spans 2 cols */}
@@ -384,43 +404,48 @@ export function HomePage() {
             <CardMeta>{t("pages.home.topNamespacesMeta")}</CardMeta>
           </CardHeader>
           <div className="px-5 py-3">
-            {/* Slice 0: BE returns empty arrays for these; rendering against typed demo data */}
-            {DEMO_NAMESPACES.slice(0, TOP_NAMESPACES_COUNT).map((namespace) => {
-              const upload24 = Math.floor(
-                namespace.assetCount * NAMESPACE_UPLOAD_MULTIPLIER + NAMESPACE_UPLOAD_BASE,
-              );
-              const pct =
-                (namespace.assetCount / NAMESPACE_TOTAL_ASSETS) * NAMESPACE_PCT_MULTIPLIER;
-              const pctStr = pct.toFixed(2) + "%";
-              return (
-                <Link
-                  key={namespace.slug}
-                  to="/namespaces"
-                  className="border-border/40 hover:bg-secondary/30 grid grid-cols-[120px_1fr_60px_50px] items-center gap-3 border-b py-2 no-underline last:border-b-0 sm:grid-cols-[180px_1fr_70px_60px] sm:gap-4"
-                >
-                  <div>
-                    <div className="text-latam-indigo-deep font-mono text-[12.5px]">
-                      {namespace.slug}
+            {topNamespaces.length > 0 ? (
+              topNamespaces.map((namespace) => {
+                const upload24 = Math.floor(
+                  namespace.assetCount * NAMESPACE_UPLOAD_MULTIPLIER + NAMESPACE_UPLOAD_BASE,
+                );
+                const pct =
+                  (namespace.assetCount / NAMESPACE_TOTAL_ASSETS) * NAMESPACE_PCT_MULTIPLIER;
+                const pctStr = pct.toFixed(2) + "%";
+                return (
+                  <Link
+                    key={namespace.slug}
+                    to="/namespaces"
+                    className="border-border/40 hover:bg-secondary/30 grid grid-cols-[120px_1fr_60px_50px] items-center gap-3 border-b py-2 no-underline last:border-b-0 sm:grid-cols-[180px_1fr_70px_60px] sm:gap-4"
+                  >
+                    <div>
+                      <div className="text-latam-indigo-deep font-mono text-[12.5px]">
+                        {namespace.slug}
+                      </div>
+                      <div className="text-muted-foreground text-[11px]">
+                        {t("pages.home.policyVersion", { version: namespace.policyVersion })}
+                      </div>
                     </div>
-                    <div className="text-muted-foreground text-[11px]">
-                      {t("pages.home.policyVersion", { version: namespace.policyVersion })}
+                    <div className="bg-secondary relative h-2 overflow-hidden rounded-full">
+                      <div
+                        className="bg-latam-indigo absolute inset-y-0 left-0 rounded-full"
+                        style={{ width: pctStr }}
+                      />
                     </div>
-                  </div>
-                  <div className="bg-secondary relative h-2 overflow-hidden rounded-full">
-                    <div
-                      className="bg-latam-indigo absolute inset-y-0 left-0 rounded-full"
-                      style={{ width: pctStr }}
-                    />
-                  </div>
-                  <div className="text-right font-mono text-[12px] tabular-nums">
-                    {(namespace.assetCount / NAMESPACE_ASSET_DIVISOR).toFixed(2)}M
-                  </div>
-                  <div className="text-ok text-right font-mono text-[12px] tabular-nums">
-                    +{upload24}
-                  </div>
-                </Link>
-              );
-            })}
+                    <div className="text-right font-mono text-[12px] tabular-nums">
+                      {(namespace.assetCount / NAMESPACE_ASSET_DIVISOR).toFixed(2)}M
+                    </div>
+                    <div className="text-ok text-right font-mono text-[12px] tabular-nums">
+                      +{upload24}
+                    </div>
+                  </Link>
+                );
+              })
+            ) : (
+              <div className="text-muted-foreground px-5 py-8 text-center text-[12.5px]">
+                {t("pages.home.topNamespacesEmpty")}
+              </div>
+            )}
           </div>
         </Card>
 
@@ -434,9 +459,13 @@ export function HomePage() {
             </CardMeta>
           </CardHeader>
           <div className="px-5 py-2 text-[12px]">
-            {recentEvents.map((event) => (
-              <EventRow key={event.id} event={event} />
-            ))}
+            {recentEvents.length > 0 ? (
+              recentEvents.map((event) => <EventRow key={event.id} event={event} />)
+            ) : (
+              <div className="text-muted-foreground px-5 py-8 text-center text-[12.5px]">
+                {t("pages.home.liveEventsEmpty")}
+              </div>
+            )}
             <Link
               to="/audit"
               className="text-latam-indigo block py-2 text-center text-[12px] hover:underline"

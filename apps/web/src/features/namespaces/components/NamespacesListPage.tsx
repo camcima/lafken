@@ -1,4 +1,4 @@
-// Slice 2a: wire real namespace data; fall back to demo when BE returns empty
+// Slice 2a: wire real namespace data; demo layout requires VITE_DEMO_DATA.
 import type { NamespaceResponseDTO } from "@shared/backend-api";
 import { Link } from "@tanstack/react-router";
 import { Layers, Plus, Search, Shield } from "lucide-react";
@@ -10,6 +10,7 @@ import { Button } from "@/components/common/Button";
 import { Card, CardHeader, CardMeta, CardTitle } from "@/components/common/Card";
 import { RightDrawer } from "@/components/common/RightDrawer";
 import { useNamespaces } from "@/features/namespaces/hooks/useNamespaces";
+import { isDemoMode } from "@/lib/demo/demo-mode";
 import { DEMO_NAMESPACES, type DemoNamespace } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
 
@@ -289,7 +290,7 @@ export function NamespacesListPage(): React.JSX.Element {
 
   const { data: page } = useNamespaces({ page: 1, limit: 50 });
   const real: NamespaceResponseDTO[] = page?.data ?? [];
-  const usingDemo = real.length === 0;
+  const usingDemo = isDemoMode && real.length === 0;
 
   const filteredDemo = DEMO_NAMESPACES.filter(
     (ns) =>
@@ -354,11 +355,20 @@ export function NamespacesListPage(): React.JSX.Element {
       {/* Real data layout */}
       {!usingDemo ? (
         <Card className="p-0">
-          <div className="py-1">
-            {filteredReal.map((ns) => (
-              <RealNamespaceRow key={ns.slug} ns={ns} />
-            ))}
-          </div>
+          {filteredReal.length > 0 ? (
+            <div className="py-1">
+              {filteredReal.map((ns) => (
+                <RealNamespaceRow key={ns.slug} ns={ns} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-muted-foreground px-5 py-8 text-center text-[12.5px]">
+              <div className="text-foreground text-[14px] font-medium">
+                {t("pages.namespaces.empty.title")}
+              </div>
+              <div className="mt-1">{t("pages.namespaces.empty.description")}</div>
+            </div>
+          )}
         </Card>
       ) : (
         /* Demo card layout */

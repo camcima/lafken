@@ -100,15 +100,15 @@ describe("HomePage", () => {
     expect(screen.getByText("Live events")).toBeInTheDocument();
   });
 
-  it("renders KPI counts from API when present, otherwise from demo data", () => {
+  it("renders valid zero KPI counts from the API instead of replacing them with demo values", () => {
     render(
       <I18nProvider>
         <HomePage />
       </I18nProvider>,
     );
-    // API returns zero counts → falls back to demo values for totalAssets and quarantine
-    expect(screen.getByText("2.42M")).toBeInTheDocument();
-    expect(screen.getByText("47")).toBeInTheDocument();
+    expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(5);
+    expect(screen.queryByText("2.42M")).not.toBeInTheDocument();
+    expect(screen.queryByText("47")).not.toBeInTheDocument();
   });
 
   it("renders queue rows from demo data", () => {

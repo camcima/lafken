@@ -1,5 +1,5 @@
-// Slice 1: SystemPage now reads real storage bindings via the BE; falls back
-// to a typed demo card while the list is empty.
+// Slice 1: SystemPage reads real storage bindings via the BE; demo storage
+// cards are only rendered when VITE_DEMO_DATA is explicitly enabled.
 import type { StorageBindingResponseDTO } from "@shared/backend-api";
 import { ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
 import React, { useState } from "react";
@@ -11,6 +11,7 @@ import { Sparkline } from "@/components/common/Sparkline";
 import { DeleteStorageBindingDialog } from "@/features/system/components/DeleteStorageBindingDialog";
 import { StorageBindingDrawer } from "@/features/system/components/StorageBindingDrawer";
 import { useStorageBindings } from "@/features/system/hooks/useSystem";
+import { isDemoMode } from "@/lib/demo/demo-mode";
 import {
   DEMO_QUEUE_SPARKS,
   DEMO_QUEUES,
@@ -334,6 +335,7 @@ export function SystemPage(): React.JSX.Element {
       : "ok";
 
   const hasRealBindings = bindings.length > 0;
+  const showDemoBindings = isDemoMode && !hasRealBindings;
 
   return (
     <div className="space-y-4">
@@ -382,7 +384,7 @@ export function SystemPage(): React.JSX.Element {
           <CardHeader>
             <CardTitle>
               {t("pages.system.storageBindings.title")}
-              {!hasRealBindings ? (
+              {showDemoBindings ? (
                 <span className="text-muted-foreground ml-2 text-[10.5px] font-normal">
                   {t("pages.system.storageBindings.demoLabel")}
                 </span>
@@ -407,7 +409,7 @@ export function SystemPage(): React.JSX.Element {
                 />
               ))}
             </div>
-          ) : (
+          ) : showDemoBindings ? (
             <div className="space-y-3 px-5 py-4">
               {DEMO_STORAGE_BINDINGS.map((b) => (
                 <div key={b.name}>
@@ -436,6 +438,10 @@ export function SystemPage(): React.JSX.Element {
                   </div>
                 </div>
               ))}
+            </div>
+          ) : (
+            <div className="text-muted-foreground px-5 py-8 text-center text-[12.5px]">
+              {t("pages.system.noStorageBindings")}
             </div>
           )}
         </Card>
