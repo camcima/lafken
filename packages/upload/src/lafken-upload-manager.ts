@@ -20,9 +20,36 @@ export interface IFileFailedEventDetail {
 type AnyMeta = Record<string, unknown>;
 type AnyBody = Record<string, never>;
 
+interface IImageDimensions {
+  width: number;
+  height: number;
+}
+
+async function probeImageDimensions(file: File): Promise<IImageDimensions> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("not-an-image"));
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = (): void => {
+      const result: IImageDimensions = { width: img.naturalWidth, height: img.naturalHeight };
+      URL.revokeObjectURL(url);
+      resolve(result);
+    };
+    img.onerror = (): void => {
+      URL.revokeObjectURL(url);
+      reject(new Error("image-decode-failed"));
+    };
+    img.src = url;
+  });
+}
+
 export class LafkenUploadManager extends EventTarget {
   private readonly uppy: Uppy<AnyMeta, AnyBody>;
   private readonly publicIdByFileId = new Map<string, string>();
+  private readonly dimProbesByFileId = new Map<string, Promise<IImageDimensions | null>>();
 
   constructor(private readonly opts: ILafkenUploadManagerOptions) {
     super();
@@ -72,18 +99,26 @@ export class LafkenUploadManager extends EventTarget {
 
   addFiles(files: File[]): void {
     for (const file of files) {
-      this.uppy.addFile({
+      const fileId = this.uppy.addFile({
         name: file.name,
         type: file.type,
         data: file,
         source: "lafken-upload",
       });
+      // Probe dimensions in parallel — failures are non-fatal (we just don't
+      // forward width/height). The probe typically completes well before the
+      // user clicks Start, so confirmCompletedFiles can await the result.
+      this.dimProbesByFileId.set(
+        fileId,
+        probeImageDimensions(file).catch(() => null),
+      );
     }
   }
 
   removeFile(fileId: string): void {
     this.uppy.removeFile(fileId);
     this.publicIdByFileId.delete(fileId);
+    this.dimProbesByFileId.delete(fileId);
   }
 
   async start(): Promise<void> {
@@ -93,6 +128,7 @@ export class LafkenUploadManager extends EventTarget {
   cancelAll(): void {
     this.uppy.cancelAll();
     this.publicIdByFileId.clear();
+    this.dimProbesByFileId.clear();
   }
 
   getUppy(): Uppy<AnyMeta, AnyBody> {
@@ -106,7 +142,9 @@ export class LafkenUploadManager extends EventTarget {
       const publicId = this.publicIdByFileId.get(file.id);
       if (!publicId) continue;
       try {
-        await this.opts.client.confirmUpload(publicId);
+        const dims = await this.dimProbesByFileId.get(file.id);
+        const options = dims ? { width: dims.width, height: dims.height } : undefined;
+        await this.opts.client.confirmUpload(publicId, options);
         this.dispatchEvent(
           new CustomEvent<IFileConfirmedEventDetail>("file-confirmed", {
             detail: { fileId: file.id, publicId },

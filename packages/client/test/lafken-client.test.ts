@@ -78,8 +78,36 @@ describe("LafkenClient", () => {
       const [calledUrl, calledInit] = fetchSpy.mock.calls[0];
       expect(calledUrl).toBe("https://api.example.com/v1/assets/asset-123/confirm");
       expect(calledInit?.method).toBe("POST");
-      expect(calledInit?.body).toBeUndefined();
+      expect(JSON.parse(calledInit?.body as string)).toEqual({});
       expect(result).toEqual(mockAsset);
+    });
+
+    it("forwards width and height in the body when options are provided", async () => {
+      const mockAsset = {
+        publicId: "asset-123",
+        namespaceSlug: "my-namespace",
+        state: "uploaded",
+        storageKey: "namespaces/my-namespace/asset-123",
+        declaredMimeType: "image/jpeg",
+        sizeBytes: 1024,
+        uploadedBy: null,
+        confirmedAt: "2026-05-05T12:00:00Z",
+        createdAt: "2026-05-05T11:00:00Z",
+      };
+
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify(mockAsset), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+      const client = new LafkenClient({ baseUrl: "https://api.example.com" });
+      await client.confirmUpload("asset-123", { width: 100, height: 50 });
+
+      const [, calledInit] = fetchSpy.mock.calls[0];
+      const body = JSON.parse(calledInit?.body as string) as Record<string, unknown>;
+      expect(body).toEqual({ width: 100, height: 50 });
     });
   });
 

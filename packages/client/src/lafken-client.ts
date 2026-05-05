@@ -1,5 +1,6 @@
 import {
   type IAsset,
+  type IConfirmUploadOptions,
   type ICreateUploadIntentInput,
   type ICreateUploadIntentResult,
   type ILafkenClientOptions,
@@ -15,10 +16,11 @@ export class LafkenClient {
     return response as ICreateUploadIntentResult;
   }
 
-  async confirmUpload(publicId: string): Promise<IAsset> {
+  async confirmUpload(publicId: string, options?: IConfirmUploadOptions): Promise<IAsset> {
     const response = await this.request(
       "POST",
       `/v1/assets/${encodeURIComponent(publicId)}/confirm`,
+      options ?? {},
     );
     return response as IAsset;
   }

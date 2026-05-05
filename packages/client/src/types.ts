@@ -11,6 +11,11 @@ export interface ICreateUploadIntentResult {
   expiresAt: string;
 }
 
+export interface IConfirmUploadOptions {
+  width?: number;
+  height?: number;
+}
+
 export interface IAsset {
   publicId: string;
   namespaceSlug: string;

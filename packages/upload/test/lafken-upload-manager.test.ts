@@ -1,10 +1,34 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LafkenUploadManager } from "../src/lafken-upload-manager";
 import type {
   IFileConfirmedEventDetail,
   IFileFailedEventDetail,
 } from "../src/lafken-upload-manager";
+
+class FakeImage {
+  public naturalWidth = 256;
+  public naturalHeight = 128;
+  public onload: (() => void) | null = null;
+  public onerror: (() => void) | null = null;
+  public set src(_value: string) {
+    setTimeout(() => this.onload?.(), 0);
+  }
+}
+
+beforeEach(() => {
+  vi.stubGlobal("Image", FakeImage);
+  vi.stubGlobal("URL", {
+    createObjectURL: (): string => "blob:fake",
+    revokeObjectURL: (): void => {
+      // no-op
+    },
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function makeClientMock(overrides?: {
   createUploadIntentError?: Error;
@@ -72,9 +96,59 @@ describe("LafkenUploadManager", () => {
     // Wait for async confirmCompletedFiles to finish
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
-    expect(client.confirmUpload).toHaveBeenCalledWith("pub-123");
+    expect(client.confirmUpload).toHaveBeenCalledWith("pub-123", { width: 256, height: 128 });
     expect(confirmedEvents).toHaveLength(1);
     expect(confirmedEvents[0]).toEqual({ fileId: uppyFile.id, publicId: "pub-123" });
+  });
+
+  it("forwards probed image dimensions to confirmUpload", async () => {
+    const client = makeClientMock();
+    const manager = new LafkenUploadManager({
+      client: client as never,
+      namespaceSlug: "my-namespace",
+    });
+
+    const file = new File(["data"], "image.png", { type: "image/png" });
+    manager.addFiles([file]);
+    const uppy = manager.getUppy();
+    const [uppyFile] = uppy.getFiles();
+    expect(uppyFile).toBeDefined();
+
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (manager as any).publicIdByFileId.set(uppyFile.id, "pub-789");
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+
+    uppy.emit("complete", { successful: [uppyFile], failed: [] });
+
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+
+    expect(client.confirmUpload).toHaveBeenCalledWith("pub-789", { width: 256, height: 128 });
+  });
+
+  it("calls confirmUpload without dimensions for non-image files", async () => {
+    const client = makeClientMock();
+    const manager = new LafkenUploadManager({
+      client: client as never,
+      namespaceSlug: "my-namespace",
+    });
+
+    const file = new File(["data"], "doc.pdf", { type: "application/pdf" });
+    manager.addFiles([file]);
+    const uppy = manager.getUppy();
+    const [uppyFile] = uppy.getFiles();
+    expect(uppyFile).toBeDefined();
+
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (manager as any).publicIdByFileId.set(uppyFile.id, "pub-doc");
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+
+    uppy.emit("complete", { successful: [uppyFile], failed: [] });
+
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+
+    expect(client.confirmUpload).toHaveBeenCalledWith("pub-doc", undefined);
   });
 
   it("dispatches file-failed when confirmUpload throws", async () => {
@@ -107,7 +181,7 @@ describe("LafkenUploadManager", () => {
 
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
-    expect(client.confirmUpload).toHaveBeenCalledWith("pub-456");
+    expect(client.confirmUpload).toHaveBeenCalledWith("pub-456", { width: 256, height: 128 });
     expect(failedEvents).toHaveLength(1);
     expect(failedEvents[0].fileId).toBe(uppyFile.id);
     expect(failedEvents[0].error).toBe(confirmError);
