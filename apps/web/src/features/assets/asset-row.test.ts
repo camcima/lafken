@@ -19,29 +19,26 @@ function makeDto(overrides: Partial<AssetResponseDTO> = {}): AssetResponseDTO {
 }
 
 describe("assetResponseToRow", () => {
-  it("uses the first previewUrl as thumbUrl when one is present", () => {
-    const row = assetResponseToRow(
-      makeDto({
-        previewUrls: {
-          "thumb-sm": "https://imgproxy.test/foo",
-          "thumb-md": "https://imgproxy.test/bar",
-        },
-      }),
-    );
-    expect(row.thumbUrl).toBe("https://imgproxy.test/foo");
+  it("forwards previewUrls verbatim from the DTO", () => {
+    const previewUrls = {
+      "thumb-sm": "https://imgproxy.test/foo",
+      "thumb-md": "https://imgproxy.test/bar",
+    };
+    const row = assetResponseToRow(makeDto({ previewUrls }));
+    expect(row.previewUrls).toEqual(previewUrls);
   });
 
-  it("leaves thumbUrl undefined when previewUrls is empty", () => {
+  it("forwards an empty previewUrls map as-is", () => {
     const row = assetResponseToRow(makeDto({ previewUrls: {} }));
-    expect(row.thumbUrl).toBeUndefined();
+    expect(row.previewUrls).toEqual({});
   });
 
-  it("leaves thumbUrl undefined when previewUrls is missing from the DTO", () => {
+  it("leaves previewUrls undefined when missing from the DTO", () => {
     // Older response shapes from a stale BE may not include previewUrls.
     const dto = makeDto();
     // @ts-expect-error simulating a legacy DTO shape without previewUrls
     delete dto.previewUrls;
     const row = assetResponseToRow(dto);
-    expect(row.thumbUrl).toBeUndefined();
+    expect(row.previewUrls).toBeUndefined();
   });
 });
