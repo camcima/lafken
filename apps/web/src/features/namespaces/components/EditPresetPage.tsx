@@ -89,6 +89,19 @@ function toOptionalNum(value: unknown): number | undefined {
   return undefined;
 }
 
+function mapResponseParamsToFormValues(
+  raw: Record<string, unknown>,
+): IUpdatePresetVersionValues["params"] {
+  return {
+    fit: (raw["fit"] as IUpdatePresetVersionValues["params"]["fit"]) ?? "cover",
+    format: (raw["format"] as IUpdatePresetVersionValues["params"]["format"]) ?? "auto",
+    quality: typeof raw["quality"] === "number" ? raw["quality"] : DEFAULT_QUALITY,
+    width: toOptionalNum(raw["width"]),
+    height: toOptionalNum(raw["height"]),
+    dpr: toOptionalNum(raw["dpr"]),
+  };
+}
+
 // ── Main component ─────────────────────────────────────────
 export function EditPresetPage(): React.JSX.Element {
   const { t } = useTranslation();
@@ -127,40 +140,22 @@ export function EditPresetPage(): React.JSX.Element {
 
   const updateMutation = useUpdatePresetVersion();
 
-  // Extract params from the latest preset record
-  const latestParams = latestPreset?.params;
-
   const form = useForm<IUpdatePresetVersionValues>({
     resolver: zodResolver(updatePresetVersionSchema),
     defaultValues: {
-      params: {
-        fit: (latestParams?.fit as IUpdatePresetVersionValues["params"]["fit"]) ?? "cover",
-        format: (latestParams?.format as IUpdatePresetVersionValues["params"]["format"]) ?? "auto",
-        quality: typeof latestParams?.quality === "number" ? latestParams.quality : DEFAULT_QUALITY,
-        width: toOptionalNum(latestParams?.width),
-        height: toOptionalNum(latestParams?.height),
-        dpr: toOptionalNum(latestParams?.dpr),
-      },
+      params: mapResponseParamsToFormValues(latestPreset?.params ?? {}),
     },
     mode: "onBlur",
   });
 
+  const { reset: resetForm } = form;
+
   // Re-populate when the preset loads
   useEffect(() => {
     if (latestPreset) {
-      const rawParams = latestPreset.params;
-      form.reset({
-        params: {
-          fit: (rawParams?.fit as IUpdatePresetVersionValues["params"]["fit"]) ?? "cover",
-          format: (rawParams?.format as IUpdatePresetVersionValues["params"]["format"]) ?? "auto",
-          quality: typeof rawParams?.quality === "number" ? rawParams.quality : DEFAULT_QUALITY,
-          width: toOptionalNum(rawParams?.width),
-          height: toOptionalNum(rawParams?.height),
-          dpr: toOptionalNum(rawParams?.dpr),
-        },
-      });
+      resetForm({ params: mapResponseParamsToFormValues(latestPreset.params) });
     }
-  }, [latestPreset, form]);
+  }, [latestPreset, resetForm]);
 
   const {
     handleSubmit,

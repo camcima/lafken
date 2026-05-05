@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useCreatePreset } from "@/features/namespaces/hooks/useNamespaces";
 import { ApiError, type ApiErrorBody } from "@/lib/api/api-error";
 import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
 
@@ -45,10 +46,10 @@ vi.mock("@/features/namespaces/hooks/useNamespaces", () => ({
     data: mockNamespace,
     isLoading: false,
   }),
-  useCreatePreset: () => ({
+  useCreatePreset: vi.fn(() => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
-  }),
+  })),
 }));
 
 vi.mock("@tanstack/react-router", async () => {
@@ -107,6 +108,10 @@ describe("NewPresetPage", () => {
     mockMutateAsync.mockReset();
     mockNavigate.mockReset();
     mockNamespace = sampleNamespace;
+    vi.mocked(useCreatePreset).mockReturnValue({
+      mutateAsync: mockMutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useCreatePreset>);
   });
 
   it("renders the form with default values", () => {
@@ -127,15 +132,14 @@ describe("NewPresetPage", () => {
   });
 
   it("disables submit while pending", () => {
-    // Re-mock with isPending = true
-    const { unmount } = renderPage();
-    unmount();
+    vi.mocked(useCreatePreset).mockReturnValue({
+      mutateAsync: mockMutateAsync,
+      isPending: true,
+    } as unknown as ReturnType<typeof useCreatePreset>);
 
-    // We can check the normal state — button is enabled when not pending/submitting
     renderPage();
     const submitBtn = screen.getByRole("button", { name: /create preset/i });
-    // Not disabled when not submitting
-    expect(submitBtn).not.toBeDisabled();
+    expect(submitBtn).toBeDisabled();
   });
 
   it("calls useCreatePreset with the correct payload on submit", async () => {
