@@ -468,8 +468,23 @@
         "editMetadata": "Editar metadatos",
         "editPolicy": "Editar política",
         "editPolicyDeferred": "La edición de la política llegará en la próxima entrega.",
+        "editPolicyArchivedTooltip": "No se puede editar la política de un namespace archivado.",
         "archive": "Archivar",
         "unarchive": "Desarchivar"
+      },
+      "policy": {
+        "edit": {
+          "title": "Editar política",
+          "subtitle": "Actualizar la política del namespace {{slug}}.",
+          "submit": "Guardar política",
+          "cancel": "Cancelar",
+          "errors": {
+            "generic": "No se pudo guardar la política. Por favor, inténtelo de nuevo.",
+            "namespaceDeleted": "Este namespace fue eliminado. Actualice la página.",
+            "namespaceArchived": "Este namespace fue archivado. Actualice para ver el estado actual.",
+            "versionConflict": "Otro operador editó esta política. Actualice y vuelva a aplicar sus cambios."
+          }
+        }
       },
       "form": {
         "title": "Nuevo namespace",
@@ -599,6 +614,35 @@
         "latestActivity": "Actividad reciente",
         "latestActivityMeta": "últimas 24h · este namespace",
         "noActivity": "No hay actividad reciente en este namespace."
+      },
+      "policy": {
+        "currentVersion": "Política v{{version}}",
+        "currentVersionMeta": "Política activa actual",
+        "configured": "Configurado",
+        "notConfigured": "—",
+        "pastVersions": {
+          "title": "Historial de versiones",
+          "empty": "No hay versiones anteriores.",
+          "backToCurrent": "Volver a la actual"
+        },
+        "fields": {
+          "version": "Versión",
+          "retentionDays": "Días de retención",
+          "retentionMode": "Modo de retención",
+          "maxFileSizeBytes": "Tamaño máximo de archivo (bytes)",
+          "allowedMimeTypes": "Tipos MIME permitidos",
+          "exifHandling": "Manejo de EXIF",
+          "virusScanRequired": "Análisis antivirus requerido",
+          "contentModeration": "Moderación de contenido",
+          "requiredMetadataSchema": "Esquema de metadatos requerido",
+          "immutable": "Inmutable",
+          "servingMode": "Modo de entrega",
+          "signedUrlTtlSeconds": "TTL de URL firmada (s)",
+          "signedUrlBucketSize": "Tamaño de bucket de URL firmada",
+          "retryConfig": "Configuración de reintentos",
+          "createdAt": "Creado el",
+          "createdBy": "Creado por"
+        }
       },
       "empty": {
         "overview": "Los detalles del resumen aparecerán aquí cuando los datos estén disponibles.",

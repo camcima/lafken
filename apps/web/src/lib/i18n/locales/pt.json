@@ -468,8 +468,23 @@
         "editMetadata": "Editar metadados",
         "editPolicy": "Editar política",
         "editPolicyDeferred": "A edição de política chegará na próxima entrega.",
+        "editPolicyArchivedTooltip": "Não é possível editar a política de um namespace arquivado.",
         "archive": "Arquivar",
         "unarchive": "Desarquivar"
+      },
+      "policy": {
+        "edit": {
+          "title": "Editar política",
+          "subtitle": "Atualizar a política do namespace {{slug}}.",
+          "submit": "Salvar política",
+          "cancel": "Cancelar",
+          "errors": {
+            "generic": "Não foi possível salvar a política. Por favor, tente novamente.",
+            "namespaceDeleted": "Este namespace foi excluído. Atualize a página.",
+            "namespaceArchived": "Este namespace foi arquivado. Atualize para ver o estado atual.",
+            "versionConflict": "Outro operador editou esta política. Atualize e aplique suas alterações novamente."
+          }
+        }
       },
       "form": {
         "title": "Novo namespace",
@@ -599,6 +614,35 @@
         "latestActivity": "Atividade recente",
         "latestActivityMeta": "últimas 24h · este namespace",
         "noActivity": "Nenhuma atividade recente neste namespace."
+      },
+      "policy": {
+        "currentVersion": "Política v{{version}}",
+        "currentVersionMeta": "Política ativa atual",
+        "configured": "Configurado",
+        "notConfigured": "—",
+        "pastVersions": {
+          "title": "Histórico de versões",
+          "empty": "Nenhuma versão anterior.",
+          "backToCurrent": "Voltar para a atual"
+        },
+        "fields": {
+          "version": "Versão",
+          "retentionDays": "Dias de retenção",
+          "retentionMode": "Modo de retenção",
+          "maxFileSizeBytes": "Tamanho máximo do arquivo (bytes)",
+          "allowedMimeTypes": "Tipos MIME permitidos",
+          "exifHandling": "Tratamento de EXIF",
+          "virusScanRequired": "Verificação de vírus obrigatória",
+          "contentModeration": "Moderação de conteúdo",
+          "requiredMetadataSchema": "Esquema de metadados obrigatório",
+          "immutable": "Imutável",
+          "servingMode": "Modo de entrega",
+          "signedUrlTtlSeconds": "TTL da URL assinada (s)",
+          "signedUrlBucketSize": "Tamanho do bucket de URL assinada",
+          "retryConfig": "Configuração de tentativas",
+          "createdAt": "Criado em",
+          "createdBy": "Criado por"
+        }
       },
       "empty": {
         "overview": "Os detalhes da visão geral aparecerão aqui quando os dados estiverem disponíveis.",
