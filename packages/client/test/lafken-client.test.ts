@@ -147,6 +147,100 @@ describe("LafkenClient", () => {
     });
   });
 
+  describe("getPreviewUrl", () => {
+    it("GETs the preview URL endpoint and returns the url string", async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ url: "https://imgproxy.example.com/foo" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+      const client = new LafkenClient({ baseUrl: "https://api.example.com" });
+      const result = await client.getPreviewUrl({ publicId: "asset-123", preset: "thumb" });
+
+      expect(fetchSpy).toHaveBeenCalledOnce();
+      const [calledUrl, calledInit] = fetchSpy.mock.calls[0];
+      expect(calledUrl).toBe(
+        "https://api.example.com/v1/assets/asset-123/preview-url?preset=thumb",
+      );
+      expect(calledInit?.method).toBe("GET");
+      expect(calledInit?.body).toBeUndefined();
+      expect(result).toBe("https://imgproxy.example.com/foo");
+    });
+
+    it("encodes reserved characters in the publicId path segment and the preset query param", async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ url: "https://imgproxy.example.com/bar" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+      const client = new LafkenClient({ baseUrl: "https://api.example.com" });
+      await client.getPreviewUrl({ publicId: "abc%def", preset: "hero image" });
+
+      const [calledUrl] = fetchSpy.mock.calls[0];
+      expect(calledUrl).toBe(
+        "https://api.example.com/v1/assets/abc%25def/preview-url?preset=hero+image",
+      );
+    });
+
+    it("attaches the Authorization header when getAuthToken is configured", async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ url: "https://imgproxy.example.com/baz" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+      const getAuthToken = vi.fn().mockResolvedValue("preview-token") as () => Promise<
+        string | null
+      >;
+      const client = new LafkenClient({
+        baseUrl: "https://api.example.com",
+        getAuthToken,
+      });
+
+      await client.getPreviewUrl({ publicId: "asset-123", preset: "thumb" });
+
+      expect(getAuthToken).toHaveBeenCalledOnce();
+      const [, calledInit] = fetchSpy.mock.calls[0];
+      const headers = calledInit?.headers as Record<string, string>;
+      expect(headers.Authorization).toBe("Bearer preview-token");
+    });
+
+    it("throws LafkenApiError with parsed problem details on 404 responses", async () => {
+      const problemDetails = {
+        type: "about:blank",
+        status: 404,
+        title: "Not Found",
+        detail: "Asset not found",
+      };
+
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify(problemDetails), {
+          status: 404,
+          headers: { "Content-Type": "application/problem+json" },
+        }),
+      );
+
+      const client = new LafkenClient({ baseUrl: "https://api.example.com" });
+
+      let thrownError: LafkenApiError | undefined;
+      try {
+        await client.getPreviewUrl({ publicId: "missing", preset: "thumb" });
+      } catch (err) {
+        thrownError = err as LafkenApiError;
+      }
+
+      expect(thrownError).toBeInstanceOf(LafkenApiError);
+      expect(thrownError?.status).toBe(404);
+      expect(thrownError?.message).toBe("Asset not found");
+      expect(thrownError?.problemDetails).toEqual(problemDetails);
+    });
+  });
+
   describe("authentication", () => {
     it("adds Authorization header when getAuthToken returns a token", async () => {
       const mockResult = {

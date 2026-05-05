@@ -25,8 +25,18 @@ export class LafkenClient {
     return response as IAsset;
   }
 
-  private async request(method: string, path: string, body?: unknown): Promise<unknown> {
-    const url = `${this.opts.baseUrl.replace(/\/$/, "")}${path}`;
+  async getPreviewUrl(input: { publicId: string; preset: string }): Promise<string> {
+    const base = this.opts.baseUrl.replace(/\/$/, "");
+    const url = new URL(`${base}/v1/assets/${encodeURIComponent(input.publicId)}/preview-url`);
+    url.searchParams.set("preset", input.preset);
+    const response = (await this.request("GET", url.toString())) as { url: string };
+    return response.url;
+  }
+
+  private async request(method: string, pathOrUrl: string, body?: unknown): Promise<unknown> {
+    const url = pathOrUrl.startsWith("http")
+      ? pathOrUrl
+      : `${this.opts.baseUrl.replace(/\/$/, "")}${pathOrUrl}`;
     const headers: Record<string, string> = { Accept: "application/json" };
     if (body !== undefined) {
       headers["Content-Type"] = "application/json";
