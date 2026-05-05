@@ -532,6 +532,20 @@
         "description": "Create the first namespace to get started."
       },
       "demoLabel": "(demo)",
+      "policy": {
+        "edit": {
+          "title": "Edit policy",
+          "subtitle": "Update the policy for namespace {{slug}}.",
+          "submit": "Save policy",
+          "cancel": "Cancel",
+          "errors": {
+            "generic": "Could not save the policy. Please try again.",
+            "namespaceDeleted": "This namespace was deleted. Please refresh the page.",
+            "namespaceArchived": "This namespace was archived. Please refresh the page.",
+            "versionConflict": "Another operator edited this policy. Refresh and re-apply your changes."
+          }
+        }
+      },
       "actions": {
         "newNamespace": "New namespace",
         "editMetadata": "Edit metadata",
