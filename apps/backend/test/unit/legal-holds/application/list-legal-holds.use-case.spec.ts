@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { ListLegalHoldsUseCase } from "@/legal-holds/application/use-cases/list-legal-holds.use-case";
 import { LegalHold } from "@/legal-holds/domain/entities/legal-hold.entity";
 
+import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryLegalHoldQueryRepository } from "../__fakes__/in-memory-legal-hold-query.repository";
 
 describe("ListLegalHoldsUseCase", () => {
@@ -22,7 +23,7 @@ describe("ListLegalHoldsUseCase", () => {
   });
 
   it("returns enriched holds with their affectedAssetCount", async () => {
-    const holdId = 1n;
+    const holdId = TEST_UUIDS.legalHold1;
     const legalHold = LegalHold.fromProps({
       id: holdId,
       caseReference: "CASE-001",

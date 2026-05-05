@@ -28,13 +28,13 @@ describe("NamespaceWriteRepository.createPolicyVersion", () => {
     await db.closeConnection();
   });
 
-  async function seedStorageBinding(): Promise<bigint> {
+  async function seedStorageBinding(): Promise<string> {
     const row = await db.connection
       .insertInto("storage_bindings")
       .values({ name: "test-binding", adapter_type: "gcs", config: { bucket: "test-bucket" } })
       .returningAll()
       .executeTakeFirstOrThrow();
-    return BigInt((row as { id: bigint }).id);
+    return (row as { id: string }).id;
   }
 
   const basePolicy = {
@@ -53,7 +53,7 @@ describe("NamespaceWriteRepository.createPolicyVersion", () => {
     retryConfig: null,
   };
 
-  async function seedNamespaceV1(slug: string): Promise<bigint> {
+  async function seedNamespaceV1(slug: string): Promise<string> {
     const storageBindingId = await seedStorageBinding();
     const namespace = await repository.createWithInitialPolicy({
       slug,
@@ -96,8 +96,8 @@ describe("NamespaceWriteRepository.createPolicyVersion", () => {
       .where("id", "=", namespaceId)
       .executeTakeFirstOrThrow();
 
-    expect(BigInt((nsRow as { current_policy_id: bigint }).current_policy_id)).toBe(
-      BigInt((policies[1] as { id: bigint }).id),
+    expect((nsRow as { current_policy_id: string }).current_policy_id).toBe(
+      (policies[1] as { id: string }).id,
     );
   });
 

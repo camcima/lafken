@@ -8,7 +8,7 @@ describe("LegalHoldResponseMapper", () => {
   it("maps an active legal hold to the response DTO shape", () => {
     const result = LegalHoldResponseMapper.fromDomain(
       LegalHold.fromProps({
-        id: 1n,
+        id: "01900000-0000-7000-8000-000000000050",
         caseReference: "CASE-2026-001",
         description: "Hold for litigation purposes",
         scopeSummary: "All aircraft inspection photos from 2024",
@@ -25,7 +25,7 @@ describe("LegalHoldResponseMapper", () => {
     );
 
     expect(result).toEqual({
-      id: "1",
+      id: "01900000-0000-7000-8000-000000000050",
       caseReference: "CASE-2026-001",
       description: "Hold for litigation purposes",
       scopeSummary: "All aircraft inspection photos from 2024",
@@ -42,7 +42,7 @@ describe("LegalHoldResponseMapper", () => {
   it("maps a lifted legal hold with optional fields populated", () => {
     const result = LegalHoldResponseMapper.fromDomain(
       LegalHold.fromProps({
-        id: 2n,
+        id: "01900000-0000-7000-8000-000000000051",
         caseReference: "CASE-2025-042",
         description: "Resolved litigation hold",
         scopeSummary: "Documents related to Q3 audit",
@@ -59,7 +59,7 @@ describe("LegalHoldResponseMapper", () => {
     );
 
     expect(result).toMatchObject({
-      id: "2",
+      id: "01900000-0000-7000-8000-000000000051",
       active: false,
       liftedBy: "counsel@example.com",
       liftedAt: "2025-12-31T23:59:59.000Z",

@@ -4,6 +4,7 @@ import { GetStorageBindingByNameUseCase } from "@/system/application/use-cases/g
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 import { StorageBindingNotFoundError } from "@/system/domain/errors/storage-binding-not-found.error";
 
+import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryStorageBindingQueryRepository } from "../__fakes__/in-memory-storage-binding-query.repository";
 
 describe("GetStorageBindingByNameUseCase", () => {
@@ -23,7 +24,7 @@ describe("GetStorageBindingByNameUseCase", () => {
 
   it("returns the storage binding when found", async () => {
     const binding = StorageBinding.fromProps({
-      id: 1n,
+      id: TEST_UUIDS.storageBinding1,
       name: "default",
       adapterType: "gcs",
       config: {},

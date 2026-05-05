@@ -5,6 +5,7 @@ import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
+import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
 
 describe("GetNamespaceBySlugUseCase", () => {
@@ -24,12 +25,12 @@ describe("GetNamespaceBySlugUseCase", () => {
 
   it("returns the namespace when found", async () => {
     const fixture = Namespace.fromProps({
-      id: 1n,
+      id: TEST_UUIDS.namespace1,
       slug: new Slug("aircraft-photos"),
       displayName: "Aircraft Photos",
       description: null,
-      currentPolicyId: 1n,
-      storageBindingId: 1n,
+      currentPolicyId: TEST_UUIDS.policy1,
+      storageBindingId: TEST_UUIDS.storageBinding1,
       archivedAt: null,
       createdAt: new Date("2026-01-01T00:00:00Z"),
       updatedAt: new Date("2026-01-01T00:00:00Z"),

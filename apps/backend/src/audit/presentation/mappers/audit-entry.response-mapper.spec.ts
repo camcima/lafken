@@ -12,7 +12,7 @@ describe("AuditEntryResponseMapper", () => {
 
     const result = AuditEntryResponseMapper.fromDomain(
       AuditEntry.fromProps({
-        id: BigInt("123456789"),
+        id: "01900000-0000-7000-8000-000000000061",
         entityType: "namespace",
         entityId: "ns-abc-123",
         action: "create",
@@ -27,7 +27,7 @@ describe("AuditEntryResponseMapper", () => {
     );
 
     expect(result).toEqual({
-      id: "123456789",
+      id: "01900000-0000-7000-8000-000000000061",
       entityType: "namespace",
       entityId: "ns-abc-123",
       action: "create",
@@ -44,7 +44,7 @@ describe("AuditEntryResponseMapper", () => {
 
     const result = AuditEntryResponseMapper.fromDomain(
       AuditEntry.fromProps({
-        id: BigInt("987654321"),
+        id: "01900000-0000-7000-8000-000000000062",
         entityType: "asset",
         entityId: "asset-xyz",
         action: "delete",
@@ -58,7 +58,7 @@ describe("AuditEntryResponseMapper", () => {
       }),
     );
 
-    expect(result.id).toBe("987654321");
+    expect(result.id).toBe("01900000-0000-7000-8000-000000000062");
     expect(result.beforeState).toEqual({ state: "active" });
     expect(result.afterState).toBeUndefined();
     expect(result.reason).toBeUndefined();

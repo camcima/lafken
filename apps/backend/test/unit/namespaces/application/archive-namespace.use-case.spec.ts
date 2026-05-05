@@ -5,17 +5,18 @@ import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
+import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
 import { InMemoryNamespaceWriteRepository } from "../__fakes__/in-memory-namespace-write.repository";
 
 function makeNamespace(archivedAt: Date | null = null): Namespace {
   return Namespace.fromProps({
-    id: 1n,
+    id: TEST_UUIDS.namespace1,
     slug: new Slug("my-namespace"),
     displayName: "My Namespace",
     description: null,
-    currentPolicyId: 1n,
-    storageBindingId: 1n,
+    currentPolicyId: TEST_UUIDS.policy1,
+    storageBindingId: TEST_UUIDS.storageBinding1,
     archivedAt,
     createdAt: new Date(),
     updatedAt: new Date(),

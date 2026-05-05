@@ -32,7 +32,7 @@ describe("StorageBindingWriteRepository", () => {
 
   it("inserts a new binding row and returns it with an assigned id and timestamps", async () => {
     const binding = StorageBinding.fromProps({
-      id: 0n,
+      id: "00000000-0000-0000-0000-000000000000",
       name: "new-binding",
       adapterType: "gcs",
       config: { bucket: "my-bucket" },
@@ -42,7 +42,8 @@ describe("StorageBindingWriteRepository", () => {
 
     const result = await repository.insert(binding);
 
-    expect(result.props.id).toBeGreaterThan(0n);
+    expect(typeof result.props.id).toBe("string");
+    expect(result.props.id.length).toBeGreaterThan(0);
     expect(result.props.name).toBe("new-binding");
     expect(result.props.adapterType).toBe("gcs");
     expect(result.props.config).toEqual({ bucket: "my-bucket" });
@@ -67,7 +68,7 @@ describe("StorageBindingWriteRepository", () => {
       .execute();
 
     const binding = StorageBinding.fromProps({
-      id: 0n,
+      id: "00000000-0000-0000-0000-000000000000",
       name: "to-update",
       adapterType: "gcs",
       config: { bucket: "new-bucket" },
@@ -93,7 +94,7 @@ describe("StorageBindingWriteRepository", () => {
 
   it("throws when updating a row that does not exist", async () => {
     const binding = StorageBinding.fromProps({
-      id: 0n,
+      id: "00000000-0000-0000-0000-000000000000",
       name: "missing",
       adapterType: "gcs",
       config: { bucket: "any-bucket" },

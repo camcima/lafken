@@ -9,12 +9,12 @@ describe("NamespaceResponseMapper", () => {
   it("maps a namespace to the response DTO shape", () => {
     const result = NamespaceResponseMapper.fromDomain(
       Namespace.fromProps({
-        id: 1n,
+        id: "01900000-0000-7000-8000-000000000010",
         slug: new Slug("aircraft-photos"),
         displayName: "Aircraft Photos",
         description: "Photos taken during aircraft inspections",
-        currentPolicyId: 1n,
-        storageBindingId: 1n,
+        currentPolicyId: "01900000-0000-7000-8000-000000000020",
+        storageBindingId: "01900000-0000-7000-8000-000000000001",
         archivedAt: null,
         createdAt: new Date("2026-01-01T00:00:00Z"),
         updatedAt: new Date("2026-01-02T00:00:00Z"),

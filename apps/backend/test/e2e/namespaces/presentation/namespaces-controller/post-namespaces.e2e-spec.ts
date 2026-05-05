@@ -58,7 +58,7 @@ describe("[E2E] POST /v1/namespaces", () => {
       .returningAll()
       .execute();
 
-    storageBindingId = String((row as { id: bigint }).id);
+    storageBindingId = (row as { id: string }).id;
   });
 
   it("returns 201 + DTO when slug is unique and storage binding exists", async () => {
@@ -121,7 +121,7 @@ describe("[E2E] POST /v1/namespaces", () => {
         slug: "missing-binding-ns",
         displayName: "Missing Binding Namespace",
         description: null,
-        storageBindingId: "999999999",
+        storageBindingId: "00000000-0000-0000-0000-000000000000",
         policy: VALID_POLICY,
       });
 
@@ -131,7 +131,7 @@ describe("[E2E] POST /v1/namespaces", () => {
       type: "https://lafken.dev/problems/storage-binding-missing-error",
       status: 422,
     });
-    expect(response.body.detail).toContain("999999999");
+    expect(response.body.detail).toContain("00000000-0000-0000-0000-000000000000");
   });
 
   it("returns 400 when slug fails the regex", async () => {

@@ -41,10 +41,10 @@ describe("AssetQueryRepository", () => {
   });
 
   it("returns null for a processing job when asset ID does not exist", async () => {
-    expect(await repository.findProcessingJob(0n)).toBeNull();
+    expect(await repository.findProcessingJob("00000000-0000-0000-0000-000000000000")).toBeNull();
   });
 
   it("returns null for a namespace slug when namespace ID does not exist", async () => {
-    expect(await repository.findNamespaceSlug(0n)).toBeNull();
+    expect(await repository.findNamespaceSlug("00000000-0000-0000-0000-000000000000")).toBeNull();
   });
 });

@@ -46,7 +46,7 @@ const VALID_DB_POLICY_VALUES = {
 describe("[E2E] POST /v1/namespaces/:slug/policy-versions", () => {
   let app: INestApplication;
   let db: DatabaseClient;
-  let storageBindingId: bigint;
+  let storageBindingId: string;
 
   beforeAll(async () => {
     const fixture = await createAppModuleForE2ETest();
@@ -78,7 +78,7 @@ describe("[E2E] POST /v1/namespaces/:slug/policy-versions", () => {
       .returningAll()
       .execute();
 
-    storageBindingId = (bindingRow as { id: bigint }).id;
+    storageBindingId = (bindingRow as { id: string }).id;
   });
 
   async function insertNamespace(slug: string, archivedAt: Date | null = null): Promise<void> {
@@ -88,14 +88,14 @@ describe("[E2E] POST /v1/namespaces/:slug/policy-versions", () => {
         .values({
           slug,
           display_name: "Test Namespace",
-          current_policy_id: BigInt(0),
+          current_policy_id: "00000000-0000-0000-0000-000000000000",
           storage_binding_id: storageBindingId,
           archived_at: archivedAt ?? undefined,
         })
         .returningAll()
         .execute();
 
-      const namespaceId = (nsRow as { id: bigint }).id;
+      const namespaceId = (nsRow as { id: string }).id;
 
       const [policyRow] = await tx
         .insertInto("namespace_policies")
@@ -107,7 +107,7 @@ describe("[E2E] POST /v1/namespaces/:slug/policy-versions", () => {
         .returningAll()
         .execute();
 
-      const policyId = (policyRow as { id: bigint }).id;
+      const policyId = (policyRow as { id: string }).id;
 
       await tx
         .updateTable("namespaces")

@@ -61,16 +61,16 @@ describe("NamespaceQueryRepository", () => {
         .where("name", "=", "default")
         .executeTakeFirstOrThrow();
 
-      // Insert namespace — current_policy_id = 0 is a placeholder that satisfies
+      // Insert namespace — current_policy_id uses NIL_UUID as a placeholder that satisfies
       // NOT NULL. The deferred FK allows the violation until commit.
       await tx
         .insertInto("namespaces")
         .values({
           slug: "aircraft-photos",
           display_name: "Aircraft Photos",
-          // Force bigint literal 0 to satisfy NOT NULL; deferred FK allows this
-          current_policy_id: BigInt(0),
-          storage_binding_id: BigInt((sb as { id: bigint }).id),
+          // NIL UUID satisfies NOT NULL; deferred FK allows this
+          current_policy_id: "00000000-0000-0000-0000-000000000000",
+          storage_binding_id: (sb as { id: string }).id,
         })
         .execute();
 
@@ -84,7 +84,7 @@ describe("NamespaceQueryRepository", () => {
       await tx
         .insertInto("namespace_policies")
         .values({
-          namespace_id: BigInt((ns as { id: bigint }).id),
+          namespace_id: (ns as { id: string }).id,
           version: 1,
           retention_days: 365,
           retention_mode: "delete",
@@ -100,14 +100,14 @@ describe("NamespaceQueryRepository", () => {
       const policy = await tx
         .selectFrom("namespace_policies")
         .selectAll()
-        .where("namespace_id", "=", BigInt((ns as { id: bigint }).id))
+        .where("namespace_id", "=", (ns as { id: string }).id)
         .executeTakeFirstOrThrow();
 
       // Update namespace to point at real policy (satisfying the deferred FK)
       await tx
         .updateTable("namespaces")
-        .set({ current_policy_id: BigInt((policy as { id: bigint }).id) })
-        .where("id", "=", BigInt((ns as { id: bigint }).id))
+        .set({ current_policy_id: (policy as { id: string }).id })
+        .where("id", "=", (ns as { id: string }).id)
         .execute();
     });
 

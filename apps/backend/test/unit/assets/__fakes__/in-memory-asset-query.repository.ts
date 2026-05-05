@@ -10,33 +10,33 @@ import {
 
 export class InMemoryAssetQueryRepository implements AssetQueryRepositoryPort {
   private assets: Asset[] = [];
-  private stateTransitions = new Map<bigint, AssetStateTransition[]>();
-  private analyses = new Map<bigint, AssetAnalysis[]>();
-  private processingJobs = new Map<bigint, ProcessingJob>();
-  private namespaceSlugs = new Map<bigint, string>();
-  private policyVersions = new Map<bigint, number>();
+  private stateTransitions = new Map<string, AssetStateTransition[]>();
+  private analyses = new Map<string, AssetAnalysis[]>();
+  private processingJobs = new Map<string, ProcessingJob>();
+  private namespaceSlugs = new Map<string, string>();
+  private policyVersions = new Map<string, number>();
 
   seed(assets: Asset[]): void {
     this.assets = assets;
   }
 
-  seedStateTransitions(assetId: bigint, transitions: AssetStateTransition[]): void {
+  seedStateTransitions(assetId: string, transitions: AssetStateTransition[]): void {
     this.stateTransitions.set(assetId, transitions);
   }
 
-  seedAnalyses(assetId: bigint, analyses: AssetAnalysis[]): void {
+  seedAnalyses(assetId: string, analyses: AssetAnalysis[]): void {
     this.analyses.set(assetId, analyses);
   }
 
-  seedProcessingJob(assetId: bigint, job: ProcessingJob): void {
+  seedProcessingJob(assetId: string, job: ProcessingJob): void {
     this.processingJobs.set(assetId, job);
   }
 
-  seedNamespaceSlug(namespaceId: bigint, slug: string): void {
+  seedNamespaceSlug(namespaceId: string, slug: string): void {
     this.namespaceSlugs.set(namespaceId, slug);
   }
 
-  seedPolicyVersion(policyVersionId: bigint, version: number): void {
+  seedPolicyVersion(policyVersionId: string, version: number): void {
     this.policyVersions.set(policyVersionId, version);
   }
 
@@ -56,23 +56,23 @@ export class InMemoryAssetQueryRepository implements AssetQueryRepositoryPort {
     return Promise.resolve(this.assets.find((a) => a.props.publicId === publicId) ?? null);
   }
 
-  listStateTransitions(assetId: bigint): Promise<AssetStateTransition[]> {
+  listStateTransitions(assetId: string): Promise<AssetStateTransition[]> {
     return Promise.resolve(this.stateTransitions.get(assetId) ?? []);
   }
 
-  listAnalyses(assetId: bigint): Promise<AssetAnalysis[]> {
+  listAnalyses(assetId: string): Promise<AssetAnalysis[]> {
     return Promise.resolve(this.analyses.get(assetId) ?? []);
   }
 
-  findProcessingJob(assetId: bigint): Promise<ProcessingJob | null> {
+  findProcessingJob(assetId: string): Promise<ProcessingJob | null> {
     return Promise.resolve(this.processingJobs.get(assetId) ?? null);
   }
 
-  findNamespaceSlug(namespaceId: bigint): Promise<string | null> {
+  findNamespaceSlug(namespaceId: string): Promise<string | null> {
     return Promise.resolve(this.namespaceSlugs.get(namespaceId) ?? null);
   }
 
-  findPolicyVersion(policyVersionId: bigint): Promise<number | null> {
+  findPolicyVersion(policyVersionId: string): Promise<number | null> {
     return Promise.resolve(this.policyVersions.get(policyVersionId) ?? null);
   }
 }

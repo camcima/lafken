@@ -1,19 +1,22 @@
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 import { StorageBindingWriteRepositoryPort } from "@/system/domain/repositories/storage-binding-write.repository.port";
 
-const INITIAL_ID = 1n;
-const ID_INCREMENT = 1n;
+let nextIdCounter = 1;
+const UUID_SUFFIX_PAD_LENGTH = 12;
+
+function generateFakeUuid(): string {
+  const counter = nextIdCounter++;
+  return `01900000-0000-7000-8000-${String(counter).padStart(UUID_SUFFIX_PAD_LENGTH, "0")}`;
+}
 
 export class InMemoryStorageBindingWriteRepository implements StorageBindingWriteRepositoryPort {
   private readonly bindings = new Map<string, StorageBinding>();
-  private nextId: bigint = INITIAL_ID;
 
   insert(binding: StorageBinding): Promise<StorageBinding> {
     const stored = StorageBinding.fromProps({
       ...binding.props,
-      id: this.nextId,
+      id: generateFakeUuid(),
     });
-    this.nextId += ID_INCREMENT;
     this.bindings.set(stored.props.name, stored);
     return Promise.resolve(stored);
   }
@@ -31,9 +34,6 @@ export class InMemoryStorageBindingWriteRepository implements StorageBindingWrit
   // Test-only helpers
   seed(binding: StorageBinding): void {
     this.bindings.set(binding.props.name, binding);
-    if (binding.props.id >= this.nextId) {
-      this.nextId = binding.props.id + ID_INCREMENT;
-    }
   }
 
   has(name: string): boolean {

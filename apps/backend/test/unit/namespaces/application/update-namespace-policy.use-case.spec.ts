@@ -7,6 +7,7 @@ import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not
 import { PolicyVersionConflictError } from "@/namespaces/domain/errors/policy-version-conflict.error";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
+import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
 import { InMemoryNamespaceWriteRepository } from "../__fakes__/in-memory-namespace-write.repository";
 
@@ -28,12 +29,12 @@ const VALID_POLICY = {
 
 function makeNamespace(opts: { slug: string; archived?: boolean }): Namespace {
   return Namespace.fromProps({
-    id: 42n,
+    id: TEST_UUIDS.namespace1,
     slug: new Slug(opts.slug),
     displayName: "X",
     description: null,
-    currentPolicyId: 1n,
-    storageBindingId: 1n,
+    currentPolicyId: TEST_UUIDS.policy1,
+    storageBindingId: TEST_UUIDS.storageBinding1,
     archivedAt: opts.archived ? new Date() : null,
     createdAt: new Date(),
     updatedAt: new Date(),

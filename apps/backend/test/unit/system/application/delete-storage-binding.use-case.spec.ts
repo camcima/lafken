@@ -4,6 +4,7 @@ import { DeleteStorageBindingUseCase } from "@/system/application/use-cases/dele
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 import { StorageBindingNotFoundError } from "@/system/domain/errors/storage-binding-not-found.error";
 
+import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryStorageBindingQueryRepository } from "../__fakes__/in-memory-storage-binding-query.repository";
 import { InMemoryStorageBindingWriteRepository } from "../__fakes__/in-memory-storage-binding-write.repository";
 
@@ -20,7 +21,7 @@ describe("DeleteStorageBindingUseCase", () => {
 
   it("deletes a storage binding when it exists", async () => {
     const binding = StorageBinding.fromProps({
-      id: 1n,
+      id: TEST_UUIDS.storageBinding1,
       name: "default",
       adapterType: "gcs",
       config: { bucket: "lafken-dev", projectId: "lafken-project" },

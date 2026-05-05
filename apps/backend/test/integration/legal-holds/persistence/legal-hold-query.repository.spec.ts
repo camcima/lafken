@@ -33,11 +33,11 @@ describe("LegalHoldQueryRepository", () => {
   });
 
   it("returns null for an id that does not exist", async () => {
-    expect(await repository.findById(99999n)).toBeNull();
+    expect(await repository.findById("00000000-0000-0000-0000-000000000000")).toBeNull();
   });
 
   it("returns 0 for countAffectedAssets when no assets are linked", async () => {
-    const count = await repository.countAffectedAssets(99999n);
+    const count = await repository.countAffectedAssets("00000000-0000-0000-0000-000000000000");
     expect(count).toBe(0);
   });
 });

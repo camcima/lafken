@@ -7,7 +7,7 @@ import { StorageBindingResponseMapper } from "./storage-binding.response-mapper"
 describe("StorageBindingResponseMapper", () => {
   it("maps a GCS storage binding to its response DTO with all fields", () => {
     const binding = StorageBinding.fromProps({
-      id: 1n,
+      id: "01900000-0000-7000-8000-000000000001",
       name: "gcs-prod",
       adapterType: "gcs",
       config: { bucket: "my-bucket" },
@@ -17,7 +17,7 @@ describe("StorageBindingResponseMapper", () => {
 
     const dto = StorageBindingResponseMapper.fromDomain(binding);
 
-    expect(dto.id).toBe("1");
+    expect(dto.id).toBe("01900000-0000-7000-8000-000000000001");
     expect(dto.name).toBe("gcs-prod");
     expect(dto.adapterType).toBe("gcs");
     expect(dto.config).toEqual({ bucket: "my-bucket" });
@@ -26,7 +26,7 @@ describe("StorageBindingResponseMapper", () => {
 
   it("does not expose any credential field on the DTO", () => {
     const binding = StorageBinding.fromProps({
-      id: 2n,
+      id: "01900000-0000-7000-8000-000000000002",
       name: "gcs-staging",
       adapterType: "gcs",
       config: { bucket: "staging-bucket" },

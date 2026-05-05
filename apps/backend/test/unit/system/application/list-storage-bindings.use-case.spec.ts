@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { ListStorageBindingsUseCase } from "@/system/application/use-cases/list-storage-bindings.use-case";
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 
+import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryStorageBindingQueryRepository } from "../__fakes__/in-memory-storage-binding-query.repository";
 
 describe("ListStorageBindingsUseCase", () => {
@@ -21,7 +22,7 @@ describe("ListStorageBindingsUseCase", () => {
 
   it("returns all storage bindings when they exist", async () => {
     const binding = StorageBinding.fromProps({
-      id: 1n,
+      id: TEST_UUIDS.storageBinding1,
       name: "default",
       adapterType: "gcs",
       config: {},

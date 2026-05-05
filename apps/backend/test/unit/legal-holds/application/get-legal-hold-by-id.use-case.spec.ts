@@ -4,6 +4,7 @@ import { GetLegalHoldByIdUseCase } from "@/legal-holds/application/use-cases/get
 import { LegalHold } from "@/legal-holds/domain/entities/legal-hold.entity";
 import { LegalHoldNotFoundError } from "@/legal-holds/domain/errors/legal-hold-not-found.error";
 
+import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryLegalHoldQueryRepository } from "../__fakes__/in-memory-legal-hold-query.repository";
 
 describe("GetLegalHoldByIdUseCase", () => {
@@ -15,19 +16,21 @@ describe("GetLegalHoldByIdUseCase", () => {
     useCase = new GetLegalHoldByIdUseCase(repository);
   });
 
-  it("throws LegalHoldNotFoundError when the id does not exist", async () => {
-    await expect(useCase.execute({ id: "99999" })).rejects.toBeInstanceOf(LegalHoldNotFoundError);
+  it("throws LegalHoldNotFoundError when the UUID does not match any hold", async () => {
+    await expect(
+      useCase.execute({ id: "00000000-0000-0000-0000-000000000000" }),
+    ).rejects.toBeInstanceOf(LegalHoldNotFoundError);
   });
 
-  it("throws LegalHoldNotFoundError for an invalid (non-numeric) id", async () => {
-    await expect(useCase.execute({ id: "not-a-number" })).rejects.toBeInstanceOf(
-      LegalHoldNotFoundError,
-    );
+  it("throws LegalHoldNotFoundError for an unknown UUID string", async () => {
+    await expect(
+      useCase.execute({ id: "01900000-0000-7000-8000-999999999999" }),
+    ).rejects.toBeInstanceOf(LegalHoldNotFoundError);
   });
 
   it("returns the legal hold with affectedAssetCount when found", async () => {
     const fixture = LegalHold.fromProps({
-      id: 1n,
+      id: TEST_UUIDS.legalHold1,
       caseReference: "CASE-2026-001",
       description: "Hold for litigation",
       scopeSummary: "All inspection assets",
@@ -41,10 +44,10 @@ describe("GetLegalHoldByIdUseCase", () => {
       updatedAt: new Date("2026-01-01T00:00:00Z"),
     });
     repository.seed([fixture]);
-    repository.seedAssetCount(1n, 3);
+    repository.seedAssetCount(TEST_UUIDS.legalHold1, 3);
 
-    const result = await useCase.execute({ id: "1" });
-    expect(result.legalHold.props.id).toBe(1n);
+    const result = await useCase.execute({ id: TEST_UUIDS.legalHold1 });
+    expect(result.legalHold.props.id).toBe(TEST_UUIDS.legalHold1);
     expect(result.affectedAssetCount).toBe(3);
   });
 });

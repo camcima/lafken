@@ -9,18 +9,18 @@ import {
 
 export class InMemoryNamespaceQueryRepository implements NamespaceQueryRepositoryPort {
   private namespaces: Namespace[] = [];
-  private policies = new Map<bigint, NamespacePolicy[]>();
-  private presets = new Map<bigint, NamespacePreset[]>();
+  private policies = new Map<string, NamespacePolicy[]>();
+  private presets = new Map<string, NamespacePreset[]>();
 
   seed(namespaces: Namespace[]): void {
     this.namespaces = namespaces;
   }
 
-  seedPolicies(namespaceId: bigint, policies: NamespacePolicy[]): void {
+  seedPolicies(namespaceId: string, policies: NamespacePolicy[]): void {
     this.policies.set(namespaceId, policies);
   }
 
-  seedPresets(namespaceId: bigint, presets: NamespacePreset[]): void {
+  seedPresets(namespaceId: string, presets: NamespacePreset[]): void {
     this.presets.set(namespaceId, presets);
   }
 
@@ -40,11 +40,11 @@ export class InMemoryNamespaceQueryRepository implements NamespaceQueryRepositor
     return Promise.resolve(this.namespaces.find((ns) => ns.props.slug.value === slug) ?? null);
   }
 
-  listPolicies(namespaceId: bigint): Promise<NamespacePolicy[]> {
+  listPolicies(namespaceId: string): Promise<NamespacePolicy[]> {
     return Promise.resolve(this.policies.get(namespaceId) ?? []);
   }
 
-  listPresets(namespaceId: bigint): Promise<NamespacePreset[]> {
+  listPresets(namespaceId: string): Promise<NamespacePreset[]> {
     return Promise.resolve(this.presets.get(namespaceId) ?? []);
   }
 

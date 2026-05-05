@@ -7,6 +7,7 @@ import { DuplicateStorageBindingNameError } from "@/system/domain/errors/duplica
 import { InvalidStorageBindingConfigError } from "@/system/domain/errors/invalid-storage-binding-config.error";
 import { InvalidStorageBindingNameError } from "@/system/domain/errors/invalid-storage-binding-name.error";
 
+import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryBucketExistsChecker } from "../__fakes__/in-memory-bucket-exists-checker";
 import { InMemoryStorageBindingQueryRepository } from "../__fakes__/in-memory-storage-binding-query.repository";
 import { InMemoryStorageBindingWriteRepository } from "../__fakes__/in-memory-storage-binding-write.repository";
@@ -40,14 +41,15 @@ describe("CreateStorageBindingUseCase", () => {
     expect(result.props.name).toBe("default");
     expect(result.props.adapterType).toBe("gcs");
     expect(result.props.config).toEqual(validConfig);
-    expect(result.props.id).toBeGreaterThan(0n);
+    expect(typeof result.props.id).toBe("string");
+    expect(result.props.id.length).toBeGreaterThan(0);
     expect(writeRepository.has("default")).toBe(true);
   });
 
   it("rejects when a binding with the same name already exists", async () => {
     queryRepository.seed([
       StorageBinding.fromProps({
-        id: 1n,
+        id: TEST_UUIDS.storageBinding1,
         name: "default",
         adapterType: "gcs",
         config: validConfig,

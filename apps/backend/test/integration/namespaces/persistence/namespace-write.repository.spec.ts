@@ -29,13 +29,13 @@ describe("NamespaceWriteRepository", () => {
     await db.closeConnection();
   });
 
-  async function seedStorageBinding(): Promise<bigint> {
+  async function seedStorageBinding(): Promise<string> {
     const row = await db.connection
       .insertInto("storage_bindings")
       .values({ name: "test-binding", adapter_type: "gcs", config: { bucket: "test-bucket" } })
       .returningAll()
       .executeTakeFirstOrThrow();
-    return BigInt((row as { id: bigint }).id);
+    return (row as { id: string }).id;
   }
 
   const basePolicy = {
@@ -71,8 +71,10 @@ describe("NamespaceWriteRepository", () => {
     expect(result.props.description).toBe("All aircraft imagery");
     expect(result.props.storageBindingId).toBe(storageBindingId);
     expect(result.props.archivedAt).toBeNull();
-    expect(result.props.id).toBeGreaterThan(0n);
-    expect(result.props.currentPolicyId).toBeGreaterThan(0n);
+    expect(typeof result.props.id).toBe("string");
+    expect(result.props.id.length).toBeGreaterThan(0);
+    expect(typeof result.props.currentPolicyId).toBe("string");
+    expect(result.props.currentPolicyId.length).toBeGreaterThan(0);
 
     // Verify via raw SQL that the policy row exists and is version 1
     const nsRow = await db.connection
@@ -86,18 +88,18 @@ describe("NamespaceWriteRepository", () => {
     const policyRow = await db.connection
       .selectFrom("namespace_policies")
       .selectAll()
-      .where("namespace_id", "=", BigInt((nsRow as { id: bigint }).id))
+      .where("namespace_id", "=", (nsRow as { id: string }).id)
       .executeTakeFirst();
 
     expect(policyRow).toBeDefined();
     expect((policyRow as { version: number }).version).toBe(1);
-    expect(BigInt((nsRow as { current_policy_id: bigint }).current_policy_id)).toBe(
-      BigInt((policyRow as { id: bigint }).id),
+    expect((nsRow as { current_policy_id: string }).current_policy_id).toBe(
+      (policyRow as { id: string }).id,
     );
   });
 
   it("throws StorageBindingMissingError when the storage binding does not exist, and rolls back — leaving no policy row", async () => {
-    const nonExistentBindingId = BigInt(999_999_999);
+    const nonExistentBindingId = "00000000-0000-0000-0000-000000000000";
 
     await expect(
       repository.createWithInitialPolicy({

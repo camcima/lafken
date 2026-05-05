@@ -6,6 +6,7 @@ import { BucketNotFoundError } from "@/system/domain/errors/bucket-not-found.err
 import { InvalidStorageBindingConfigError } from "@/system/domain/errors/invalid-storage-binding-config.error";
 import { StorageBindingNotFoundError } from "@/system/domain/errors/storage-binding-not-found.error";
 
+import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryBucketExistsChecker } from "../__fakes__/in-memory-bucket-exists-checker";
 import { InMemoryStorageBindingQueryRepository } from "../__fakes__/in-memory-storage-binding-query.repository";
 import { InMemoryStorageBindingWriteRepository } from "../__fakes__/in-memory-storage-binding-write.repository";
@@ -36,7 +37,7 @@ describe("UpdateStorageBindingUseCase", () => {
 
     queryRepository.seed([
       StorageBinding.fromProps({
-        id: 1n,
+        id: TEST_UUIDS.storageBinding1,
         name: "default",
         adapterType: "gcs",
         config: originalConfig,
@@ -51,7 +52,7 @@ describe("UpdateStorageBindingUseCase", () => {
 
     expect(result.props.name).toBe("default");
     expect(result.props.config).toEqual(newConfig);
-    expect(result.props.id).toBe(1n);
+    expect(result.props.id).toBe(TEST_UUIDS.storageBinding1);
     expect(writeRepository.get("default")?.props.config).toEqual(newConfig);
   });
 

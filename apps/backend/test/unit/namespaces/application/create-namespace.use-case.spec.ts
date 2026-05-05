@@ -7,6 +7,7 @@ import { NamespaceAlreadyExistsError } from "@/namespaces/domain/errors/namespac
 import { StorageBindingMissingError } from "@/namespaces/domain/errors/storage-binding-missing.error";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
+import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
 import { InMemoryNamespaceWriteRepository } from "../__fakes__/in-memory-namespace-write.repository";
 
@@ -14,7 +15,7 @@ const VALID_INPUT = {
   slug: "aircraft-photos",
   displayName: "Aircraft photos",
   description: "Photos of aircraft.",
-  storageBindingId: 1n,
+  storageBindingId: TEST_UUIDS.storageBinding1,
   policy: {
     retentionDays: null,
     retentionMode: "none" as const,
@@ -53,12 +54,12 @@ describe("CreateNamespaceUseCase", () => {
   it("throws NamespaceAlreadyExistsError when the slug is taken", async () => {
     queryRepo.seed([
       Namespace.fromProps({
-        id: 99n,
+        id: TEST_UUIDS.namespace1,
         slug: new Slug("aircraft-photos"),
         displayName: "x",
         description: null,
-        currentPolicyId: 1n,
-        storageBindingId: 1n,
+        currentPolicyId: TEST_UUIDS.policy1,
+        storageBindingId: TEST_UUIDS.storageBinding1,
         archivedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),

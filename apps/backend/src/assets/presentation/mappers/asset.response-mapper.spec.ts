@@ -8,11 +8,11 @@ describe("AssetResponseMapper", () => {
   it("maps an asset to the response DTO shape", () => {
     const result = AssetResponseMapper.fromDomain(
       Asset.fromProps({
-        id: 1n,
+        id: "01900000-0000-7000-8000-000000000040",
         publicId: "abc-123",
-        namespaceId: 10n,
-        policyVersionId: 20n,
-        storageBindingId: 30n,
+        namespaceId: "01900000-0000-7000-8000-000000000010",
+        policyVersionId: "01900000-0000-7000-8000-000000000020",
+        storageBindingId: "01900000-0000-7000-8000-000000000001",
         storageKey: "uploads/abc-123",
         state: "ready",
         stateReason: null,
@@ -64,11 +64,11 @@ describe("AssetResponseMapper", () => {
   it("maps content hash buffer to hex string", () => {
     const result = AssetResponseMapper.fromDomain(
       Asset.fromProps({
-        id: 2n,
+        id: "01900000-0000-7000-8000-000000000041",
         publicId: "xyz-456",
-        namespaceId: 10n,
-        policyVersionId: 20n,
-        storageBindingId: 30n,
+        namespaceId: "01900000-0000-7000-8000-000000000010",
+        policyVersionId: "01900000-0000-7000-8000-000000000020",
+        storageBindingId: "01900000-0000-7000-8000-000000000001",
         storageKey: "uploads/xyz-456",
         state: "ready",
         stateReason: null,

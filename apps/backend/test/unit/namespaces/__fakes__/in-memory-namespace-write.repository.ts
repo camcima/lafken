@@ -12,17 +12,19 @@ import {
 } from "@/namespaces/domain/repositories/namespace-write.repository.port";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
-const INITIAL_NAMESPACE_ID = 1n;
-const INITIAL_POLICY_ID = 1n;
-const ID_INCREMENT = 1n;
+let nextIdCounter = 1;
+const UUID_SUFFIX_PAD_LENGTH = 12;
+
+function generateFakeUuid(): string {
+  const counter = nextIdCounter++;
+  return `01900000-0000-7000-8000-${String(counter).padStart(UUID_SUFFIX_PAD_LENGTH, "0")}`;
+}
 
 export class InMemoryNamespaceWriteRepository extends NamespaceWriteRepositoryPort {
   readonly namespaces = new Map<string, Namespace>();
-  readonly missingStorageBindings = new Set<bigint>();
-  readonly policyVersionsByNamespace = new Map<bigint, number>();
+  readonly missingStorageBindings = new Set<string>();
+  readonly policyVersionsByNamespace = new Map<string, number>();
   collisionsRemaining = 0;
-  private nextNamespaceId = INITIAL_NAMESPACE_ID;
-  private nextPolicyId = INITIAL_POLICY_ID;
 
   seed(namespace: Namespace): void {
     this.namespaces.set(namespace.props.slug.value, namespace);
@@ -47,10 +49,8 @@ export class InMemoryNamespaceWriteRepository extends NamespaceWriteRepositoryPo
       );
     }
     const now = new Date();
-    const policyId = this.nextPolicyId;
-    this.nextPolicyId += ID_INCREMENT;
-    const namespaceId = this.nextNamespaceId;
-    this.nextNamespaceId += ID_INCREMENT;
+    const policyId = generateFakeUuid();
+    const namespaceId = generateFakeUuid();
     const namespace = Namespace.fromProps({
       id: namespaceId,
       slug: new Slug(input.slug),
@@ -128,7 +128,7 @@ export class InMemoryNamespaceWriteRepository extends NamespaceWriteRepositoryPo
     }
     const updated = Namespace.fromProps({
       ...found.props,
-      currentPolicyId: BigInt(next),
+      currentPolicyId: generateFakeUuid(),
       updatedAt: new Date(),
     });
     this.namespaces.set(found.props.slug.value, updated);

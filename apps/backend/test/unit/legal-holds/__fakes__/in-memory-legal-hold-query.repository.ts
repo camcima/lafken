@@ -7,13 +7,13 @@ import {
 
 export class InMemoryLegalHoldQueryRepository implements LegalHoldQueryRepositoryPort {
   private legalHolds: LegalHold[] = [];
-  private assetCounts = new Map<bigint, number>();
+  private assetCounts = new Map<string, number>();
 
   seed(legalHolds: LegalHold[]): void {
     this.legalHolds = legalHolds;
   }
 
-  seedAssetCount(holdId: bigint, count: number): void {
+  seedAssetCount(holdId: string, count: number): void {
     this.assetCounts.set(holdId, count);
   }
 
@@ -29,11 +29,11 @@ export class InMemoryLegalHoldQueryRepository implements LegalHoldQueryRepositor
     });
   }
 
-  findById(id: bigint): Promise<LegalHold | null> {
+  findById(id: string): Promise<LegalHold | null> {
     return Promise.resolve(this.legalHolds.find((hold) => hold.props.id === id) ?? null);
   }
 
-  countAffectedAssets(holdId: bigint): Promise<number> {
+  countAffectedAssets(holdId: string): Promise<number> {
     return Promise.resolve(this.assetCounts.get(holdId) ?? 0);
   }
 }

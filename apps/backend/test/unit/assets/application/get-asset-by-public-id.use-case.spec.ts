@@ -4,6 +4,7 @@ import { GetAssetByPublicIdUseCase } from "@/assets/application/use-cases/get-as
 import { Asset } from "@/assets/domain/entities/asset.entity";
 import { AssetNotFoundError } from "@/assets/domain/errors/asset-not-found.error";
 
+import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryAssetQueryRepository } from "../__fakes__/in-memory-asset-query.repository";
 
 describe("GetAssetByPublicIdUseCase", () => {
@@ -23,11 +24,11 @@ describe("GetAssetByPublicIdUseCase", () => {
 
   it("returns the asset with metadata when found", async () => {
     const fixture = Asset.fromProps({
-      id: 1n,
+      id: TEST_UUIDS.asset1,
       publicId: "abc-123",
-      namespaceId: 10n,
-      policyVersionId: 20n,
-      storageBindingId: 30n,
+      namespaceId: TEST_UUIDS.namespace1,
+      policyVersionId: TEST_UUIDS.policy1,
+      storageBindingId: TEST_UUIDS.storageBinding1,
       storageKey: "uploads/abc-123",
       state: "ready",
       stateReason: null,
@@ -49,8 +50,8 @@ describe("GetAssetByPublicIdUseCase", () => {
       updatedAt: new Date("2026-01-01T00:00:00Z"),
     });
     repository.seed([fixture]);
-    repository.seedNamespaceSlug(10n, "aircraft-photos");
-    repository.seedPolicyVersion(20n, 3);
+    repository.seedNamespaceSlug(TEST_UUIDS.namespace1, "aircraft-photos");
+    repository.seedPolicyVersion(TEST_UUIDS.policy1, 3);
 
     const result = await useCase.execute({ publicId: "abc-123" });
     expect(result.asset.props.publicId).toBe("abc-123");
