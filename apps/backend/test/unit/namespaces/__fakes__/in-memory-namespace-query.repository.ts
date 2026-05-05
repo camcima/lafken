@@ -48,6 +48,12 @@ export class InMemoryNamespaceQueryRepository implements NamespaceQueryRepositor
     return Promise.resolve(this.presets.get(namespaceId) ?? []);
   }
 
+  findPresetByName(namespaceId: string, name: string): Promise<NamespacePreset | null> {
+    const preset =
+      (this.presets.get(namespaceId) ?? []).find((p) => p.props.name === name) ?? null;
+    return Promise.resolve(preset);
+  }
+
   findStorageBindingName(): Promise<string | null> {
     return Promise.resolve(null);
   }

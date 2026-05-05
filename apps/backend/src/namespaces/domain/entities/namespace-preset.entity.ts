@@ -1,9 +1,11 @@
+import { PresetParams } from "../value-objects/preset-params.value-object";
+
 export interface INamespacePresetProps {
   id: string;
   namespaceId: string;
   name: string;
   version: number;
-  transformation: Record<string, unknown>;
+  params: PresetParams;
   cdnMaxAge: number | null;
   signedUrlTtl: number | null;
   preGenerate: boolean;

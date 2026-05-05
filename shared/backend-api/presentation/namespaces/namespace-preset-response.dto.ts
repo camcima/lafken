@@ -8,7 +8,7 @@ export class NamespacePresetResponseDTO {
   version!: number;
 
   @ApiProperty({ type: Object })
-  transformation!: Record<string, unknown>;
+  params!: Record<string, unknown>;
 
   @ApiProperty({ required: false, type: Number })
   cdnMaxAge?: number;

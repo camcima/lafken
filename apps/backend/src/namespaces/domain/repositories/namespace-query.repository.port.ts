@@ -20,6 +20,7 @@ export abstract class NamespaceQueryRepositoryPort {
   abstract findBySlug(slug: string): Promise<Namespace | null>;
   abstract listPolicies(namespaceId: string): Promise<NamespacePolicy[]>;
   abstract listPresets(namespaceId: string): Promise<NamespacePreset[]>;
+  abstract findPresetByName(namespaceId: string, name: string): Promise<NamespacePreset | null>;
   abstract findStorageBindingName(storageBindingId: string): Promise<string | null>;
   abstract findCurrentPolicyVersion(namespaceId: string): Promise<number | null>;
 }

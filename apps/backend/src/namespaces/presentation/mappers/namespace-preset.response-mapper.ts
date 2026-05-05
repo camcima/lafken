@@ -7,7 +7,7 @@ export class NamespacePresetResponseMapper {
     return {
       name: preset.props.name,
       version: preset.props.version,
-      transformation: preset.props.transformation,
+      params: preset.props.params.toJSON() as unknown as Record<string, unknown>,
       cdnMaxAge: preset.props.cdnMaxAge ?? undefined,
       signedUrlTtl: preset.props.signedUrlTtl ?? undefined,
       preGenerate: preset.props.preGenerate,
