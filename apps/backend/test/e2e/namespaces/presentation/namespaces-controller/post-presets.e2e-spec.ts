@@ -193,6 +193,26 @@ describe("[E2E] POST /v1/namespaces/:slug/presets", () => {
     expect(response.status).toBe(400);
   });
 
+  it("rejects a preset name with the reserved 'lafken:' prefix", async () => {
+    await insertNamespace("reserved-prefix-ns");
+
+    const response = await request(app.getHttpServer())
+      .post("/v1/namespaces/reserved-prefix-ns/presets")
+      .set("Authorization", "Bearer test-token")
+      .send({
+        name: "lafken:thumbnail",
+        params: { width: 100, height: 100, fit: "cover", format: "webp", quality: 80 },
+      });
+
+    // The DTO's name regex also forbids ':' as a defense-in-depth boundary,
+    // so the rejection surfaces as a 400 from class-validator rather than as
+    // the runtime ReservedPresetNameError 422 from the use case. Either way,
+    // a namespace owner cannot create a preset that shadows a Lafken-internal
+    // name.
+    expect(response.status).toBe(400);
+    expect(response.headers["content-type"]).toContain("application/problem+json");
+  });
+
   it("returns 403 when caller lacks PLATFORM_OPERATOR role", async () => {
     await insertNamespace("some-ns");
 
