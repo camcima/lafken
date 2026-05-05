@@ -182,6 +182,36 @@ describe("AssetWriteRepository", () => {
     expect((jobRows[0] as { attempt_number: number }).attempt_number).toBe(1);
   });
 
+  it("createUploadedAsset persists optional width and height when provided", async () => {
+    const asset = await repository.createUploadedAsset({
+      publicId: intentPublicId,
+      namespaceId,
+      policyVersionId,
+      storageBindingId: bindingId,
+      storageKey: "uploads/test-asset.jpg",
+      declaredMimeType: "image/jpeg",
+      declaredSizeBytes: 4096n,
+      uploadedBy: "ops@latam.com",
+      effectiveMaxSizeBytes: 52_428_800n,
+      effectiveUrlTtl: 3600,
+      intentId: intentPublicId,
+      width: 100,
+      height: 50,
+    });
+
+    expect(asset.props.width).toBe(100);
+    expect(asset.props.height).toBe(50);
+
+    const assetRows = await db.connection
+      .selectFrom("assets")
+      .select(["width", "height"])
+      .where("public_id", "=", intentPublicId)
+      .execute();
+    expect(assetRows).toHaveLength(1);
+    expect((assetRows[0] as { width: number | null }).width).toBe(100);
+    expect((assetRows[0] as { height: number | null }).height).toBe(50);
+  });
+
   it("createUploadedAsset rolls back all rows when a FK constraint is violated", async () => {
     const BAD_POLICY_ID = "ffffffff-ffff-ffff-ffff-ffffffffffff";
 

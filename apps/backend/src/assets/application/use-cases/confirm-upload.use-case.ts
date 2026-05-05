@@ -16,6 +16,8 @@ const DEFAULT_SIGNED_URL_TTL_SECONDS = 3600;
 export interface IConfirmUploadInput {
   publicId: string;
   uploadedBy: string | null;
+  width?: number;
+  height?: number;
 }
 
 @Injectable()
@@ -91,6 +93,8 @@ export class ConfirmUploadUseCase {
       effectiveMaxSizeBytes: policy.props.maxFileSizeBytes,
       effectiveUrlTtl: policy.props.signedUrlTtlSeconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS,
       intentId: intent.props.id,
+      width: input.width ?? null,
+      height: input.height ?? null,
     });
   }
 }

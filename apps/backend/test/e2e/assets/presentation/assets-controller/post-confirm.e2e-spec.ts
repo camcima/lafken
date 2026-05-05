@@ -183,6 +183,38 @@ describe.skipIf(!GATE)("[E2E] POST /v1/assets/:publicId/confirm (fake-gcs gate)"
     expect(jobs).toHaveLength(1);
   });
 
+  it("persists width and height when provided in confirm body", async () => {
+    await insertNamespace("photos-ns");
+
+    const { publicId, uploadUrl, uploadHeaders } = await createUploadIntent("photos-ns");
+
+    const putResponse = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { ...uploadHeaders, "Content-Type": "image/jpeg" },
+      body: TINY_JPEG,
+    });
+    expect(putResponse.ok).toBe(true);
+
+    const confirmResponse = await request(app.getHttpServer())
+      .post(`/v1/assets/${publicId}/confirm`)
+      .set("Authorization", "Bearer test-token")
+      .send({ width: 256, height: 256 });
+
+    expect(confirmResponse.status).toBe(200);
+    expect(confirmResponse.body.width).toBe(256);
+    expect(confirmResponse.body.height).toBe(256);
+
+    const assetRow = await db.connection
+      .selectFrom("assets")
+      .where("public_id", "=", publicId)
+      .selectAll()
+      .executeTakeFirst();
+
+    expect(assetRow).toBeDefined();
+    expect((assetRow as { width: number | null }).width).toBe(256);
+    expect((assetRow as { height: number | null }).height).toBe(256);
+  });
+
   it("returns RFC 9457 404 when public ID does not match any upload intent", async () => {
     const response = await request(app.getHttpServer())
       .post("/v1/assets/ffffffff-ffff-ffff-ffff-ffffffffffff/confirm")

@@ -182,6 +182,26 @@ describe("ConfirmUploadUseCase", () => {
     ).rejects.toBeInstanceOf(UploadIntentExpiredError);
   });
 
+  it("forwards optional width and height to the asset write repository", async () => {
+    const intent = makeIntent();
+    intentRepo.seed([intent]);
+    storageBindingQueryRepo.seed([makeBinding()]);
+    namespaceQueryRepo.seedPolicies(TEST_UUIDS.namespace1, [makePolicy()]);
+
+    const asset = await useCase.execute({
+      publicId: TEST_UUIDS.asset1,
+      uploadedBy: "user@example.com",
+      width: 256,
+      height: 128,
+    });
+
+    expect(asset.props.width).toBe(256);
+    expect(asset.props.height).toBe(128);
+    expect(assetWriteRepo.createdAssets).toHaveLength(1);
+    expect(assetWriteRepo.createdAssets[0]?.width).toBe(256);
+    expect(assetWriteRepo.createdAssets[0]?.height).toBe(128);
+  });
+
   it("throws UploadedObjectMissingError when the object is not present in GCS", async () => {
     const intent = makeIntent();
     intentRepo.seed([intent]);

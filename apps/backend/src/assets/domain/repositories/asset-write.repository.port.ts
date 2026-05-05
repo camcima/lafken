@@ -12,6 +12,8 @@ export interface ICreateUploadedAssetInput {
   effectiveMaxSizeBytes: bigint;
   effectiveUrlTtl: number;
   intentId: string;
+  width?: number | null;
+  height?: number | null;
 }
 
 export abstract class AssetWriteRepositoryPort {

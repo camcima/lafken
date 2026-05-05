@@ -23,6 +23,7 @@ import {
   AssetAnalysisResponseDTO,
   AssetResponseDTO,
   AssetStateTransitionResponseDTO,
+  ConfirmUploadRequestDTO,
   CreateUploadIntentRequestDTO,
   CreateUploadIntentResponseDTO,
   ListAssetsQueryDTO,
@@ -223,12 +224,15 @@ export class AssetsController {
   @ApiUnprocessableEntityResponse()
   async confirmUpload(
     @Param("publicId") publicId: string,
+    @Body() body: ConfirmUploadRequestDTO,
     @AuthenticatedUser() user: AuthenticatedUserType,
   ): Promise<AssetResponseDTO> {
     try {
       const asset = await this.confirmUploadUseCase.execute({
         publicId,
         uploadedBy: user.emailAddress,
+        width: body.width,
+        height: body.height,
       });
       const namespaceSlug =
         (await this.assetQueryRepository.findNamespaceSlug(asset.props.namespaceId)) ?? "unknown";

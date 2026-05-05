@@ -775,6 +775,12 @@ paths:
           in: path
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmUploadRequestDTO'
       responses:
         '200':
           description: ''
@@ -1906,6 +1912,13 @@ components:
         - uploadUrl
         - uploadHeaders
         - expiresAt
+    ConfirmUploadRequestDTO:
+      type: object
+      properties:
+        width:
+          type: number
+        height:
+          type: number
     QuarantinedAssetResponseDTO:
       type: object
       properties:

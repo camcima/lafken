@@ -36,6 +36,8 @@ export class AssetWriteRepository implements AssetWriteRepositoryPort {
           state: "uploaded",
           declared_mime_type: input.declaredMimeType,
           size_bytes: input.declaredSizeBytes,
+          width: input.width ?? null,
+          height: input.height ?? null,
           uploaded_by: input.uploadedBy ?? undefined,
           effective_max_size_bytes: input.effectiveMaxSizeBytes,
           effective_url_ttl: input.effectiveUrlTtl,

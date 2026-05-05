@@ -36,6 +36,8 @@ export interface IMakeUploadedInput {
   declaredMimeType: string;
   declaredSizeBytes: bigint;
   uploadedBy: string | null;
+  width?: number | null;
+  height?: number | null;
 }
 
 export class Asset {
@@ -66,8 +68,8 @@ export class Asset {
       sizeBytes: input.declaredSizeBytes,
       mimeType: null,
       declaredMimeType: input.declaredMimeType,
-      width: null,
-      height: null,
+      width: input.width ?? null,
+      height: input.height ?? null,
       contentHash: null,
       uploadedBy: input.uploadedBy,
       owningRecordType: null,
