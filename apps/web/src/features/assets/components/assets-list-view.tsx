@@ -19,8 +19,18 @@ export function getAutoPageSize(view: ViewMode): number {
   return AUTO_PAGE_SIZE_ROWS;
 }
 
-// 1024 * 1024 — bytes per mebibyte for size display
+// Size display thresholds and units
+const BYTES_PER_KIB = 1024;
 export const BYTES_PER_MIB = 1_048_576;
+const KB_DISPLAY_THRESHOLD = BYTES_PER_MIB;
+
+function formatSize(bytes: number): string {
+  if (bytes <= 0) return "—";
+  if (bytes < KB_DISPLAY_THRESHOLD) {
+    return `${(bytes / BYTES_PER_KIB).toFixed(0)} KB`;
+  }
+  return `${(bytes / BYTES_PER_MIB).toFixed(1)} MB`;
+}
 
 // ── Thumbnail ─────────────────────────────────────────────────────────────
 type ThumbSize = "sm" | "md" | "lg";
@@ -198,7 +208,7 @@ function RowsView({
               </div>
             </div>
             <div className="text-muted-foreground text-right font-mono text-[11.5px] tabular-nums">
-              {(asset.sizeBytes / BYTES_PER_MIB).toFixed(1)} MB
+              {formatSize(asset.sizeBytes)}
             </div>
             <div className="text-muted-foreground text-right font-mono text-[11.5px] tabular-nums">
               {fmtMinAgo(asset.minutesAgo)}
@@ -248,7 +258,7 @@ function GridView({ pageRows }: IGridViewProps): React.JSX.Element {
             <div className="mt-0.5 flex items-center justify-between text-[10.5px]">
               <span className="text-muted-foreground font-mono">{asset.namespaceSlug}</span>
               <span className="text-muted-foreground font-mono tabular-nums">
-                {(asset.sizeBytes / BYTES_PER_MIB).toFixed(1)} MB
+                {formatSize(asset.sizeBytes)}
               </span>
             </div>
           </div>
@@ -293,7 +303,7 @@ function HybridView({ pageRows }: IHybridViewProps): React.JSX.Element {
             </div>
             <div className="text-muted-foreground mt-0.5 flex items-center justify-between text-[10.5px]">
               <span className="truncate">{asset.uploadedDisplay}</span>
-              <span className="font-mono">{(asset.sizeBytes / BYTES_PER_MIB).toFixed(1)} MB</span>
+              <span className="font-mono">{formatSize(asset.sizeBytes)}</span>
             </div>
           </div>
         </Link>
