@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   NotFoundException,
@@ -27,6 +28,7 @@ import {
   CreateUploadIntentRequestDTO,
   CreateUploadIntentResponseDTO,
   ListAssetsQueryDTO,
+  PreviewUrlResponseDTO,
   ProcessingJobResponseDTO,
 } from "@shared/backend-api";
 
@@ -193,6 +195,54 @@ export class AssetsController {
         result.policyVersion,
         signCtx,
       );
+    } catch (err) {
+      if (err instanceof AssetNotFoundError) {
+        throw new NotFoundException(err.message, { cause: err });
+      }
+      throw err;
+    }
+  }
+
+  @Get(":publicId/preview-url")
+  @AuthenticatedEndpoint()
+  @Header("Cache-Control", "private, max-age=300")
+  @ApiOperation({
+    summary: "Mint a signed preview URL for an asset against a named preset",
+  })
+  @ApiOkResponse({ type: PreviewUrlResponseDTO })
+  @ApiNotFoundResponse()
+  async getPreviewUrl(
+    @Param("publicId") publicId: string,
+    @Query("preset") preset?: string,
+  ): Promise<PreviewUrlResponseDTO> {
+    if (!preset || preset.trim() === "") {
+      throw new UnprocessableEntityException("preset query parameter is required");
+    }
+    try {
+      const result = await this.getAssetByPublicIdUseCase.execute({ publicId });
+      const resolveSignCtx = this.buildSignContextResolver();
+      const signCtx: IPreviewSignContext | null = await resolveSignCtx(result.asset);
+      if (signCtx === null) {
+        throw new NotFoundException(
+          `No active preset matching "${preset}" was found for this asset's namespace.`,
+        );
+      }
+      const matched = signCtx.presets.find((entry) => entry.name === preset);
+      if (!matched) {
+        throw new NotFoundException(
+          `No active preset matching "${preset}" was found for this asset's namespace.`,
+        );
+      }
+      const sourceUrl: string =
+        `${signCtx.sourceBaseUrl}/storage/v1/b/${signCtx.bucket}` +
+        `/o/${encodeURIComponent(result.asset.props.storageKey)}?alt=media`;
+      const url: string | null = signCtx.signer.sign({ sourceUrl, preset: matched.spec });
+      if (url === null) {
+        throw new NotFoundException(
+          `No active preset matching "${preset}" was found for this asset's namespace.`,
+        );
+      }
+      return { url };
     } catch (err) {
       if (err instanceof AssetNotFoundError) {
         throw new NotFoundException(err.message, { cause: err });
