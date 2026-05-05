@@ -4,9 +4,11 @@ import { NamespacePreset } from "@/namespaces/domain/entities/namespace-preset.e
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { PresetNameAlreadyExistsError } from "@/namespaces/domain/errors/preset-name-already-exists.error";
+import { ReservedPresetNameError } from "@/namespaces/domain/errors/reserved-preset-name.error";
 import { NamespacePresetWriteRepositoryPort } from "@/namespaces/domain/repositories/namespace-preset-write.repository.port";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import type { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
+import { SYSTEM_PRESET_NAME_PREFIX } from "@/shared/kernel/domain/preset-naming";
 
 export interface ICreatePresetInput {
   slug: string;
@@ -23,6 +25,13 @@ export class CreatePresetUseCase {
   ) {}
 
   async execute(input: ICreatePresetInput): Promise<NamespacePreset> {
+    if (input.name.toLowerCase().startsWith(SYSTEM_PRESET_NAME_PREFIX)) {
+      throw new ReservedPresetNameError({
+        name: input.name,
+        reservedPrefix: SYSTEM_PRESET_NAME_PREFIX,
+      });
+    }
+
     const namespace = await this.queryRepository.findBySlug(input.slug);
     if (!namespace) {
       throw new NamespaceNotFoundError({ slug: input.slug });

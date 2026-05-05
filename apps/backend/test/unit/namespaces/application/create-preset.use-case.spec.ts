@@ -6,6 +6,7 @@ import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { PresetNameAlreadyExistsError } from "@/namespaces/domain/errors/preset-name-already-exists.error";
+import { ReservedPresetNameError } from "@/namespaces/domain/errors/reserved-preset-name.error";
 import { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
@@ -84,6 +85,34 @@ describe("CreatePresetUseCase", () => {
         createdBy: null,
       }),
     ).rejects.toBeInstanceOf(NamespaceArchivedError);
+  });
+
+  it("rejects names starting with the reserved 'lafken:' prefix", async () => {
+    const ns = makeNamespace({ slug: "aircraft-photos" });
+    queryRepo.seed([ns]);
+
+    await expect(
+      useCase.execute({
+        slug: "aircraft-photos",
+        name: "lafken:thumbnail",
+        params: VALID_PARAMS,
+        createdBy: null,
+      }),
+    ).rejects.toBeInstanceOf(ReservedPresetNameError);
+  });
+
+  it("rejects names with the reserved prefix in mixed case", async () => {
+    const ns = makeNamespace({ slug: "aircraft-photos" });
+    queryRepo.seed([ns]);
+
+    await expect(
+      useCase.execute({
+        slug: "aircraft-photos",
+        name: "Lafken:Thumbnail",
+        params: VALID_PARAMS,
+        createdBy: null,
+      }),
+    ).rejects.toBeInstanceOf(ReservedPresetNameError);
   });
 
   it("throws PresetNameAlreadyExistsError when name is taken", async () => {

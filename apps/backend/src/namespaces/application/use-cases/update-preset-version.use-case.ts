@@ -5,9 +5,11 @@ import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-arc
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { PresetNotFoundError } from "@/namespaces/domain/errors/preset-not-found.error";
 import { PresetVersionConflictError } from "@/namespaces/domain/errors/preset-version-conflict.error";
+import { ReservedPresetNameError } from "@/namespaces/domain/errors/reserved-preset-name.error";
 import { NamespacePresetWriteRepositoryPort } from "@/namespaces/domain/repositories/namespace-preset-write.repository.port";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import type { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
+import { SYSTEM_PRESET_NAME_PREFIX } from "@/shared/kernel/domain/preset-naming";
 
 const RETRY_LIMIT = 1;
 
@@ -26,6 +28,13 @@ export class UpdatePresetVersionUseCase {
   ) {}
 
   async execute(input: IUpdatePresetVersionInput): Promise<NamespacePreset> {
+    if (input.name.toLowerCase().startsWith(SYSTEM_PRESET_NAME_PREFIX)) {
+      throw new ReservedPresetNameError({
+        name: input.name,
+        reservedPrefix: SYSTEM_PRESET_NAME_PREFIX,
+      });
+    }
+
     const namespace = await this.queryRepository.findBySlug(input.slug);
     if (!namespace) {
       throw new NamespaceNotFoundError({ slug: input.slug });

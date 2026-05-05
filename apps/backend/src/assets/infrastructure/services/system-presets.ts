@@ -1,11 +1,6 @@
 import type { IPreviewSpec } from "@/assets/domain/services/preview-url-signer.port";
 
-/**
- * Reserved prefix for Lafken-internal preset names. Namespace-defined preset
- * names MUST NOT start with this prefix — that's enforced by the create/update
- * preset use cases.
- */
-export const SYSTEM_PRESET_NAME_PREFIX = "lafken:";
+export { SYSTEM_PRESET_NAME_PREFIX } from "@/shared/kernel/domain/preset-naming";
 
 export interface ISystemPreset {
   name: string;

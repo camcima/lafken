@@ -7,6 +7,7 @@ import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-arc
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { PresetNotFoundError } from "@/namespaces/domain/errors/preset-not-found.error";
 import { PresetVersionConflictError } from "@/namespaces/domain/errors/preset-version-conflict.error";
+import { ReservedPresetNameError } from "@/namespaces/domain/errors/reserved-preset-name.error";
 import { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
@@ -115,6 +116,29 @@ describe("UpdatePresetVersionUseCase", () => {
         createdBy: null,
       }),
     ).rejects.toBeInstanceOf(NamespaceArchivedError);
+  });
+
+  it("rejects names starting with the reserved 'lafken:' prefix before any repository lookup", async () => {
+    // No seed: the prefix check must fire before findBySlug, so this won't hit NamespaceNotFoundError.
+    await expect(
+      useCase.execute({
+        slug: "aircraft-photos",
+        name: "lafken:thumbnail",
+        params: VALID_PARAMS,
+        createdBy: null,
+      }),
+    ).rejects.toBeInstanceOf(ReservedPresetNameError);
+  });
+
+  it("rejects names with the reserved prefix in mixed case", async () => {
+    await expect(
+      useCase.execute({
+        slug: "aircraft-photos",
+        name: "Lafken:Thumbnail",
+        params: VALID_PARAMS,
+        createdBy: null,
+      }),
+    ).rejects.toBeInstanceOf(ReservedPresetNameError);
   });
 
   it("throws PresetNotFoundError when name does not exist", async () => {
