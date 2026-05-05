@@ -163,17 +163,8 @@ export class AssetsController {
       uploadedTo: query.uploadedTo,
     });
 
-    const resolveSignCtx = this.buildSignContextResolver();
-    const data = await Promise.all(
-      page.data.map(async (item) => {
-        const signCtx: IPreviewSignContext | null = await resolveSignCtx(item.asset);
-        return AssetResponseMapper.fromDomain(
-          item.asset,
-          item.namespaceSlug,
-          item.policyVersion,
-          signCtx,
-        );
-      }),
+    const data = page.data.map((item) =>
+      AssetResponseMapper.fromDomain(item.asset, item.namespaceSlug, item.policyVersion),
     );
 
     return { data, total: page.total, page: page.page, limit: page.limit, lastPage: page.lastPage };
@@ -187,13 +178,10 @@ export class AssetsController {
   async getOne(@Param("publicId") publicId: string): Promise<AssetResponseDTO> {
     try {
       const result = await this.getAssetByPublicIdUseCase.execute({ publicId });
-      const resolveSignCtx = this.buildSignContextResolver();
-      const signCtx: IPreviewSignContext | null = await resolveSignCtx(result.asset);
       return AssetResponseMapper.fromDomain(
         result.asset,
         result.namespaceSlug,
         result.policyVersion,
-        signCtx,
       );
     } catch (err) {
       if (err instanceof AssetNotFoundError) {
@@ -369,9 +357,7 @@ export class AssetsController {
         (await this.assetQueryRepository.findNamespaceSlug(asset.props.namespaceId)) ?? "unknown";
       const policyVersion =
         (await this.assetQueryRepository.findPolicyVersion(asset.props.policyVersionId)) ?? 0;
-      const resolveSignCtx = this.buildSignContextResolver();
-      const signCtx: IPreviewSignContext | null = await resolveSignCtx(asset);
-      return AssetResponseMapper.fromDomain(asset, namespaceSlug, policyVersion, signCtx);
+      return AssetResponseMapper.fromDomain(asset, namespaceSlug, policyVersion);
     } catch (err) {
       if (err instanceof UploadIntentNotFoundError) {
         throw new NotFoundException(err.message, { cause: err });

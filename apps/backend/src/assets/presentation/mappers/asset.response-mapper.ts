@@ -17,12 +17,7 @@ export interface IPreviewSignContext {
 }
 
 export class AssetResponseMapper {
-  static fromDomain(
-    asset: Asset,
-    namespaceSlug: string,
-    policyVersion: number,
-    signCtx: IPreviewSignContext | null = null,
-  ): AssetResponseDTO {
+  static fromDomain(asset: Asset, namespaceSlug: string, policyVersion: number): AssetResponseDTO {
     return {
       publicId: asset.props.publicId,
       namespaceSlug,
@@ -47,44 +42,6 @@ export class AssetResponseMapper {
       confirmedAt: asset.props.confirmedAt?.toISOString() ?? undefined,
       stateChangedAt: asset.props.stateChangedAt.toISOString(),
       createdAt: asset.props.createdAt.toISOString(),
-      previewUrls: AssetResponseMapper.buildPreviewUrls(asset, signCtx),
     };
-  }
-
-  private static buildPreviewUrls(
-    asset: Asset,
-    signCtx: IPreviewSignContext | null,
-  ): Record<string, string> {
-    const result: Record<string, string> = {};
-    if (signCtx === null) {
-      return result;
-    }
-    if (!AssetResponseMapper.isPreviewable(asset)) {
-      return result;
-    }
-    // GCS JSON API media path: works against fake-gcs and against public GCS
-    // objects regardless of the request `Host` header. (fake-gcs's plain
-    // `/{bucket}/{key}` route only resolves when Host matches `-public-host`,
-    // so a docker-internal request from imgproxy 404s on that style.)
-    const sourceUrl: string =
-      `${signCtx.sourceBaseUrl}/storage/v1/b/${signCtx.bucket}` +
-      `/o/${encodeURIComponent(asset.props.storageKey)}?alt=media`;
-    for (const { name, spec } of signCtx.presets) {
-      const url: string | null = signCtx.signer.sign({ sourceUrl, preset: spec });
-      if (url !== null) {
-        result[name] = url;
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Only assets with a successfully ingested binary can be previewed. Pending
-   * uploads have no source object yet; rejected/quarantined ones must not be
-   * exposed.
-   */
-  private static isPreviewable(asset: Asset): boolean {
-    const state: string = asset.props.state;
-    return state === "uploaded" || state === "processing" || state === "ready";
   }
 }

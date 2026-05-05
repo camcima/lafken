@@ -61,7 +61,6 @@ describe("QuarantinedAssetResponseMapper", () => {
       confirmedAt: undefined,
       stateChangedAt: stateChangedAt.toISOString(),
       createdAt: createdAt.toISOString(),
-      previewUrls: {},
       quarantineKind: "virus",
       flaggedAnalyzer: undefined,
       flaggedCategory: undefined,

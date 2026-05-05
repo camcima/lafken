@@ -28,9 +28,6 @@ export class QuarantinedAssetResponseMapper {
       confirmedAt: view.props.confirmedAt?.toISOString() ?? undefined,
       stateChangedAt: view.props.stateChangedAt.toISOString(),
       createdAt: view.props.createdAt.toISOString(),
-      // Quarantined assets are not previewable; never expose their bytes
-      // through the rendering proxy.
-      previewUrls: {},
       quarantineKind: view.props.quarantineKind,
       flaggedAnalyzer: view.props.flaggedAnalyzer ?? undefined,
       flaggedCategory: view.props.flaggedCategory ?? undefined,

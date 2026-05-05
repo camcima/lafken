@@ -75,11 +75,4 @@ export class AssetResponseDTO {
 
   @ApiProperty()
   createdAt!: string;
-
-  @ApiProperty({
-    type: Object,
-    description:
-      "Map of preset name to fully-signed preview URL the browser can use as <img src>. Empty when no presets are active or no signer is configured.",
-  })
-  previewUrls!: Record<string, string>;
 }
