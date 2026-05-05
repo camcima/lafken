@@ -39,6 +39,11 @@ vi.mock("./UploadAssetsDialog", () => ({
   UploadAssetsDialog: () => null,
 }));
 
+// AssetImage requires a LafkenProvider; stub it out in unit tests.
+vi.mock("@lafken/react", () => ({
+  AssetImage: () => null,
+}));
+
 const NAMESPACE: NamespaceResponseDTO = {
   slug: "active-ns",
   displayName: "Active",
@@ -88,7 +93,6 @@ describe("NamespaceAssetsTab", () => {
       legalHold: false,
       stateChangedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
-      previewUrls: {},
     };
     listMock.mockResolvedValue({
       data: [asset],

@@ -25,12 +25,6 @@ export interface IAssetRow {
   /** 0-360 hue for the thumbnail gradient (deterministic). */
   thumbHue: number;
   legalHold: boolean;
-  /**
-   * Signed preview URLs (preset name → URL). Forwarded as-is from the BE; the
-   * `<AssetImage>` SDK component picks one. Undefined when the BE is not
-   * configured to mint preview URLs; empty object when the asset has none active.
-   */
-  previewUrls: Record<string, string> | undefined;
   /** Demo-only fields; empty string when not available. */
   tail: string;
   wo: string;
@@ -88,7 +82,6 @@ export function assetResponseToRow(dto: AssetResponseDTO): IAssetRow {
     dimensions: formatDimensions(dto.width, dto.height),
     thumbHue: hashHue(dto.publicId),
     legalHold: dto.legalHold,
-    previewUrls: dto.previewUrls,
     tail: "",
     wo: "",
   };
@@ -110,7 +103,6 @@ export function demoAssetToRow(demo: DemoAsset): IAssetRow {
     dimensions: demo.dimensions,
     thumbHue: demo.thumbHue,
     legalHold: demo.hasLegalHold,
-    previewUrls: undefined,
     tail: demo.tail,
     wo: demo.wo,
   };

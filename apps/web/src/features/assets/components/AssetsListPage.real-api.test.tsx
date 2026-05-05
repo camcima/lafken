@@ -16,6 +16,11 @@ import { AssetsListPage } from "./AssetsListPage";
 // Force real-API mode for these tests.
 vi.mock("@/lib/demo/demo-mode", () => ({ isDemoMode: false }));
 
+// AssetImage requires a LafkenProvider; stub it out in unit tests.
+vi.mock("@lafken/react", () => ({
+  AssetImage: () => null,
+}));
+
 // Mock the services module before importing the page so the page reads the
 // mocked instances at import time.
 const listAssetsMock =
@@ -67,7 +72,6 @@ const ASSET: AssetResponseDTO = {
   stateChangedAt: new Date().toISOString(),
   createdAt: new Date().toISOString(),
   mimeType: "image/jpeg",
-  previewUrls: {},
 };
 
 const NAMESPACE: NamespaceResponseDTO = {

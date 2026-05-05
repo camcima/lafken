@@ -54,10 +54,10 @@ interface IThumbProps {
 function Thumb({ asset, size = "md" }: IThumbProps): React.JSX.Element {
   const isQuarantined =
     asset.state === "quarantined_moderation" || asset.state === "quarantined_virus";
-  // Hide the bytes for states whose contents shouldn't be exposed; the BE
-  // already returns an empty previewUrls map for those, but defend anyway.
-  const sdkAsset =
-    isQuarantined || asset.state === "rejected" ? null : { previewUrls: asset.previewUrls };
+  const previewable =
+    !isQuarantined &&
+    asset.state !== "rejected" &&
+    (asset.state === "uploaded" || asset.state === "processing" || asset.state === "ready");
   return (
     <div
       className={cn("border-border relative overflow-hidden rounded border", THUMB_DIMS[size])}
@@ -65,11 +65,14 @@ function Thumb({ asset, size = "md" }: IThumbProps): React.JSX.Element {
         background: `linear-gradient(135deg, hsl(${asset.thumbHue} 50% 55%), hsl(${asset.thumbHue} 60% 35%))`,
       }}
     >
-      <AssetImage
-        asset={sdkAsset}
-        alt=""
-        className="absolute inset-0 h-full w-full bg-black object-contain"
-      />
+      {previewable && (
+        <AssetImage
+          publicId={asset.publicId}
+          preset="lafken:thumbnail"
+          alt=""
+          className="absolute inset-0 h-full w-full bg-black object-contain"
+        />
+      )}
       {/* Static processing scan stripe (no animation per React port spec) */}
       {asset.state === "processing" && (
         <span className="absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.18)_0_4px,transparent_4px_8px)]" />

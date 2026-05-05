@@ -11,6 +11,11 @@ import { AssetsListPage } from "./AssetsListPage";
 // real-API path is exercised in AssetsListPage.real-api.test.tsx.
 vi.mock("@/lib/demo/demo-mode", () => ({ isDemoMode: true }));
 
+// AssetImage requires a LafkenProvider; stub it out in unit tests.
+vi.mock("@lafken/react", () => ({
+  AssetImage: () => null,
+}));
+
 // TanStack Router Link mock
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
