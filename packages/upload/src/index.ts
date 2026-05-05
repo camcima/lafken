@@ -1,1 +1,6 @@
-export const __SLICE3_SCAFFOLD = true;
+export {
+  LafkenUploadManager,
+  type IFileConfirmedEventDetail,
+  type IFileFailedEventDetail,
+  type ILafkenUploadManagerOptions,
+} from "./lafken-upload-manager";

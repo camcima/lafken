@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@shared/typescript-config": "workspace:*",
+    "jsdom": "^28.1.0",
     "vitest": "^4.1.2"
   }
 }
