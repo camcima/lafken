@@ -30,7 +30,7 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
       try {
         // namespaces.current_policy_id FK is DEFERRABLE INITIALLY DEFERRED —
         // the check is deferred to commit, so we can insert the namespace first
-        // with a placeholder 0n value, then insert the policy with the real
+        // with NIL_UUID as a placeholder, then insert the policy with the real
         // namespace_id, then backfill current_policy_id before the tx commits.
         const nsRow = await tx
           .insertInto("namespaces")
