@@ -22,6 +22,7 @@ import { fmtAgo } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
 
 import { ArchiveNamespaceDialog } from "./ArchiveNamespaceDialog";
+import { NamespaceAssetsTab } from "./NamespaceAssetsTab";
 import { NamespaceMetadataDrawer } from "./NamespaceMetadataDrawer";
 import { PastVersionsPanel } from "./PastVersionsPanel";
 import { RealPresetsTab } from "./RealPresetsTab";
@@ -570,7 +571,12 @@ export function NamespaceDetailPage({
         ))}
       {activeTab === "presets" &&
         (demoNs ? <DemoPresetsTab ns={demoNs} /> : <RealPresetsTab namespace={namespace} />)}
-      {activeTab === "assets" && <SliceLaterTab label={t("pages.namespaceDetail.empty.assets")} />}
+      {activeTab === "assets" &&
+        (demoNs ? (
+          <SliceLaterTab label={t("pages.namespaceDetail.empty.assets")} />
+        ) : namespace ? (
+          <NamespaceAssetsTab namespace={namespace} />
+        ) : null)}
       {activeTab === "webhooks" && (
         <SliceLaterTab label={t("pages.namespaceDetail.empty.webhooks")} />
       )}
