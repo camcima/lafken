@@ -1,5 +1,6 @@
 import type {
   CreateNamespaceRequestDTO,
+  CreatePolicyVersionRequestDTO,
   UpdateNamespaceMetadataRequestDTO,
 } from "@shared/backend-api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -79,6 +80,18 @@ export function useUnarchiveNamespace() {
     onSuccess: (_data, slug) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.detail(slug) });
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.lists() });
+    },
+  });
+}
+
+export function useUpdateNamespacePolicy() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ slug, input }: { slug: string; input: CreatePolicyVersionRequestDTO }) =>
+      namespacesService.updatePolicy(slug, input),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: namespacesKeys.detail(variables.slug) });
+      void queryClient.invalidateQueries({ queryKey: namespacesKeys.policies(variables.slug) });
     },
   });
 }

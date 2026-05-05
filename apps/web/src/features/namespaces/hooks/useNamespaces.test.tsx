@@ -1,5 +1,6 @@
 import type {
   CreateNamespaceRequestDTO,
+  CreatePolicyVersionRequestDTO,
   NamespaceResponseDTO,
   UpdateNamespaceMetadataRequestDTO,
 } from "@shared/backend-api";
@@ -16,6 +17,7 @@ import {
   useCreateNamespace,
   useUnarchiveNamespace,
   useUpdateNamespaceMetadata,
+  useUpdateNamespacePolicy,
 } from "./useNamespaces";
 
 function createWrapper(client: QueryClient) {
@@ -243,5 +245,79 @@ describe("useUnarchiveNamespace", () => {
     expect(unarchiveSpy).toHaveBeenCalledWith(slug);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.detail(slug) });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.lists() });
+  });
+});
+
+const VALID_POLICY: CreatePolicyVersionRequestDTO = {
+  policy: {
+    retentionDays: null,
+    retentionMode: "none",
+    maxFileSizeBytes: 52428800,
+    allowedMimeTypes: ["image/jpeg", "image/png"],
+    exifHandling: "strip",
+    virusScanRequired: false,
+    contentModeration: null,
+    requiredMetadataSchema: null,
+    immutable: false,
+    servingMode: "public",
+    signedUrlTtlSeconds: null,
+    signedUrlBucketSize: null,
+    retryConfig: null,
+  },
+};
+
+describe("useUpdateNamespacePolicy", () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    queryClient = makeQueryClient();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("calls NamespacesService.updatePolicy and invalidates the matching detail and policies on success", async () => {
+    const slug = "aircraft-photos";
+    const updatePolicySpy = vi
+      .spyOn(namespacesService, "updatePolicy")
+      .mockResolvedValue(sampleNamespace);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useUpdateNamespacePolicy(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({ slug, input: VALID_POLICY });
+    });
+
+    expect(updatePolicySpy).toHaveBeenCalledWith(slug, VALID_POLICY);
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.detail(slug) });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.policies(slug) });
+  });
+
+  it("surfaces the error and does not invalidate the cache when the service throws", async () => {
+    const slug = "aircraft-photos";
+    const failure = new Error("policy update failed");
+    vi.spyOn(namespacesService, "updatePolicy").mockRejectedValueOnce(failure);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useUpdateNamespacePolicy(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await expect(result.current.mutateAsync({ slug, input: VALID_POLICY })).rejects.toThrow(
+        "policy update failed",
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(result.current.error).toBe(failure);
+    expect(invalidateSpy).not.toHaveBeenCalled();
   });
 });

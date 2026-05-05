@@ -1,5 +1,6 @@
 import type {
   CreateNamespaceRequestDTO,
+  CreatePolicyVersionRequestDTO,
   NamespacePolicyResponseDTO,
   NamespacePresetResponseDTO,
   NamespaceResponseDTO,
@@ -70,6 +71,16 @@ export class NamespacesService extends BaseService {
     return this.getApiClient().post<Record<string, never>, NamespaceResponseDTO>(
       this.getServiceUrl(`${this.basePath}/${encodeURIComponent(slug)}/unarchive`),
       {},
+    );
+  }
+
+  async updatePolicy(
+    slug: string,
+    input: CreatePolicyVersionRequestDTO,
+  ): Promise<NamespaceResponseDTO> {
+    return this.getApiClient().post<CreatePolicyVersionRequestDTO, NamespaceResponseDTO>(
+      this.getServiceUrl(`${this.basePath}/${encodeURIComponent(slug)}/policy-versions`),
+      input,
     );
   }
 }
