@@ -551,6 +551,7 @@
         "editMetadata": "Edit metadata",
         "editPolicy": "Edit policy",
         "editPolicyDeferred": "Policy editing arrives in the next slice.",
+        "editPolicyArchivedTooltip": "Cannot edit policy on an archived namespace.",
         "archive": "Archive",
         "unarchive": "Unarchive"
       },
@@ -613,6 +614,33 @@
         "latestActivity": "Latest activity",
         "latestActivityMeta": "last 24h · this namespace",
         "noActivity": "No recent activity in this namespace."
+      },
+      "policy": {
+        "currentVersion": "Policy v{{version}}",
+        "currentVersionMeta": "Current active policy",
+        "pastVersions": {
+          "title": "Version history",
+          "empty": "No past versions.",
+          "backToCurrent": "Back to current"
+        },
+        "fields": {
+          "version": "Version",
+          "retentionDays": "Retention days",
+          "retentionMode": "Retention mode",
+          "maxFileSizeBytes": "Max file size (bytes)",
+          "allowedMimeTypes": "Allowed MIME types",
+          "exifHandling": "EXIF handling",
+          "virusScanRequired": "Virus scan required",
+          "contentModeration": "Content moderation",
+          "requiredMetadataSchema": "Required metadata schema",
+          "immutable": "Immutable",
+          "servingMode": "Serving mode",
+          "signedUrlTtlSeconds": "Signed URL TTL (s)",
+          "signedUrlBucketSize": "Signed URL bucket size",
+          "retryConfig": "Retry config",
+          "createdAt": "Created at",
+          "createdBy": "Created by"
+        }
       },
       "empty": {
         "overview": "Overview details will appear here once data is available.",

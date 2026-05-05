@@ -1,3 +1,4 @@
+import type { NamespacePolicyResponseDTO, NamespaceResponseDTO } from "@shared/backend-api";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -109,13 +110,12 @@ describe("NamespaceDetailPage — valid slug", () => {
     expect(screen.getByRole("button", { name: /edit metadata/i })).toBeInTheDocument();
   });
 
-  it("renders Edit policy button as disabled with deferred tooltip", () => {
+  it("renders Edit policy as a Link on active namespace", () => {
     renderPage({ slug: "aircraft-photos" });
-    const editPolicyBtn = screen.getByRole("button", { name: /edit policy/i });
-    expect(editPolicyBtn).toBeDisabled();
-    expect(editPolicyBtn).toHaveAttribute("aria-disabled", "true");
-    expect(editPolicyBtn).toHaveAttribute("title");
-    expect(editPolicyBtn.getAttribute("title")).toMatch(/policy editing/i);
+    // Active namespace: Edit policy renders as an anchor (Button asChild + Link), not a disabled button
+    const editPolicyEl = screen.getByText(/^edit policy$/i);
+    expect(editPolicyEl.tagName.toLowerCase()).toBe("a");
+    expect(editPolicyEl).not.toBeDisabled();
   });
 
   it("renders Archive button on active namespace and opens dialog with archive mode on click", async () => {
@@ -156,5 +156,140 @@ describe("NamespaceDetailPage — archived namespace", () => {
     expect(screen.getByText(/archived/i)).toBeInTheDocument();
 
     spy.mockRestore();
+  });
+
+  it("renders Edit policy as disabled with archived tooltip on archived namespace", () => {
+    const spy = vi.spyOn(useNamespacesModule, "useNamespace").mockReturnValue({
+      data: {
+        slug: "aircraft-photos",
+        displayName: "Aircraft Photos",
+        description: undefined,
+        currentPolicyVersion: 7,
+        storageBindingName: "gcs-prod",
+        archivedAt: "2026-02-01T00:00:00.000Z",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-02-01T00:00:00.000Z",
+      },
+      isLoading: false,
+    } as ReturnType<typeof useNamespacesModule.useNamespace>);
+
+    renderPage({ slug: "aircraft-photos" });
+
+    const editPolicyBtn = screen.getByRole("button", { name: /edit policy/i });
+    expect(editPolicyBtn).toBeDisabled();
+    expect(editPolicyBtn).toHaveAttribute("aria-disabled", "true");
+    expect(editPolicyBtn.getAttribute("title")).toMatch(/archived/i);
+
+    spy.mockRestore();
+  });
+});
+
+const realNamespace: NamespaceResponseDTO = {
+  slug: "real-namespace",
+  displayName: "Real Namespace",
+  description: undefined,
+  currentPolicyVersion: 3,
+  storageBindingName: "gcs-prod",
+  archivedAt: undefined,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+};
+
+function makePolicy(
+  version: number,
+  overrides?: Partial<NamespacePolicyResponseDTO>,
+): NamespacePolicyResponseDTO {
+  return {
+    version,
+    retentionMode: "none",
+    maxFileSizeBytes: 52_428_800,
+    allowedMimeTypes: ["image/jpeg"],
+    exifHandling: "strip",
+    virusScanRequired: true,
+    immutable: false,
+    servingMode: "signed",
+    createdAt: `2026-01-0${version}T10:00:00.000Z`,
+    createdBy: `user-${version}@example.com`,
+    ...overrides,
+  };
+}
+
+const samplePolicies: NamespacePolicyResponseDTO[] = [makePolicy(3), makePolicy(2), makePolicy(1)];
+
+describe("NamespaceDetailPage — real namespace policy tab", () => {
+  it("renders RealPolicyTab with current-version values when slug is not in demo data", () => {
+    const nsSpy = vi.spyOn(useNamespacesModule, "useNamespace").mockReturnValue({
+      data: realNamespace,
+      isLoading: false,
+    } as ReturnType<typeof useNamespacesModule.useNamespace>);
+    const policySpy = vi.spyOn(useNamespacesModule, "useNamespacePolicies").mockReturnValue({
+      data: samplePolicies,
+      isLoading: false,
+    } as ReturnType<typeof useNamespacesModule.useNamespacePolicies>);
+
+    renderPage({ slug: "real-namespace", tab: "policy" });
+
+    // Should show the current version fields label (card title "Policy v3")
+    const policyCardTitles = screen.getAllByText(/policy v3/i);
+    expect(policyCardTitles.length).toBeGreaterThanOrEqual(1);
+    // Should show version history section
+    expect(screen.getByText(/version history/i)).toBeInTheDocument();
+
+    nsSpy.mockRestore();
+    policySpy.mockRestore();
+  });
+
+  it("renders the past-versions panel listing all returned policies", () => {
+    const nsSpy = vi.spyOn(useNamespacesModule, "useNamespace").mockReturnValue({
+      data: realNamespace,
+      isLoading: false,
+    } as ReturnType<typeof useNamespacesModule.useNamespace>);
+    const policySpy = vi.spyOn(useNamespacesModule, "useNamespacePolicies").mockReturnValue({
+      data: samplePolicies,
+      isLoading: false,
+    } as ReturnType<typeof useNamespacesModule.useNamespacePolicies>);
+
+    renderPage({ slug: "real-namespace", tab: "policy" });
+
+    // Version history panel should list v3, v2, v1 (buttons in the panel)
+    const v3Buttons = screen.getAllByRole("button", { name: /v3/ });
+    const v2Buttons = screen.getAllByRole("button", { name: /v2/ });
+    const v1Buttons = screen.getAllByRole("button", { name: /v1/ });
+    expect(v3Buttons.length).toBeGreaterThanOrEqual(1);
+    expect(v2Buttons.length).toBeGreaterThanOrEqual(1);
+    expect(v1Buttons.length).toBeGreaterThanOrEqual(1);
+
+    nsSpy.mockRestore();
+    policySpy.mockRestore();
+  });
+
+  it("replaces the policy panel with the selected version's values when a past version is clicked", async () => {
+    const user = userEvent.setup();
+
+    const nsSpy = vi.spyOn(useNamespacesModule, "useNamespace").mockReturnValue({
+      data: realNamespace,
+      isLoading: false,
+    } as ReturnType<typeof useNamespacesModule.useNamespace>);
+    const policySpy = vi.spyOn(useNamespacesModule, "useNamespacePolicies").mockReturnValue({
+      data: samplePolicies,
+      isLoading: false,
+    } as ReturnType<typeof useNamespacesModule.useNamespacePolicies>);
+
+    renderPage({ slug: "real-namespace", tab: "policy" });
+
+    // Initially shows v3 in the card title (CardTitle)
+    expect(screen.getAllByText(/policy v3/i).length).toBeGreaterThanOrEqual(1);
+
+    // Click v1 in the version history
+    const v1Btn = screen.getByRole("button", { name: /v1/ });
+    await user.click(v1Btn);
+
+    // Now card title should show v1
+    expect(screen.getAllByText(/policy v1/i).length).toBeGreaterThanOrEqual(1);
+    // "Back to current" should appear
+    expect(screen.getByText(/back to current/i)).toBeInTheDocument();
+
+    nsSpy.mockRestore();
+    policySpy.mockRestore();
   });
 });

@@ -1,5 +1,5 @@
 // Slice 0: BE returns empty arrays; rendering against typed demo data
-import type { NamespaceResponseDTO } from "@shared/backend-api";
+import type { NamespacePolicyResponseDTO, NamespaceResponseDTO } from "@shared/backend-api";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import React, { useState } from "react";
@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 
 import { ArchiveNamespaceDialog } from "./ArchiveNamespaceDialog";
 import { NamespaceMetadataDrawer } from "./NamespaceMetadataDrawer";
+import { PastVersionsPanel } from "./PastVersionsPanel";
 
 const BACK_ICON_SIZE = 14;
 const RECENT_AUDIT_COUNT = 5;
@@ -193,6 +194,136 @@ function SliceLaterTab({ label }: { label: string }): React.JSX.Element {
   );
 }
 
+interface IRealPolicyTabProps {
+  namespace: NamespaceResponseDTO;
+  policies: NamespacePolicyResponseDTO[];
+  selectedVersion: number;
+  onSelectVersion: (version: number) => void;
+}
+
+function RealPolicyTab({
+  namespace,
+  policies,
+  selectedVersion,
+  onSelectVersion,
+}: IRealPolicyTabProps): React.JSX.Element {
+  const { t } = useTranslation();
+
+  const displayPolicy =
+    policies.find((policy) => policy.version === selectedVersion) ?? policies[0];
+
+  const policyRows: Array<[string, React.ReactNode]> = displayPolicy
+    ? [
+        [
+          t("pages.namespaceDetail.policy.fields.version"),
+          <span key="version" className="font-mono">
+            v{displayPolicy.version}
+          </span>,
+        ],
+        [
+          t("pages.namespaceDetail.policy.fields.retentionMode"),
+          <span key="retentionMode" className="font-mono">
+            {displayPolicy.retentionMode}
+          </span>,
+        ],
+        [
+          t("pages.namespaceDetail.policy.fields.retentionDays"),
+          <span key="retentionDays" className="font-mono">
+            {displayPolicy.retentionDays ?? "—"}
+          </span>,
+        ],
+        [
+          t("pages.namespaceDetail.policy.fields.maxFileSizeBytes"),
+          <span key="maxFileSize" className="font-mono">
+            {displayPolicy.maxFileSizeBytes.toLocaleString()}
+          </span>,
+        ],
+        [
+          t("pages.namespaceDetail.policy.fields.allowedMimeTypes"),
+          <span key="mimeTypes" className="font-mono">
+            {displayPolicy.allowedMimeTypes.join(", ")}
+          </span>,
+        ],
+        [
+          t("pages.namespaceDetail.policy.fields.exifHandling"),
+          <span key="exifHandling" className="font-mono">
+            {displayPolicy.exifHandling}
+          </span>,
+        ],
+        [
+          t("pages.namespaceDetail.policy.fields.virusScanRequired"),
+          <span key="virusScan" className="font-mono">
+            {displayPolicy.virusScanRequired
+              ? t("pages.namespaces.drawer.moderationEnabled")
+              : t("pages.namespaces.drawer.moderationDisabled")}
+          </span>,
+        ],
+        [
+          t("pages.namespaceDetail.policy.fields.servingMode"),
+          <span key="servingMode" className="font-mono">
+            {displayPolicy.servingMode}
+          </span>,
+        ],
+        [
+          t("pages.namespaceDetail.policy.fields.immutable"),
+          <span key="immutable" className="font-mono">
+            {String(displayPolicy.immutable)}
+          </span>,
+        ],
+        [
+          t("pages.namespaceDetail.policy.fields.createdAt"),
+          <span key="createdAt" className="font-mono">
+            {new Date(displayPolicy.createdAt).toLocaleString()}
+          </span>,
+        ],
+        [
+          t("pages.namespaceDetail.policy.fields.createdBy"),
+          <span key="createdBy" className="font-mono">
+            {displayPolicy.createdBy ?? "—"}
+          </span>,
+        ],
+      ]
+    : [];
+
+  return (
+    <div className="grid gap-4">
+      <Card className="p-0">
+        <CardHeader>
+          <CardTitle>
+            {t("pages.namespaceDetail.policy.currentVersion", {
+              version: selectedVersion,
+            })}
+          </CardTitle>
+          <CardMeta>{t("pages.namespaceDetail.policy.currentVersionMeta")}</CardMeta>
+        </CardHeader>
+        {displayPolicy ? (
+          <div className="grid grid-cols-1 gap-x-8 gap-y-3 px-5 py-5 text-[12.5px] sm:grid-cols-2">
+            {policyRows.map(([rowKey, rowVal]) => (
+              <div key={rowKey}>
+                <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
+                  {rowKey}
+                </div>
+                <div className="font-mono text-[12px]">{rowVal}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-muted-foreground px-5 py-8 text-center text-[12.5px]">
+            {t("pages.namespaceDetail.empty.policy")}
+          </div>
+        )}
+      </Card>
+
+      <PastVersionsPanel
+        policies={policies}
+        currentVersion={namespace.currentPolicyVersion}
+        selectedVersion={selectedVersion}
+        onSelectVersion={onSelectVersion}
+      />
+    </div>
+  );
+}
+
 /** Build a minimal NamespaceResponseDTO from demo data for drawer/dialog usage */
 function demoToNamespaceDTO(demoNs: DemoNamespace): NamespaceResponseDTO {
   return {
@@ -214,9 +345,9 @@ export function NamespaceDetailPage({
 }: INamespaceDetailPageProps): React.JSX.Element {
   const { t } = useTranslation();
   const { isLoading, data: namespaceData } = useNamespace(slug);
+  const { data: policiesData } = useNamespacePolicies(slug);
 
-  // Consume the hooks to satisfy the contract even if unused in Slice 0
-  useNamespacePolicies(slug);
+  // Consume presets hook
   useNamespacePresets(slug);
 
   // Find demo namespace for content rendering
@@ -238,6 +369,21 @@ export function NamespaceDetailPage({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [archiveMode, setArchiveMode] = useState<"archive" | "unarchive">("archive");
+
+  // Selected policy version for the policy tab (real namespaces only).
+  // We store the previous currentPolicyVersion in state so that when it changes
+  // (e.g. right after an edit), we can reset the user's selection — following
+  // the React pattern for "adjusting state on render" without useEffect.
+  const [prevCurrentVersion, setPrevCurrentVersion] = useState(namespace?.currentPolicyVersion);
+  const [selectedVersion, setSelectedVersion] = useState(namespace?.currentPolicyVersion ?? 1);
+
+  if (
+    namespace?.currentPolicyVersion !== undefined &&
+    prevCurrentVersion !== namespace.currentPolicyVersion
+  ) {
+    setPrevCurrentVersion(namespace.currentPolicyVersion);
+    setSelectedVersion(namespace.currentPolicyVersion);
+  }
 
   const isArchived = Boolean(namespace?.archivedAt);
 
@@ -305,15 +451,23 @@ export function NamespaceDetailPage({
             >
               {t("pages.namespaces.actions.editMetadata")}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled
-              aria-disabled="true"
-              title={t("pages.namespaces.actions.editPolicyDeferred")}
-            >
-              {t("pages.namespaces.actions.editPolicy")}
-            </Button>
+            {isArchived ? (
+              <Button
+                type="button"
+                variant="indigo"
+                disabled
+                aria-disabled="true"
+                title={t("pages.namespaces.actions.editPolicyArchivedTooltip")}
+              >
+                {t("pages.namespaces.actions.editPolicy")}
+              </Button>
+            ) : (
+              <Button asChild variant="indigo">
+                <Link to="/namespaces/$slug/policy/edit" params={{ slug: namespace.slug }}>
+                  {t("pages.namespaces.actions.editPolicy")}
+                </Link>
+              </Button>
+            )}
             <Button
               type="button"
               variant={isArchived ? "outline" : "destructive"}
@@ -347,7 +501,12 @@ export function NamespaceDetailPage({
         (demoNs ? (
           <PolicyTab ns={demoNs} />
         ) : (
-          <SliceLaterTab label={t("pages.namespaceDetail.empty.policy")} />
+          <RealPolicyTab
+            namespace={namespace}
+            policies={policiesData ?? []}
+            selectedVersion={selectedVersion}
+            onSelectVersion={setSelectedVersion}
+          />
         ))}
       {activeTab === "presets" && (
         <SliceLaterTab label={t("pages.namespaceDetail.empty.presets")} />
