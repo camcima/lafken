@@ -591,6 +591,27 @@
           "versionConflict": "Another operator edited this preset. Refresh and re-apply your changes."
         }
       },
+      "assets": {
+        "title": "Assets",
+        "upload": {
+          "cta": "Upload assets",
+          "dialogTitle": "Upload assets",
+          "dropzonePrompt": "Drop image files here or click to choose",
+          "startButton": "Start upload",
+          "cancelButton": "Cancel",
+          "fileStateIdle": "Ready",
+          "fileStateUploading": "Uploading…",
+          "fileStateUploaded": "Uploaded",
+          "fileStateError": "Failed"
+        },
+        "empty": {
+          "title": "No assets yet",
+          "body": "Upload your first asset to get started."
+        },
+        "list": {
+          "columnFile": "Recent uploads"
+        }
+      },
       "actions": {
         "newNamespace": "New namespace",
         "editMetadata": "Edit metadata",

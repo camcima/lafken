@@ -530,6 +530,27 @@
           "versionConflict": "Outro operador editou este preset. Atualize e aplique suas alterações novamente."
         }
       },
+      "assets": {
+        "title": "Ativos",
+        "upload": {
+          "cta": "Enviar ativos",
+          "dialogTitle": "Enviar ativos",
+          "dropzonePrompt": "Solte arquivos de imagem aqui ou clique para escolher",
+          "startButton": "Iniciar envio",
+          "cancelButton": "Cancelar",
+          "fileStateIdle": "Pronto",
+          "fileStateUploading": "Enviando…",
+          "fileStateUploaded": "Enviado",
+          "fileStateError": "Falhou"
+        },
+        "empty": {
+          "title": "Ainda não há ativos",
+          "body": "Envie seu primeiro ativo para começar."
+        },
+        "list": {
+          "columnFile": "Envios recentes"
+        }
+      },
       "form": {
         "title": "Novo namespace",
         "subtitle": "Configure a identidade, armazenamento e política do namespace.",

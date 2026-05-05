@@ -530,6 +530,27 @@
           "versionConflict": "Otro operador editó este preset. Actualice y vuelva a aplicar sus cambios."
         }
       },
+      "assets": {
+        "title": "Activos",
+        "upload": {
+          "cta": "Subir activos",
+          "dialogTitle": "Subir activos",
+          "dropzonePrompt": "Arrastra archivos de imagen aquí o haz clic para elegir",
+          "startButton": "Iniciar carga",
+          "cancelButton": "Cancelar",
+          "fileStateIdle": "Listo",
+          "fileStateUploading": "Subiendo…",
+          "fileStateUploaded": "Subido",
+          "fileStateError": "Falló"
+        },
+        "empty": {
+          "title": "Aún no hay activos",
+          "body": "Sube tu primer activo para comenzar."
+        },
+        "list": {
+          "columnFile": "Cargas recientes"
+        }
+      },
       "form": {
         "title": "Nuevo namespace",
         "subtitle": "Configure la identidad, almacenamiento y política del namespace.",
