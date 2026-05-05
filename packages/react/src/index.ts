@@ -11,3 +11,9 @@ export {
   type IUploadDropzoneRenderProps,
 } from "./upload-dropzone";
 export { AssetImage, type IAssetImageAsset, type IAssetImageProps } from "./asset-image";
+export {
+  LafkenProvider,
+  useLafkenClient,
+  _LafkenClientContext,
+  type ILafkenProviderProps,
+} from "./lafken-provider";
