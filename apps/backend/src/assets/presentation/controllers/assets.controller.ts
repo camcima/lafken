@@ -108,11 +108,17 @@ export class AssetsController {
       let presets: Array<{ name: string; spec: IPreviewSpec }> | undefined =
         presetsCache.get(namespaceId);
       if (!presets) {
+        // listPresets returns every active row ordered by (name asc, version
+        // desc); collapse to the highest active version per name so a stale
+        // older version can't clobber the latest one in the resulting URL map.
         const list = await namespaceRepo.listPresets(namespaceId);
-        presets = list.map((preset) => ({
-          name: preset.props.name,
-          spec: preset.props.params.props,
-        }));
+        const latestByName: Map<string, IPreviewSpec> = new Map();
+        for (const preset of list) {
+          if (!latestByName.has(preset.props.name)) {
+            latestByName.set(preset.props.name, preset.props.params.props);
+          }
+        }
+        presets = Array.from(latestByName, ([name, spec]) => ({ name, spec }));
         presetsCache.set(namespaceId, presets);
       }
       if (presets.length === 0) {

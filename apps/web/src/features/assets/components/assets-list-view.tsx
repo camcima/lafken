@@ -67,7 +67,7 @@ function Thumb({ asset, size = "md" }: IThumbProps): React.JSX.Element {
       <AssetImage
         asset={sdkAsset}
         alt=""
-        className="absolute inset-0 h-full w-full object-cover"
+        className="absolute inset-0 h-full w-full object-contain"
       />
       {/* Static processing scan stripe (no animation per React port spec) */}
       {asset.state === "processing" && (
