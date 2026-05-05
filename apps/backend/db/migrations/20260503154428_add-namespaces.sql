@@ -1,20 +1,20 @@
 -- migrate:up
 
 CREATE TABLE IF NOT EXISTS namespaces (
-  id                  bigserial PRIMARY KEY,
+  id                  uuid PRIMARY KEY DEFAULT uuidv7(),
   slug                text NOT NULL UNIQUE,
   display_name        text NOT NULL,
   description         text,
-  current_policy_id   bigint NOT NULL,                  -- FK added after namespace_policies exists
-  storage_binding_id  bigint NOT NULL REFERENCES storage_bindings(id) ON DELETE RESTRICT,
+  current_policy_id   uuid NOT NULL,                  -- FK added after namespace_policies exists
+  storage_binding_id  uuid NOT NULL REFERENCES storage_bindings(id) ON DELETE RESTRICT,
   archived_at         timestamptz,
   created_at          timestamptz NOT NULL DEFAULT now(),
   updated_at          timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS namespace_policies (
-  id                       bigserial PRIMARY KEY,
-  namespace_id             bigint NOT NULL REFERENCES namespaces(id) ON DELETE RESTRICT,
+  id                       uuid PRIMARY KEY DEFAULT uuidv7(),
+  namespace_id             uuid NOT NULL REFERENCES namespaces(id) ON DELETE RESTRICT,
   version                  integer NOT NULL,
   retention_days           integer,
   retention_mode           text NOT NULL,                -- 'delete' | 'archive' | 'none'
@@ -40,8 +40,8 @@ ALTER TABLE namespaces
   FOREIGN KEY (current_policy_id) REFERENCES namespace_policies(id) DEFERRABLE INITIALLY DEFERRED;
 
 CREATE TABLE IF NOT EXISTS namespace_presets (
-  id                   bigserial PRIMARY KEY,
-  namespace_id         bigint NOT NULL REFERENCES namespaces(id) ON DELETE RESTRICT,
+  id                   uuid PRIMARY KEY DEFAULT uuidv7(),
+  namespace_id         uuid NOT NULL REFERENCES namespaces(id) ON DELETE RESTRICT,
   name                 text NOT NULL,
   version              integer NOT NULL,
   transformation       jsonb NOT NULL,

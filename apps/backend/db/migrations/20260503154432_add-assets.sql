@@ -1,12 +1,12 @@
 -- migrate:up
 
 CREATE TABLE IF NOT EXISTS assets (
-  id                          bigserial PRIMARY KEY,
+  id                          uuid PRIMARY KEY DEFAULT uuidv7(),
   public_id                   uuid NOT NULL UNIQUE DEFAULT gen_random_uuid(),
-  namespace_id                bigint NOT NULL REFERENCES namespaces(id) ON DELETE RESTRICT,
-  policy_version_id           bigint NOT NULL REFERENCES namespace_policies(id) ON DELETE RESTRICT,
+  namespace_id                uuid NOT NULL REFERENCES namespaces(id) ON DELETE RESTRICT,
+  policy_version_id           uuid NOT NULL REFERENCES namespace_policies(id) ON DELETE RESTRICT,
   state                       text NOT NULL,
-  storage_binding_id          bigint NOT NULL REFERENCES storage_bindings(id) ON DELETE RESTRICT,
+  storage_binding_id          uuid NOT NULL REFERENCES storage_bindings(id) ON DELETE RESTRICT,
   storage_key                 text NOT NULL,
   content_hash                bytea,
   size_bytes                  bigint,
@@ -34,11 +34,11 @@ CREATE TABLE IF NOT EXISTS assets (
 );
 
 CREATE TABLE IF NOT EXISTS upload_intents (
-  id                       bigserial PRIMARY KEY,
+  id                       uuid PRIMARY KEY DEFAULT uuidv7(),
   public_id                uuid NOT NULL UNIQUE DEFAULT gen_random_uuid(),
-  namespace_id             bigint NOT NULL REFERENCES namespaces(id) ON DELETE RESTRICT,
-  policy_version_id        bigint NOT NULL REFERENCES namespace_policies(id) ON DELETE RESTRICT,
-  storage_binding_id       bigint NOT NULL REFERENCES storage_bindings(id) ON DELETE RESTRICT,
+  namespace_id             uuid NOT NULL REFERENCES namespaces(id) ON DELETE RESTRICT,
+  policy_version_id        uuid NOT NULL REFERENCES namespace_policies(id) ON DELETE RESTRICT,
+  storage_binding_id       uuid NOT NULL REFERENCES storage_bindings(id) ON DELETE RESTRICT,
   storage_key              text NOT NULL,
   declared_mime_type       text,
   declared_size_bytes      bigint,
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS upload_intents (
 );
 
 CREATE TABLE IF NOT EXISTS processing_jobs (
-  asset_id          bigint PRIMARY KEY REFERENCES assets(id) ON DELETE RESTRICT,
+  asset_id          uuid PRIMARY KEY REFERENCES assets(id) ON DELETE RESTRICT,
   worker_id         text,
   state             text NOT NULL,
   claimed_at        timestamptz,
@@ -68,8 +68,8 @@ CREATE TABLE IF NOT EXISTS processing_jobs (
 );
 
 CREATE TABLE IF NOT EXISTS asset_state_transitions (
-  id              bigserial PRIMARY KEY,
-  asset_id        bigint NOT NULL REFERENCES assets(id) ON DELETE RESTRICT,
+  id              uuid PRIMARY KEY DEFAULT uuidv7(),
+  asset_id        uuid NOT NULL REFERENCES assets(id) ON DELETE RESTRICT,
   from_state      text,
   to_state        text NOT NULL,
   reason          text,
@@ -81,8 +81,8 @@ CREATE TABLE IF NOT EXISTS asset_state_transitions (
 );
 
 CREATE TABLE IF NOT EXISTS asset_analyses (
-  id                  bigserial PRIMARY KEY,
-  asset_id            bigint NOT NULL REFERENCES assets(id) ON DELETE RESTRICT,
+  id                  uuid PRIMARY KEY DEFAULT uuidv7(),
+  asset_id            uuid NOT NULL REFERENCES assets(id) ON DELETE RESTRICT,
   analyzer            text NOT NULL,
   analyzer_version    text,
   findings            jsonb NOT NULL,

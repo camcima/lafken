@@ -1,7 +1,7 @@
 -- migrate:up
 
 CREATE TABLE IF NOT EXISTS storage_bindings (
-  id              bigserial PRIMARY KEY,
+  id              uuid PRIMARY KEY DEFAULT uuidv7(),
   name            text NOT NULL UNIQUE,
   adapter_type    text NOT NULL,                     -- 'gcs' | 's3' | 'local'
   config          jsonb NOT NULL,

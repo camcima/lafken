@@ -1,7 +1,7 @@
 -- migrate:up
 
 CREATE TABLE IF NOT EXISTS configuration_audit_log (
-  id                bigserial PRIMARY KEY,
+  id                uuid PRIMARY KEY DEFAULT uuidv7(),
   entity_type       text NOT NULL,                     -- 'namespace' | 'namespace_policy' | 'namespace_preset' | 'storage_binding'
   entity_id         text NOT NULL,                     -- text to accommodate slugs / composite keys
   action            text NOT NULL,                     -- 'create' | 'update' | 'archive' | 'delete'

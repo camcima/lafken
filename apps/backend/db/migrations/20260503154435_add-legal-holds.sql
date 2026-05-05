@@ -1,7 +1,7 @@
 -- migrate:up
 
 CREATE TABLE IF NOT EXISTS legal_holds (
-  id                bigserial PRIMARY KEY,
+  id                uuid PRIMARY KEY DEFAULT uuidv7(),
   case_reference    text NOT NULL,
   description       text NOT NULL,
   scope_summary     text NOT NULL,
@@ -16,8 +16,8 @@ CREATE TABLE IF NOT EXISTS legal_holds (
 );
 
 CREATE TABLE IF NOT EXISTS legal_hold_assets (
-  legal_hold_id     bigint NOT NULL REFERENCES legal_holds(id) ON DELETE RESTRICT,
-  asset_id          bigint NOT NULL REFERENCES assets(id) ON DELETE RESTRICT,
+  legal_hold_id     uuid NOT NULL REFERENCES legal_holds(id) ON DELETE RESTRICT,
+  asset_id          uuid NOT NULL REFERENCES assets(id) ON DELETE RESTRICT,
   added_at          timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (legal_hold_id, asset_id)
 );
