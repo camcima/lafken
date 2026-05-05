@@ -41,6 +41,7 @@ import { ListIntegrationsUseCase } from "@/system/application/use-cases/list-int
 import { ListStorageBindingsUseCase } from "@/system/application/use-cases/list-storage-bindings.use-case";
 import { UpdateStorageBindingUseCase } from "@/system/application/use-cases/update-storage-binding.use-case";
 import { DuplicateStorageBindingNameError } from "@/system/domain/errors/duplicate-storage-binding-name.error";
+import { StorageBindingInUseError } from "@/system/domain/errors/storage-binding-in-use.error";
 import { StorageBindingNotFoundError } from "@/system/domain/errors/storage-binding-not-found.error";
 
 import { IntegrationStatusResponseMapper } from "../mappers/integration-status.response-mapper";
@@ -143,12 +144,16 @@ export class SystemController {
   @ApiOperation({ summary: "Delete a storage binding" })
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
+  @ApiConflictResponse()
   async deleteStorageBinding(@Param("name") name: string): Promise<void> {
     try {
       await this.deleteStorageBindingUseCase.execute({ name });
     } catch (err) {
       if (err instanceof StorageBindingNotFoundError) {
         throw new NotFoundException(err.message, { cause: err });
+      }
+      if (err instanceof StorageBindingInUseError) {
+        throw new ConflictException(err.message, { cause: err });
       }
       throw err;
     }

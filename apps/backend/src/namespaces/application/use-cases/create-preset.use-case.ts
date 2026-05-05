@@ -36,11 +36,18 @@ export class CreatePresetUseCase {
       throw new PresetNameAlreadyExistsError({ slug: input.slug, name: input.name });
     }
 
-    return this.writeRepository.createPreset({
-      namespaceId: namespace.props.id,
-      name: input.name,
-      params: input.params,
-      createdBy: input.createdBy,
-    });
+    try {
+      return await this.writeRepository.createPreset({
+        namespaceId: namespace.props.id,
+        name: input.name,
+        params: input.params,
+        createdBy: input.createdBy,
+      });
+    } catch (err) {
+      if (err instanceof PresetNameAlreadyExistsError) {
+        throw new PresetNameAlreadyExistsError({ slug: input.slug, name: input.name });
+      }
+      throw err;
+    }
   }
 }

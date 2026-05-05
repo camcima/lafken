@@ -57,7 +57,9 @@ export class GcsBucketExistsCheckerAdapter extends BucketExistsCheckerPort {
     const bucketName: string = props.config.bucket;
     let exists: boolean;
     try {
-      [exists] = await this.storage.bucket(bucketName).exists();
+      [exists] = await this.storage
+        .bucket(bucketName, { userProject: props.config.projectId })
+        .exists();
     } catch (err) {
       throw new BucketCheckFailedError({
         adapterType: "gcs",

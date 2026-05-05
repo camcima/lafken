@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { NamespacePreset } from "@/namespaces/domain/entities/namespace-preset.entity";
+import { PresetNameAlreadyExistsError } from "@/namespaces/domain/errors/preset-name-already-exists.error";
 import { PresetNotFoundError } from "@/namespaces/domain/errors/preset-not-found.error";
 import { PresetVersionConflictError } from "@/namespaces/domain/errors/preset-version-conflict.error";
 import type {
@@ -20,18 +21,26 @@ export class NamespacePresetWriteRepository implements NamespacePresetWriteRepos
   constructor(private readonly db: DatabaseClient) {}
 
   async createPreset(input: ICreatePresetInput): Promise<NamespacePreset> {
-    const row = await this.db.connection
-      .insertInto("namespace_presets")
-      .values({
-        namespace_id: input.namespaceId,
-        name: input.name,
-        version: 1,
-        params: input.params.toJSON(),
-        active: true,
-        created_by: input.createdBy ?? undefined,
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
+    let row: Record<string, unknown>;
+    try {
+      row = await this.db.connection
+        .insertInto("namespace_presets")
+        .values({
+          namespace_id: input.namespaceId,
+          name: input.name,
+          version: 1,
+          params: input.params.toJSON(),
+          active: true,
+          created_by: input.createdBy ?? undefined,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+    } catch (err) {
+      if (this.isPresetVersionUniqueViolation(err)) {
+        throw new PresetNameAlreadyExistsError({ slug: "<unknown>", name: input.name });
+      }
+      throw err;
+    }
     return NamespacePresetDbMapper.toDomain(row);
   }
 

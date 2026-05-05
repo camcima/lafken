@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { NamespaceAlreadyExistsError } from "@/namespaces/domain/errors/namespace-already-exists.error";
 import { StorageBindingMissingError } from "@/namespaces/domain/errors/storage-binding-missing.error";
 import { NamespaceWriteRepository } from "@/namespaces/infrastructure/persistence/repositories/namespace-write.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
@@ -124,6 +125,29 @@ describe("NamespaceWriteRepository", () => {
       .select((eb) => eb.fn.countAll<string>().as("count"))
       .executeTakeFirstOrThrow();
     expect(Number((polCnt as { count: string }).count)).toBe(0);
+  });
+
+  it("translates duplicate slugs into a domain error", async () => {
+    const storageBindingId = await seedStorageBinding();
+    await repository.createWithInitialPolicy({
+      slug: "duplicate-slug",
+      displayName: "Original",
+      description: null,
+      storageBindingId,
+      policy: basePolicy,
+      createdBy: null,
+    });
+
+    await expect(
+      repository.createWithInitialPolicy({
+        slug: "duplicate-slug",
+        displayName: "Duplicate",
+        description: null,
+        storageBindingId,
+        policy: basePolicy,
+        createdBy: null,
+      }),
+    ).rejects.toBeInstanceOf(NamespaceAlreadyExistsError);
   });
 
   it("updates display_name and description", async () => {

@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { PresetNameAlreadyExistsError } from "@/namespaces/domain/errors/preset-name-already-exists.error";
 import { PresetNotFoundError } from "@/namespaces/domain/errors/preset-not-found.error";
 import { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
 import { NamespacePresetWriteRepository } from "@/namespaces/infrastructure/persistence/repositories/namespace-preset-write.repository";
@@ -119,6 +120,24 @@ describe("NamespacePresetWriteRepository", () => {
     expect((rows[0] as { name: string }).name).toBe("thumbnail");
     expect((rows[0] as { version: number }).version).toBe(1);
     expect((rows[0] as { active: boolean }).active).toBe(true);
+  });
+
+  it("createPreset translates duplicate initial versions into a domain error", async () => {
+    await repository.createPreset({
+      namespaceId,
+      name: "thumbnail",
+      params: VALID_PARAMS,
+      createdBy: null,
+    });
+
+    await expect(
+      repository.createPreset({
+        namespaceId,
+        name: "thumbnail",
+        params: VALID_PARAMS,
+        createdBy: null,
+      }),
+    ).rejects.toBeInstanceOf(PresetNameAlreadyExistsError);
   });
 
   it("createVersion bumps version and inherits active from latest", async () => {

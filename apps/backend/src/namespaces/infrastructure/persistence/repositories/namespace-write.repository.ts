@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
+import { NamespaceAlreadyExistsError } from "@/namespaces/domain/errors/namespace-already-exists.error";
 import { PolicyVersionConflictError } from "@/namespaces/domain/errors/policy-version-conflict.error";
 import { StorageBindingMissingError } from "@/namespaces/domain/errors/storage-binding-missing.error";
 import type {
@@ -82,6 +83,9 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
       } catch (err) {
         if (this.isStorageBindingFkViolation(err)) {
           throw new StorageBindingMissingError({ storageBindingId: input.storageBindingId });
+        }
+        if (this.isNamespaceSlugUniqueViolation(err)) {
+          throw new NamespaceAlreadyExistsError({ slug: input.slug });
         }
         throw err;
       }
@@ -196,6 +200,14 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
     if (code !== PG_UNIQUE_VIOLATION) return false;
     const detail = (err as { detail?: unknown }).detail;
     return typeof detail === "string" && detail.includes("(namespace_id, version)");
+  }
+
+  private isNamespaceSlugUniqueViolation(err: unknown): boolean {
+    if (!err || typeof err !== "object") return false;
+    const code = (err as { code?: unknown }).code;
+    if (code !== PG_UNIQUE_VIOLATION) return false;
+    const detail = (err as { detail?: unknown }).detail;
+    return typeof detail === "string" && detail.includes("(slug)");
   }
 
   private isStorageBindingFkViolation(err: unknown): boolean {
