@@ -1,0 +1,214 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+
+import { AssetProcessingRepository } from "@/assets/infrastructure/persistence/repositories/asset-processing.repository";
+import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+
+import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
+
+const NIL_UUID = "00000000-0000-0000-0000-000000000000";
+
+describe("AssetProcessingRepository", () => {
+  let db: DatabaseClient;
+  let repository: AssetProcessingRepository;
+  let assetId: string;
+
+  beforeAll(async () => {
+    db = await createTestDatabaseClient();
+    repository = new AssetProcessingRepository(db);
+  });
+
+  afterAll(async () => {
+    await db.closeConnection();
+  });
+
+  beforeEach(async () => {
+    await cleanDatabase(db);
+    assetId = await seedUploadedAssetWithJob(db);
+  });
+
+  it("finds an asset with its processing policy", async () => {
+    const result = await repository.findAssetWithPolicy(assetId);
+
+    expect(result?.asset.props.id).toBe(assetId);
+    expect(result?.policy.props.allowedMimeTypes).toEqual(["image/png"]);
+    expect(result?.policy.props.virusScanRequired).toBe(true);
+  });
+
+  it("transitions asset state with a precondition and records timeline metadata", async () => {
+    const transitioned = await repository.transitionAsset({
+      assetId,
+      fromState: "uploaded",
+      toState: "processing",
+      reason: "processing_started",
+      metadata: { worker_id: "worker-a", job_attempt: 1, reason_code: "processing_started" },
+      occurredBy: "worker:worker-a",
+      now: new Date("2026-05-06T12:00:00.000Z"),
+    });
+
+    expect(transitioned).toBe(true);
+
+    const asset = await db.connection
+      .selectFrom("assets")
+      .select(["state", "state_reason"])
+      .where("id", "=", assetId)
+      .executeTakeFirstOrThrow();
+
+    expect(asset.state).toBe("processing");
+    expect(asset.state_reason).toBe("processing_started");
+
+    const transition = await db.connection
+      .selectFrom("asset_state_transitions")
+      .select(["from_state", "to_state", "reason", "metadata", "occurred_by"])
+      .where("asset_id", "=", assetId)
+      .executeTakeFirstOrThrow();
+
+    expect(transition.from_state).toBe("uploaded");
+    expect(transition.to_state).toBe("processing");
+    expect(transition.reason).toBe("processing_started");
+    expect(transition.occurred_by).toBe("worker:worker-a");
+    expect(transition.metadata).toEqual({
+      worker_id: "worker-a",
+      job_attempt: 1,
+      reason_code: "processing_started",
+    });
+  });
+
+  it("updates derived metadata and records analysis evidence", async () => {
+    const contentHash = Buffer.alloc(32, 3);
+
+    await repository.updateDerivedMetadata({
+      assetId,
+      mimeType: "image/png",
+      sizeBytes: 123n,
+      width: 2,
+      height: 3,
+      contentHash,
+      captureContext: { captured_at: "2026-05-06T12:00:00.000Z" },
+    });
+
+    await repository.recordAnalysis({
+      assetId,
+      analyzer: "image_inspection",
+      analyzerVersion: "sharp-v1",
+      decision: "pass",
+      findings: { duration_ms: 12 },
+      occurredAt: new Date("2026-05-06T12:00:00.000Z"),
+    });
+
+    const asset = await db.connection
+      .selectFrom("assets")
+      .select(["mime_type", "size_bytes", "width", "height", "content_hash", "capture_context"])
+      .where("id", "=", assetId)
+      .executeTakeFirstOrThrow();
+
+    expect(asset.mime_type).toBe("image/png");
+    expect(asset.size_bytes).toBe(123n);
+    expect(asset.width).toBe(2);
+    expect(asset.height).toBe(3);
+    expect(Buffer.from(asset.content_hash as Buffer).toString("hex")).toBe(
+      contentHash.toString("hex"),
+    );
+    expect(asset.capture_context).toEqual({ captured_at: "2026-05-06T12:00:00.000Z" });
+
+    const analyses = await db.connection
+      .selectFrom("asset_analyses")
+      .select(["analyzer", "decision", "findings"])
+      .where("asset_id", "=", assetId)
+      .execute();
+
+    expect(analyses).toHaveLength(1);
+    expect(analyses[0]?.analyzer).toBe("image_inspection");
+    expect(analyses[0]?.decision).toBe("pass");
+    expect(analyses[0]?.findings).toEqual({ duration_ms: 12 });
+  });
+});
+
+async function cleanDatabase(db: DatabaseClient): Promise<void> {
+  await db.connection.transaction().execute(async (tx) => {
+    await tx.deleteFrom("asset_analyses").execute();
+    await tx.deleteFrom("asset_state_transitions").execute();
+    await tx.deleteFrom("processing_jobs").execute();
+    await tx.deleteFrom("assets").execute();
+    await tx.deleteFrom("upload_intents").execute();
+    await tx.deleteFrom("namespace_presets").execute();
+    await tx.deleteFrom("namespace_policies").execute();
+    await tx.deleteFrom("namespaces").execute();
+    await tx.deleteFrom("storage_bindings").execute();
+  });
+}
+
+async function seedUploadedAssetWithJob(db: DatabaseClient): Promise<string> {
+  return db.connection.transaction().execute(async (tx) => {
+    const binding = await tx
+      .insertInto("storage_bindings")
+      .values({ name: "asset-processing-binding", adapter_type: "gcs", config: { bucket: "test" } })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+
+    const namespace = await tx
+      .insertInto("namespaces")
+      .values({
+        slug: "asset-processing",
+        display_name: "Asset Processing",
+        description: null,
+        current_policy_id: NIL_UUID,
+        storage_binding_id: binding.id,
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+
+    const policy = await tx
+      .insertInto("namespace_policies")
+      .values({
+        namespace_id: namespace.id,
+        version: 1,
+        retention_days: null,
+        retention_mode: "none",
+        max_file_size_bytes: 52_428_800n,
+        allowed_mime_types: ["image/png"],
+        exif_handling: "strip",
+        virus_scan_required: true,
+        content_moderation: { threshold: 0.9 },
+        required_metadata_schema: null,
+        immutable: false,
+        serving_mode: "signed",
+        signed_url_ttl_seconds: 3600,
+        signed_url_bucket_size: 300,
+        retry_config: null,
+        created_by: null,
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+
+    await tx.updateTable("namespaces").set({ current_policy_id: policy.id }).execute();
+
+    const asset = await tx
+      .insertInto("assets")
+      .values({
+        namespace_id: namespace.id,
+        policy_version_id: policy.id,
+        state: "uploaded",
+        storage_binding_id: binding.id,
+        storage_key: "uploads/asset-processing.png",
+        declared_mime_type: "image/png",
+        size_bytes: 42n,
+        effective_max_size_bytes: 52_428_800n,
+        effective_url_ttl: 3600,
+        confirmed_at: new Date("2026-05-06T11:59:00.000Z"),
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+
+    await tx
+      .insertInto("processing_jobs")
+      .values({
+        asset_id: asset.id,
+        state: "released",
+        attempt_number: 1,
+        not_before: new Date("2026-05-06T11:59:00.000Z"),
+      })
+      .execute();
+
+    return asset.id;
+  });
+}
