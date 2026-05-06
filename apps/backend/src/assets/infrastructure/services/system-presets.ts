@@ -23,4 +23,15 @@ export const SYSTEM_PRESETS: ReadonlyArray<ISystemPreset> = [
       dpr: null,
     },
   },
+  {
+    name: "lafken:detail-hero",
+    spec: {
+      width: 1200,
+      height: null,
+      fit: "contain",
+      format: "webp",
+      quality: 85,
+      dpr: null,
+    },
+  },
 ];

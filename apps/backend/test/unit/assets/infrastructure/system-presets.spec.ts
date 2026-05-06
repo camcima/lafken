@@ -19,6 +19,19 @@ describe("SYSTEM_PRESETS", () => {
     });
   });
 
+  it("includes lafken:detail-hero sized for the asset detail view", () => {
+    const hero = SYSTEM_PRESETS.find((p) => p.name === "lafken:detail-hero");
+    expect(hero).toBeDefined();
+    expect(hero!.spec).toEqual({
+      width: 1200,
+      height: null,
+      fit: "contain",
+      format: "webp",
+      quality: 85,
+      dpr: null,
+    });
+  });
+
   it("every system preset name uses the reserved prefix", () => {
     for (const preset of SYSTEM_PRESETS) {
       expect(preset.name.startsWith(SYSTEM_PRESET_NAME_PREFIX)).toBe(true);
