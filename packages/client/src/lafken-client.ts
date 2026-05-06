@@ -33,6 +33,22 @@ export class LafkenClient {
     return response.url;
   }
 
+  async getDownloadUrl(input: { publicId: string }): Promise<string> {
+    const response = (await this.request(
+      "GET",
+      `/v1/assets/${encodeURIComponent(input.publicId)}/download-url`,
+    )) as { url: string };
+    return response.url;
+  }
+
+  async retryAssetProcessing(input: { publicId: string }): Promise<void> {
+    await this.request(
+      "POST",
+      `/v1/assets/${encodeURIComponent(input.publicId)}/retry-processing`,
+      {},
+    );
+  }
+
   private async request(method: string, pathOrUrl: string, body?: unknown): Promise<unknown> {
     const url = pathOrUrl.startsWith("http")
       ? pathOrUrl
@@ -71,6 +87,11 @@ export class LafkenClient {
     }
 
     if (response.status === 204) return undefined;
-    return response.json();
+    // Some endpoints (e.g. POST /retry-processing) return 200 with an empty
+    // body — calling response.json() there would throw. Defensively read the
+    // text first and only parse when there's something to parse.
+    const text = await response.text();
+    if (text.length === 0) return undefined;
+    return JSON.parse(text);
   }
 }

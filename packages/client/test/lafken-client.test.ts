@@ -241,6 +241,156 @@ describe("LafkenClient", () => {
     });
   });
 
+  describe("getDownloadUrl", () => {
+    it("GETs the download URL endpoint and returns the url string", async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ url: "https://storage.example.com/blob.jpg?sig=x" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+      const client = new LafkenClient({ baseUrl: "https://api.example.com" });
+      const result = await client.getDownloadUrl({ publicId: "asset-123" });
+
+      expect(fetchSpy).toHaveBeenCalledOnce();
+      const [calledUrl, calledInit] = fetchSpy.mock.calls[0];
+      expect(calledUrl).toBe("https://api.example.com/v1/assets/asset-123/download-url");
+      expect(calledInit?.method).toBe("GET");
+      expect(calledInit?.body).toBeUndefined();
+      expect(result).toBe("https://storage.example.com/blob.jpg?sig=x");
+    });
+
+    it("encodes reserved characters in the publicId path segment", async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ url: "https://storage.example.com/blob.jpg" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+      const client = new LafkenClient({ baseUrl: "https://api.example.com" });
+      await client.getDownloadUrl({ publicId: "abc%def" });
+
+      const [calledUrl] = fetchSpy.mock.calls[0];
+      expect(calledUrl).toBe("https://api.example.com/v1/assets/abc%25def/download-url");
+    });
+
+    it("attaches the Authorization header when getAuthToken is configured", async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ url: "https://storage.example.com/blob.jpg" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+      const getAuthToken = vi.fn().mockResolvedValue("download-token") as () => Promise<
+        string | null
+      >;
+      const client = new LafkenClient({
+        baseUrl: "https://api.example.com",
+        getAuthToken,
+      });
+
+      await client.getDownloadUrl({ publicId: "asset-123" });
+
+      expect(getAuthToken).toHaveBeenCalledOnce();
+      const [, calledInit] = fetchSpy.mock.calls[0];
+      const headers = calledInit?.headers as Record<string, string>;
+      expect(headers.Authorization).toBe("Bearer download-token");
+    });
+
+    it("throws LafkenApiError with parsed problem details on 404 responses", async () => {
+      const problemDetails = {
+        type: "about:blank",
+        status: 404,
+        title: "Not Found",
+        detail: "Asset not found",
+      };
+
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify(problemDetails), {
+          status: 404,
+          headers: { "Content-Type": "application/problem+json" },
+        }),
+      );
+
+      const client = new LafkenClient({ baseUrl: "https://api.example.com" });
+
+      let thrownError: LafkenApiError | undefined;
+      try {
+        await client.getDownloadUrl({ publicId: "missing" });
+      } catch (err) {
+        thrownError = err as LafkenApiError;
+      }
+
+      expect(thrownError).toBeInstanceOf(LafkenApiError);
+      expect(thrownError?.status).toBe(404);
+      expect(thrownError?.message).toBe("Asset not found");
+    });
+  });
+
+  describe("retryAssetProcessing", () => {
+    it("POSTs to the retry-processing endpoint with an empty body", async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response("", {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+      const client = new LafkenClient({ baseUrl: "https://api.example.com" });
+      await client.retryAssetProcessing({ publicId: "asset-123" });
+
+      expect(fetchSpy).toHaveBeenCalledOnce();
+      const [calledUrl, calledInit] = fetchSpy.mock.calls[0];
+      expect(calledUrl).toBe("https://api.example.com/v1/assets/asset-123/retry-processing");
+      expect(calledInit?.method).toBe("POST");
+      expect(JSON.parse(calledInit?.body as string)).toEqual({});
+    });
+
+    it("encodes reserved characters in the publicId path segment", async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response("", { status: 200, headers: { "Content-Type": "application/json" } }),
+      );
+
+      const client = new LafkenClient({ baseUrl: "https://api.example.com" });
+      await client.retryAssetProcessing({ publicId: "abc%def" });
+
+      const [calledUrl] = fetchSpy.mock.calls[0];
+      expect(calledUrl).toBe("https://api.example.com/v1/assets/abc%25def/retry-processing");
+    });
+
+    it("throws LafkenApiError with parsed problem details on 422 responses", async () => {
+      const problemDetails = {
+        type: "about:blank",
+        status: 422,
+        title: "Unprocessable Entity",
+        detail: "Asset is not in processing_failed",
+      };
+
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify(problemDetails), {
+          status: 422,
+          headers: { "Content-Type": "application/problem+json" },
+        }),
+      );
+
+      const client = new LafkenClient({ baseUrl: "https://api.example.com" });
+
+      let thrownError: LafkenApiError | undefined;
+      try {
+        await client.retryAssetProcessing({ publicId: "asset-123" });
+      } catch (err) {
+        thrownError = err as LafkenApiError;
+      }
+
+      expect(thrownError).toBeInstanceOf(LafkenApiError);
+      expect(thrownError?.status).toBe(422);
+      expect(thrownError?.message).toBe("Asset is not in processing_failed");
+    });
+  });
+
   describe("authentication", () => {
     it("adds Authorization header when getAuthToken returns a token", async () => {
       const mockResult = {

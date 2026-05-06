@@ -1,13 +1,15 @@
 import type { LafkenClient } from "@lafken/client";
 import React, { useContext, useEffect, useState } from "react";
 
+import { _getCachedPresetUrl, _resetPresetUrlCache } from "./_url-cache";
 import { _LafkenClientContext } from "./lafken-provider";
 
-const cache: Map<string, Promise<string>> = new Map();
-
-/** Test-only — reset the dedup cache between tests. */
+/**
+ * Test-only — re-exported for back-compat. <AssetImage> and useAssetPresetUrl
+ * share the cache in `_url-cache.ts`, so resetting it covers both.
+ */
 export function _resetAssetImageCache(): void {
-  cache.clear();
+  _resetPresetUrlCache();
 }
 
 interface IFetchState {
@@ -49,14 +51,7 @@ export function AssetImage(props: IAssetImageProps): React.JSX.Element | null {
 
   useEffect(() => {
     let cancelled = false;
-    let promise: Promise<string> | undefined = cache.get(key);
-    if (promise === undefined) {
-      promise = client.getPreviewUrl({ publicId, preset });
-      cache.set(key, promise);
-      promise.catch(() => {
-        cache.delete(key);
-      });
-    }
+    const promise: Promise<string> = _getCachedPresetUrl(client, publicId, preset);
     promise.then(
       (resolved: string) => {
         if (!cancelled) setState({ key, url: resolved, errored: false });
