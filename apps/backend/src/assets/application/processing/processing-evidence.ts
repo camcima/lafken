@@ -12,8 +12,8 @@ export interface IStepTimingInput {
 export interface ITransitionMetadataInput {
   workerId: string;
   attemptNumber: number;
+  reasonCode: string;
   step?: ProcessingStepName;
-  reasonCode?: string;
   durationMs?: number;
   totalDurationMs?: number;
   steps?: Record<string, unknown>[];
@@ -30,8 +30,8 @@ export interface IStepTiming {
 export interface ITransitionMetadata {
   worker_id: string;
   job_attempt: number;
+  reason_code: string;
   step?: ProcessingStepName;
-  reason_code?: string;
   duration_ms?: number;
   total_duration_ms?: number;
   steps?: Record<string, unknown>[];
@@ -43,6 +43,8 @@ const TERMINAL_ASSET_STATES: readonly AssetState[] = [
   "quarantined_virus",
   "quarantined_moderation",
   "processing_failed",
+  "expired",
+  "deleted",
 ];
 
 export function calculateDurationMs(startedAt: Date, finishedAt: Date): number {
@@ -66,14 +68,11 @@ export function makeTransitionMetadata(input: ITransitionMetadataInput): ITransi
   const metadata: ITransitionMetadata = {
     worker_id: input.workerId,
     job_attempt: input.attemptNumber,
+    reason_code: input.reasonCode,
   };
 
   if (input.step !== undefined) {
     metadata.step = input.step;
-  }
-
-  if (input.reasonCode !== undefined) {
-    metadata.reason_code = input.reasonCode;
   }
 
   if (input.durationMs !== undefined) {

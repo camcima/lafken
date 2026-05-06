@@ -1,20 +1,16 @@
-import type { NamespacePolicy } from "@/namespaces/domain/entities/namespace-policy.entity";
-
 export interface IContentModerationInput {
   bytes: Buffer;
-  mimeType: string | null;
-  policy: NamespacePolicy;
-  captureContext: Record<string, unknown> | null;
+  policyConfig: Record<string, unknown>;
 }
 
 export interface IContentModerationResult {
   decision: "pass" | "quarantine";
   reason: string | null;
-  adapter: string;
-  adapterVersion: string | null;
   findings: Record<string, unknown>;
+  analyzer: string;
+  analyzerVersion: string | null;
 }
 
 export abstract class ContentModerationPort {
-  abstract moderate(input: IContentModerationInput): Promise<IContentModerationResult>;
+  abstract analyze(input: IContentModerationInput): Promise<IContentModerationResult>;
 }

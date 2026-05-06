@@ -9,12 +9,12 @@ export interface IAssetWithPolicy {
 
 export interface ITransitionAssetInput {
   assetId: string;
-  expectedState: AssetState;
-  nextState: AssetState;
+  fromState: AssetState;
+  toState: AssetState;
   reason: string;
   metadata: Record<string, unknown>;
   occurredBy: string;
-  occurredAt: Date;
+  now: Date;
 }
 
 export interface IRecordAnalysisInput {
@@ -22,7 +22,7 @@ export interface IRecordAnalysisInput {
   analyzer: string;
   analyzerVersion: string | null;
   findings: Record<string, unknown>;
-  decision: string | null;
+  decision: "pass" | "flag" | "quarantine" | "error";
   occurredAt: Date;
 }
 
@@ -30,15 +30,15 @@ export interface IUpdateDerivedMetadataInput {
   assetId: string;
   mimeType: string;
   sizeBytes: bigint;
-  width: number;
-  height: number;
+  width: number | null;
+  height: number | null;
   contentHash: Buffer;
-  captureContext: Record<string, unknown>;
+  captureContext: Record<string, unknown> | null;
 }
 
 export abstract class AssetProcessingRepositoryPort {
   abstract findAssetWithPolicy(assetId: string): Promise<IAssetWithPolicy | null>;
-  abstract transitionAsset(input: ITransitionAssetInput): Promise<Asset | null>;
+  abstract transitionAsset(input: ITransitionAssetInput): Promise<boolean>;
   abstract recordAnalysis(input: IRecordAnalysisInput): Promise<void>;
-  abstract updateDerivedMetadata(input: IUpdateDerivedMetadataInput): Promise<Asset | null>;
+  abstract updateDerivedMetadata(input: IUpdateDerivedMetadataInput): Promise<void>;
 }

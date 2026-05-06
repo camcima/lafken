@@ -46,8 +46,24 @@ describe("processing evidence helpers", () => {
     expect(isTerminalAssetState("quarantined_virus")).toBe(true);
     expect(isTerminalAssetState("quarantined_moderation")).toBe(true);
     expect(isTerminalAssetState("processing_failed")).toBe(true);
+    expect(isTerminalAssetState("expired")).toBe(true);
+    expect(isTerminalAssetState("deleted")).toBe(true);
     expect(isTerminalAssetState("uploaded")).toBe(false);
     expect(isTerminalAssetState("processing")).toBe(false);
+  });
+
+  it("always includes reason code in transition metadata", () => {
+    const metadata = makeTransitionMetadata({
+      workerId: "worker-a",
+      attemptNumber: 1,
+      reasonCode: "processing_started",
+    });
+
+    expect(metadata).toEqual({
+      worker_id: "worker-a",
+      job_attempt: 1,
+      reason_code: "processing_started",
+    });
   });
 
   it("creates serializable step timing", () => {

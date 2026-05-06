@@ -1,6 +1,6 @@
 import type { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
 
-export interface IClaimAvailableInput {
+export interface IClaimJobsInput {
   workerId: string;
   limit: number;
   now: Date;
@@ -12,12 +12,6 @@ export interface IHeartbeatInput {
   now: Date;
 }
 
-export interface IUpdateCurrentStepInput {
-  assetId: string;
-  workerId: string;
-  step: string;
-}
-
 export interface IReleaseForRetryInput {
   assetId: string;
   workerId: string;
@@ -27,16 +21,10 @@ export interface IReleaseForRetryInput {
   now: Date;
 }
 
-export interface IMarkCompletedInput {
+export interface IMarkTerminalJobInput {
   assetId: string;
   workerId: string;
-  now: Date;
-}
-
-export interface IMarkFailedInput {
-  assetId: string;
-  workerId: string;
-  lastError: string;
+  lastError?: string;
   now: Date;
 }
 
@@ -52,12 +40,12 @@ export interface IReleaseStaleClaimInput {
 }
 
 export abstract class ProcessingJobRepositoryPort {
-  abstract claimAvailable(input: IClaimAvailableInput): Promise<ProcessingJob[]>;
-  abstract heartbeat(input: IHeartbeatInput): Promise<void>;
-  abstract updateCurrentStep(input: IUpdateCurrentStepInput): Promise<void>;
-  abstract releaseForRetry(input: IReleaseForRetryInput): Promise<void>;
-  abstract markCompleted(input: IMarkCompletedInput): Promise<void>;
-  abstract markFailed(input: IMarkFailedInput): Promise<void>;
+  abstract claimAvailable(input: IClaimJobsInput): Promise<ProcessingJob[]>;
+  abstract heartbeat(input: IHeartbeatInput): Promise<boolean>;
+  abstract updateCurrentStep(input: IHeartbeatInput & { currentStep: string }): Promise<boolean>;
+  abstract releaseForRetry(input: IReleaseForRetryInput): Promise<boolean>;
+  abstract markCompleted(input: IMarkTerminalJobInput): Promise<boolean>;
+  abstract markFailed(input: IMarkTerminalJobInput): Promise<boolean>;
   abstract findStaleClaims(input: IFindStaleClaimsInput): Promise<ProcessingJob[]>;
-  abstract releaseStaleClaim(input: IReleaseStaleClaimInput): Promise<void>;
+  abstract releaseStaleClaim(input: IReleaseStaleClaimInput): Promise<boolean>;
 }
