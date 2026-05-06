@@ -17,6 +17,10 @@ import {
   makeTransitionMetadata,
   type ProcessingStepName,
 } from "./processing-evidence";
+import {
+  TransientProcessingError,
+  type TransientProcessingStep,
+} from "./transient-processing.error";
 
 export interface IProcessClaimedAssetInput {
   assetId: string;
@@ -53,7 +57,9 @@ export class ProcessClaimedAssetUseCase {
       "processing started",
     );
     const machine = createActor(assetProcessingMachine).start();
-    const loaded = await this.assetRepo.findAssetWithPolicy(input.assetId);
+    const loaded = await this.runStep("load_asset", () =>
+      this.assetRepo.findAssetWithPolicy(input.assetId),
+    );
     if (!loaded) {
       this.logger.warn(
         { assetId: input.assetId },
@@ -88,7 +94,9 @@ export class ProcessClaimedAssetUseCase {
       currentState = "processing";
     }
 
-    const binding = await this.storageBindingRepo.findById(asset.props.storageBindingId);
+    const binding = await this.runStep("load_binding", () =>
+      this.storageBindingRepo.findById(asset.props.storageBindingId),
+    );
     if (!binding) {
       this.logger.warn(
         { assetId: asset.props.id, storageBindingId: asset.props.storageBindingId },
@@ -105,17 +113,21 @@ export class ProcessClaimedAssetUseCase {
     }
 
     const gcs = binding.getGcsConfig();
-    const bytes: Buffer = await this.assetStorage.readObjectBytes({
-      binding: { bucket: gcs.bucket, projectId: gcs.projectId },
-      storageKey: asset.props.storageKey,
-    });
+    const bytes: Buffer = await this.runStep("read_object", () =>
+      this.assetStorage.readObjectBytes({
+        binding: { bucket: gcs.bucket, projectId: gcs.projectId },
+        storageKey: asset.props.storageKey,
+      }),
+    );
 
     const inspectionStartedAt: Date = new Date();
-    const inspection = await this.imageInspection.inspect({
-      bytes,
-      declaredMimeType: asset.props.declaredMimeType,
-      allowedMimeTypes: policy.props.allowedMimeTypes,
-    });
+    const inspection = await this.runStep("image_inspection", () =>
+      this.imageInspection.inspect({
+        bytes,
+        declaredMimeType: asset.props.declaredMimeType,
+        allowedMimeTypes: policy.props.allowedMimeTypes,
+      }),
+    );
     this.logger.info(
       {
         assetId: asset.props.id,
@@ -166,7 +178,9 @@ export class ProcessClaimedAssetUseCase {
     });
 
     const scanStartedAt: Date = new Date();
-    const scan = await this.virusScan.scan({ bytes, contentHash: inspection.contentHash });
+    const scan = await this.runStep("virus_scan", () =>
+      this.virusScan.scan({ bytes, contentHash: inspection.contentHash }),
+    );
     this.logger.info(
       {
         assetId: asset.props.id,
@@ -206,13 +220,16 @@ export class ProcessClaimedAssetUseCase {
     }
 
     machine.send({ type: "VIRUS_CLEAN" });
-    if (policy.props.contentModeration) {
+    const moderationConfig = policy.props.contentModeration;
+    if (moderationConfig) {
       machine.send({ type: "MODERATION_REQUIRED" });
       const moderationStartedAt: Date = new Date();
-      const moderation = await this.moderation.analyze({
-        bytes,
-        policyConfig: policy.props.contentModeration,
-      });
+      const moderation = await this.runStep("content_moderation", () =>
+        this.moderation.analyze({
+          bytes,
+          policyConfig: moderationConfig,
+        }),
+      );
       this.logger.info(
         {
           assetId: asset.props.id,
@@ -308,5 +325,19 @@ export class ProcessClaimedAssetUseCase {
 
   private workerActor(workerId: string): string {
     return `worker:${workerId}`;
+  }
+
+  /**
+   * Wraps a port call so that any thrown error becomes a TransientProcessingError
+   * tagged with the step that failed. The worker catches this and consults the
+   * retry policy. Business decisions (e.g. inspection.decision === "error",
+   * scan.decision === "quarantine") are NOT wrapped — they return normally.
+   */
+  private async runStep<T>(step: TransientProcessingStep, fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn();
+    } catch (err) {
+      throw new TransientProcessingError(step, err);
+    }
   }
 }
