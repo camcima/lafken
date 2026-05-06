@@ -22,9 +22,15 @@ export interface IObjectExistsInput {
   storageKey: string;
 }
 
+export interface IReadObjectBytesInput {
+  binding: IGcsBindingDescriptor;
+  storageKey: string;
+}
+
 export abstract class AssetStoragePort {
   abstract issueSignedUploadUrl(
     input: IIssueSignedUploadUrlInput,
   ): Promise<IIssueSignedUploadUrlResult>;
   abstract objectExists(input: IObjectExistsInput): Promise<boolean>;
+  abstract readObjectBytes(input: IReadObjectBytesInput): Promise<Buffer>;
 }

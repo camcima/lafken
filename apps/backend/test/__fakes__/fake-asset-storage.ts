@@ -3,6 +3,7 @@ import {
   type IIssueSignedUploadUrlInput,
   type IIssueSignedUploadUrlResult,
   type IObjectExistsInput,
+  type IReadObjectBytesInput,
 } from "@/assets/domain/services/asset-storage.service.port";
 
 const DEFAULT_TTL_MS = 900_000;
@@ -10,6 +11,8 @@ const DEFAULT_TTL_MS = 900_000;
 export class FakeAssetStorage extends AssetStoragePort {
   readonly issued: IIssueSignedUploadUrlInput[] = [];
   readonly existsCalls: IObjectExistsInput[] = [];
+  readonly readCalls: IReadObjectBytesInput[] = [];
+  readonly objects: Map<string, Buffer> = new Map();
   existsResult = true;
 
   issueSignedUploadUrl(input: IIssueSignedUploadUrlInput): Promise<IIssueSignedUploadUrlResult> {
@@ -26,6 +29,15 @@ export class FakeAssetStorage extends AssetStoragePort {
 
   objectExists(input: IObjectExistsInput): Promise<boolean> {
     this.existsCalls.push(input);
-    return Promise.resolve(this.existsResult);
+    return Promise.resolve(this.existsResult || this.objects.has(input.storageKey));
+  }
+
+  readObjectBytes(input: IReadObjectBytesInput): Promise<Buffer> {
+    this.readCalls.push(input);
+    const bytes: Buffer | undefined = this.objects.get(input.storageKey);
+    if (!bytes) {
+      return Promise.reject(new Error(`Object "${input.storageKey}" does not exist`));
+    }
+    return Promise.resolve(bytes);
   }
 }

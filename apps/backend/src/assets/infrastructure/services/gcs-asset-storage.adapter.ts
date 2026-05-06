@@ -1,11 +1,13 @@
-import { Storage, type StorageOptions } from "@google-cloud/storage";
+import { type Bucket, Storage, type StorageOptions } from "@google-cloud/storage";
 import { Injectable } from "@nestjs/common";
 
 import {
   AssetStoragePort,
+  type IGcsBindingDescriptor,
   type IIssueSignedUploadUrlInput,
   type IIssueSignedUploadUrlResult,
   type IObjectExistsInput,
+  type IReadObjectBytesInput,
 } from "@/assets/domain/services/asset-storage.service.port";
 
 const FAKE_GCS_PROJECT_ID = "fake-gcs";
@@ -57,8 +59,7 @@ export class GcsAssetStorageAdapter extends AssetStoragePort {
     input: IIssueSignedUploadUrlInput,
   ): Promise<IIssueSignedUploadUrlResult> {
     const expiresAt = new Date(Date.now() + input.ttlSeconds * MS_PER_SECOND);
-    const [url] = await this.storage
-      .bucket(input.binding.bucket, { userProject: input.binding.projectId })
+    const [url] = await this.getBucket(input.binding)
       .file(input.storageKey)
       .getSignedUrl({
         action: "write",
@@ -80,10 +81,16 @@ export class GcsAssetStorageAdapter extends AssetStoragePort {
   }
 
   async objectExists(input: IObjectExistsInput): Promise<boolean> {
-    const [exists] = await this.storage
-      .bucket(input.binding.bucket, { userProject: input.binding.projectId })
-      .file(input.storageKey)
-      .exists();
+    const [exists] = await this.getBucket(input.binding).file(input.storageKey).exists();
     return exists;
+  }
+
+  async readObjectBytes(input: IReadObjectBytesInput): Promise<Buffer> {
+    const [bytes] = await this.getBucket(input.binding).file(input.storageKey).download();
+    return bytes;
+  }
+
+  private getBucket(binding: IGcsBindingDescriptor): Bucket {
+    return this.storage.bucket(binding.bucket, { userProject: binding.projectId });
   }
 }
