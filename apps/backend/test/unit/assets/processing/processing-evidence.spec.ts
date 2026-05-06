@@ -6,6 +6,10 @@ import {
   makeStepTiming,
   makeTransitionMetadata,
 } from "@/assets/application/processing/processing-evidence";
+import type {
+  IMakeStepTimingInput,
+  IStepTiming,
+} from "@/assets/application/processing/processing-evidence";
 
 describe("processing evidence helpers", () => {
   it("calculates non-negative step duration", () => {
@@ -67,12 +71,14 @@ describe("processing evidence helpers", () => {
   });
 
   it("creates serializable step timing", () => {
-    const timing = makeStepTiming({
+    const input: IMakeStepTimingInput = {
       step: "virus_scan",
       startedAt: new Date("2026-05-06T12:00:00.000Z"),
       finishedAt: new Date("2026-05-06T12:00:00.210Z"),
       decision: "pass",
-    });
+    };
+
+    const timing: IStepTiming = makeStepTiming(input);
 
     expect(timing).toEqual({
       step: "virus_scan",
@@ -80,6 +86,39 @@ describe("processing evidence helpers", () => {
       finished_at: "2026-05-06T12:00:00.210Z",
       duration_ms: 210,
       decision: "pass",
+    });
+  });
+
+  it("preserves serializable step timings in transition metadata", () => {
+    const steps: IStepTiming[] = [
+      makeStepTiming({
+        step: "image_inspection",
+        startedAt: new Date("2026-05-06T12:00:00.000Z"),
+        finishedAt: new Date("2026-05-06T12:00:00.842Z"),
+        decision: "pass",
+      }),
+      makeStepTiming({
+        step: "virus_scan",
+        startedAt: new Date("2026-05-06T12:00:01.000Z"),
+        finishedAt: new Date("2026-05-06T12:00:01.210Z"),
+        decision: "pass",
+      }),
+    ];
+
+    const metadata = makeTransitionMetadata({
+      workerId: "worker-a",
+      attemptNumber: 1,
+      reasonCode: "processing_completed",
+      totalDurationMs: 1052,
+      steps,
+    });
+
+    expect(metadata).toEqual({
+      worker_id: "worker-a",
+      job_attempt: 1,
+      reason_code: "processing_completed",
+      total_duration_ms: 1052,
+      steps,
     });
   });
 });

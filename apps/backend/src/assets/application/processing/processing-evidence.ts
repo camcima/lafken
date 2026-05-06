@@ -2,7 +2,7 @@ import type { AssetState } from "@/assets/domain/value-objects/asset-state.value
 
 export type ProcessingStepName = "image_inspection" | "virus_scan" | "content_moderation";
 
-export interface IStepTimingInput {
+export interface IMakeStepTimingInput {
   step: ProcessingStepName;
   startedAt: Date;
   finishedAt: Date;
@@ -16,7 +16,7 @@ export interface ITransitionMetadataInput {
   step?: ProcessingStepName;
   durationMs?: number;
   totalDurationMs?: number;
-  steps?: Record<string, unknown>[];
+  steps?: IStepTiming[];
 }
 
 export interface IStepTiming {
@@ -34,7 +34,7 @@ export interface ITransitionMetadata {
   step?: ProcessingStepName;
   duration_ms?: number;
   total_duration_ms?: number;
-  steps?: Record<string, unknown>[];
+  steps?: IStepTiming[];
 }
 
 const TERMINAL_ASSET_STATES: readonly AssetState[] = [
@@ -52,7 +52,7 @@ export function calculateDurationMs(startedAt: Date, finishedAt: Date): number {
   return Math.max(0, durationMs);
 }
 
-export function makeStepTiming(input: IStepTimingInput): IStepTiming {
+export function makeStepTiming(input: IMakeStepTimingInput): IStepTiming {
   const durationMs: number = calculateDurationMs(input.startedAt, input.finishedAt);
 
   return {
@@ -64,8 +64,8 @@ export function makeStepTiming(input: IStepTimingInput): IStepTiming {
   };
 }
 
-export function makeTransitionMetadata(input: ITransitionMetadataInput): ITransitionMetadata {
-  const metadata: ITransitionMetadata = {
+export function makeTransitionMetadata(input: ITransitionMetadataInput): Record<string, unknown> {
+  const metadata: Record<string, unknown> = {
     worker_id: input.workerId,
     job_attempt: input.attemptNumber,
     reason_code: input.reasonCode,
