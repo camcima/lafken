@@ -1,4 +1,5 @@
 import { Asset, type IAssetProps } from "@/assets/domain/entities/asset.entity";
+import { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
 import {
   type INamespacePolicyProps,
   NamespacePolicy,
@@ -78,5 +79,22 @@ export function makeStorageBinding(overrides: Partial<IStorageBindingProps> = {}
     createdAt: new Date("2026-05-06T11:59:00.000Z"),
     updatedAt: new Date("2026-05-06T11:59:00.000Z"),
     ...overrides,
+  });
+}
+
+export function makeJob(assetId: string = TEST_UUIDS.asset1, attemptNumber = 1): ProcessingJob {
+  return ProcessingJob.fromProps({
+    assetId,
+    state: "claimed",
+    workerId: "worker-a",
+    currentStep: "claim",
+    attemptNumber,
+    notBefore: null,
+    claimedAt: new Date("2026-05-06T12:00:00.000Z"),
+    heartbeatAt: new Date("2026-05-06T12:00:00.000Z"),
+    lastError: null,
+    lastErrorAt: null,
+    createdAt: new Date("2026-05-06T11:59:00.000Z"),
+    updatedAt: new Date("2026-05-06T12:00:00.000Z"),
   });
 }
