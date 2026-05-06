@@ -1,16 +1,63 @@
 import type { AssetResponseDTO } from "@shared/backend-api";
-import { Copy, Download } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Copy, Download, Loader2, RefreshCw } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/common/Button";
+import { assetsKeys } from "@/features/assets/keys";
+import { getLafkenClient } from "@/lib/lafken-client";
 
 interface IActionBarProps {
   asset: AssetResponseDTO;
   onCopy: (text: string, label: string) => void;
+  onToast: (message: string) => void;
 }
 
-export function ActionBar({ asset, onCopy }: IActionBarProps): React.JSX.Element {
+export function ActionBar({ asset, onCopy, onToast }: IActionBarProps): React.JSX.Element {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  const showRetry: boolean = asset.state === "processing_failed";
+
+  const handleDownload = async (): Promise<void> => {
+    if (isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const client = getLafkenClient();
+      const url: string = await client.getDownloadUrl({ publicId: asset.publicId });
+      // Open in a new tab; some browsers honour the storage object's
+      // Content-Disposition for inline rendering, others trigger a download.
+      // The user can then "Save as…" if needed. window.location.href would
+      // navigate away from the page, which is worse UX than a new tab.
+      window.open(url, "_blank", "noopener");
+    } catch {
+      onToast(t("pages.assetDetail.actions.toasts.downloadFailed"));
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleRetry = async (): Promise<void> => {
+    if (isRetrying) return;
+    setIsRetrying(true);
+    try {
+      const client = getLafkenClient();
+      await client.retryAssetProcessing({ publicId: asset.publicId });
+      onToast(t("pages.assetDetail.actions.toasts.retryStarted"));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: assetsKeys.detail(asset.publicId) }),
+        queryClient.invalidateQueries({ queryKey: assetsKeys.stateTransitions(asset.publicId) }),
+        queryClient.invalidateQueries({ queryKey: assetsKeys.processingJob(asset.publicId) }),
+      ]);
+    } catch {
+      onToast(t("pages.assetDetail.actions.toasts.retryFailed"));
+    } finally {
+      setIsRetrying(false);
+    }
+  };
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
@@ -24,10 +71,32 @@ export function ActionBar({ asset, onCopy }: IActionBarProps): React.JSX.Element
         <Copy size={13} />
         {t("pages.assetDetail.actions.menu.copyPublicId")}
       </Button>
-      <Button variant="outline" size="sm" disabled>
-        <Download size={13} />
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          void handleDownload();
+        }}
+        disabled={isDownloading}
+        aria-busy={isDownloading}
+      >
+        {isDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
         {t("pages.assetDetail.actions.menu.downloadOriginal")}
       </Button>
+      {showRetry && (
+        <Button
+          variant="indigo"
+          size="sm"
+          onClick={() => {
+            void handleRetry();
+          }}
+          disabled={isRetrying}
+          aria-busy={isRetrying}
+        >
+          {isRetrying ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+          {t("pages.assetDetail.actions.menu.retryProcessing")}
+        </Button>
+      )}
     </div>
   );
 }

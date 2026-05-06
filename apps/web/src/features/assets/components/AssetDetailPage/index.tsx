@@ -71,13 +71,17 @@ export function AssetDetailPage({ publicId }: IAssetDetailPageProps): React.JSX.
 
   const [toasts, setToasts] = useState<IToast[]>([]);
 
-  const handleCopy = (text: string, label: string): void => {
-    void navigator.clipboard.writeText(text).catch(() => undefined);
+  const showToast = (message: string): void => {
     const id = crypto.randomUUID();
-    setToasts((prev) => [...prev, { id, message: label }]);
+    setToasts((prev) => [...prev, { id, message }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
     }, TOAST_DURATION_MS);
+  };
+
+  const handleCopy = (text: string, label: string): void => {
+    void navigator.clipboard.writeText(text).catch(() => undefined);
+    showToast(label);
   };
 
   if (assetQuery.isLoading) {
@@ -136,7 +140,7 @@ export function AssetDetailPage({ publicId }: IAssetDetailPageProps): React.JSX.
         </div>
       )}
 
-      <ActionBar asset={asset} onCopy={handleCopy} />
+      <ActionBar asset={asset} onCopy={handleCopy} onToast={showToast} />
 
       <StateHero state={asset.state} />
 
@@ -158,7 +162,7 @@ export function AssetDetailPage({ publicId }: IAssetDetailPageProps): React.JSX.
         <CaptureCard asset={asset} />
       </div>
 
-      <PresetsCard />
+      <PresetsCard asset={asset} onToast={showToast} />
     </div>
   );
 }

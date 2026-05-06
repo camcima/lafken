@@ -325,10 +325,16 @@
         "menu": {
           "copyPublicId": "Copiar ID público",
           "downloadOriginal": "Descargar original",
+          "retryProcessing": "Reintentar procesamiento",
           "openInApi": "Abrir en API",
           "viewAuditTrail": "Ver registro de auditoría",
           "editMetadata": "Editar metadatos",
           "forceExpire": "Forzar expiración…"
+        },
+        "toasts": {
+          "downloadFailed": "No se pudo iniciar la descarga. Inténtelo de nuevo.",
+          "retryStarted": "Procesamiento reiniciado.",
+          "retryFailed": "No se pudo reiniciar el procesamiento. Inténtelo de nuevo."
         }
       },
       "stateHero": {
@@ -410,7 +416,13 @@
         "hits": "{{count}} accesos",
         "ready": "listo",
         "preview": "Vista previa",
-        "copyUrl": "Copiar URL"
+        "copyUrl": "Copiar URL",
+        "openUrl": "Abrir",
+        "empty": "Aún no hay presets configurados para este namespace.",
+        "error": "URL no disponible",
+        "toasts": {
+          "urlCopied": "URL copiada para el preset «{{name}}»"
+        }
       },
       "siblings": {
         "altLabel": "Ángulo alternativo {{label}}"

@@ -325,10 +325,16 @@
         "menu": {
           "copyPublicId": "Copy public ID",
           "downloadOriginal": "Download original",
+          "retryProcessing": "Retry processing",
           "openInApi": "Open in API",
           "viewAuditTrail": "View audit trail",
           "editMetadata": "Edit metadata",
           "forceExpire": "Force expire…"
+        },
+        "toasts": {
+          "downloadFailed": "Could not start download. Please try again.",
+          "retryStarted": "Processing restarted.",
+          "retryFailed": "Could not restart processing. Please try again."
         }
       },
       "stateHero": {
@@ -410,7 +416,13 @@
         "hits": "{{count}} hits",
         "ready": "ready",
         "preview": "Preview",
-        "copyUrl": "Copy URL"
+        "copyUrl": "Copy URL",
+        "openUrl": "Open",
+        "empty": "No presets configured for this namespace yet.",
+        "error": "URL unavailable",
+        "toasts": {
+          "urlCopied": "URL copied for preset \"{{name}}\""
+        }
       },
       "siblings": {
         "altLabel": "Alternative angle {{label}}"

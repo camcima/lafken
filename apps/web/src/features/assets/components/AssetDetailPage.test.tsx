@@ -4,8 +4,10 @@ import type {
   AssetStateTransitionResponseDTO,
   PaginatedResult,
 } from "@shared/backend-api";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
 
@@ -80,16 +82,41 @@ const TEST_SIBLINGS: PaginatedResult<AssetResponseDTO> = {
   lastPage: 1,
 };
 
+let mockAsset: AssetResponseDTO = TEST_ASSET;
+
+function withState(state: AssetResponseDTO["state"]): AssetResponseDTO {
+  return Object.assign(Object.create(null) as object, TEST_ASSET, { state }) as AssetResponseDTO;
+}
+
 vi.mock("@/features/assets/hooks/useAssets", () => ({
   useAssets: () => ({ data: TEST_SIBLINGS, isLoading: false }),
-  useAsset: () => ({ data: TEST_ASSET, isLoading: false, error: null }),
+  useAsset: () => ({ data: mockAsset, isLoading: false, error: null }),
   useAssetStateTransitions: () => ({ data: TEST_TRANSITIONS, isLoading: false }),
   useAssetAnalyses: () => ({ data: TEST_ANALYSES, isLoading: false }),
   useAssetProcessingJob: () => ({ data: undefined, isLoading: false }),
 }));
 
+vi.mock("@/features/namespaces/hooks/useNamespaces", () => ({
+  useNamespacePresets: () => ({ data: [], isLoading: false }),
+}));
+
+const mockGetDownloadUrl = vi.fn().mockResolvedValue("https://storage.example.com/blob.jpg?sig=x");
+const mockRetryAssetProcessing = vi.fn().mockResolvedValue(undefined);
+
+vi.mock("@/lib/lafken-client", () => ({
+  getLafkenClient: () => ({
+    getDownloadUrl: mockGetDownloadUrl,
+    retryAssetProcessing: mockRetryAssetProcessing,
+  }),
+}));
+
 vi.mock("@lafken/react", () => ({
   AssetImage: () => null,
+  useAssetPresetUrl: () => ({
+    url: "https://cdn.example.com/preview.webp",
+    isLoading: false,
+    error: null,
+  }),
 }));
 
 vi.mock("@tanstack/react-router", async () => {
@@ -103,22 +130,33 @@ vi.mock("@tanstack/react-router", async () => {
   };
 });
 
-describe("AssetDetailPage", () => {
-  it("renders the asset's public ID from BE data", () => {
-    render(
+function renderPage(): void {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={queryClient}>
       <I18nProvider>
         <AssetDetailPage publicId={TEST_PUBLIC_ID} />
-      </I18nProvider>,
-    );
+      </I18nProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe("AssetDetailPage", () => {
+  beforeEach(() => {
+    mockAsset = TEST_ASSET;
+    mockGetDownloadUrl.mockClear();
+    mockRetryAssetProcessing.mockClear();
+  });
+
+  it("renders the asset's public ID from BE data", () => {
+    renderPage();
     expect(screen.getByText(TEST_PUBLIC_ID)).toBeInTheDocument();
   });
 
   it("renders all major section titles", () => {
-    render(
-      <I18nProvider>
-        <AssetDetailPage publicId={TEST_PUBLIC_ID} />
-      </I18nProvider>,
-    );
+    renderPage();
 
     expect(screen.getByText(/identity & lineage/i)).toBeInTheDocument();
     expect(screen.getByText(/file properties/i)).toBeInTheDocument();
@@ -130,13 +168,36 @@ describe("AssetDetailPage", () => {
   });
 
   it("renders the analyses returned by the BE", () => {
-    render(
-      <I18nProvider>
-        <AssetDetailPage publicId={TEST_PUBLIC_ID} />
-      </I18nProvider>,
-    );
+    renderPage();
 
     expect(screen.getByText(/validator · 1\.0\.0/i)).toBeInTheDocument();
     expect(screen.getByText(/clamav · 1\.3\.1/i)).toBeInTheDocument();
+  });
+
+  it("does not render the retry-processing button when the asset is in 'ready'", () => {
+    mockAsset = withState("ready");
+    renderPage();
+    expect(screen.queryByRole("button", { name: /retry processing/i })).not.toBeInTheDocument();
+  });
+
+  it("renders the retry-processing button when the asset is in 'processing_failed'", () => {
+    mockAsset = withState("processing_failed");
+    renderPage();
+    expect(screen.getByRole("button", { name: /retry processing/i })).toBeInTheDocument();
+  });
+
+  it("calls the SDK retryAssetProcessing when the retry button is clicked", async () => {
+    mockAsset = withState("processing_failed");
+    renderPage();
+    const button = screen.getByRole("button", { name: /retry processing/i });
+    await userEvent.click(button);
+    expect(mockRetryAssetProcessing).toHaveBeenCalledTimes(1);
+    expect(mockRetryAssetProcessing).toHaveBeenCalledWith({ publicId: TEST_PUBLIC_ID });
+  });
+
+  it("renders system preset rows in the PresetsCard", () => {
+    renderPage();
+    expect(screen.getByText("lafken:thumbnail")).toBeInTheDocument();
+    expect(screen.getByText("lafken:detail-hero")).toBeInTheDocument();
   });
 });

@@ -325,10 +325,16 @@
         "menu": {
           "copyPublicId": "Copiar ID público",
           "downloadOriginal": "Baixar original",
+          "retryProcessing": "Tentar processar novamente",
           "openInApi": "Abrir na API",
           "viewAuditTrail": "Ver trilha de auditoria",
           "editMetadata": "Editar metadados",
           "forceExpire": "Forçar expiração…"
+        },
+        "toasts": {
+          "downloadFailed": "Não foi possível iniciar o download. Tente novamente.",
+          "retryStarted": "Processamento reiniciado.",
+          "retryFailed": "Não foi possível reiniciar o processamento. Tente novamente."
         }
       },
       "stateHero": {
@@ -410,7 +416,13 @@
         "hits": "{{count}} acessos",
         "ready": "pronto",
         "preview": "Visualizar",
-        "copyUrl": "Copiar URL"
+        "copyUrl": "Copiar URL",
+        "openUrl": "Abrir",
+        "empty": "Nenhuma predefinição configurada para este namespace ainda.",
+        "error": "URL indisponível",
+        "toasts": {
+          "urlCopied": "URL copiada para a predefinição \"{{name}}\""
+        }
       },
       "siblings": {
         "altLabel": "Ângulo alternativo {{label}}"
