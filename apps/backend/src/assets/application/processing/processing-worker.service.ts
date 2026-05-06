@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
 
-import { Inject, Injectable, type OnModuleDestroy } from "@nestjs/common";
+import { Inject, Injectable, type OnModuleDestroy, Optional } from "@nestjs/common";
 
 import type { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
 import { ProcessingJobRepositoryPort } from "@/assets/domain/repositories/processing-job.repository.port";
 import { environmentConfiguration } from "@/shared/infrastructure/environment.configuration";
 
 import { ProcessClaimedAssetUseCase } from "./process-claimed-asset.use-case";
+import { ReclaimStaleProcessingJobsUseCase } from "./reclaim-stale-processing-jobs.use-case";
 
 const ZERO_REMAINING_CAPACITY = 0;
 
@@ -21,11 +22,14 @@ export class ProcessingWorkerService implements OnModuleDestroy {
   private shutdownStarted = false;
   private pollTimer: NodeJS.Timeout | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
+  private sweeperTimer: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly jobs: ProcessingJobRepositoryPort,
     @Inject(ProcessClaimedAssetUseCase)
     private readonly processor: IProcessClaimedAssetProcessor,
+    @Optional()
+    private readonly reclaimer?: ReclaimStaleProcessingJobsUseCase,
   ) {}
 
   start(): void {
@@ -37,6 +41,12 @@ export class ProcessingWorkerService implements OnModuleDestroy {
       (): void => void this.heartbeat(),
       environmentConfiguration.PROCESSING_WORKER_HEARTBEAT_INTERVAL_MS,
     );
+    if (this.reclaimer) {
+      this.sweeperTimer = setInterval(
+        (): void => void this.reclaimer?.execute({ now: new Date() }),
+        environmentConfiguration.PROCESSING_WORKER_STALE_CLAIM_MS,
+      );
+    }
     void this.tick();
   }
 
@@ -83,6 +93,9 @@ export class ProcessingWorkerService implements OnModuleDestroy {
     }
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
+    }
+    if (this.sweeperTimer) {
+      clearInterval(this.sweeperTimer);
     }
   }
 

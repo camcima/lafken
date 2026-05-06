@@ -7,6 +7,7 @@ import { SystemInfrastructureModule } from "@/system/infrastructure/system-infra
 import { ProcessClaimedAssetUseCase } from "./application/processing/process-claimed-asset.use-case";
 import { ProcessingRetryPolicy } from "./application/processing/processing-retry-policy";
 import { ProcessingWorkerService } from "./application/processing/processing-worker.service";
+import { ReclaimStaleProcessingJobsUseCase } from "./application/processing/reclaim-stale-processing-jobs.use-case";
 import { AssetsInfrastructureModule } from "./infrastructure/assets-infrastructure.module";
 
 @Module({
@@ -14,6 +15,7 @@ import { AssetsInfrastructureModule } from "./infrastructure/assets-infrastructu
   providers: [
     ProcessClaimedAssetUseCase,
     ProcessingWorkerService,
+    ReclaimStaleProcessingJobsUseCase,
     {
       provide: ProcessingRetryPolicy,
       useFactory: (): ProcessingRetryPolicy =>
