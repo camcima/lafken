@@ -538,7 +538,18 @@
           "fit": "Ajuste",
           "format": "Formato",
           "quality": "Qualidade (1–100)",
-          "dpr": "DPR (opcional)"
+          "dpr": "DPR (opcional)",
+          "sections": {
+            "identity": "Identidade",
+            "identityHint": "Como este preset é referenciado em URLs e SDKs.",
+            "dimensions": "Dimensões de saída",
+            "dimensionsHint": "Defina largura, altura ou ambos. Deixe vazios para preservar a origem.",
+            "encoding": "Codificação",
+            "encodingHint": "Formato de saída e compressão."
+          },
+          "previewLabel": "Pré-visualização ao vivo",
+          "sampleUrlTitle": "URL de exemplo",
+          "editNameLocked": "Os nomes são imutáveis. Crie um novo preset para renomear."
         },
         "history": {
           "title": "Versões anteriores",

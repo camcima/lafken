@@ -601,7 +601,18 @@
           "fit": "Fit",
           "format": "Format",
           "quality": "Quality (1–100)",
-          "dpr": "DPR (optional)"
+          "dpr": "DPR (optional)",
+          "sections": {
+            "identity": "Identity",
+            "identityHint": "How this preset is referenced in URLs and SDKs.",
+            "dimensions": "Output dimensions",
+            "dimensionsHint": "Set width, height, or both. Leave empty to preserve from source.",
+            "encoding": "Encoding",
+            "encodingHint": "Output format and compression."
+          },
+          "previewLabel": "Live preview",
+          "sampleUrlTitle": "Sample URL",
+          "editNameLocked": "Names are immutable. Create a new preset to rename."
         },
         "history": {
           "title": "Past versions",

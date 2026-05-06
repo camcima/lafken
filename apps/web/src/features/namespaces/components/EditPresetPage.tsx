@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -7,85 +8,24 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/common/Button";
 import { PastPresetVersionsPanel } from "@/features/namespaces/components/PastPresetVersionsPanel";
 import {
+  PresetNumberedSection,
+  PresetParamsFields,
+  PresetPreviewRail,
+} from "@/features/namespaces/components/PresetFormShared";
+import {
   useNamespace,
   useNamespacePresets,
   useUpdatePresetVersion,
 } from "@/features/namespaces/hooks/useNamespaces";
-import {
-  PRESET_FITS,
-  PRESET_FORMATS,
-  updatePresetVersionSchema,
-} from "@/features/namespaces/schemas/preset-params.schema";
+import { updatePresetVersionSchema } from "@/features/namespaces/schemas/preset-params.schema";
 import type { IUpdatePresetVersionValues } from "@/features/namespaces/schemas/preset-params.schema";
 import { ApiError } from "@/lib/api/api-error";
 import { extractProblemTypeSuffix } from "@/lib/api/problem-types";
-import { cn } from "@/lib/utils";
 
-// ── Sub-components ─────────────────────────────────────────
-function FieldLabel(
-  props: Readonly<
-    Omit<React.LabelHTMLAttributes<HTMLLabelElement>, "htmlFor"> & { htmlFor: string }
-  >,
-): React.JSX.Element {
-  const { className, ...rest } = props;
-  // eslint-disable-next-line jsx-a11y/label-has-associated-control
-  return <label className={cn("text-foreground text-sm font-medium", className)} {...rest} />;
-}
-
-function TextInput(
-  props: Readonly<React.InputHTMLAttributes<HTMLInputElement>>,
-): React.JSX.Element {
-  const { className, ...rest } = props;
-  return (
-    <input
-      className={cn(
-        "border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm",
-        "ring-offset-background placeholder:text-muted-foreground",
-        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-      )}
-      {...rest}
-    />
-  );
-}
-
-function SelectInput(
-  props: Readonly<React.SelectHTMLAttributes<HTMLSelectElement>>,
-): React.JSX.Element {
-  const { className, ...rest } = props;
-  return (
-    <select
-      className={cn(
-        "border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm",
-        "ring-offset-background",
-        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-      )}
-      {...rest}
-    />
-  );
-}
-
-function FieldMessage({
-  id,
-  children,
-}: Readonly<{ id?: string; children?: React.ReactNode }>): React.JSX.Element | null {
-  if (!children) return null;
-  return (
-    <p id={id} className="text-destructive mt-1 text-xs">
-      {children}
-    </p>
-  );
-}
-
-// ── Constants ──────────────────────────────────────────────
 const DEFAULT_QUALITY = 80;
+const BACK_ICON_SIZE = 14;
 
-// ── Helpers ────────────────────────────────────────────────
 function toOptionalNum(value: unknown): number | undefined {
-  if (value === null || value === undefined) return undefined;
   if (typeof value === "number") return value;
   return undefined;
 }
@@ -103,7 +43,6 @@ function mapResponseParamsToFormValues(
   };
 }
 
-// ── Main component ─────────────────────────────────────────
 export function EditPresetPage(): React.JSX.Element {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -113,17 +52,14 @@ export function EditPresetPage(): React.JSX.Element {
 
   const namespaceQuery = useNamespace(slug);
   const presetsQuery = useNamespacePresets(slug);
-
   const namespace = namespaceQuery.data;
 
-  // Redirect to detail page if namespace is archived (defense-in-depth)
   useEffect(() => {
     if (namespace?.archivedAt) {
       void navigate({ to: "/namespaces/$slug", params: { slug }, search: { tab: "presets" } });
     }
   }, [namespace, navigate, slug]);
 
-  // Find the latest version of the named preset
   const latestPreset = useMemo(() => {
     const presets = presetsQuery.data ?? [];
     const matching = presets.filter((preset) => preset.name === name);
@@ -131,7 +67,6 @@ export function EditPresetPage(): React.JSX.Element {
     return matching.reduce((best, curr) => (curr.version > best.version ? curr : best));
   }, [presetsQuery.data, name]);
 
-  // If data loaded but preset not found, redirect to detail page
   const presetsLoaded = !presetsQuery.isLoading && presetsQuery.data !== undefined;
   useEffect(() => {
     if (presetsLoaded && !latestPreset) {
@@ -139,7 +74,6 @@ export function EditPresetPage(): React.JSX.Element {
     }
   }, [presetsLoaded, latestPreset, navigate, slug]);
 
-  // All versions of this preset (for the history panel)
   const presetVersions = useMemo(() => {
     const presets = presetsQuery.data ?? [];
     return presets.filter((preset) => preset.name === name).sort((a, b) => b.version - a.version);
@@ -148,7 +82,6 @@ export function EditPresetPage(): React.JSX.Element {
   const latestVersion = presetVersions[0]?.version ?? 1;
   const [selectedVersion, setSelectedVersion] = useState(latestVersion);
 
-  // Reset selected version when latest changes (e.g. after a successful save)
   useEffect(() => {
     setSelectedVersion(latestVersion);
   }, [latestVersion]);
@@ -165,7 +98,6 @@ export function EditPresetPage(): React.JSX.Element {
 
   const { reset: resetForm } = form;
 
-  // Re-populate when the preset loads
   useEffect(() => {
     if (latestPreset) {
       resetForm({ params: mapResponseParamsToFormValues(latestPreset.params) });
@@ -173,6 +105,7 @@ export function EditPresetPage(): React.JSX.Element {
   }, [latestPreset, resetForm]);
 
   const {
+    control,
     handleSubmit,
     register,
     setError,
@@ -232,7 +165,6 @@ export function EditPresetPage(): React.JSX.Element {
           const path = (violation as { path: unknown }).path;
           const message = (violation as { message: unknown }).message;
           if (typeof path !== "string" || typeof message !== "string") continue;
-          // Map known params sub-paths
           if (path === "params.width") {
             setError("params.width", { type: "server", message });
             mappedAny = true;
@@ -299,16 +231,24 @@ export function EditPresetPage(): React.JSX.Element {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-6">
+      <div className="mx-auto max-w-7xl px-4 py-6">
         <p className="text-muted-foreground text-sm">{t("pages.namespaceDetail.loading")}</p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
-      {/* Page header */}
+    <div className="mx-auto max-w-7xl space-y-6 px-4 py-6">
       <div>
+        <Link
+          to="/namespaces/$slug"
+          params={{ slug }}
+          search={{ tab: "presets" }}
+          className="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1.5 text-[12px]"
+        >
+          <ArrowLeft size={BACK_ICON_SIZE} />
+          {t("pages.namespaceDetail.backToNamespaces")}
+        </Link>
         <h1 className="text-[22px] font-bold tracking-tight">
           {t("pages.namespaces.presets.edit.title")}
         </h1>
@@ -317,7 +257,6 @@ export function EditPresetPage(): React.JSX.Element {
         </p>
       </div>
 
-      {/* Form-level error */}
       {formLevelError ? (
         <div
           id="edit-preset-form-error"
@@ -328,149 +267,68 @@ export function EditPresetPage(): React.JSX.Element {
         </div>
       ) : null}
 
-      <form
-        id="edit-preset-form"
-        onSubmit={(e) => void handleSubmit(onSubmit)(e)}
-        className="space-y-8"
-        noValidate
-      >
-        {/* ── Dimensions ────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Width */}
-          <div className="grid gap-2">
-            <FieldLabel htmlFor="ep-width">{t("pages.namespaces.presets.form.width")}</FieldLabel>
-            <TextInput
-              id="ep-width"
-              type="number"
-              min={1}
-              max={10000}
-              aria-invalid={errors.params?.width ? true : undefined}
-              aria-describedby={errors.params?.width ? "ep-width-error" : undefined}
-              {...register("params.width", {
-                setValueAs: (rawValue: string) => (rawValue === "" ? undefined : Number(rawValue)),
-              })}
-            />
-            {errors.params?.width?.message ? (
-              <FieldMessage id="ep-width-error">{errors.params.width.message}</FieldMessage>
-            ) : null}
-          </div>
-
-          {/* Height */}
-          <div className="grid gap-2">
-            <FieldLabel htmlFor="ep-height">{t("pages.namespaces.presets.form.height")}</FieldLabel>
-            <TextInput
-              id="ep-height"
-              type="number"
-              min={1}
-              max={10000}
-              aria-invalid={errors.params?.height ? true : undefined}
-              aria-describedby={errors.params?.height ? "ep-height-error" : undefined}
-              {...register("params.height", {
-                setValueAs: (rawValue: string) => (rawValue === "" ? undefined : Number(rawValue)),
-              })}
-            />
-            {errors.params?.height?.message ? (
-              <FieldMessage id="ep-height-error">{errors.params.height.message}</FieldMessage>
-            ) : null}
-          </div>
-        </div>
-
-        {/* ── Fit ───────────────────────────────────────────── */}
-        <div className="grid gap-2">
-          <FieldLabel htmlFor="ep-fit">{t("pages.namespaces.presets.form.fit")}</FieldLabel>
-          <SelectInput
-            id="ep-fit"
-            aria-invalid={errors.params?.fit ? true : undefined}
-            aria-describedby={errors.params?.fit ? "ep-fit-error" : undefined}
-            {...register("params.fit")}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <form
+          id="edit-preset-form"
+          onSubmit={(e) => void handleSubmit(onSubmit)(e)}
+          className="space-y-4"
+          noValidate
+        >
+          <PresetNumberedSection
+            num={1}
+            labelledBy="ep-section-identity"
+            title={t("pages.namespaces.presets.form.sections.identity")}
+            hint={t("pages.namespaces.presets.form.sections.identityHint")}
           >
-            {PRESET_FITS.map((fit) => (
-              <option key={fit} value={fit}>
-                {fit}
-              </option>
-            ))}
-          </SelectInput>
-          {errors.params?.fit?.message ? (
-            <FieldMessage id="ep-fit-error">{errors.params.fit.message}</FieldMessage>
-          ) : null}
-        </div>
+            <div className="grid gap-2">
+              <span id="ep-name-label" className="text-foreground text-[11.5px] font-medium">
+                {t("pages.namespaces.presets.form.name")}
+              </span>
+              <div
+                aria-labelledby="ep-name-label"
+                className="border-input bg-secondary/40 text-muted-foreground flex h-9 items-center overflow-hidden rounded-md border"
+              >
+                <span className="border-border bg-secondary/60 border-r px-3 py-1 font-mono text-[12px] select-none">
+                  {slug}/&lt;id&gt;@
+                </span>
+                <span className="text-foreground flex-1 px-3 font-mono text-[12.5px]">{name}</span>
+              </div>
+              <p className="text-muted-foreground mt-1 text-[10.5px]">
+                {t("pages.namespaces.presets.form.editNameLocked")}
+              </p>
+            </div>
+          </PresetNumberedSection>
 
-        {/* ── Format ────────────────────────────────────────── */}
-        <div className="grid gap-2">
-          <FieldLabel htmlFor="ep-format">{t("pages.namespaces.presets.form.format")}</FieldLabel>
-          <SelectInput
-            id="ep-format"
-            aria-invalid={errors.params?.format ? true : undefined}
-            aria-describedby={errors.params?.format ? "ep-format-error" : undefined}
-            {...register("params.format")}
-          >
-            {PRESET_FORMATS.map((format) => (
-              <option key={format} value={format}>
-                {format}
-              </option>
-            ))}
-          </SelectInput>
-          {errors.params?.format?.message ? (
-            <FieldMessage id="ep-format-error">{errors.params.format.message}</FieldMessage>
-          ) : null}
-        </div>
-
-        {/* ── Quality ───────────────────────────────────────── */}
-        <div className="grid gap-2">
-          <FieldLabel htmlFor="ep-quality">{t("pages.namespaces.presets.form.quality")}</FieldLabel>
-          <TextInput
-            id="ep-quality"
-            type="number"
-            min={1}
-            max={100}
-            aria-invalid={errors.params?.quality ? true : undefined}
-            aria-describedby={errors.params?.quality ? "ep-quality-error" : undefined}
-            {...register("params.quality", { valueAsNumber: true })}
+          <PresetParamsFields<IUpdatePresetVersionValues>
+            register={register}
+            errors={errors}
+            idPrefix="ep"
           />
-          {errors.params?.quality?.message ? (
-            <FieldMessage id="ep-quality-error">{errors.params.quality.message}</FieldMessage>
-          ) : null}
-        </div>
 
-        {/* ── DPR ───────────────────────────────────────────── */}
-        <div className="grid gap-2">
-          <FieldLabel htmlFor="ep-dpr">{t("pages.namespaces.presets.form.dpr")}</FieldLabel>
-          <TextInput
-            id="ep-dpr"
-            type="number"
-            min={0.5}
-            max={4}
-            step={0.5}
-            aria-invalid={errors.params?.dpr ? true : undefined}
-            aria-describedby={errors.params?.dpr ? "ep-dpr-error" : undefined}
-            {...register("params.dpr", {
-              setValueAs: (rawValue: string) => (rawValue === "" ? undefined : Number(rawValue)),
-            })}
-          />
-          {errors.params?.dpr?.message ? (
-            <FieldMessage id="ep-dpr-error">{errors.params.dpr.message}</FieldMessage>
-          ) : null}
-        </div>
-
-        {/* ── Action bar ────────────────────────────────────── */}
-        <div className="border-border/40 flex items-center justify-end gap-3 border-t pt-4">
-          <Link to="/namespaces/$slug" params={{ slug }} search={{ tab: "presets" }}>
-            <Button type="button" variant="outline" disabled={isBusy}>
-              {t("pages.namespaces.presets.edit.cancel")}
+          <div className="border-border/40 flex items-center justify-end gap-3 border-t pt-4">
+            <Link to="/namespaces/$slug" params={{ slug }} search={{ tab: "presets" }}>
+              <Button type="button" variant="outline" disabled={isBusy}>
+                {t("pages.namespaces.presets.edit.cancel")}
+              </Button>
+            </Link>
+            <Button
+              type="submit"
+              form="edit-preset-form"
+              variant="indigo"
+              disabled={isBusy || !isDirty}
+            >
+              {t("pages.namespaces.presets.edit.submit")}
             </Button>
-          </Link>
-          <Button
-            type="submit"
-            form="edit-preset-form"
-            variant="indigo"
-            disabled={isBusy || !isDirty}
-          >
-            {t("pages.namespaces.presets.edit.submit")}
-          </Button>
-        </div>
-      </form>
+          </div>
+        </form>
 
-      {/* Past versions panel (read-only history) */}
+        <PresetPreviewRail<IUpdatePresetVersionValues>
+          control={control}
+          slug={slug}
+          presetName={name}
+        />
+      </div>
+
       {presetVersions.length > 0 && (
         <PastPresetVersionsPanel
           presets={presetVersions}
