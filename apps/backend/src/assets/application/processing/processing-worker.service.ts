@@ -31,10 +31,15 @@ export interface IProcessingWorkerOptions {
   sleep?: (ms: number) => Promise<void>;
 }
 
+interface IInFlightEntry {
+  promise: Promise<void>;
+  attemptNumber: number;
+}
+
 @Injectable()
 export class ProcessingWorkerService implements OnModuleDestroy {
   readonly workerId: string = `worker-${randomUUID()}`;
-  private readonly inFlight: Map<string, Promise<void>> = new Map();
+  private readonly inFlight: Map<string, IInFlightEntry> = new Map();
   private shutdownStarted = false;
   private pollTimer: NodeJS.Timeout | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
@@ -97,7 +102,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
 
     for (const job of jobs) {
       const promise: Promise<void> = this.process(job.props.assetId, job.props.attemptNumber);
-      this.inFlight.set(job.props.assetId, promise);
+      this.inFlight.set(job.props.assetId, { promise, attemptNumber: job.props.attemptNumber });
       promise
         .catch((err: unknown): void => {
           // Defensive net: process() handles its own retries and terminal
@@ -143,8 +148,8 @@ export class ProcessingWorkerService implements OnModuleDestroy {
     }
   }
 
-  trackInFlight(assetId: string): void {
-    this.inFlight.set(assetId, Promise.resolve());
+  trackInFlight(assetId: string, attemptNumber = 1, promise?: Promise<void>): void {
+    this.inFlight.set(assetId, { promise: promise ?? Promise.resolve(), attemptNumber });
   }
 
   /**
@@ -152,18 +157,52 @@ export class ProcessingWorkerService implements OnModuleDestroy {
    * the shutdown path; not part of the steady-state worker loop.
    */
   async drainInFlight(): Promise<void> {
-    await Promise.allSettled(Array.from(this.inFlight.values()));
+    await Promise.allSettled(Array.from(this.inFlight.values()).map((entry) => entry.promise));
   }
 
   async onModuleDestroy(): Promise<void> {
     this.logger.info({ workerId: this.workerId }, "graceful shutdown starting");
     this.beginShutdown();
+    const inFlightPromises: Promise<void>[] = Array.from(this.inFlight.values()).map(
+      (entry) => entry.promise,
+    );
     await Promise.race([
-      Promise.allSettled(this.inFlight.values()),
+      Promise.allSettled(inFlightPromises),
       new Promise<void>((resolve): void => {
         setTimeout(resolve, environmentConfiguration.PROCESSING_WORKER_SHUTDOWN_GRACE_MS);
       }),
     ]);
+    // After the grace race: any assets still in-flight got cut off. Release
+    // them so a subsequent worker can claim immediately, instead of waiting
+    // for the stale sweeper.
+    if (this.inFlight.size > 0) {
+      const entries: Array<[string, IInFlightEntry]> = Array.from(this.inFlight.entries());
+      this.logger.warn(
+        { assetIds: entries.map(([assetId]): string => assetId) },
+        "shutdown grace expired with in-flight jobs; releasing for immediate retry",
+      );
+      const now: Date = new Date();
+      await Promise.all(
+        entries.map(async ([assetId, entry]): Promise<void> => {
+          const released: boolean = await this.jobs.releaseForRetry({
+            assetId,
+            workerId: this.workerId,
+            notBefore: now,
+            // Don't consume a retry slot — we didn't count this as a real
+            // failed attempt. The next worker resumes the same attemptNumber.
+            attemptNumber: entry.attemptNumber,
+            lastError: "worker_shutdown",
+            now,
+          });
+          if (!released) {
+            this.logger.warn(
+              { assetId },
+              "shutdown release lost race; another worker may already own this job",
+            );
+          }
+        }),
+      );
+    }
   }
 
   private async process(assetId: string, attemptNumber: number): Promise<void> {

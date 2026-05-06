@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProcessingRetryPolicy } from "@/assets/application/processing/processing-retry-policy";
 import { ProcessingWorkerService } from "@/assets/application/processing/processing-worker.service";
@@ -118,6 +118,31 @@ describe("ProcessingWorkerService", () => {
     expect(assetRepo.transitions.at(-1)?.toState).toBe("processing_failed");
     expect(assetRepo.transitions.at(-1)?.fromState).toBe("processing");
     expect(assetRepo.transitions.at(-1)?.reason).toBe("retry_budget_exhausted");
+  });
+
+  describe("shutdown release", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("releases in-flight claims when the shutdown grace expires", async () => {
+      vi.useFakeTimers();
+      // Track an in-flight job whose underlying promise never settles, so the
+      // grace race is forced to time out instead of completing cleanly.
+      const neverSettling: Promise<void> = new Promise<void>((): void => {});
+      service.trackInFlight(TEST_UUIDS.asset1, 2, neverSettling);
+
+      const destroyPromise: Promise<void> = service.onModuleDestroy();
+      // The worker uses setTimeout(grace) to bound the wait; fast-forward
+      // past it so the post-race release branch runs.
+      await vi.advanceTimersByTimeAsync(30_000);
+      await destroyPromise;
+
+      expect(jobRepo.releaseCalls).toHaveLength(1);
+      expect(jobRepo.releaseCalls[0]?.assetId).toBe(TEST_UUIDS.asset1);
+      expect(jobRepo.releaseCalls[0]?.attemptNumber).toBe(2);
+      expect(jobRepo.releaseCalls[0]?.lastError).toBe("worker_shutdown");
+    });
   });
 });
 
