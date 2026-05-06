@@ -465,15 +465,8 @@
       "archivedBadge": "archivado",
       "searchPlaceholder": "Buscar namespaces por slug o nombre de visualización…",
       "policyVersion": "política v{{version}}",
-      "owner": "propietario",
-      "quarantineCount": "{{count}} cuarentena",
-      "queueClean": "cola limpia",
       "allowedTypes": {
         "demoValue": "image/jpeg, image/png, image/heic"
-      },
-      "moderation": {
-        "enabled": "moderación",
-        "none": "sin moderación"
       },
       "stats": {
         "assets": "Activos",
@@ -481,16 +474,16 @@
         "maxSize": "Tam. máx.",
         "holds": "Retenciones"
       },
-      "table": {
-        "slug": "Slug",
-        "displayName": "Nombre de visualización",
-        "storage": "Almacenamiento",
-        "policyVersion": "Versión de política",
-        "assetCount": "Cant. de activos"
+      "card": {
+        "created": "creado {{date}}"
       },
       "empty": {
         "title": "Aún no hay namespaces",
-        "description": "Crea el primer namespace para comenzar."
+        "description": "Crea el primer namespace para comenzar.",
+        "noMatch": {
+          "title": "Ningún namespace coincide",
+          "description": "Prueba con otro término de búsqueda."
+        }
       },
       "actions": {
         "newNamespace": "Nuevo namespace",

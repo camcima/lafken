@@ -534,15 +534,8 @@
       },
       "searchPlaceholder": "Search namespaces by slug or display name…",
       "policyVersion": "policy v{{version}}",
-      "owner": "owner",
-      "quarantineCount": "{{count}} quarantine",
-      "queueClean": "queue clean",
       "allowedTypes": {
         "demoValue": "image/jpeg, image/png, image/heic"
-      },
-      "moderation": {
-        "enabled": "moderation",
-        "none": "no moderation"
       },
       "stats": {
         "assets": "Assets",
@@ -550,16 +543,16 @@
         "maxSize": "Max size",
         "holds": "Holds"
       },
-      "table": {
-        "slug": "Slug",
-        "displayName": "Display name",
-        "storage": "Storage",
-        "policyVersion": "Policy version",
-        "assetCount": "Asset count"
+      "card": {
+        "created": "created {{date}}"
       },
       "empty": {
         "title": "No namespaces yet",
-        "description": "Create the first namespace to get started."
+        "description": "Create the first namespace to get started.",
+        "noMatch": {
+          "title": "No namespaces match",
+          "description": "Try a different search term."
+        }
       },
       "demoLabel": "(demo)",
       "policy": {

@@ -78,7 +78,7 @@ function renderPage() {
   );
 }
 
-describe("NamespacesListPage — demo fallback (empty API response)", () => {
+describe("NamespacesListPage — header", () => {
   it("renders the title heading", () => {
     mockNamespaces = [];
     mockTotal = 0;
@@ -86,126 +86,112 @@ describe("NamespacesListPage — demo fallback (empty API response)", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/namespaces/i);
   });
 
-  it("renders at least 3 demo namespace cards", () => {
-    mockNamespaces = [];
-    mockTotal = 0;
-    renderPage();
-    const cards = screen.getAllByRole("heading", { level: 2 });
-    expect(cards.length).toBeGreaterThanOrEqual(3);
-  });
-
-  it("renders all 6 demo namespaces by default", () => {
-    mockNamespaces = [];
-    mockTotal = 0;
-    renderPage();
-    expect(screen.getByText("Aircraft Photos")).toBeInTheDocument();
-    expect(screen.getByText("Cargo Damage Reports")).toBeInTheDocument();
-    expect(screen.getByText("Engine Borescope")).toBeInTheDocument();
-  });
-
-  it("shows (demo) watermark in the page header", () => {
-    mockNamespaces = [];
-    mockTotal = 0;
-    renderPage();
-    expect(screen.getByText("(demo)")).toBeInTheDocument();
-  });
-
-  it("filters demo namespaces by search query", async () => {
-    mockNamespaces = [];
-    mockTotal = 0;
-    renderPage();
-    const searchInput = screen.getByRole("searchbox");
-    await userEvent.type(searchInput, "aircraft");
-    expect(screen.getByText("Aircraft Photos")).toBeInTheDocument();
-    expect(screen.queryByText("Cargo Damage Reports")).not.toBeInTheDocument();
-  });
-
-  it("opens the detail drawer when a demo namespace card is clicked", async () => {
-    mockNamespaces = [];
-    mockTotal = 0;
-    renderPage();
-    // getAllByRole("button")[0] is the "+ New namespace" button inside the Link.
-    // Namespace card buttons start at index 1.
-    const firstCard = screen.getAllByRole("button")[1];
-    await userEvent.click(firstCard);
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-  });
-});
-
-describe("NamespacesListPage — real data path", () => {
-  it("renders real namespace rows when API returns data", () => {
-    mockNamespaces = [SAMPLE_NAMESPACE, SAMPLE_NAMESPACE_2];
-    mockTotal = 2;
-    renderPage();
-    expect(screen.getByText("aircraft-photos")).toBeInTheDocument();
-    expect(screen.getByText("Aircraft Photos")).toBeInTheDocument();
-    expect(screen.getByText("cargo-damage")).toBeInTheDocument();
-  });
-
-  it("does not show demo-only fields (assetCount, retention, maxBytes) in real mode", () => {
+  it("renders the + New namespace link pointing to /namespaces/new", () => {
     mockNamespaces = [SAMPLE_NAMESPACE];
     mockTotal = 1;
     renderPage();
-    // Demo headings (h2) should not appear
-    expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
-    // Demo-specific stat labels should not appear
-    expect(screen.queryByText(/assets/i)).not.toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /new namespace/i });
+    expect(link).toHaveAttribute("href", "/namespaces/new");
   });
 
-  it("shows archived badge for namespaces with archivedAt set", () => {
+  it("does not show (demo) watermark", () => {
+    mockNamespaces = [SAMPLE_NAMESPACE];
+    mockTotal = 1;
+    renderPage();
+    expect(screen.queryByText("(demo)")).not.toBeInTheDocument();
+  });
+});
+
+describe("NamespacesListPage — card grid", () => {
+  it("renders one card per namespace with displayName as a heading", () => {
+    mockNamespaces = [SAMPLE_NAMESPACE, SAMPLE_NAMESPACE_2];
+    mockTotal = 2;
+    renderPage();
+    const headings = screen.getAllByRole("heading", { level: 2 });
+    expect(headings).toHaveLength(2);
+    expect(headings[0]).toHaveTextContent("Aircraft Photos");
+    expect(headings[1]).toHaveTextContent("Cargo Damage Reports");
+  });
+
+  it("renders the slug below the display name", () => {
+    mockNamespaces = [SAMPLE_NAMESPACE];
+    mockTotal = 1;
+    renderPage();
+    expect(screen.getByText("aircraft-photos")).toBeInTheDocument();
+  });
+
+  it("renders the policy version badge in the card header", () => {
+    mockNamespaces = [SAMPLE_NAMESPACE];
+    mockTotal = 1;
+    renderPage();
+    // Header badge + bottom info strip both render the policy version label.
+    const matches = screen.getAllByText(/policy v7/i);
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders the storage binding name in the bottom info strip", () => {
+    mockNamespaces = [SAMPLE_NAMESPACE];
+    mockTotal = 1;
+    renderPage();
+    expect(screen.getByText(/gcs-prod-aircraft/)).toBeInTheDocument();
+  });
+
+  it("shows the archived badge when archivedAt is set", () => {
     mockNamespaces = [SAMPLE_NAMESPACE_2];
     mockTotal = 1;
     renderPage();
     expect(screen.getByText("archived")).toBeInTheDocument();
   });
 
-  it("does not show archived badge for active namespaces", () => {
+  it("does not show the archived badge for active namespaces", () => {
     mockNamespaces = [SAMPLE_NAMESPACE];
     mockTotal = 1;
     renderPage();
     expect(screen.queryByText("archived")).not.toBeInTheDocument();
   });
 
-  it("does not show (demo) watermark when real data is present", () => {
+  it("links each card to /namespaces/:slug", () => {
     mockNamespaces = [SAMPLE_NAMESPACE];
     mockTotal = 1;
     renderPage();
-    expect(screen.queryByText("(demo)")).not.toBeInTheDocument();
-  });
-
-  it("links each real row to /namespaces/:slug", () => {
-    mockNamespaces = [SAMPLE_NAMESPACE];
-    mockTotal = 1;
-    renderPage();
-    const link = screen.getByRole("link", { name: /aircraft-photos/i });
+    const link = screen.getByRole("link", { name: /aircraft photos/i });
     expect(link).toHaveAttribute("href", "/namespaces/aircraft-photos");
   });
 
-  it("filters real namespaces by search query", async () => {
+  it("filters namespaces by search query", async () => {
     mockNamespaces = [SAMPLE_NAMESPACE, SAMPLE_NAMESPACE_2];
     mockTotal = 2;
     renderPage();
     const searchInput = screen.getByRole("searchbox");
     await userEvent.type(searchInput, "aircraft");
-    expect(screen.getByText("aircraft-photos")).toBeInTheDocument();
-    expect(screen.queryByText("cargo-damage")).not.toBeInTheDocument();
+    expect(screen.getByText("Aircraft Photos")).toBeInTheDocument();
+    expect(screen.queryByText("Cargo Damage Reports")).not.toBeInTheDocument();
   });
 });
 
-describe("NamespacesListPage — + New namespace link", () => {
-  it("renders the + New namespace link pointing to /namespaces/new", () => {
+describe("NamespacesListPage — empty states", () => {
+  it("renders the no-namespaces empty state with a CTA when the list is empty", () => {
     mockNamespaces = [];
     mockTotal = 0;
     renderPage();
-    const link = screen.getByRole("link", { name: /new namespace/i });
-    expect(link).toHaveAttribute("href", "/namespaces/new");
+    expect(screen.getByText(/no namespaces yet/i)).toBeInTheDocument();
+    // CTA link in the empty state and the header CTA — both point to /namespaces/new.
+    const links = screen.getAllByRole("link", { name: /new namespace/i });
+    expect(links.length).toBeGreaterThanOrEqual(2);
+    for (const link of links) {
+      expect(link).toHaveAttribute("href", "/namespaces/new");
+    }
   });
 
-  it("renders the + New namespace link in real-data mode too", () => {
+  it("renders a no-match empty state (without CTA) when filters return nothing", async () => {
     mockNamespaces = [SAMPLE_NAMESPACE];
     mockTotal = 1;
     renderPage();
-    const link = screen.getByRole("link", { name: /new namespace/i });
-    expect(link).toHaveAttribute("href", "/namespaces/new");
+    const searchInput = screen.getByRole("searchbox");
+    await userEvent.type(searchInput, "zzzznoresults");
+    expect(screen.getByText(/no namespaces match/i)).toBeInTheDocument();
+    // Only the header CTA remains — no second CTA in the no-match state.
+    const links = screen.getAllByRole("link", { name: /new namespace/i });
+    expect(links).toHaveLength(1);
   });
 });
