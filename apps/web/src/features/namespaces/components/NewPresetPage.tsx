@@ -207,11 +207,11 @@ export function NewPresetPage(): React.JSX.Element {
                   {...register("name")}
                 />
               </div>
-              <p id="np-name-help" className="text-muted-foreground mt-1 text-xs">
+              <p id="np-name-help" className="text-muted-foreground mt-1 text-[11px]">
                 {t("pages.namespaces.presets.form.nameHelp")}
               </p>
               {errors.name?.message ? (
-                <p id="np-name-error" className="text-destructive mt-1 text-xs">
+                <p id="np-name-error" className="text-destructive mt-1 text-[11px]">
                   {errors.name.message}
                 </p>
               ) : null}

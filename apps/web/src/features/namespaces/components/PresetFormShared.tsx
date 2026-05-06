@@ -55,8 +55,12 @@ function FieldLabel(
   >,
 ): React.JSX.Element {
   const { className, ...rest } = props;
-  // eslint-disable-next-line jsx-a11y/label-has-associated-control
-  return <label className={cn("text-foreground text-sm font-medium", className)} {...rest} />;
+  return (
+    <label // eslint-disable-line jsx-a11y/label-has-associated-control
+      className={cn("text-foreground text-[11.5px] font-medium", className)}
+      {...rest}
+    />
+  );
 }
 
 function FieldMessage({
@@ -65,7 +69,7 @@ function FieldMessage({
 }: Readonly<{ id?: string; children?: React.ReactNode }>): React.JSX.Element | null {
   if (!children) return null;
   return (
-    <p id={id} className="text-destructive mt-1 text-xs">
+    <p id={id} className="text-destructive mt-1 text-[11px]">
       {children}
     </p>
   );
