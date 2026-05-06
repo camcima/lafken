@@ -1,16 +1,21 @@
-import type { NamespacePolicyResponseDTO, NamespaceResponseDTO } from "@shared/backend-api";
+import type {
+  NamespacePolicyResponseDTO,
+  NamespacePresetResponseDTO,
+  NamespaceResponseDTO,
+} from "@shared/backend-api";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as useNamespacesModule from "@/features/namespaces/hooks/useNamespaces";
 import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
 
 import { NamespaceDetailPage } from "./NamespaceDetailPage";
 
-// Default mock — namespace not found in API (uses demo data, not archived)
+// Default mock — namespace not found in API; tests that need a real namespace
+// mock `useNamespace` per-test via vi.spyOn.
 vi.mock("@/features/namespaces/hooks/useNamespaces", () => ({
   useNamespaces: () => ({
     data: { data: [], total: 0, page: 1, limit: 20, lastPage: 1 },
@@ -25,6 +30,17 @@ vi.mock("@/features/namespaces/hooks/useNamespaces", () => ({
   useUnarchiveNamespace: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useCreateNamespace: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
+
+const aircraftPhotosNamespace = {
+  slug: "aircraft-photos",
+  displayName: "Aircraft Photos",
+  description: undefined,
+  currentPolicyVersion: 7,
+  storageBindingName: "gcs-prod",
+  archivedAt: undefined,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+} satisfies NamespaceResponseDTO;
 
 vi.mock("@tanstack/react-router", async () => {
   const actual =
@@ -41,7 +57,7 @@ vi.mock("@tanstack/react-router", async () => {
 
 function renderPage(props: {
   slug: string;
-  tab?: "overview" | "policy" | "presets" | "assets" | "webhooks" | "quotas";
+  tab?: "overview" | "policy" | "presets" | "assets";
   onTabChange?: () => void;
 }) {
   const queryClient = new QueryClient({
@@ -77,21 +93,46 @@ describe("NamespaceDetailPage — not found", () => {
 });
 
 describe("NamespaceDetailPage — valid slug", () => {
-  it("renders the namespace display name", () => {
-    renderPage({ slug: "aircraft-photos" });
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Aircraft Photos");
+  beforeEach(() => {
+    vi.spyOn(useNamespacesModule, "useNamespace").mockReturnValue({
+      data: aircraftPhotosNamespace,
+      isLoading: false,
+    } as ReturnType<typeof useNamespacesModule.useNamespace>);
   });
 
-  it("renders all 6 tabs", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("renders the namespace display name and slug in the header", () => {
+    renderPage({ slug: "aircraft-photos" });
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Aircraft Photos");
+    expect(screen.getByText("aircraft-photos")).toBeInTheDocument();
+  });
+
+  it("renders 4 tab triggers (overview, policy, presets, assets)", () => {
     renderPage({ slug: "aircraft-photos" });
     const tabList = screen.getByRole("tablist");
     const tabs = tabList.querySelectorAll("[role='tab']");
-    expect(tabs).toHaveLength(6);
+    expect(tabs).toHaveLength(4);
+    expect(screen.getByRole("tab", { name: /overview/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /policy/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /presets/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /assets/i })).toBeInTheDocument();
   });
 
-  it("renders overview tab content by default", () => {
+  it("does not render Webhooks or Quotas tabs", () => {
     renderPage({ slug: "aircraft-photos" });
-    expect(screen.getByText(/latest activity/i)).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: /webhooks/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: /quotas/i })).not.toBeInTheDocument();
+  });
+
+  it("renders the overview stat grid by default with policy version, storage binding, presets active, and created", () => {
+    renderPage({ slug: "aircraft-photos" });
+    expect(screen.getByText(/policy version/i)).toBeInTheDocument();
+    expect(screen.getByText(/storage binding/i)).toBeInTheDocument();
+    expect(screen.getByText(/presets active/i)).toBeInTheDocument();
+    expect(screen.getByText(/^created$/i)).toBeInTheDocument();
   });
 
   it("switches to policy tab when clicked", async () => {
@@ -134,6 +175,139 @@ describe("NamespaceDetailPage — valid slug", () => {
   });
 });
 
+describe("NamespaceDetailPage — overview stat tiles", () => {
+  function makePreset(
+    name: string,
+    version: number,
+    overrides?: Partial<NamespacePresetResponseDTO>,
+  ): NamespacePresetResponseDTO {
+    return {
+      name,
+      version,
+      params: {},
+      active: true,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      createdBy: "user@example.com",
+      ...overrides,
+    } as NamespacePresetResponseDTO;
+  }
+
+  const liveNamespace = {
+    slug: "live-ns",
+    displayName: "Live Namespace",
+    description: undefined,
+    currentPolicyVersion: 4,
+    storageBindingName: "gcs-binding-x",
+    archivedAt: undefined,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  } satisfies NamespaceResponseDTO;
+
+  it("counts only the latest version per preset name when reporting active presets", () => {
+    const nsSpy = vi.spyOn(useNamespacesModule, "useNamespace").mockReturnValue({
+      data: liveNamespace,
+      isLoading: false,
+    } as ReturnType<typeof useNamespacesModule.useNamespace>);
+
+    // thumb has v1=active, v2=inactive (latest wins → not counted)
+    // tile has v1=active, v2=active (latest wins → counted)
+    // hero has only v1=active → counted
+    const presetsSpy = vi.spyOn(useNamespacesModule, "useNamespacePresets").mockReturnValue({
+      data: [
+        makePreset("thumb", 1, { active: true }),
+        makePreset("thumb", 2, { active: false }),
+        makePreset("tile", 1, { active: true }),
+        makePreset("tile", 2, { active: true }),
+        makePreset("hero", 1, { active: true }),
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useNamespacesModule.useNamespacePresets>);
+
+    renderPage({ slug: "live-ns" });
+
+    // The "Presets active" tile should report 2 (tile + hero, but not thumb).
+    const presetsLabel = screen.getByText(/presets active/i);
+    const tile = presetsLabel.parentElement;
+    expect(tile?.textContent).toMatch(/2/);
+
+    nsSpy.mockRestore();
+    presetsSpy.mockRestore();
+  });
+
+  it("renders policy version and storage binding values from the namespace DTO", () => {
+    const nsSpy = vi.spyOn(useNamespacesModule, "useNamespace").mockReturnValue({
+      data: liveNamespace,
+      isLoading: false,
+    } as ReturnType<typeof useNamespacesModule.useNamespace>);
+
+    renderPage({ slug: "live-ns" });
+
+    expect(screen.getByText("v4")).toBeInTheDocument();
+    expect(screen.getByText("gcs-binding-x")).toBeInTheDocument();
+
+    nsSpy.mockRestore();
+  });
+
+  it("omits the Updated tile when updatedAt equals createdAt", () => {
+    const nsSpy = vi.spyOn(useNamespacesModule, "useNamespace").mockReturnValue({
+      data: liveNamespace,
+      isLoading: false,
+    } as ReturnType<typeof useNamespacesModule.useNamespace>);
+
+    renderPage({ slug: "live-ns" });
+
+    expect(screen.queryByText(/^updated$/i)).not.toBeInTheDocument();
+
+    nsSpy.mockRestore();
+  });
+
+  it("renders the Updated tile when updatedAt differs from createdAt", () => {
+    const nsSpy = vi.spyOn(useNamespacesModule, "useNamespace").mockReturnValue({
+      data: {
+        ...liveNamespace,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-02-15T00:00:00.000Z",
+      },
+      isLoading: false,
+    } as ReturnType<typeof useNamespacesModule.useNamespace>);
+
+    renderPage({ slug: "live-ns" });
+
+    expect(screen.getByText(/^updated$/i)).toBeInTheDocument();
+
+    nsSpy.mockRestore();
+  });
+
+  it("renders the description above the stat grid when present", () => {
+    const nsSpy = vi.spyOn(useNamespacesModule, "useNamespace").mockReturnValue({
+      data: { ...liveNamespace, description: "Photos captured during line maintenance." },
+      isLoading: false,
+    } as ReturnType<typeof useNamespacesModule.useNamespace>);
+
+    renderPage({ slug: "live-ns" });
+
+    expect(screen.getByText(/photos captured during line maintenance/i)).toBeInTheDocument();
+
+    nsSpy.mockRestore();
+  });
+
+  it("renders an Archived state badge when the namespace is archived", () => {
+    const nsSpy = vi.spyOn(useNamespacesModule, "useNamespace").mockReturnValue({
+      data: { ...liveNamespace, archivedAt: "2026-02-01T00:00:00.000Z" },
+      isLoading: false,
+    } as ReturnType<typeof useNamespacesModule.useNamespace>);
+
+    renderPage({ slug: "live-ns" });
+
+    // The state tile should contain an "Archived" badge — the header also renders
+    // an "archived" badge, so we assert at least one match exists.
+    const archived = screen.getAllByText(/archived/i);
+    expect(archived.length).toBeGreaterThanOrEqual(1);
+
+    nsSpy.mockRestore();
+  });
+});
+
 describe("NamespaceDetailPage — archived namespace", () => {
   it("renders Unarchive button and archived badge when namespace is archived", () => {
     // Temporarily override useNamespace to return an archived namespace
@@ -154,7 +328,7 @@ describe("NamespaceDetailPage — archived namespace", () => {
     renderPage({ slug: "aircraft-photos" });
 
     expect(screen.getByRole("button", { name: /^unarchive$/i })).toBeInTheDocument();
-    expect(screen.getByText(/archived/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/archived/i).length).toBeGreaterThanOrEqual(1);
 
     spy.mockRestore();
   });
@@ -186,7 +360,7 @@ describe("NamespaceDetailPage — archived namespace", () => {
 });
 
 describe("NamespaceDetailPage — presets tab", () => {
-  it("renders RealPresetsTab when slug is not in demo data", () => {
+  it("renders the RealPresetsTab empty state when the namespace has no presets", () => {
     const nsSpy = vi.spyOn(useNamespacesModule, "useNamespace").mockReturnValue({
       data: {
         slug: "real-namespace",
@@ -214,14 +388,6 @@ describe("NamespaceDetailPage — presets tab", () => {
 
     nsSpy.mockRestore();
     presetsSpy.mockRestore();
-  });
-
-  it("renders DemoPresetsTab when slug is in demo data", () => {
-    renderPage({ slug: "aircraft-photos", tab: "presets" });
-
-    // DemoPresetsTab renders a div containing "Presets — aircraft-photos (demo)"
-    // Multiple elements may have "presets" text (tab + content), so check for demo label
-    expect(screen.getByText(/\(demo\)/i)).toBeInTheDocument();
   });
 });
 

@@ -693,14 +693,21 @@
         "overview": "Visão geral",
         "policy": "Política",
         "presets": "Predefinições",
-        "assets": "Ativos",
-        "webhooks": "Webhooks",
-        "quotas": "Cotas"
+        "assets": "Ativos"
       },
       "overview": {
-        "latestActivity": "Atividade recente",
-        "latestActivityMeta": "últimas 24h · este namespace",
-        "noActivity": "Nenhuma atividade recente neste namespace."
+        "stats": {
+          "policyVersion": "Versão da política",
+          "storageBinding": "Vinculação de armazenamento",
+          "presetsActive": "Predefinições ativas",
+          "created": "Criado",
+          "updated": "Atualizado",
+          "state": "Estado"
+        },
+        "state": {
+          "active": "Ativo",
+          "archived": "Arquivado"
+        }
       },
       "policy": {
         "currentVersion": "Política v{{version}}",
@@ -732,12 +739,7 @@
         }
       },
       "empty": {
-        "overview": "Os detalhes da visão geral aparecerão aqui quando os dados estiverem disponíveis.",
-        "policy": "Nenhuma política ainda.",
-        "presets": "Predefinições disponíveis em um próximo slice.",
-        "assets": "Listagem de ativos por namespace disponível em um próximo slice.",
-        "webhooks": "Webhooks disponíveis em um próximo slice.",
-        "quotas": "Cotas disponíveis em um próximo slice."
+        "policy": "Nenhuma política ainda."
       }
     },
     "quarantine": {

@@ -1,5 +1,8 @@
-// Slice 0: BE returns empty arrays; rendering against typed demo data
-import type { NamespacePolicyResponseDTO, NamespaceResponseDTO } from "@shared/backend-api";
+import type {
+  NamespacePolicyResponseDTO,
+  NamespacePresetResponseDTO,
+  NamespaceResponseDTO,
+} from "@shared/backend-api";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import React, { useState } from "react";
@@ -16,10 +19,6 @@ import {
   useNamespacePolicies,
   useNamespacePresets,
 } from "@/features/namespaces/hooks/useNamespaces";
-import { isDemoMode } from "@/lib/demo/demo-mode";
-import { DEMO_AUDIT, DEMO_NAMESPACES, type DemoNamespace } from "@/lib/demo/lafken-demo-data";
-import { fmtAgo } from "@/lib/demo/lafken-demo-data";
-import { cn } from "@/lib/utils";
 
 import { ArchiveNamespaceDialog } from "./ArchiveNamespaceDialog";
 import { NamespaceAssetsTab } from "./NamespaceAssetsTab";
@@ -28,9 +27,9 @@ import { PastVersionsPanel } from "./PastVersionsPanel";
 import { RealPresetsTab } from "./RealPresetsTab";
 
 const BACK_ICON_SIZE = 14;
-const RECENT_AUDIT_COUNT = 5;
+const ISO_DATE_LENGTH = 10;
 
-const TABS = ["overview", "policy", "presets", "assets", "webhooks", "quotas"] as const;
+const TABS = ["overview", "policy", "presets", "assets"] as const;
 type INamespaceTab = (typeof TABS)[number];
 
 interface INamespaceDetailPageProps {
@@ -40,173 +39,110 @@ interface INamespaceDetailPageProps {
   onTabChange?: (tab: INamespaceTab) => void;
 }
 
-function OverviewTab({ ns }: { ns: DemoNamespace }): React.JSX.Element {
-  const { t } = useTranslation();
-  const recentAudit = DEMO_AUDIT.filter((e) => e.namespace === ns.slug).slice(
-    0,
-    RECENT_AUDIT_COUNT,
-  );
-
-  return (
-    <div className="grid gap-4">
-      {/* Stats */}
-      <Card className="p-0">
-        <div className="grid grid-cols-2 sm:grid-cols-4">
-          {[
-            {
-              label: t("pages.namespaces.stats.assets"),
-              value: ns.assetCount.toLocaleString(),
-            },
-            { label: t("pages.namespaces.stats.retention"), value: ns.retention },
-            { label: t("pages.namespaces.stats.maxSize"), value: ns.maxBytes },
-            {
-              label: t("pages.namespaces.stats.holds"),
-              value: ns.holdsCount,
-              warn: ns.holdsCount > 0,
-            },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="border-border border-r px-5 py-4 first:rounded-tl-md last:border-r-0"
-            >
-              <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
-                {stat.label}
-              </div>
-              <div className={cn("font-mono text-[20px] tabular-nums", stat.warn && "text-warn")}>
-                {stat.value}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Latest activity */}
-      <Card className="p-0">
-        <CardHeader>
-          <CardTitle>{t("pages.namespaceDetail.overview.latestActivity")}</CardTitle>
-          <CardMeta>{t("pages.namespaceDetail.overview.latestActivityMeta")}</CardMeta>
-        </CardHeader>
-        {recentAudit.length === 0 ? (
-          <div className="text-muted-foreground px-5 py-8 text-center text-[12.5px]">
-            {t("pages.namespaceDetail.overview.noActivity")}
-          </div>
-        ) : (
-          <div>
-            {recentAudit.map((e) => (
-              <div
-                key={e.id}
-                className="border-border/40 flex items-center gap-3 border-b px-5 py-2.5 last:border-b-0"
-              >
-                <span
-                  className={cn(
-                    "size-1.5 flex-none rounded-full",
-                    e.result === "ok" ? "bg-ok" : "bg-danger",
-                  )}
-                />
-                <span className="flex-1 font-mono text-[11.5px]">{e.type}</span>
-                <span className="text-muted-foreground font-mono text-[10.5px]">{e.actor}</span>
-                <span className="text-muted-foreground font-mono text-[10.5px]">
-                  {fmtAgo(e.minutesAgo)}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-    </div>
-  );
+function formatDate(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
-function PolicyTab({ ns }: { ns: DemoNamespace }): React.JSX.Element {
+/**
+ * Counts the number of distinct preset names where the highest-version row
+ * for that name is active. Mirrors the dedup-by-name + latest-wins logic in
+ * RealPresetsTab so the overview stat lines up with what the Presets tab
+ * shows.
+ */
+function countActivePresetGroups(presets: NamespacePresetResponseDTO[]): number {
+  const latestByName = new Map<string, NamespacePresetResponseDTO>();
+  for (const preset of presets) {
+    const existing = latestByName.get(preset.name);
+    if (!existing || preset.version > existing.version) {
+      latestByName.set(preset.name, preset);
+    }
+  }
+  let active = 0;
+  for (const [, preset] of latestByName) {
+    if (preset.active) active += 1;
+  }
+  return active;
+}
+
+interface IStatTile {
+  label: string;
+  value: string;
+}
+
+function OverviewTab({
+  namespace,
+  presets,
+}: {
+  namespace: NamespaceResponseDTO;
+  presets: NamespacePresetResponseDTO[];
+}): React.JSX.Element {
   const { t } = useTranslation();
 
-  const policyRows: Array<[string, React.ReactNode]> = [
-    [t("pages.namespaces.drawer.retention"), ns.retention],
-    [t("pages.namespaces.drawer.maxSize"), ns.maxBytes],
-    [t("pages.namespaces.drawer.allowedTypes"), t("pages.namespaces.allowedTypes.demoValue")],
-    [
-      t("pages.namespaces.drawer.moderation"),
-      ns.moderation
-        ? t("pages.namespaces.drawer.moderationEnabled")
-        : t("pages.namespaces.drawer.moderationDisabled"),
-    ],
-    [t("pages.namespaces.drawer.exifPolicy"), t("pages.namespaces.drawer.exifPolicyValue")],
-    [t("pages.namespaces.drawer.storageBinding"), t("pages.namespaces.drawer.storageBindingValue")],
-    [
-      t("pages.namespaces.drawer.owner"),
-      <span key="owner" className="font-mono">
-        {ns.owner}
-      </span>,
-    ],
-    [
-      t("pages.namespaces.drawer.reviewers"),
-      <span key="rev" className="font-mono">
-        {t("pages.namespaces.drawer.reviewersValue")}
-      </span>,
-    ],
+  const isArchived = Boolean(namespace.archivedAt);
+  const activePresetCount = countActivePresetGroups(presets);
+  const showUpdated = namespace.updatedAt !== namespace.createdAt;
+
+  const tiles: IStatTile[] = [
+    {
+      label: t("pages.namespaceDetail.overview.stats.policyVersion"),
+      value: `v${namespace.currentPolicyVersion}`,
+    },
+    {
+      label: t("pages.namespaceDetail.overview.stats.storageBinding"),
+      value: namespace.storageBindingName,
+    },
+    {
+      label: t("pages.namespaceDetail.overview.stats.presetsActive"),
+      value: String(activePresetCount),
+    },
+    {
+      label: t("pages.namespaceDetail.overview.stats.created"),
+      value: formatDate(namespace.createdAt),
+    },
   ];
+  if (showUpdated) {
+    tiles.push({
+      label: t("pages.namespaceDetail.overview.stats.updated"),
+      value: formatDate(namespace.updatedAt),
+    });
+  }
 
   return (
-    <div className="grid gap-4">
-      <Card className="p-0">
-        <CardHeader>
-          <CardTitle>
-            {t("pages.namespaces.drawer.policyTitle", { version: ns.policyVersion })}
-          </CardTitle>
-          <CardMeta>{t("pages.namespaces.drawer.policyMeta")}</CardMeta>
-        </CardHeader>
-        <div className="grid grid-cols-1 gap-x-8 gap-y-3 px-5 py-5 text-[12.5px] sm:grid-cols-2">
-          {policyRows.map(([rowKey, rowVal]) => (
-            <div key={rowKey}>
-              <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
-                {rowKey}
-              </div>
-              <div className="font-mono text-[12px]">{rowVal}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
+    <div className="space-y-4">
+      {namespace.description ? (
+        <p className="text-muted-foreground max-w-3xl text-[12.5px] leading-relaxed">
+          {namespace.description}
+        </p>
+      ) : null}
 
-      <Card className="p-0">
-        <CardHeader>
-          <CardTitle>{t("pages.namespaces.drawer.requiredMetadata")}</CardTitle>
-        </CardHeader>
-        <div className="grid gap-2 px-5 py-4 text-[12px]">
-          {ns.required.map((field) => (
-            <div
-              key={field}
-              className="border-border bg-secondary/30 flex items-center justify-between rounded border px-3 py-2 font-mono text-[11.5px]"
-            >
-              <span>{field}</span>
-              <Badge variant="indigo-soft">{t("pages.namespaces.drawer.requiredBadge")}</Badge>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {tiles.map((tile) => (
+          <Card key={tile.label} className="px-4 py-3">
+            <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
+              {tile.label}
             </div>
-          ))}
-        </div>
-      </Card>
+            <div className="mt-0.5 truncate font-mono text-[18px] leading-tight tabular-nums">
+              {tile.value}
+            </div>
+          </Card>
+        ))}
+
+        <Card className="px-4 py-3">
+          <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
+            {t("pages.namespaceDetail.overview.stats.state")}
+          </div>
+          <div className="mt-1">
+            {isArchived ? (
+              <Badge variant="muted">{t("pages.namespaceDetail.overview.state.archived")}</Badge>
+            ) : (
+              <Badge variant="ok">{t("pages.namespaceDetail.overview.state.active")}</Badge>
+            )}
+          </div>
+        </Card>
+      </div>
     </div>
-  );
-}
-
-function SliceLaterTab({ label }: { label: string }): React.JSX.Element {
-  return (
-    <Card>
-      <div className="px-6 py-12 text-center">
-        <div className="text-muted-foreground text-[14px] font-medium">{label}</div>
-      </div>
-    </Card>
-  );
-}
-
-function DemoPresetsTab({ ns }: { ns: DemoNamespace }): React.JSX.Element {
-  const { t } = useTranslation();
-  return (
-    <Card>
-      <div className="px-6 py-12 text-center">
-        <div className="text-muted-foreground text-[14px] font-medium">
-          {t("pages.namespaces.presets.title")} — {ns.slug} {t("pages.namespaces.demoLabel")}
-        </div>
-      </div>
-    </Card>
   );
 }
 
@@ -384,39 +320,15 @@ function RealPolicyTab({
   );
 }
 
-/** Build a minimal NamespaceResponseDTO from demo data for drawer/dialog usage */
-function demoToNamespaceDTO(demoNs: DemoNamespace): NamespaceResponseDTO {
-  return {
-    slug: demoNs.slug,
-    displayName: demoNs.displayName,
-    description: undefined,
-    currentPolicyVersion: demoNs.policyVersion,
-    storageBindingName: "gcs-prod",
-    archivedAt: undefined,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-}
-
 export function NamespaceDetailPage({
   slug,
   tab,
   onTabChange,
 }: INamespaceDetailPageProps): React.JSX.Element {
   const { t } = useTranslation();
-  const { isLoading, data: namespaceData } = useNamespace(slug);
+  const { isLoading, data: namespace } = useNamespace(slug);
   const { data: policiesData } = useNamespacePolicies(slug);
-
-  // Consume presets hook
-  useNamespacePresets(slug);
-
-  // Demo content is only used when explicitly enabled and no API namespace was returned.
-  const demoNs =
-    isDemoMode && !namespaceData ? DEMO_NAMESPACES.find((ns) => ns.slug === slug) : undefined;
-
-  // Derive the namespace DTO: prefer real API data, fall back to demo-derived DTO
-  const namespace: NamespaceResponseDTO | undefined =
-    namespaceData ?? (demoNs ? demoToNamespaceDTO(demoNs) : undefined);
+  const { data: presetsData } = useNamespacePresets(slug);
 
   // Active tab — falls back to overview
   const activeTab: INamespaceTab = tab ?? "overview";
@@ -552,35 +464,19 @@ export function NamespaceDetailPage({
       />
 
       {/* Tab panels */}
-      {activeTab === "overview" &&
-        (demoNs ? (
-          <OverviewTab ns={demoNs} />
-        ) : (
-          <SliceLaterTab label={t("pages.namespaceDetail.empty.overview")} />
-        ))}
-      {activeTab === "policy" &&
-        (demoNs ? (
-          <PolicyTab ns={demoNs} />
-        ) : (
-          <RealPolicyTab
-            namespace={namespace}
-            policies={policiesData ?? []}
-            selectedVersion={selectedVersion}
-            onSelectVersion={setSelectedVersion}
-          />
-        ))}
-      {activeTab === "presets" &&
-        (demoNs ? <DemoPresetsTab ns={demoNs} /> : <RealPresetsTab namespace={namespace} />)}
-      {activeTab === "assets" &&
-        (demoNs ? (
-          <SliceLaterTab label={t("pages.namespaceDetail.empty.assets")} />
-        ) : namespace ? (
-          <NamespaceAssetsTab namespace={namespace} />
-        ) : null)}
-      {activeTab === "webhooks" && (
-        <SliceLaterTab label={t("pages.namespaceDetail.empty.webhooks")} />
+      {activeTab === "overview" && (
+        <OverviewTab namespace={namespace} presets={presetsData ?? []} />
       )}
-      {activeTab === "quotas" && <SliceLaterTab label={t("pages.namespaceDetail.empty.quotas")} />}
+      {activeTab === "policy" && (
+        <RealPolicyTab
+          namespace={namespace}
+          policies={policiesData ?? []}
+          selectedVersion={selectedVersion}
+          onSelectVersion={setSelectedVersion}
+        />
+      )}
+      {activeTab === "presets" && <RealPresetsTab namespace={namespace} />}
+      {activeTab === "assets" && <NamespaceAssetsTab namespace={namespace} />}
 
       {/* Metadata drawer */}
       <NamespaceMetadataDrawer

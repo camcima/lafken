@@ -693,14 +693,21 @@
         "overview": "Resumen",
         "policy": "Política",
         "presets": "Presets",
-        "assets": "Activos",
-        "webhooks": "Webhooks",
-        "quotas": "Cuotas"
+        "assets": "Activos"
       },
       "overview": {
-        "latestActivity": "Actividad reciente",
-        "latestActivityMeta": "últimas 24h · este namespace",
-        "noActivity": "No hay actividad reciente en este namespace."
+        "stats": {
+          "policyVersion": "Versión de política",
+          "storageBinding": "Vinculación de almacenamiento",
+          "presetsActive": "Presets activos",
+          "created": "Creado",
+          "updated": "Actualizado",
+          "state": "Estado"
+        },
+        "state": {
+          "active": "Activo",
+          "archived": "Archivado"
+        }
       },
       "policy": {
         "currentVersion": "Política v{{version}}",
@@ -732,12 +739,7 @@
         }
       },
       "empty": {
-        "overview": "Los detalles del resumen aparecerán aquí cuando los datos estén disponibles.",
-        "policy": "Aún no hay políticas.",
-        "presets": "Los presets estarán disponibles en un slice posterior.",
-        "assets": "El listado de activos por namespace estará disponible en un slice posterior.",
-        "webhooks": "Los webhooks estarán disponibles en un slice posterior.",
-        "quotas": "Las cuotas estarán disponibles en un slice posterior."
+        "policy": "Aún no hay políticas."
       }
     },
     "quarantine": {
