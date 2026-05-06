@@ -1,7 +1,7 @@
 /* eslint-disable no-process-env */
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
-const DEFAULT_PORT = 5433;
+const DEFAULT_PORT = 5434;
 
 export async function createTestDatabaseClient(): Promise<DatabaseClient> {
   return DatabaseClient.init({
