@@ -3,12 +3,12 @@ import { createHash } from "node:crypto";
 import * as exifr from "exifr";
 import sharp from "sharp";
 
-import { calculateDurationMs } from "@/assets/application/processing/processing-evidence";
 import {
   type IImageInspectionInput,
   type IImageInspectionResult,
   ImageInspectionPort,
 } from "@/assets/domain/services/image-inspection.service.port";
+import { calculateDurationMs } from "@/shared/kernel/domain/duration";
 
 import { normalizeExif } from "./exif-normalizer";
 
@@ -26,13 +26,24 @@ const ANALYZER_NAME = "image_inspection";
 const ADAPTER_NAME = "sharp-image-inspection";
 const ADAPTER_VERSION = "sharp-v1";
 
+/**
+ * Defensive cap against decompression-bomb images. 24 MP comfortably covers
+ * any phone or DSLR shot; reject anything larger. Pairs with `failOn: "warning"`
+ * so libvips refuses to decode malformed or hostile inputs instead of stalling
+ * the worker.
+ */
+const MAX_INPUT_PIXELS = 24_000_000;
+
 export class SharpImageInspectionAdapter extends ImageInspectionPort {
   async inspect(input: IImageInspectionInput): Promise<IImageInspectionResult> {
     const startedAt: Date = new Date();
     const contentHash: Buffer = createHash("sha256").update(input.bytes).digest();
 
     try {
-      const metadata: sharp.Metadata = await sharp(input.bytes).metadata();
+      const metadata: sharp.Metadata = await sharp(input.bytes, {
+        failOn: "warning",
+        limitInputPixels: MAX_INPUT_PIXELS,
+      }).metadata();
       const format: string | null = metadata.format ?? null;
       const actualMimeType: string | null = format ? (FORMAT_TO_MIME[format] ?? null) : null;
 

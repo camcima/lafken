@@ -69,4 +69,28 @@ describe("SharpImageInspectionAdapter", () => {
     expect(result.reason).toBe("mime_type_not_allowed");
     expect(result.actualMimeType).toBe("image/jpeg");
   });
+
+  it("rejects images that exceed the input pixel cap instead of hanging the worker", async () => {
+    const adapter = new SharpImageInspectionAdapter();
+    // 7000x7000 = 49 MP, well above the 24 MP defensive cap.
+    const bytes = await sharp({
+      create: {
+        width: 7000,
+        height: 7000,
+        channels: 3,
+        background: { r: 128, g: 128, b: 128 },
+      },
+    })
+      .png()
+      .toBuffer();
+
+    const result = await adapter.inspect({
+      bytes,
+      declaredMimeType: "image/png",
+      allowedMimeTypes: ["image/png"],
+    });
+
+    expect(result.decision).toBe("error");
+    expect(result.reason).toBe("invalid_image_format");
+  });
 });

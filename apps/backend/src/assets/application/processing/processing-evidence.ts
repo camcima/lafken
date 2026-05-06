@@ -1,4 +1,7 @@
 import type { AssetState } from "@/assets/domain/value-objects/asset-state.value-object";
+import { calculateDurationMs } from "@/shared/kernel/domain/duration";
+
+export { calculateDurationMs };
 
 export type ProcessingStepName = "image_inspection" | "virus_scan" | "content_moderation";
 
@@ -46,11 +49,6 @@ const TERMINAL_ASSET_STATES: readonly AssetState[] = [
   "expired",
   "deleted",
 ];
-
-export function calculateDurationMs(startedAt: Date, finishedAt: Date): number {
-  const durationMs: number = finishedAt.getTime() - startedAt.getTime();
-  return Math.max(0, durationMs);
-}
 
 export function makeStepTiming(input: IMakeStepTimingInput): IStepTiming {
   const durationMs: number = calculateDurationMs(input.startedAt, input.finishedAt);
