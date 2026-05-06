@@ -33,6 +33,7 @@ import type { NamespacePolicy } from "@/namespaces/domain/entities/namespace-pol
 import type { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
+import { FakeAppLogger } from "../../../__fakes__/fake-app-logger";
 import { FakeAssetStorage } from "../../../__fakes__/fake-asset-storage";
 import { makeAsset, makePolicy, makeStorageBinding, TEST_UUIDS } from "./processing-test-fixtures";
 
@@ -63,6 +64,7 @@ describe("ProcessClaimedAssetUseCase", () => {
       virusScan,
       moderation,
       storageBindings,
+      new FakeAppLogger(),
     );
   });
 

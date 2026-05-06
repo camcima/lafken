@@ -9,6 +9,7 @@ import {
   ProcessingJobRepositoryPort,
 } from "@/assets/domain/repositories/processing-job.repository.port";
 
+import { FakeAppLogger } from "../../../__fakes__/fake-app-logger";
 import { makeJob, TEST_UUIDS } from "./processing-test-fixtures";
 
 describe("ProcessingWorkerService", () => {
@@ -19,7 +20,7 @@ describe("ProcessingWorkerService", () => {
   beforeEach(() => {
     jobRepo = new FakeProcessingJobRepository();
     processor = new FakeProcessClaimedAssetUseCase();
-    service = new ProcessingWorkerService(jobRepo, processor);
+    service = new ProcessingWorkerService(jobRepo, processor, new FakeAppLogger());
   });
 
   it("claims available jobs up to remaining concurrency and processes each job", async () => {

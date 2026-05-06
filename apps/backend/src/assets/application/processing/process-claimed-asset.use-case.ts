@@ -8,10 +8,15 @@ import { ContentModerationPort } from "@/assets/domain/services/content-moderati
 import { ImageInspectionPort } from "@/assets/domain/services/image-inspection.service.port";
 import { VirusScanPort } from "@/assets/domain/services/virus-scan.service.port";
 import type { AssetState } from "@/assets/domain/value-objects/asset-state.value-object";
+import { AppLoggerPort } from "@/shared/application/app-logger.port";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 import { assetProcessingMachine } from "./asset-processing-machine";
-import { makeTransitionMetadata, type ProcessingStepName } from "./processing-evidence";
+import {
+  calculateDurationMs,
+  makeTransitionMetadata,
+  type ProcessingStepName,
+} from "./processing-evidence";
 
 export interface IProcessClaimedAssetInput {
   assetId: string;
@@ -37,12 +42,23 @@ export class ProcessClaimedAssetUseCase {
     private readonly virusScan: VirusScanPort,
     private readonly moderation: ContentModerationPort,
     private readonly storageBindingRepo: StorageBindingQueryRepositoryPort,
-  ) {}
+    private readonly logger: AppLoggerPort,
+  ) {
+    this.logger.setContext(ProcessClaimedAssetUseCase.name);
+  }
 
   async execute(input: IProcessClaimedAssetInput): Promise<ProcessClaimedAssetResult> {
+    this.logger.info(
+      { assetId: input.assetId, attemptNumber: input.attemptNumber, workerId: input.workerId },
+      "processing started",
+    );
     const machine = createActor(assetProcessingMachine).start();
     const loaded = await this.assetRepo.findAssetWithPolicy(input.assetId);
     if (!loaded) {
+      this.logger.warn(
+        { assetId: input.assetId },
+        "asset not found while processing; marking job failed",
+      );
       machine.send({ type: "FAILED" });
       await this.jobRepo.markFailed({
         assetId: input.assetId,
@@ -74,6 +90,10 @@ export class ProcessClaimedAssetUseCase {
 
     const binding = await this.storageBindingRepo.findById(asset.props.storageBindingId);
     if (!binding) {
+      this.logger.warn(
+        { assetId: asset.props.id, storageBindingId: asset.props.storageBindingId },
+        "storage binding not found; marking job failed",
+      );
       machine.send({ type: "FAILED" });
       await this.jobRepo.markFailed({
         assetId: asset.props.id,
@@ -90,11 +110,21 @@ export class ProcessClaimedAssetUseCase {
       storageKey: asset.props.storageKey,
     });
 
+    const inspectionStartedAt: Date = new Date();
     const inspection = await this.imageInspection.inspect({
       bytes,
       declaredMimeType: asset.props.declaredMimeType,
       allowedMimeTypes: policy.props.allowedMimeTypes,
     });
+    this.logger.info(
+      {
+        assetId: asset.props.id,
+        step: "image_inspection",
+        decision: inspection.decision,
+        durationMs: calculateDurationMs(inspectionStartedAt, new Date()),
+      },
+      "step completed",
+    );
     await this.assetRepo.recordAnalysis({
       assetId: asset.props.id,
       analyzer: inspection.analyzer,
@@ -106,11 +136,16 @@ export class ProcessClaimedAssetUseCase {
 
     if (inspection.decision === "error") {
       machine.send({ type: "IMAGE_INVALID" });
+      const reason: string = inspection.reason ?? "invalid_image_format";
+      this.logger.info(
+        { assetId: asset.props.id, toState: "rejected", reason },
+        "transitioning to terminal state",
+      );
       await this.transitionToTerminal({
         assetId: asset.props.id,
         fromState: currentState,
         toState: "rejected",
-        reason: inspection.reason ?? "invalid_image_format",
+        reason,
         workerId: input.workerId,
         attemptNumber: input.attemptNumber,
         step: "image_inspection",
@@ -130,7 +165,17 @@ export class ProcessClaimedAssetUseCase {
       captureContext: inspection.captureContext,
     });
 
+    const scanStartedAt: Date = new Date();
     const scan = await this.virusScan.scan({ bytes, contentHash: inspection.contentHash });
+    this.logger.info(
+      {
+        assetId: asset.props.id,
+        step: "virus_scan",
+        decision: scan.decision,
+        durationMs: calculateDurationMs(scanStartedAt, new Date()),
+      },
+      "step completed",
+    );
     await this.assetRepo.recordAnalysis({
       assetId: asset.props.id,
       analyzer: scan.analyzer,
@@ -142,11 +187,16 @@ export class ProcessClaimedAssetUseCase {
 
     if (scan.decision === "quarantine") {
       machine.send({ type: "VIRUS_INFECTED" });
+      const reason: string = scan.reason ?? "virus_detected";
+      this.logger.info(
+        { assetId: asset.props.id, toState: "quarantined_virus", reason },
+        "transitioning to terminal state",
+      );
       await this.transitionToTerminal({
         assetId: asset.props.id,
         fromState: currentState,
         toState: "quarantined_virus",
-        reason: scan.reason ?? "virus_detected",
+        reason,
         workerId: input.workerId,
         attemptNumber: input.attemptNumber,
         step: "virus_scan",
@@ -158,10 +208,20 @@ export class ProcessClaimedAssetUseCase {
     machine.send({ type: "VIRUS_CLEAN" });
     if (policy.props.contentModeration) {
       machine.send({ type: "MODERATION_REQUIRED" });
+      const moderationStartedAt: Date = new Date();
       const moderation = await this.moderation.analyze({
         bytes,
         policyConfig: policy.props.contentModeration,
       });
+      this.logger.info(
+        {
+          assetId: asset.props.id,
+          step: "content_moderation",
+          decision: moderation.decision,
+          durationMs: calculateDurationMs(moderationStartedAt, new Date()),
+        },
+        "step completed",
+      );
       await this.assetRepo.recordAnalysis({
         assetId: asset.props.id,
         analyzer: moderation.analyzer,
@@ -172,11 +232,16 @@ export class ProcessClaimedAssetUseCase {
       });
       if (moderation.decision === "quarantine") {
         machine.send({ type: "MODERATION_QUARANTINE" });
+        const reason: string = moderation.reason ?? "moderation_quarantined";
+        this.logger.info(
+          { assetId: asset.props.id, toState: "quarantined_moderation", reason },
+          "transitioning to terminal state",
+        );
         await this.transitionToTerminal({
           assetId: asset.props.id,
           fromState: currentState,
           toState: "quarantined_moderation",
-          reason: moderation.reason ?? "moderation_quarantined",
+          reason,
           workerId: input.workerId,
           attemptNumber: input.attemptNumber,
           step: "content_moderation",
@@ -189,6 +254,10 @@ export class ProcessClaimedAssetUseCase {
       machine.send({ type: "MODERATION_PASS" });
     }
 
+    this.logger.info(
+      { assetId: asset.props.id, toState: "ready", reason: "processing_completed" },
+      "transitioning to terminal state",
+    );
     await this.transitionToTerminal({
       assetId: asset.props.id,
       fromState: currentState,

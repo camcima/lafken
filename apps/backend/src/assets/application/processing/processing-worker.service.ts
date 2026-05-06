@@ -4,6 +4,7 @@ import { Inject, Injectable, type OnModuleDestroy, Optional } from "@nestjs/comm
 
 import type { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
 import { ProcessingJobRepositoryPort } from "@/assets/domain/repositories/processing-job.repository.port";
+import { AppLoggerPort } from "@/shared/application/app-logger.port";
 import { environmentConfiguration } from "@/shared/infrastructure/environment.configuration";
 
 import { ProcessClaimedAssetUseCase } from "./process-claimed-asset.use-case";
@@ -28,9 +29,12 @@ export class ProcessingWorkerService implements OnModuleDestroy {
     private readonly jobs: ProcessingJobRepositoryPort,
     @Inject(ProcessClaimedAssetUseCase)
     private readonly processor: IProcessClaimedAssetProcessor,
+    private readonly logger: AppLoggerPort,
     @Optional()
     private readonly reclaimer?: ReclaimStaleProcessingJobsUseCase,
-  ) {}
+  ) {
+    this.logger.setContext(ProcessingWorkerService.name);
+  }
 
   start(): void {
     this.pollTimer = setInterval(
@@ -67,6 +71,8 @@ export class ProcessingWorkerService implements OnModuleDestroy {
       now: new Date(),
     });
 
+    this.logger.debug({ claimed: jobs.length, inFlight: this.inFlight.size }, "tick claimed jobs");
+
     for (const job of jobs) {
       const promise: Promise<void> = this.process(job.props.assetId, job.props.attemptNumber);
       this.inFlight.set(job.props.assetId, promise);
@@ -80,8 +86,15 @@ export class ProcessingWorkerService implements OnModuleDestroy {
 
   async heartbeat(): Promise<void> {
     await Promise.all(
-      Array.from(this.inFlight.keys()).map((assetId: string): Promise<boolean> => {
-        return this.jobs.heartbeat({ assetId, workerId: this.workerId, now: new Date() });
+      Array.from(this.inFlight.keys()).map(async (assetId: string): Promise<void> => {
+        const ok: boolean = await this.jobs.heartbeat({
+          assetId,
+          workerId: this.workerId,
+          now: new Date(),
+        });
+        if (!ok) {
+          this.logger.warn({ assetId }, "heartbeat failed; another worker may have taken the job");
+        }
       }),
     );
   }
@@ -104,6 +117,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    this.logger.info({ workerId: this.workerId }, "graceful shutdown starting");
     this.beginShutdown();
     await Promise.race([
       Promise.allSettled(this.inFlight.values()),

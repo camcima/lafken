@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import type { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
 import { AssetProcessingRepositoryPort } from "@/assets/domain/repositories/asset-processing.repository.port";
 import { ProcessingJobRepositoryPort } from "@/assets/domain/repositories/processing-job.repository.port";
+import { AppLoggerPort } from "@/shared/application/app-logger.port";
 import { environmentConfiguration } from "@/shared/infrastructure/environment.configuration";
 
 import { isTerminalAssetState, makeTransitionMetadata } from "./processing-evidence";
@@ -20,7 +21,10 @@ export class ReclaimStaleProcessingJobsUseCase {
   constructor(
     private readonly jobs: ProcessingJobRepositoryPort,
     private readonly assets: AssetProcessingRepositoryPort,
-  ) {}
+    private readonly logger: AppLoggerPort,
+  ) {
+    this.logger.setContext(ReclaimStaleProcessingJobsUseCase.name);
+  }
 
   async execute(input: IReclaimStaleProcessingJobsInput): Promise<void> {
     const staleBefore: Date = new Date(
@@ -41,16 +45,34 @@ export class ReclaimStaleProcessingJobsUseCase {
     const workerId: string = job.props.workerId ?? STALE_SWEEPER_WORKER_ID;
 
     if (!loaded || isTerminalAssetState(loaded.asset.props.state)) {
-      await this.jobs.markCompleted({
+      this.logger.info(
+        {
+          assetId: job.props.assetId,
+          currentState: loaded?.asset.props.state ?? null,
+          action: "completed_terminal",
+        },
+        "stale job for terminal asset; marking job completed",
+      );
+      const marked: boolean = await this.jobs.markCompleted({
         assetId: job.props.assetId,
         workerId,
         now,
       });
+      if (!marked) {
+        this.logger.warn(
+          { assetId: job.props.assetId },
+          "markCompleted lost race during stale-job reclaim",
+        );
+      }
       return;
     }
 
     const nextAttemptNumber: number = job.props.attemptNumber + NEXT_ATTEMPT_INCREMENT;
     if (nextAttemptNumber > environmentConfiguration.PROCESSING_WORKER_MAX_ATTEMPTS) {
+      this.logger.info(
+        { assetId: job.props.assetId, currentState: loaded.asset.props.state, action: "exhausted" },
+        "stale job exceeded retry budget",
+      );
       await this.assets.transitionAsset({
         assetId: job.props.assetId,
         fromState: loaded.asset.props.state,
@@ -73,6 +95,15 @@ export class ReclaimStaleProcessingJobsUseCase {
       return;
     }
 
+    this.logger.info(
+      {
+        assetId: job.props.assetId,
+        currentState: loaded.asset.props.state,
+        action: "released",
+        nextAttemptNumber,
+      },
+      "releasing stale claim for retry",
+    );
     await this.jobs.releaseStaleClaim({
       assetId: job.props.assetId,
       nextAttemptNumber,

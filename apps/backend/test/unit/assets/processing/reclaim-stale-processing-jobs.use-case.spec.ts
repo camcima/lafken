@@ -19,6 +19,7 @@ import {
 import type { AssetState } from "@/assets/domain/value-objects/asset-state.value-object";
 import type { NamespacePolicy } from "@/namespaces/domain/entities/namespace-policy.entity";
 
+import { FakeAppLogger } from "../../../__fakes__/fake-app-logger";
 import { makeAsset, makeJob, makePolicy, TEST_UUIDS } from "./processing-test-fixtures";
 
 describe("ReclaimStaleProcessingJobsUseCase", () => {
@@ -29,7 +30,7 @@ describe("ReclaimStaleProcessingJobsUseCase", () => {
   beforeEach(() => {
     assetRepo = new StaleAssetRepository();
     jobRepo = new StaleJobRepository();
-    useCase = new ReclaimStaleProcessingJobsUseCase(jobRepo, assetRepo);
+    useCase = new ReclaimStaleProcessingJobsUseCase(jobRepo, assetRepo, new FakeAppLogger());
   });
 
   it("marks stale terminal assets completed", async () => {
