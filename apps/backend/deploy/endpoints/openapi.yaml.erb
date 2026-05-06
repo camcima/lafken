@@ -607,6 +607,38 @@ paths:
       summary: Get an asset by public ID
       tags:
         - Assets
+  /v1/assets/{publicId}/preview-url:
+    get:
+      operationId: AssetsController_getPreviewUrl_v1
+      parameters:
+        - name: publicId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: preset
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewUrlResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+      summary: Mint a signed preview URL for an asset against a named preset
+      tags:
+        - Assets
   /v1/assets/{publicId}/state-transitions:
     get:
       operationId: AssetsController_listStateTransitions_v1
@@ -1715,12 +1747,6 @@ components:
           type: string
         createdAt:
           type: string
-        previewUrls:
-          type: object
-          description: >-
-            Map of preset name to fully-signed preview URL the browser can use
-            as <img src>. Empty when no presets are active or no signer is
-            configured.
       required:
         - publicId
         - namespaceSlug
@@ -1730,7 +1756,6 @@ components:
         - legalHold
         - stateChangedAt
         - createdAt
-        - previewUrls
     PaginatedAssetResponseDTO:
       type: object
       properties:
@@ -1752,6 +1777,14 @@ components:
         - limit
         - page
         - lastPage
+    PreviewUrlResponseDTO:
+      type: object
+      properties:
+        url:
+          type: string
+          description: Fully-signed imgproxy URL the browser can fetch directly.
+      required:
+        - url
     AssetStateTransitionResponseDTO:
       type: object
       properties:
@@ -1823,6 +1856,7 @@ components:
             - claimed
             - released
             - completed
+            - failed
         workerId:
           type: string
         currentStep:
@@ -1942,12 +1976,6 @@ components:
           type: string
         createdAt:
           type: string
-        previewUrls:
-          type: object
-          description: >-
-            Map of preset name to fully-signed preview URL the browser can use
-            as <img src>. Empty when no presets are active or no signer is
-            configured.
         quarantineKind:
           type: string
           enum:
@@ -1970,7 +1998,6 @@ components:
         - legalHold
         - stateChangedAt
         - createdAt
-        - previewUrls
         - quarantineKind
         - flaggedAt
     PaginatedQuarantinedAssetResponseDTO:
