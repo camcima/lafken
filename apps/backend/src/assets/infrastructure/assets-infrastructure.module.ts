@@ -55,7 +55,13 @@ import { SharpImageInspectionAdapter } from "./services/sharp-image-inspection.a
           signature: environmentConfiguration.PROCESSING_VIRUS_SCAN_SIGNATURE,
         }),
     },
-    { provide: ContentModerationPort, useClass: LocalContentModerationAdapter },
+    {
+      provide: ContentModerationPort,
+      useFactory: (): ContentModerationPort =>
+        new LocalContentModerationAdapter({
+          forceDecision: environmentConfiguration.PROCESSING_CONTENT_MODERATION_FORCE_DECISION,
+        }),
+    },
     {
       provide: PreviewUrlSignerPort,
       useFactory: (): PreviewUrlSignerPort => {

@@ -32,4 +32,28 @@ describe("LocalContentModerationAdapter", () => {
     expect(result.reason).toBe("moderation_quarantined");
     expect(result.findings["category"]).toBe("violence");
   });
+
+  it("forces quarantine when forceDecision='quarantine' overrides a passing policy", async () => {
+    const adapter = new LocalContentModerationAdapter({ forceDecision: "quarantine" });
+
+    const result = await adapter.analyze({
+      bytes: Buffer.from("safe"),
+      policyConfig: { localDecision: "pass", threshold: 0.9 },
+    });
+
+    expect(result.decision).toBe("quarantine");
+    expect(result.reason).toBe("moderation_quarantined");
+  });
+
+  it("forces pass when forceDecision='pass' overrides a quarantining policy", async () => {
+    const adapter = new LocalContentModerationAdapter({ forceDecision: "pass" });
+
+    const result = await adapter.analyze({
+      bytes: Buffer.from("flagged"),
+      policyConfig: { localDecision: "quarantine", category: "violence" },
+    });
+
+    expect(result.decision).toBe("pass");
+    expect(result.reason).toBeNull();
+  });
 });

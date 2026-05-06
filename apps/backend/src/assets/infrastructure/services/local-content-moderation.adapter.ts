@@ -4,10 +4,23 @@ import type {
 } from "@/assets/domain/services/content-moderation.service.port";
 import { ContentModerationPort } from "@/assets/domain/services/content-moderation.service.port";
 
+export interface ILocalContentModerationAdapterOptions {
+  /**
+   * When set, overrides the policy-derived decision. Lets operators force the
+   * quarantine branch (or hard-pin pass) without editing per-namespace policy.
+   */
+  forceDecision?: "pass" | "quarantine";
+}
+
 export class LocalContentModerationAdapter extends ContentModerationPort {
+  constructor(private readonly options: ILocalContentModerationAdapterOptions = {}) {
+    super();
+  }
+
   analyze(input: IContentModerationInput): Promise<IContentModerationResult> {
-    const decision: "pass" | "quarantine" =
+    const policyDecision: "pass" | "quarantine" =
       input.policyConfig["localDecision"] === "quarantine" ? "quarantine" : "pass";
+    const decision: "pass" | "quarantine" = this.options.forceDecision ?? policyDecision;
     const category: string =
       typeof input.policyConfig["category"] === "string" ? input.policyConfig["category"] : "none";
     const score: number =

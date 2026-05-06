@@ -138,6 +138,13 @@ const environmentSchema = z
       .default(false),
     /** Optional signature string reported by the local virus-scan adapter when forced infected. */
     PROCESSING_VIRUS_SCAN_SIGNATURE: z.string().optional(),
+    /**
+     * Forces the local content-moderation adapter to a specific decision,
+     * overriding the namespace policy's `localDecision` field. Lets operators
+     * dogfood the moderation-quarantine flow end-to-end without editing
+     * per-namespace policy. Unset disables the override.
+     */
+    PROCESSING_CONTENT_MODERATION_FORCE_DECISION: z.enum(["pass", "quarantine"]).optional(),
   })
   .refine(
     (data) => {
