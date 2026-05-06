@@ -103,12 +103,6 @@ const environmentSchema = z
 
     /** Browser-facing imgproxy origin (e.g. http://localhost:8081). */
     IMGPROXY_BASE_URL: z.string().url().optional(),
-    /**
-     * Source URL prefix imgproxy will fetch from. Must be reachable from the
-     * imgproxy process — in dev that's the fake-gcs container DNS name.
-     * Falls back to "" when omitted (which leaves the signer disabled).
-     */
-    IMGPROXY_SOURCE_BASE_URL: z.string().url().optional(),
     /** Hex-encoded HMAC-SHA256 key shared with imgproxy. */
     IMGPROXY_KEY: z
       .string()

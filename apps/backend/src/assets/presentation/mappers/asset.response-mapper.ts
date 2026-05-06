@@ -10,10 +10,8 @@ export interface IPreviewSignContext {
   signer: PreviewUrlSignerPort;
   /** Active namespace presets to expand into preview URLs. */
   presets: Array<{ name: string; spec: IPreviewSpec }>;
-  /** Base URL prefix imgproxy will use to fetch the source object. */
-  sourceBaseUrl: string;
-  /** Bucket the source object lives in. */
-  bucket: string;
+  /** The asset's storage binding, resolved once per request. */
+  binding: { bucket: string; projectId: string };
 }
 
 export class AssetResponseMapper {

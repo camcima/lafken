@@ -32,7 +32,6 @@ vitest.mock(
       OIDC_ROLES_CLAIM: "roles",
       CLOUD_ENDPOINT_DEFINITION: false,
       IMGPROXY_BASE_URL: undefined,
-      IMGPROXY_SOURCE_BASE_URL: undefined,
       IMGPROXY_KEY: undefined,
       IMGPROXY_SALT: undefined,
       IMGPROXY_SIGNATURE_SIZE: 32,

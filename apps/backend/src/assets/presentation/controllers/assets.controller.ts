@@ -52,6 +52,7 @@ import { UploadIntentExpiredError } from "@/assets/domain/errors/upload-intent-e
 import { UploadIntentNotFoundError } from "@/assets/domain/errors/upload-intent-not-found.error";
 import { UploadedObjectMissingError } from "@/assets/domain/errors/uploaded-object-missing.error";
 import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-query.repository.port";
+import { AssetStoragePort } from "@/assets/domain/services/asset-storage.service.port";
 import {
   type IPreviewSpec,
   PreviewUrlSignerPort,
@@ -60,7 +61,6 @@ import { SYSTEM_PRESETS } from "@/assets/infrastructure/services/system-presets"
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
-import { environmentConfiguration } from "@/shared/infrastructure/environment.configuration";
 import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 import { AuthenticatedEndpoint } from "@/shared/presentation/auth/decorators/authenticated-endpoint.decorator";
 import {
@@ -75,6 +75,13 @@ import { AssetAnalysisResponseMapper } from "../mappers/asset-analysis.response-
 import { AssetStateTransitionResponseMapper } from "../mappers/asset-state-transition.response-mapper";
 import { AssetResponseMapper, type IPreviewSignContext } from "../mappers/asset.response-mapper";
 import { ProcessingJobResponseMapper } from "../mappers/processing-job.response-mapper";
+
+/**
+ * TTL for the V4-signed source URL handed to imgproxy. Keeps a comfortable
+ * margin over imgproxy's render + retry window so a transient retry never
+ * outlives the URL.
+ */
+const PREVIEW_SOURCE_URL_TTL_SECONDS = 900;
 
 @Controller({ path: "assets" })
 @ApiTags("Assets")
@@ -91,23 +98,20 @@ export class AssetsController {
     private readonly getAssetDownloadUrlUseCase: GetAssetDownloadUrlUseCase,
     private readonly assetQueryRepository: AssetQueryRepositoryPort,
     private readonly previewUrlSigner: PreviewUrlSignerPort,
+    private readonly assetStorage: AssetStoragePort,
     private readonly namespaceQueryRepository: NamespaceQueryRepositoryPort,
     private readonly storageBindingQueryRepository: StorageBindingQueryRepositoryPort,
   ) {}
 
   /**
    * Builds a per-asset preview-sign context, caching per-namespace presets and
-   * per-binding bucket lookups across the loop. Returns null when no preview
-   * source base URL is configured (signer is a no-op in that case anyway).
+   * per-binding GCS config lookups across the loop. Returns null when there
+   * are no active presets for the asset's namespace or when the asset's
+   * binding cannot be resolved.
    */
   private buildSignContextResolver(): (asset: Asset) => Promise<IPreviewSignContext | null> {
-    const sourceBaseUrl: string | undefined = environmentConfiguration.IMGPROXY_SOURCE_BASE_URL;
-    if (!sourceBaseUrl) {
-      return (): Promise<null> => Promise.resolve(null);
-    }
-    const trimmedBaseUrl: string = sourceBaseUrl.replace(/\/+$/u, "");
     const presetsCache: Map<string, Array<{ name: string; spec: IPreviewSpec }>> = new Map();
-    const bucketCache: Map<string, string | null> = new Map();
+    const bindingCache: Map<string, { bucket: string; projectId: string } | null> = new Map();
     const signer: PreviewUrlSignerPort = this.previewUrlSigner;
     const namespaceRepo: NamespaceQueryRepositoryPort = this.namespaceQueryRepository;
     const bindingRepo: StorageBindingQueryRepositoryPort = this.storageBindingQueryRepository;
@@ -139,16 +143,18 @@ export class AssetsController {
         return null;
       }
       const bindingId: string = asset.props.storageBindingId;
-      let bucket: string | null | undefined = bucketCache.get(bindingId);
-      if (bucket === undefined) {
-        const binding = await bindingRepo.findById(bindingId);
-        bucket = binding ? binding.getGcsConfig().bucket : null;
-        bucketCache.set(bindingId, bucket);
+      let binding: { bucket: string; projectId: string } | null | undefined =
+        bindingCache.get(bindingId);
+      if (binding === undefined) {
+        const found = await bindingRepo.findById(bindingId);
+        const gcs = found?.getGcsConfig();
+        binding = gcs ? { bucket: gcs.bucket, projectId: gcs.projectId } : null;
+        bindingCache.set(bindingId, binding);
       }
-      if (!bucket) {
+      if (!binding) {
         return null;
       }
-      return { signer, presets, sourceBaseUrl: trimmedBaseUrl, bucket };
+      return { signer, presets, binding };
     };
   }
 
@@ -227,9 +233,16 @@ export class AssetsController {
           `No active preset matching "${preset}" was found for this asset's namespace.`,
         );
       }
-      const sourceUrl: string =
-        `${signCtx.sourceBaseUrl}/storage/v1/b/${signCtx.bucket}` +
-        `/o/${encodeURIComponent(result.asset.props.storageKey)}?alt=media`;
+      // Mint a V4-signed read URL against the asset's binding. imgproxy fetches
+      // this URL anonymously, so the bucket itself never has to be public-read
+      // and Lafken can host any number of bindings without per-bucket setup on
+      // imgproxy. The TTL must outlive imgproxy's worst-case render+retry
+      // window for a single asset.
+      const sourceUrl: string = await this.assetStorage.signReadUrl({
+        binding: signCtx.binding,
+        storageKey: result.asset.props.storageKey,
+        ttlSeconds: PREVIEW_SOURCE_URL_TTL_SECONDS,
+      });
       const url: string | null = signCtx.signer.sign({ sourceUrl, preset: matched.spec });
       if (url === null) {
         throw new NotFoundException(

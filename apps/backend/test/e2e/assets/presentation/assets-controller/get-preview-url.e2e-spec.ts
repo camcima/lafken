@@ -7,6 +7,8 @@ import { DatabaseClient } from "@/shared/infrastructure/persistence/database-cli
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
+// eslint-disable-next-line no-process-env
+const GATE = process.env["LAFKEN_E2E_REQUIRES_FAKE_GCS"] === "true";
 
 const VALID_DB_POLICY_VALUES = {
   retention_days: null,
@@ -33,7 +35,7 @@ const NAMESPACE_PRESET_PARAMS = {
   quality: 85,
 };
 
-describe("[E2E] GET /v1/assets/:publicId/preview-url", () => {
+describe.skipIf(!GATE)("[E2E] GET /v1/assets/:publicId/preview-url", () => {
   let app: INestApplication;
   let db: DatabaseClient;
   let storageBindingId: string;

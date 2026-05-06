@@ -13,9 +13,6 @@ function overrideEnvironmentVariables() {
   if (!process.env["IMGPROXY_BASE_URL"]) {
     process.env["IMGPROXY_BASE_URL"] = "http://imgproxy.test";
   }
-  if (!process.env["IMGPROXY_SOURCE_BASE_URL"]) {
-    process.env["IMGPROXY_SOURCE_BASE_URL"] = "http://fake-gcs.test";
-  }
   if (!process.env["IMGPROXY_KEY"]) {
     process.env["IMGPROXY_KEY"] = "deadbeef";
   }
