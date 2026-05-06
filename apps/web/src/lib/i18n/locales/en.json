@@ -294,10 +294,28 @@
     "assetDetail": {
       "title": "Asset",
       "loading": "Loading…",
+      "loadingAsset": "Loading asset…",
+      "errorLoading": "Could not load this asset. Please try again.",
       "notFound": {
         "title": "Asset not found",
         "description": "This asset does not exist or you do not have permission to view it.",
         "action": "Back to Assets"
+      },
+      "empty": {
+        "noExternalRef": "No external reference",
+        "unknown": "Unknown",
+        "noCustomMetadata": "No custom metadata for this asset.",
+        "noCaptureContext": "No capture context recorded.",
+        "noTransitions": "No state transitions yet.",
+        "noAnalyses": "No analyses yet.",
+        "presetsComingSoon": "Preset URLs are coming soon."
+      },
+      "timeline": {
+        "processingJob": "Processing job",
+        "state": "state",
+        "attempt": "attempt",
+        "step": "step",
+        "worker": "worker"
       },
       "actions": {
         "reProcess": "Re-process",
@@ -408,7 +426,8 @@
       },
       "analyses": {
         "threshold": "Threshold:",
-        "decision": "Decision:"
+        "decision": "Decision:",
+        "occurredAt": "occurred at"
       },
       "stateHeroValues": {
         "processing": {

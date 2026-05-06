@@ -294,10 +294,28 @@
     "assetDetail": {
       "title": "Ativo",
       "loading": "Carregando…",
+      "loadingAsset": "Carregando ativo…",
+      "errorLoading": "Não foi possível carregar este ativo. Tente novamente.",
       "notFound": {
         "title": "Ativo não encontrado",
         "description": "Este ativo não existe ou você não tem permissão para visualizá-lo.",
         "action": "Voltar para Ativos"
+      },
+      "empty": {
+        "noExternalRef": "Sem referência externa",
+        "unknown": "Desconhecido",
+        "noCustomMetadata": "Sem metadados personalizados para este ativo.",
+        "noCaptureContext": "Sem contexto de captura registrado.",
+        "noTransitions": "Ainda não há transições de estado.",
+        "noAnalyses": "Ainda não há análises.",
+        "presetsComingSoon": "URLs de predefinições em breve."
+      },
+      "timeline": {
+        "processingJob": "Trabalho de processamento",
+        "state": "estado",
+        "attempt": "tentativa",
+        "step": "etapa",
+        "worker": "worker"
       },
       "actions": {
         "reProcess": "Reprocessar",
@@ -408,7 +426,8 @@
       },
       "analyses": {
         "threshold": "Limite:",
-        "decision": "Decisão:"
+        "decision": "Decisão:",
+        "occurredAt": "ocorrido em"
       },
       "stateHeroValues": {
         "processing": {

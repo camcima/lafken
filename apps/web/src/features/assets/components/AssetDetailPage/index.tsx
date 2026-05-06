@@ -1,6 +1,21 @@
+import type {
+  AssetAnalysisResponseDTO,
+  AssetResponseDTO,
+  AssetStateTransitionResponseDTO,
+  ProcessingJobResponseDTO,
+} from "@shared/backend-api";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
-import { DEMO_ASSET_DETAIL } from "@/lib/demo/lafken-demo-data";
+import {
+  useAsset,
+  useAssetAnalyses,
+  useAssetProcessingJob,
+  useAssets,
+  useAssetStateTransitions,
+} from "@/features/assets/hooks/useAssets";
+import { ApiError } from "@/lib/api/api-error";
 
 import { ActionBar } from "./action-bar";
 import { AnalysesCard } from "./analyses-card";
@@ -9,13 +24,12 @@ import { FilePropsCard } from "./file-props-card";
 import { IdentityCard } from "./identity-card";
 import { MetadataCard } from "./metadata-card";
 import { PresetsCard } from "./presets-card";
+import { SiblingStrip } from "./sibling-strip";
 import { StateHero } from "./state-hero";
 import { Timeline } from "./timeline";
 import { VisualBlock } from "./visual-block";
 
 interface IAssetDetailPageProps {
-  // publicId is intentionally unused in Slice 0 — the BE returns 404 for all detail requests
-  // so we always render the canonical demo asset regardless of the route param.
   publicId: string;
 }
 
@@ -25,13 +39,36 @@ interface IToast {
 }
 
 const TOAST_DURATION_MS = 2000;
+const HTTP_NOT_FOUND = 404;
 
-export function AssetDetailPage(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _props: IAssetDetailPageProps,
-): React.JSX.Element {
-  // Slice 0: BE returns 404 for all detail requests; rendering canonical demo asset
-  const asset = DEMO_ASSET_DETAIL;
+function isNotFoundError(err: unknown): boolean {
+  return err instanceof ApiError && err.status === HTTP_NOT_FOUND;
+}
+
+export function AssetDetailPage({ publicId }: IAssetDetailPageProps): React.JSX.Element {
+  const { t } = useTranslation();
+  const assetQuery = useAsset(publicId);
+  const transitionsQuery = useAssetStateTransitions(publicId);
+  const analysesQuery = useAssetAnalyses(publicId);
+  const processingJobQuery = useAssetProcessingJob(publicId);
+
+  const asset: AssetResponseDTO | undefined = assetQuery.data;
+  const externalRefType = asset?.externalRefType;
+  const externalRefId = asset?.externalRefId;
+  const namespaceSlug = asset?.namespaceSlug;
+
+  const siblingsQuery = useAssets(
+    namespaceSlug !== undefined && externalRefType !== undefined && externalRefId !== undefined
+      ? { namespaceSlug, externalRefType, externalRefId }
+      : {},
+  );
+  const canFetchSiblings: boolean =
+    namespaceSlug !== undefined && externalRefType !== undefined && externalRefId !== undefined;
+  const siblings: AssetResponseDTO[] =
+    canFetchSiblings && siblingsQuery.data
+      ? siblingsQuery.data.data.filter((sibling) => sibling.publicId !== asset?.publicId)
+      : [];
+
   const [toasts, setToasts] = useState<IToast[]>([]);
 
   const handleCopy = (text: string, label: string): void => {
@@ -43,9 +80,49 @@ export function AssetDetailPage(
     }, TOAST_DURATION_MS);
   };
 
+  if (assetQuery.isLoading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="text-muted-foreground text-[13px]">
+          {t("pages.assetDetail.loadingAsset")}
+        </div>
+      </div>
+    );
+  }
+
+  if (assetQuery.error && isNotFoundError(assetQuery.error)) {
+    return (
+      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3">
+        <div className="text-foreground text-[16px] font-semibold">
+          {t("pages.assetDetail.notFound.title")}
+        </div>
+        <div className="text-muted-foreground max-w-md text-center text-[13px]">
+          {t("pages.assetDetail.notFound.description")}
+        </div>
+        <Link
+          to="/assets"
+          className="text-latam-indigo hover:text-latam-indigo-deep text-[13px] underline-offset-4 hover:underline"
+        >
+          {t("pages.assetDetail.notFound.action")}
+        </Link>
+      </div>
+    );
+  }
+
+  if (assetQuery.error || !asset) {
+    return (
+      <div className="border-danger-line bg-danger-soft text-danger rounded-md border px-4 py-3 text-[13px]">
+        {t("pages.assetDetail.errorLoading")}
+      </div>
+    );
+  }
+
+  const stateTransitions: AssetStateTransitionResponseDTO[] = transitionsQuery.data ?? [];
+  const analyses: AssetAnalysisResponseDTO[] = analysesQuery.data ?? [];
+  const processingJob: ProcessingJobResponseDTO | undefined = processingJobQuery.data;
+
   return (
     <div className="space-y-5">
-      {/* Toast notifications */}
       {toasts.length > 0 && (
         <div className="pointer-events-none fixed right-4 bottom-4 z-50 flex flex-col gap-2">
           {toasts.map((toast) => (
@@ -59,35 +136,29 @@ export function AssetDetailPage(
         </div>
       )}
 
-      {/* Action bar */}
       <ActionBar asset={asset} onCopy={handleCopy} />
 
-      {/* State hero */}
       <StateHero state={asset.state} />
 
-      {/* Visual block */}
       <VisualBlock asset={asset} />
 
-      {/* Identity + File props two-up */}
+      <SiblingStrip siblings={siblings} />
+
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <IdentityCard asset={asset} onCopy={handleCopy} />
         <FilePropsCard asset={asset} onCopy={handleCopy} />
       </div>
 
-      {/* Timeline */}
-      <Timeline asset={asset} />
+      <Timeline transitions={stateTransitions} processingJob={processingJob} />
 
-      {/* Analyses */}
-      <AnalysesCard asset={asset} />
+      <AnalysesCard analyses={analyses} />
 
-      {/* Metadata + Capture context two-up */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <MetadataCard asset={asset} />
         <CaptureCard asset={asset} />
       </div>
 
-      {/* Presets / Available URLs */}
-      <PresetsCard asset={asset} onCopy={handleCopy} />
+      <PresetsCard />
     </div>
   );
 }

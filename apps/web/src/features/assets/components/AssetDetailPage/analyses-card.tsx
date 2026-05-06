@@ -1,3 +1,4 @@
+import type { AssetAnalysisResponseDTO } from "@shared/backend-api";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -7,70 +8,49 @@ import { Card } from "@/components/common/Card/Card";
 import { CardHeader } from "@/components/common/Card/CardHeader";
 import { CardMeta } from "@/components/common/Card/CardMeta";
 import { CardTitle } from "@/components/common/Card/CardTitle";
-import type { IDemoAssetDetail, IDemoAssetDetailAnalysis } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
 
+type DecisionVariant = "ok" | "info" | "danger" | "warn";
+
+const DECISION_VARIANT: Record<
+  NonNullable<AssetAnalysisResponseDTO["decision"]>,
+  DecisionVariant
+> = {
+  pass: "ok",
+  flag: "warn",
+  quarantine: "danger",
+  error: "danger",
+};
+
+const JSON_INDENT = 2;
+const TIME_SLICE_END = 8;
+
 interface IAnalysisItemProps {
-  analysis: IDemoAssetDetailAnalysis;
+  analysis: AssetAnalysisResponseDTO;
   defaultOpen?: boolean;
 }
 
-type VerdictVariant = "ok" | "info" | "danger" | "warn";
-
-const VERDICT_VARIANT: Record<IDemoAssetDetailAnalysis["verdict"], VerdictVariant> = {
-  passed: "ok",
-  info: "info",
-  failed: "danger",
-  warning: "warn",
-};
-
-const PCT_MAX = 100;
-const JSON_INDENT = 2;
-const TIME_SLICE_END = 8;
-const SCORE_PRECISION = 3;
-
-function ModerationBars({ raw }: { raw: IDemoAssetDetailAnalysis["raw"] }): React.JSX.Element {
-  const { t } = useTranslation();
-  const categories = raw.categories as Record<string, number>;
-  const threshold = raw.threshold as number;
-  const decision = raw.decision as string;
-
-  return (
-    <div className="mt-2.5">
-      {Object.entries(categories).map(([categoryName, score]) => {
-        const pct = (score / threshold) * PCT_MAX;
-        const over = score >= threshold;
-        return (
-          <div
-            key={categoryName}
-            className="grid grid-cols-[88px_1fr_48px] items-center gap-2.5 py-0.5 text-[12px]"
-          >
-            <span className="text-muted-foreground capitalize">{categoryName}</span>
-            <div className="bg-secondary relative h-1.5 overflow-hidden rounded-full">
-              <div
-                className={cn("h-full rounded-full", over ? "bg-danger" : "bg-ok")}
-                style={{ width: `${String(Math.min(PCT_MAX, pct))}%` }}
-              />
-              <div className="bg-foreground/40 absolute top-[-2px] right-0 bottom-[-2px] w-px" />
-            </div>
-            <span className="text-muted-foreground text-right font-mono text-[11px]">
-              {score.toFixed(SCORE_PRECISION)}
-            </span>
-          </div>
-        );
-      })}
-      <div className="text-muted-foreground mt-1.5 text-[11px]">
-        {t("pages.assetDetail.analyses.threshold")} {threshold} ·{" "}
-        {t("pages.assetDetail.analyses.decision")} <b className="text-ok">{decision}</b>
-      </div>
-    </div>
-  );
+function summarize(findings: Record<string, unknown>): string {
+  const keys: string[] = Object.keys(findings);
+  if (keys.length === 0) return "";
+  const preferredKeys: string[] = ["summary", "message", "decision", "result"];
+  for (const key of preferredKeys) {
+    const value = findings[key];
+    if (typeof value === "string" && value !== "") return value;
+  }
+  return `${String(keys.length)} fields`;
 }
 
 function AnalysisItem({ analysis, defaultOpen = false }: IAnalysisItemProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(defaultOpen);
-  const isMod = analysis.id === "moderation";
-  const variant: VerdictVariant = VERDICT_VARIANT[analysis.verdict];
+  const decision = analysis.decision;
+  const variant: DecisionVariant = decision !== undefined ? DECISION_VARIANT[decision] : "info";
+  const summary: string = summarize(analysis.findings);
+  const versionLabel: string =
+    analysis.analyzerVersion !== undefined
+      ? `${analysis.analyzer} · ${analysis.analyzerVersion}`
+      : analysis.analyzer;
 
   return (
     <div className="border-border bg-secondary/40 mt-2 rounded border first:mt-0">
@@ -85,23 +65,25 @@ function AnalysisItem({ analysis, defaultOpen = false }: IAnalysisItemProps): Re
           size={12}
           className={cn("text-muted-foreground transition-transform", open && "rotate-90")}
         />
-        <span className="text-[12.5px] font-medium">{analysis.name}</span>
-        <Badge variant={variant} className="text-[10px]">
-          {analysis.verdict}
-        </Badge>
-        <span className="text-muted-foreground flex-1 truncate text-[12px]">
-          {analysis.summary}
-        </span>
+        <span className="text-[12.5px] font-medium">{versionLabel}</span>
+        {decision !== undefined && (
+          <Badge variant={variant} className="text-[10px]">
+            {decision}
+          </Badge>
+        )}
+        <span className="text-muted-foreground flex-1 truncate text-[12px]">{summary}</span>
         <span className="text-muted-foreground font-mono text-[11px]">
-          {analysis.at.split("T")[1]?.slice(0, TIME_SLICE_END) ?? ""}
+          {analysis.occurredAt.split("T")[1]?.slice(0, TIME_SLICE_END) ?? ""}
         </span>
       </button>
       {open && (
         <div className="border-border border-t border-dashed px-3 pb-3">
-          {isMod && <ModerationBars raw={analysis.raw} />}
           <pre className="bg-secondary/60 text-muted-foreground mt-2.5 overflow-x-auto rounded p-2.5 font-mono text-[11px]">
-            {JSON.stringify(analysis.raw, null, JSON_INDENT)}
+            {JSON.stringify(analysis.findings, null, JSON_INDENT)}
           </pre>
+          <div className="text-muted-foreground/80 mt-1 text-right font-mono text-[10.5px]">
+            {t("pages.assetDetail.analyses.occurredAt")}: {analysis.occurredAt}
+          </div>
         </div>
       )}
     </div>
@@ -109,10 +91,10 @@ function AnalysisItem({ analysis, defaultOpen = false }: IAnalysisItemProps): Re
 }
 
 interface IAnalysesCardProps {
-  asset: IDemoAssetDetail;
+  analyses: AssetAnalysisResponseDTO[];
 }
 
-export function AnalysesCard({ asset }: IAnalysesCardProps): React.JSX.Element {
+export function AnalysesCard({ analyses }: IAnalysesCardProps): React.JSX.Element {
   const { t } = useTranslation();
 
   return (
@@ -120,17 +102,23 @@ export function AnalysesCard({ asset }: IAnalysesCardProps): React.JSX.Element {
       <CardHeader>
         <CardTitle>{t("pages.assetDetail.sections.analyses")}</CardTitle>
         <CardMeta>
-          {t("pages.assetDetail.sections.analysesMeta", { count: asset.analyses.length })}
+          {t("pages.assetDetail.sections.analysesMeta", { count: analyses.length })}
         </CardMeta>
       </CardHeader>
       <div className="px-5 py-3">
-        {asset.analyses.map((analysis) => (
-          <AnalysisItem
-            key={analysis.id}
-            analysis={analysis}
-            defaultOpen={analysis.id === "moderation"}
-          />
-        ))}
+        {analyses.length === 0 ? (
+          <div className="text-muted-foreground text-[12.5px]">
+            {t("pages.assetDetail.empty.noAnalyses")}
+          </div>
+        ) : (
+          analyses.map((analysis, idx) => (
+            <AnalysisItem
+              key={`${analysis.analyzer}-${analysis.occurredAt}-${String(idx)}`}
+              analysis={analysis}
+              defaultOpen={idx === 0}
+            />
+          ))
+        )}
       </div>
     </Card>
   );
