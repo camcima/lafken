@@ -52,14 +52,14 @@ export class AssetQueryRepository implements AssetQueryRepositoryPort {
       dataQuery = dataQuery.where("assets.uploaded_by", "=", input.uploadedBy);
     }
 
-    if (input.owningRecordType) {
-      countQuery = countQuery.where("assets.owning_record_type", "=", input.owningRecordType);
-      dataQuery = dataQuery.where("assets.owning_record_type", "=", input.owningRecordType);
+    if (input.externalRefType) {
+      countQuery = countQuery.where("assets.external_ref_type", "=", input.externalRefType);
+      dataQuery = dataQuery.where("assets.external_ref_type", "=", input.externalRefType);
     }
 
-    if (input.owningRecordId) {
-      countQuery = countQuery.where("assets.owning_record_id", "=", input.owningRecordId);
-      dataQuery = dataQuery.where("assets.owning_record_id", "=", input.owningRecordId);
+    if (input.externalRefId) {
+      countQuery = countQuery.where("assets.external_ref_id", "=", input.externalRefId);
+      dataQuery = dataQuery.where("assets.external_ref_id", "=", input.externalRefId);
     }
 
     if (input.uploadedFrom) {

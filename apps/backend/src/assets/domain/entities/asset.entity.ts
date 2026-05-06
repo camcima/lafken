@@ -16,8 +16,8 @@ export interface IAssetProps {
   height: number | null;
   contentHash: Buffer | null;
   uploadedBy: string | null;
-  owningRecordType: string | null;
-  owningRecordId: string | null;
+  externalRefType: string | null;
+  externalRefId: string | null;
   customMetadata: Record<string, unknown>;
   captureContext: Record<string, unknown> | null;
   legalHold: boolean;
@@ -72,8 +72,8 @@ export class Asset {
       height: input.height ?? null,
       contentHash: null,
       uploadedBy: input.uploadedBy,
-      owningRecordType: null,
-      owningRecordId: null,
+      externalRefType: null,
+      externalRefId: null,
       customMetadata: {},
       captureContext: null,
       legalHold: false,

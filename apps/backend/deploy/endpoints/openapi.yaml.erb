@@ -544,12 +544,12 @@ paths:
           in: query
           schema:
             type: string
-        - name: owningRecordType
+        - name: externalRefType
           required: false
           in: query
           schema:
             type: string
-        - name: owningRecordId
+        - name: externalRefId
           required: false
           in: query
           schema:
@@ -1731,9 +1731,9 @@ components:
           type: string
         uploadedBy:
           type: string
-        owningRecordType:
+        externalRefType:
           type: string
-        owningRecordId:
+        externalRefId:
           type: string
         customMetadata:
           type: object
@@ -1960,9 +1960,9 @@ components:
           type: string
         uploadedBy:
           type: string
-        owningRecordType:
+        externalRefType:
           type: string
-        owningRecordId:
+        externalRefId:
           type: string
         customMetadata:
           type: object

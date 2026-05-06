@@ -10,8 +10,8 @@ export interface ListAssetsInput {
   namespaceSlug?: string;
   states?: AssetState[];
   uploadedBy?: string;
-  owningRecordType?: string;
-  owningRecordId?: string;
+  externalRefType?: string;
+  externalRefId?: string;
   uploadedFrom?: string;
   uploadedTo?: string;
 }

@@ -53,10 +53,10 @@ export class AssetResponseDTO {
   uploadedBy?: string;
 
   @ApiProperty({ required: false, type: String })
-  owningRecordType?: string;
+  externalRefType?: string;
 
   @ApiProperty({ required: false, type: String })
-  owningRecordId?: string;
+  externalRefId?: string;
 
   @ApiProperty({ type: Object })
   customMetadata!: Record<string, unknown>;

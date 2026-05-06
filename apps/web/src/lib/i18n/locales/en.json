@@ -368,7 +368,7 @@
         "namespace": "Namespace",
         "policyVersion": "Policy version",
         "storageBinding": "Storage binding",
-        "owningRecord": "Owning record",
+        "externalRef": "External reference",
         "uploadedBy": "Uploaded by",
         "uploadedAt": "Uploaded at",
         "filename": "Filename",

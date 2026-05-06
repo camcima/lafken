@@ -14,8 +14,8 @@ export interface QuarantinedAssetViewProps {
   height: number | null;
   contentHash: Buffer | null;
   uploadedBy: string | null;
-  owningRecordType: string | null;
-  owningRecordId: string | null;
+  externalRefType: string | null;
+  externalRefId: string | null;
   customMetadata: Record<string, unknown>;
   captureContext: Record<string, unknown> | null;
   legalHold: boolean;

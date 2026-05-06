@@ -30,12 +30,12 @@ export class ListAssetsQueryDTO extends makePaginatedRequestInputDto() {
   @IsOptional()
   @IsString()
   @ApiProperty({ required: false, type: String })
-  owningRecordType?: string;
+  externalRefType?: string;
 
   @IsOptional()
   @IsString()
   @ApiProperty({ required: false, type: String })
-  owningRecordId?: string;
+  externalRefId?: string;
 
   @IsOptional()
   @IsString()

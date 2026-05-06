@@ -55,8 +55,8 @@ export interface Assets {
   legal_hold_reference: string | null;
   mime_type: string | null;
   namespace_id: string;
-  owning_record_id: string | null;
-  owning_record_type: string | null;
+  external_ref_id: string | null;
+  external_ref_type: string | null;
   policy_version_id: string;
   public_id: Generated<string>;
   size_bytes: Int8 | null;

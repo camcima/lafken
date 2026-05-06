@@ -19,8 +19,8 @@ export class AssetsService extends BaseService {
       namespaceSlug: query.namespaceSlug,
       states: query.states?.join(","),
       uploadedBy: query.uploadedBy,
-      owningRecordType: query.owningRecordType,
-      owningRecordId: query.owningRecordId,
+      externalRefType: query.externalRefType,
+      externalRefId: query.externalRefId,
       uploadedFrom: query.uploadedFrom,
       uploadedTo: query.uploadedTo,
     };

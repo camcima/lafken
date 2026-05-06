@@ -1017,7 +1017,7 @@ export interface IDemoAssetDetail {
   namespace: { slug: string; displayName: string };
   policyVersion: number;
   storageBinding: string;
-  owningRecord: { type: string; id: string; label: string };
+  externalRef: { type: string; id: string; label: string };
   uploadedBy: { principal: string; displayName: string; role: string };
   uploadedAt: string;
   uploadedAtLocal: string;
@@ -1055,7 +1055,7 @@ export const DEMO_ASSET_DETAIL: IDemoAssetDetail = {
   },
   policyVersion: 7,
   storageBinding: "gcs-prod-aircraft-evidence",
-  owningRecord: {
+  externalRef: {
     type: "work_order",
     id: "wo-2026-04-29-N12345-018",
     label: "WO-2026-04-29-N12345-018",

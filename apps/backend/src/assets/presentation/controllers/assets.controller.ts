@@ -157,8 +157,8 @@ export class AssetsController {
       namespaceSlug: query.namespaceSlug,
       states: query.states,
       uploadedBy: query.uploadedBy,
-      owningRecordType: query.owningRecordType,
-      owningRecordId: query.owningRecordId,
+      externalRefType: query.externalRefType,
+      externalRefId: query.externalRefId,
       uploadedFrom: query.uploadedFrom,
       uploadedTo: query.uploadedTo,
     });

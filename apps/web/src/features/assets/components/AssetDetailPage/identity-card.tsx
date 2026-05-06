@@ -51,10 +51,10 @@ export function IdentityCard({ asset, onCopy }: IIdentityCardProps): React.JSX.E
         <DLRow label={t("pages.assetDetail.dl.storageBinding")}>
           <span className="font-mono text-[12px]">{asset.storageBinding}</span>
         </DLRow>
-        <DLRow label={t("pages.assetDetail.dl.owningRecord")}>
+        <DLRow label={t("pages.assetDetail.dl.externalRef")}>
           <span className="inline-flex items-center gap-1">
             <span className="text-latam-indigo font-mono">
-              {asset.owningRecord.type}/{asset.owningRecord.id}
+              {asset.externalRef.type}/{asset.externalRef.id}
             </span>
             <ExternalLink size={11} className="text-muted-foreground" />
           </span>
