@@ -2,11 +2,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { StorageBindingResponseDTO } from "@shared/backend-api";
 import { Link, useNavigate } from "@tanstack/react-router";
 import React, { useMemo } from "react";
-import { useForm } from "react-hook-form";
+import type { Control } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 
 import { Button } from "@/components/common/Button";
+import { Card } from "@/components/common/Card";
 import { useCreateNamespace } from "@/features/namespaces/hooks/useNamespaces";
 import { useStorageBindings } from "@/features/system/hooks/useSystem";
 import { ApiError } from "@/lib/api/api-error";
@@ -156,8 +158,30 @@ function FieldHelp({
   );
 }
 
-function SectionHeading({ children }: Readonly<{ children: React.ReactNode }>): React.JSX.Element {
-  return <h2 className="text-foreground mb-4 border-b pb-2 text-base font-semibold">{children}</h2>;
+interface INumberedSectionProps {
+  num: number;
+  title: string;
+  children: React.ReactNode;
+  labelledBy: string;
+}
+
+function NumberedSection(props: Readonly<INumberedSectionProps>): React.JSX.Element {
+  const { num, title, labelledBy, children } = props;
+  const numStr = String(num).padStart(2, "0");
+  return (
+    <Card className="p-0" aria-labelledby={labelledBy}>
+      <div className="border-border/60 flex items-baseline gap-3 border-b px-6 py-4">
+        <span className="text-latam-pink font-mono text-[11px] tabular-nums">{numStr}</span>
+        <h2
+          id={labelledBy}
+          className="text-foreground m-0 flex-1 text-[14px] font-semibold tracking-tight"
+        >
+          {title}
+        </h2>
+      </div>
+      <div className="space-y-4 px-6 py-5">{children}</div>
+    </Card>
+  );
 }
 
 // ── Helpers ────────────────────────────────────────────────
@@ -168,6 +192,75 @@ function isValidJson(jsonStr: string): boolean {
   } catch {
     return false;
   }
+}
+
+// ── Live YAML preview ─────────────────────────────────────
+interface IYamlPreviewProps {
+  control: Control<IFormValues>;
+  bindings: ReadonlyArray<StorageBindingResponseDTO>;
+}
+
+function YamlPreview({ control, bindings }: Readonly<IYamlPreviewProps>): React.JSX.Element {
+  const values = useWatch({ control });
+
+  const yaml = useMemo(() => {
+    const slug = (values.slug ?? "").trim() || "<slug>";
+    const displayName = (values.displayName ?? "").trim() || "<display name>";
+    const description = (values.description ?? "").trim();
+    const storageBindingId = values.storageBindingId ?? "";
+    const bindingName = bindings.find((b) => b.id === storageBindingId)?.name ?? "<none>";
+    const maxBytes = values.maxFileSizeBytes ?? "0";
+    const mimeTypes = (values.allowedMimeTypesRaw ?? "")
+      .split(",")
+      .map((mime) => mime.trim())
+      .filter(Boolean);
+    const requireVirusScan = values.virusScanRequired ?? false;
+    const retentionDays = values.retentionDays ?? "";
+    const retentionMode = values.retentionMode ?? "none";
+    const exifHandling = values.exifHandling ?? "strip";
+    const immutable = values.immutable ?? false;
+    const servingMode = values.servingMode ?? "signed";
+    const signedTtl = values.signedUrlTtlSeconds ?? "";
+    const signedBucket = values.signedUrlBucketSize ?? "";
+
+    const lines: string[] = [];
+    lines.push("apiVersion: lafken.latam.com/v1");
+    lines.push("kind: Namespace");
+    lines.push("metadata:");
+    lines.push(`  slug: ${slug}`);
+    lines.push(`  displayName: "${displayName}"`);
+    if (description) lines.push(`  description: "${description}"`);
+    lines.push("spec:");
+    lines.push("  storage:");
+    lines.push(`    binding: ${bindingName}`);
+    lines.push("  validation:");
+    lines.push(`    maxBytes: ${maxBytes || "0"}`);
+    lines.push("    mimeTypes:");
+    if (mimeTypes.length === 0) {
+      lines.push("      []");
+    } else {
+      for (const mime of mimeTypes) lines.push(`      - ${mime}`);
+    }
+    lines.push(`    requireVirusScan: ${String(requireVirusScan)}`);
+    lines.push("  lifecycle:");
+    if (retentionDays) lines.push(`    retentionDays: ${retentionDays}`);
+    lines.push(`    retentionMode: ${retentionMode}`);
+    lines.push(`    exifHandling: ${exifHandling}`);
+    lines.push(`    immutable: ${String(immutable)}`);
+    lines.push("  serving:");
+    lines.push(`    mode: ${servingMode}`);
+    if (servingMode === "signed") {
+      if (signedTtl) lines.push(`    signedUrlTtlSec: ${signedTtl}`);
+      if (signedBucket) lines.push(`    signedUrlBucketSize: ${signedBucket}`);
+    }
+    return lines.join("\n");
+  }, [values, bindings]);
+
+  return (
+    <pre className="m-0 max-h-[640px] overflow-auto rounded-md bg-[#0F0A2E] px-4 py-3 font-mono text-[11px] leading-[1.6] text-[#C2D0E0]">
+      {yaml}
+    </pre>
+  );
 }
 
 // ── Main component ─────────────────────────────────────────
@@ -413,7 +506,7 @@ export function NewNamespacePage(): React.JSX.Element {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+    <div className="mx-auto max-w-7xl space-y-6 px-4 py-6">
       {/* Page header */}
       <div>
         <h1 className="text-[22px] font-bold tracking-tight">{t("pages.namespaces.form.title")}</h1>
@@ -452,18 +545,19 @@ export function NewNamespacePage(): React.JSX.Element {
         </div>
       ) : null}
 
-      <form
-        id="new-namespace-form"
-        onSubmit={(e) => void handleSubmit(onSubmit)(e)}
-        className="space-y-8"
-        noValidate
-      >
-        {/* ── Section 1: Identity ───────────────────────────── */}
-        <section aria-labelledby="section-identity">
-          <SectionHeading>
-            <span id="section-identity">{t("pages.namespaces.form.sections.identity")}</span>
-          </SectionHeading>
-          <div className="space-y-4">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <form
+          id="new-namespace-form"
+          onSubmit={(e) => void handleSubmit(onSubmit)(e)}
+          className="space-y-4"
+          noValidate
+        >
+          {/* ── Section 1: Identity ───────────────────────────── */}
+          <NumberedSection
+            num={1}
+            labelledBy="section-identity"
+            title={t("pages.namespaces.form.sections.identity")}
+          >
             {/* Slug */}
             <div className="grid gap-2">
               <FieldLabel htmlFor="ns-slug">{t("pages.namespaces.form.fields.slug")}</FieldLabel>
@@ -511,47 +605,47 @@ export function NewNamespacePage(): React.JSX.Element {
                 <FieldMessage id="ns-description-error">{errors.description.message}</FieldMessage>
               ) : null}
             </div>
-          </div>
-        </section>
+          </NumberedSection>
 
-        {/* ── Section 2: Storage ────────────────────────────── */}
-        <section aria-labelledby="section-storage">
-          <SectionHeading>
-            <span id="section-storage">{t("pages.namespaces.form.sections.storage")}</span>
-          </SectionHeading>
-          <div className="grid gap-2">
-            <FieldLabel htmlFor="ns-storage-binding">
-              {t("pages.namespaces.form.fields.storageBinding")}
-            </FieldLabel>
-            <SelectInput
-              id="ns-storage-binding"
-              aria-invalid={errors.storageBindingId ? true : undefined}
-              aria-describedby={errors.storageBindingId ? "ns-storage-binding-error" : undefined}
-              {...register("storageBindingId")}
-            >
-              <option value="">
-                {t("pages.namespaces.form.fields.storageBindingPlaceholder")}
-              </option>
-              {bindings.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
+          {/* ── Section 2: Storage ────────────────────────────── */}
+          <NumberedSection
+            num={2}
+            labelledBy="section-storage"
+            title={t("pages.namespaces.form.sections.storage")}
+          >
+            <div className="grid gap-2">
+              <FieldLabel htmlFor="ns-storage-binding">
+                {t("pages.namespaces.form.fields.storageBinding")}
+              </FieldLabel>
+              <SelectInput
+                id="ns-storage-binding"
+                aria-invalid={errors.storageBindingId ? true : undefined}
+                aria-describedby={errors.storageBindingId ? "ns-storage-binding-error" : undefined}
+                {...register("storageBindingId")}
+              >
+                <option value="">
+                  {t("pages.namespaces.form.fields.storageBindingPlaceholder")}
                 </option>
-              ))}
-            </SelectInput>
-            {errors.storageBindingId?.message ? (
-              <FieldMessage id="ns-storage-binding-error">
-                {errors.storageBindingId.message}
-              </FieldMessage>
-            ) : null}
-          </div>
-        </section>
+                {bindings.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </SelectInput>
+              {errors.storageBindingId?.message ? (
+                <FieldMessage id="ns-storage-binding-error">
+                  {errors.storageBindingId.message}
+                </FieldMessage>
+              ) : null}
+            </div>
+          </NumberedSection>
 
-        {/* ── Section 3: Validation ─────────────────────────── */}
-        <section aria-labelledby="section-validation">
-          <SectionHeading>
-            <span id="section-validation">{t("pages.namespaces.form.sections.validation")}</span>
-          </SectionHeading>
-          <div className="space-y-4">
+          {/* ── Section 3: Validation ─────────────────────────── */}
+          <NumberedSection
+            num={3}
+            labelledBy="section-validation"
+            title={t("pages.namespaces.form.sections.validation")}
+          >
             {/* Max file size */}
             <div className="grid gap-2">
               <FieldLabel htmlFor="ns-max-file-size">
@@ -617,15 +711,14 @@ export function NewNamespacePage(): React.JSX.Element {
                 </FieldMessage>
               ) : null}
             </div>
-          </div>
-        </section>
+          </NumberedSection>
 
-        {/* ── Section 4: Lifecycle ──────────────────────────── */}
-        <section aria-labelledby="section-lifecycle">
-          <SectionHeading>
-            <span id="section-lifecycle">{t("pages.namespaces.form.sections.lifecycle")}</span>
-          </SectionHeading>
-          <div className="space-y-4">
+          {/* ── Section 4: Lifecycle ──────────────────────────── */}
+          <NumberedSection
+            num={4}
+            labelledBy="section-lifecycle"
+            title={t("pages.namespaces.form.sections.lifecycle")}
+          >
             {/* Retention days */}
             <div className="grid gap-2">
               <FieldLabel htmlFor="ns-retention-days">
@@ -711,15 +804,14 @@ export function NewNamespacePage(): React.JSX.Element {
                 <FieldMessage id="ns-immutable-error">{errors.immutable.message}</FieldMessage>
               ) : null}
             </div>
-          </div>
-        </section>
+          </NumberedSection>
 
-        {/* ── Section 5: Serving ────────────────────────────── */}
-        <section aria-labelledby="section-serving">
-          <SectionHeading>
-            <span id="section-serving">{t("pages.namespaces.form.sections.serving")}</span>
-          </SectionHeading>
-          <div className="space-y-4">
+          {/* ── Section 5: Serving ────────────────────────────── */}
+          <NumberedSection
+            num={5}
+            labelledBy="section-serving"
+            title={t("pages.namespaces.form.sections.serving")}
+          >
             {/* Serving mode */}
             <div className="grid gap-2">
               <FieldLabel htmlFor="ns-serving-mode">
@@ -785,18 +877,14 @@ export function NewNamespacePage(): React.JSX.Element {
                 </FieldMessage>
               ) : null}
             </div>
-          </div>
-        </section>
+          </NumberedSection>
 
-        {/* ── Section 6: Advanced ───────────────────────────── */}
-        <details>
-          <summary
-            id="section-advanced"
-            className="text-foreground cursor-pointer border-b pb-2 text-base font-semibold"
+          {/* ── Section 6: Advanced ───────────────────────────── */}
+          <NumberedSection
+            num={6}
+            labelledBy="section-advanced"
+            title={t("pages.namespaces.form.sections.advanced")}
           >
-            {t("pages.namespaces.form.sections.advanced")}
-          </summary>
-          <div className="mt-4 space-y-4">
             {/* Content moderation */}
             <div className="grid gap-2">
               <FieldLabel htmlFor="ns-content-moderation">
@@ -857,26 +945,40 @@ export function NewNamespacePage(): React.JSX.Element {
                 </FieldMessage>
               ) : null}
             </div>
-          </div>
-        </details>
+          </NumberedSection>
 
-        {/* ── Action bar ────────────────────────────────────── */}
-        <div className="border-border/40 flex items-center justify-end gap-3 border-t pt-4">
-          <Link to="/namespaces">
-            <Button type="button" variant="outline" disabled={isBusy}>
-              {t("pages.namespaces.form.cancel")}
+          {/* ── Action bar ────────────────────────────────────── */}
+          <div className="border-border/40 flex items-center justify-end gap-3 border-t pt-4">
+            <Link to="/namespaces">
+              <Button type="button" variant="outline" disabled={isBusy}>
+                {t("pages.namespaces.form.cancel")}
+              </Button>
+            </Link>
+            <Button
+              type="submit"
+              form="new-namespace-form"
+              variant="indigo"
+              disabled={isBusy || !hasBindings}
+            >
+              {t("pages.namespaces.form.submit")}
             </Button>
-          </Link>
-          <Button
-            type="submit"
-            form="new-namespace-form"
-            variant="indigo"
-            disabled={isBusy || !hasBindings}
-          >
-            {t("pages.namespaces.form.submit")}
-          </Button>
-        </div>
-      </form>
+          </div>
+        </form>
+
+        {/* ── Live YAML preview rail ──────────────────────────── */}
+        <aside
+          aria-label={t("pages.namespaces.form.yamlPreviewLabel")}
+          className="hidden lg:sticky lg:top-6 lg:block lg:self-start"
+        >
+          <div className="border-border/60 mb-2 flex items-center justify-between border-b pb-2">
+            <span className="text-muted-foreground text-[10.5px] font-medium tracking-wider uppercase">
+              {t("pages.namespaces.form.yamlPreviewTitle")}
+            </span>
+            <span className="text-muted-foreground font-mono text-[10.5px]">YAML</span>
+          </div>
+          <YamlPreview control={form.control} bindings={bindings} />
+        </aside>
+      </div>
     </div>
   );
 }

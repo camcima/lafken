@@ -510,7 +510,9 @@
           "proxied": "Proxied"
         },
         "cancel": "Cancel",
-        "submit": "Create namespace"
+        "submit": "Create namespace",
+        "yamlPreviewLabel": "Live YAML preview",
+        "yamlPreviewTitle": "Live preview"
       },
       "edit": {
         "title": "Edit namespace",

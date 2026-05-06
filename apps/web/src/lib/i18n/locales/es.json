@@ -622,7 +622,9 @@
           "proxied": "Proxy"
         },
         "cancel": "Cancelar",
-        "submit": "Crear namespace"
+        "submit": "Crear namespace",
+        "yamlPreviewLabel": "Vista previa YAML en vivo",
+        "yamlPreviewTitle": "Vista previa"
       },
       "edit": {
         "title": "Editar namespace",

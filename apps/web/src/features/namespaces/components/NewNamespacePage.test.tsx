@@ -103,23 +103,27 @@ describe("NewNamespacePage", () => {
   it("renders all six sections with secure defaults pre-filled", () => {
     renderPage();
 
-    // All 6 section headings (5 h2, 1 summary for Advanced)
     expect(screen.getByRole("heading", { name: /^identity$/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /^storage$/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /^validation$/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /^lifecycle$/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /^serving$/i })).toBeInTheDocument();
-    // Advanced is inside <details><summary>, not a heading role
-    expect(screen.getByText(/^advanced$/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^advanced$/i })).toBeInTheDocument();
 
-    // Slug is empty
     expect(screen.getByLabelText(/^slug$/i)).toHaveValue("");
-
-    // Max file size has the default 50 MiB value (52428800)
     expect(screen.getByLabelText(/max file size/i)).toHaveValue(52_428_800);
-
-    // Virus scan checkbox is checked by default
     expect(screen.getByLabelText(/require virus scan/i)).toBeChecked();
+  });
+
+  it("renders a live YAML preview that reflects the current slug", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const preview = screen.getByLabelText(/yaml/i);
+    expect(preview.textContent).toMatch(/slug: <slug>/);
+
+    await user.type(screen.getByLabelText(/^slug$/i), "aircraft-photos");
+    expect(preview.textContent).toMatch(/slug: aircraft-photos/);
   });
 
   it("disables Save and shows a warning when there are no storage bindings", () => {
