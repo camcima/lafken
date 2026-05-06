@@ -121,6 +121,13 @@ const environmentSchema = z
       .optional(),
     /** Truncated signature length in base64 chars. Match imgproxy's IMGPROXY_SIGNATURE_SIZE. */
     IMGPROXY_SIGNATURE_SIZE: z.coerce.number().int().positive().default(32),
+
+    PROCESSING_WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1000),
+    PROCESSING_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+    PROCESSING_WORKER_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().positive().default(10_000),
+    PROCESSING_WORKER_STALE_CLAIM_MS: z.coerce.number().int().positive().default(60_000),
+    PROCESSING_WORKER_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
+    PROCESSING_WORKER_SHUTDOWN_GRACE_MS: z.coerce.number().int().positive().default(30_000),
   })
   .refine(
     (data) => {

@@ -16,6 +16,7 @@ allowBuilds:
   msw: true
   nestjs-pino: true
   protobufjs: true
+  sharp: true
   unrs-resolver: true
 
 # =============================================================================
