@@ -62,6 +62,9 @@ describe("[E2E] POST /v1/namespaces/:slug/policy-versions", () => {
   beforeEach(async () => {
     await db.connection.transaction().execute(async (tx) => {
       await tx.deleteFrom("namespace_presets").execute();
+      await tx.deleteFrom("asset_analyses").execute();
+      await tx.deleteFrom("asset_state_transitions").execute();
+      await tx.deleteFrom("processing_jobs").execute();
       await tx.deleteFrom("assets").execute();
       await tx.deleteFrom("namespace_policies").execute();
       await tx.deleteFrom("namespaces").execute();

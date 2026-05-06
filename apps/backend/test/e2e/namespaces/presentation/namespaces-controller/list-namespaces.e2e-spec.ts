@@ -27,6 +27,9 @@ describe("[E2E] GET /v1/namespaces", () => {
     // DEFERRABLE FK: namespaces.current_policy_id → namespace_policies.
     await db.connection.transaction().execute(async (tx) => {
       await tx.deleteFrom("namespace_presets").execute();
+      await tx.deleteFrom("asset_analyses").execute();
+      await tx.deleteFrom("asset_state_transitions").execute();
+      await tx.deleteFrom("processing_jobs").execute();
       await tx.deleteFrom("assets").execute();
       // Delete policies first (deferred FK namespaces.current_policy_id checked at commit).
       // Namespaces must be deleted after policies to satisfy the RESTRICT FK
