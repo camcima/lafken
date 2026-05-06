@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
@@ -98,9 +98,14 @@ export function EditPresetPage(): React.JSX.Element {
 
   const { reset: resetForm } = form;
 
+  // Reset the form only when the loaded version actually changes — not on
+  // every React Query refetch. Otherwise refetches (e.g. on window focus)
+  // would clear isDirty and lock the Save button while the user is editing.
+  const lastSyncedVersionRef = useRef<number | null>(null);
   useEffect(() => {
-    if (latestPreset) {
+    if (latestPreset && lastSyncedVersionRef.current !== latestPreset.version) {
       resetForm({ params: mapResponseParamsToFormValues(latestPreset.params) });
+      lastSyncedVersionRef.current = latestPreset.version;
     }
   }, [latestPreset, resetForm]);
 
