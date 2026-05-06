@@ -86,6 +86,15 @@ describe("ProcessClaimedAssetUseCase", () => {
       "image_inspection",
       "virus_scan",
     ]);
+
+    const readyTransition = assetRepo.transitions.at(-1);
+    expect(readyTransition?.toState).toBe("ready");
+    const metadata = readyTransition?.metadata ?? {};
+    expect(typeof metadata["total_duration_ms"]).toBe("number");
+    expect(metadata["total_duration_ms"] as number).toBeGreaterThanOrEqual(0);
+    expect(Array.isArray(metadata["steps"])).toBe(true);
+    const steps = metadata["steps"] as Array<{ step: string }>;
+    expect(steps.map((entry) => entry.step)).toEqual(["image_inspection", "virus_scan"]);
   });
 
   it("records current_step transitions in order when moderation is enabled", async () => {
@@ -99,6 +108,16 @@ describe("ProcessClaimedAssetUseCase", () => {
 
     expect(result.kind).toBe("completed");
     expect(jobRepo.currentStepUpdates.map((item) => item.currentStep)).toEqual([
+      "image_inspection",
+      "virus_scan",
+      "content_moderation",
+    ]);
+
+    const readyTransition = assetRepo.transitions.at(-1);
+    expect(readyTransition?.toState).toBe("ready");
+    const metadata = readyTransition?.metadata ?? {};
+    const steps = metadata["steps"] as Array<{ step: string }>;
+    expect(steps.map((entry) => entry.step)).toEqual([
       "image_inspection",
       "virus_scan",
       "content_moderation",

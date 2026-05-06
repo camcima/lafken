@@ -14,6 +14,8 @@ import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/
 import { assetProcessingMachine } from "./asset-processing-machine";
 import {
   calculateDurationMs,
+  type IStepTiming,
+  makeStepTiming,
   makeTransitionMetadata,
   type ProcessingStepName,
 } from "./processing-evidence";
@@ -76,6 +78,8 @@ export class ProcessClaimedAssetUseCase {
     }
 
     const { asset, policy } = loaded;
+    const processingStartedAt: Date = new Date();
+    const stepTimings: IStepTiming[] = [];
     let currentState: AssetState = asset.props.state;
     if (currentState === "uploaded") {
       await this.assetRepo.transitionAsset({
@@ -133,12 +137,21 @@ export class ProcessClaimedAssetUseCase {
         allowedMimeTypes: policy.props.allowedMimeTypes,
       }),
     );
+    const inspectionFinishedAt: Date = new Date();
+    stepTimings.push(
+      makeStepTiming({
+        step: "image_inspection",
+        startedAt: inspectionStartedAt,
+        finishedAt: inspectionFinishedAt,
+        decision: inspection.decision,
+      }),
+    );
     this.logger.info(
       {
         assetId: asset.props.id,
         step: "image_inspection",
         decision: inspection.decision,
-        durationMs: calculateDurationMs(inspectionStartedAt, new Date()),
+        durationMs: calculateDurationMs(inspectionStartedAt, inspectionFinishedAt),
       },
       "step completed",
     );
@@ -191,12 +204,21 @@ export class ProcessClaimedAssetUseCase {
     const scan = await this.runStep("virus_scan", () =>
       this.virusScan.scan({ bytes, contentHash: inspection.contentHash }),
     );
+    const scanFinishedAt: Date = new Date();
+    stepTimings.push(
+      makeStepTiming({
+        step: "virus_scan",
+        startedAt: scanStartedAt,
+        finishedAt: scanFinishedAt,
+        decision: scan.decision,
+      }),
+    );
     this.logger.info(
       {
         assetId: asset.props.id,
         step: "virus_scan",
         decision: scan.decision,
-        durationMs: calculateDurationMs(scanStartedAt, new Date()),
+        durationMs: calculateDurationMs(scanStartedAt, scanFinishedAt),
       },
       "step completed",
     );
@@ -245,12 +267,21 @@ export class ProcessClaimedAssetUseCase {
           policyConfig: moderationConfig,
         }),
       );
+      const moderationFinishedAt: Date = new Date();
+      stepTimings.push(
+        makeStepTiming({
+          step: "content_moderation",
+          startedAt: moderationStartedAt,
+          finishedAt: moderationFinishedAt,
+          decision: moderation.decision,
+        }),
+      );
       this.logger.info(
         {
           assetId: asset.props.id,
           step: "content_moderation",
           decision: moderation.decision,
-          durationMs: calculateDurationMs(moderationStartedAt, new Date()),
+          durationMs: calculateDurationMs(moderationStartedAt, moderationFinishedAt),
         },
         "step completed",
       );
@@ -290,13 +321,13 @@ export class ProcessClaimedAssetUseCase {
       { assetId: asset.props.id, toState: "ready", reason: "processing_completed" },
       "transitioning to terminal state",
     );
-    await this.transitionToTerminal({
+    await this.transitionToReady({
       assetId: asset.props.id,
       fromState: currentState,
-      toState: "ready",
-      reason: "processing_completed",
       workerId: input.workerId,
       attemptNumber: input.attemptNumber,
+      processingStartedAt,
+      stepTimings,
     });
     return { kind: "completed" };
   }
@@ -330,6 +361,43 @@ export class ProcessClaimedAssetUseCase {
       assetId: input.assetId,
       workerId: input.workerId,
       now: new Date(),
+    });
+  }
+
+  /**
+   * Success-path terminal transition. Aggregates per-step timings into the
+   * transition metadata so the audit trail records every stage's duration and
+   * the wall-clock total — required by the processing spec for `ready`.
+   */
+  private async transitionToReady(input: {
+    assetId: string;
+    fromState: AssetState;
+    workerId: string;
+    attemptNumber: number;
+    processingStartedAt: Date;
+    stepTimings: IStepTiming[];
+  }): Promise<void> {
+    const reason: string = "processing_completed";
+    const finishedAt: Date = new Date();
+    await this.assetRepo.transitionAsset({
+      assetId: input.assetId,
+      fromState: input.fromState,
+      toState: "ready",
+      reason,
+      metadata: makeTransitionMetadata({
+        workerId: input.workerId,
+        attemptNumber: input.attemptNumber,
+        reasonCode: reason,
+        totalDurationMs: calculateDurationMs(input.processingStartedAt, finishedAt),
+        steps: input.stepTimings,
+      }),
+      occurredBy: this.workerActor(input.workerId),
+      now: finishedAt,
+    });
+    await this.jobRepo.markCompleted({
+      assetId: input.assetId,
+      workerId: input.workerId,
+      now: finishedAt,
     });
   }
 
