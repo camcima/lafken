@@ -22,6 +22,7 @@ import {
 } from "@nestjs/swagger";
 import {
   AssetAnalysisResponseDTO,
+  AssetDownloadUrlResponseDTO,
   AssetResponseDTO,
   AssetStateTransitionResponseDTO,
   ConfirmUploadRequestDTO,
@@ -35,6 +36,7 @@ import {
 import { ConfirmUploadUseCase } from "@/assets/application/use-cases/confirm-upload.use-case";
 import { CreateUploadIntentUseCase } from "@/assets/application/use-cases/create-upload-intent.use-case";
 import { GetAssetByPublicIdUseCase } from "@/assets/application/use-cases/get-asset-by-public-id.use-case";
+import { GetAssetDownloadUrlUseCase } from "@/assets/application/use-cases/get-asset-download-url.use-case";
 import { GetAssetProcessingJobUseCase } from "@/assets/application/use-cases/get-asset-processing-job.use-case";
 import { ListAssetAnalysesUseCase } from "@/assets/application/use-cases/list-asset-analyses.use-case";
 import { ListAssetStateTransitionsUseCase } from "@/assets/application/use-cases/list-asset-state-transitions.use-case";
@@ -86,6 +88,7 @@ export class AssetsController {
     private readonly createUploadIntentUseCase: CreateUploadIntentUseCase,
     private readonly confirmUploadUseCase: ConfirmUploadUseCase,
     private readonly retryAssetProcessingUseCase: RetryAssetProcessingUseCase,
+    private readonly getAssetDownloadUrlUseCase: GetAssetDownloadUrlUseCase,
     private readonly assetQueryRepository: AssetQueryRepositoryPort,
     private readonly previewUrlSigner: PreviewUrlSignerPort,
     private readonly namespaceQueryRepository: NamespaceQueryRepositoryPort,
@@ -234,6 +237,27 @@ export class AssetsController {
         );
       }
       return { url };
+    } catch (err) {
+      if (err instanceof AssetNotFoundError) {
+        throw new NotFoundException(err.message, { cause: err });
+      }
+      throw err;
+    }
+  }
+
+  @Get(":publicId/download-url")
+  @AuthenticatedEndpoint()
+  @ApiOperation({
+    summary: "Mint a signed read URL for an asset's original bytes",
+    description:
+      "Returns a fully-signed GCS read URL the browser can fetch directly to " +
+      "download the asset's original bytes. The URL is valid for ~5 minutes.",
+  })
+  @ApiOkResponse({ type: AssetDownloadUrlResponseDTO })
+  @ApiNotFoundResponse()
+  async getDownloadUrl(@Param("publicId") publicId: string): Promise<AssetDownloadUrlResponseDTO> {
+    try {
+      return await this.getAssetDownloadUrlUseCase.execute({ publicId });
     } catch (err) {
       if (err instanceof AssetNotFoundError) {
         throw new NotFoundException(err.message, { cause: err });

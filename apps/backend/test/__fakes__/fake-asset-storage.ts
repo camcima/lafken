@@ -4,6 +4,7 @@ import {
   type IIssueSignedUploadUrlResult,
   type IObjectExistsInput,
   type IReadObjectBytesInput,
+  type ISignReadUrlInput,
 } from "@/assets/domain/services/asset-storage.service.port";
 
 const DEFAULT_TTL_MS = 900_000;
@@ -12,6 +13,7 @@ export class FakeAssetStorage extends AssetStoragePort {
   readonly issued: IIssueSignedUploadUrlInput[] = [];
   readonly existsCalls: IObjectExistsInput[] = [];
   readonly readCalls: IReadObjectBytesInput[] = [];
+  readonly readSigned: ISignReadUrlInput[] = [];
   readonly objects: Map<string, Buffer> = new Map();
   existsResult = true;
 
@@ -39,5 +41,12 @@ export class FakeAssetStorage extends AssetStoragePort {
       return Promise.reject(new Error(`Object "${input.storageKey}" does not exist`));
     }
     return Promise.resolve(bytes);
+  }
+
+  signReadUrl(input: ISignReadUrlInput): Promise<string> {
+    this.readSigned.push(input);
+    return Promise.resolve(
+      `https://fake-gcs.local/read/${encodeURIComponent(input.storageKey)}?sig=stub`,
+    );
   }
 }

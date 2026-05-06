@@ -6,6 +6,7 @@ import { SystemInfrastructureModule } from "@/system/infrastructure/system-infra
 import { ConfirmUploadUseCase } from "./application/use-cases/confirm-upload.use-case";
 import { CreateUploadIntentUseCase } from "./application/use-cases/create-upload-intent.use-case";
 import { GetAssetByPublicIdUseCase } from "./application/use-cases/get-asset-by-public-id.use-case";
+import { GetAssetDownloadUrlUseCase } from "./application/use-cases/get-asset-download-url.use-case";
 import { GetAssetProcessingJobUseCase } from "./application/use-cases/get-asset-processing-job.use-case";
 import { ListAssetAnalysesUseCase } from "./application/use-cases/list-asset-analyses.use-case";
 import { ListAssetStateTransitionsUseCase } from "./application/use-cases/list-asset-state-transitions.use-case";
@@ -26,6 +27,7 @@ import { AssetsController } from "./presentation/controllers/assets.controller";
     CreateUploadIntentUseCase,
     ConfirmUploadUseCase,
     RetryAssetProcessingUseCase,
+    GetAssetDownloadUrlUseCase,
   ],
 })
 export class AssetsModule {}

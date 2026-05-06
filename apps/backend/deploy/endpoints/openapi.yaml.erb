@@ -639,6 +639,36 @@ paths:
       summary: Mint a signed preview URL for an asset against a named preset
       tags:
         - Assets
+  /v1/assets/{publicId}/download-url:
+    get:
+      description: >-
+        Returns a fully-signed GCS read URL the browser can fetch directly to
+        download the asset's original bytes. The URL is valid for ~5 minutes.
+      operationId: AssetsController_getDownloadUrl_v1
+      parameters:
+        - name: publicId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetDownloadUrlResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+      summary: Mint a signed read URL for an asset's original bytes
+      tags:
+        - Assets
   /v1/assets/{publicId}/state-transitions:
     get:
       operationId: AssetsController_listStateTransitions_v1
@@ -1819,6 +1849,16 @@ components:
         url:
           type: string
           description: Fully-signed imgproxy URL the browser can fetch directly.
+      required:
+        - url
+    AssetDownloadUrlResponseDTO:
+      type: object
+      properties:
+        url:
+          type: string
+          description: >-
+            Fully-signed GCS read URL the browser can fetch directly to download
+            the original asset bytes. Valid for ~5 minutes.
       required:
         - url
     AssetStateTransitionResponseDTO:

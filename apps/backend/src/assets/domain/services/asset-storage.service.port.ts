@@ -27,10 +27,17 @@ export interface IReadObjectBytesInput {
   storageKey: string;
 }
 
+export interface ISignReadUrlInput {
+  binding: IGcsBindingDescriptor;
+  storageKey: string;
+  ttlSeconds: number;
+}
+
 export abstract class AssetStoragePort {
   abstract issueSignedUploadUrl(
     input: IIssueSignedUploadUrlInput,
   ): Promise<IIssueSignedUploadUrlResult>;
   abstract objectExists(input: IObjectExistsInput): Promise<boolean>;
   abstract readObjectBytes(input: IReadObjectBytesInput): Promise<Buffer>;
+  abstract signReadUrl(input: ISignReadUrlInput): Promise<string>;
 }

@@ -8,6 +8,7 @@ import {
   type IIssueSignedUploadUrlResult,
   type IObjectExistsInput,
   type IReadObjectBytesInput,
+  type ISignReadUrlInput,
 } from "@/assets/domain/services/asset-storage.service.port";
 
 const FAKE_GCS_PROJECT_ID = "fake-gcs";
@@ -88,6 +89,16 @@ export class GcsAssetStorageAdapter extends AssetStoragePort {
   async readObjectBytes(input: IReadObjectBytesInput): Promise<Buffer> {
     const [bytes] = await this.getBucket(input.binding).file(input.storageKey).download();
     return bytes;
+  }
+
+  async signReadUrl(input: ISignReadUrlInput): Promise<string> {
+    const expiresAt = new Date(Date.now() + input.ttlSeconds * MS_PER_SECOND);
+    const [url] = await this.getBucket(input.binding).file(input.storageKey).getSignedUrl({
+      action: "read",
+      version: "v4",
+      expires: expiresAt,
+    });
+    return url;
   }
 
   private getBucket(binding: IGcsBindingDescriptor): Bucket {

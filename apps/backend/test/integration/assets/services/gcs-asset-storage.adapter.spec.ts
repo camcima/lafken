@@ -53,4 +53,39 @@ describe.skipIf(!GATE)("GcsAssetStorageAdapter (fake-gcs)", () => {
       }),
     ).toBe(false);
   });
+
+  it("signs a v4 read URL that fake-gcs serves the bytes from", async () => {
+    const adapter = new GcsAssetStorageAdapter({
+      endpoint: ENDPOINT,
+      credentialsJson: CREDENTIALS_JSON,
+    });
+    // Upload an object first so we have something to read.
+    const key = `integration-test/${Date.now()}/read-source`;
+    const issued = await adapter.issueSignedUploadUrl({
+      binding: BINDING,
+      storageKey: key,
+      contentType: "image/jpeg",
+      maxBytes: 1_048_576n,
+      ttlSeconds: 900,
+    });
+    const expected = new Uint8Array([0xde, 0xad, 0xbe, 0xef]);
+    const putResponse = await fetch(issued.url, {
+      method: "PUT",
+      headers: issued.headers,
+      body: expected,
+    });
+    expect(putResponse.ok).toBe(true);
+
+    const readUrl = await adapter.signReadUrl({
+      binding: BINDING,
+      storageKey: key,
+      ttlSeconds: 300,
+    });
+    expect(readUrl).toContain("X-Goog-Signature");
+
+    const getResponse = await fetch(readUrl);
+    expect(getResponse.ok).toBe(true);
+    const bytes = new Uint8Array(await getResponse.arrayBuffer());
+    expect(Array.from(bytes)).toEqual(Array.from(expected));
+  });
 });
