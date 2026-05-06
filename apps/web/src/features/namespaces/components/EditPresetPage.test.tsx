@@ -135,10 +135,10 @@ describe("EditPresetPage", () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/quality/i)).toHaveValue(75);
+      expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveValue(75);
     });
 
-    expect(screen.getByLabelText(/fit/i)).toHaveValue("cover");
+    expect(screen.getByRole("radio", { name: /cover/i })).toBeChecked();
     expect(screen.getByLabelText(/format/i)).toHaveValue("webp");
     expect(screen.getByLabelText(/width/i)).toHaveValue(400);
     expect(screen.getByLabelText(/height/i)).toHaveValue(300);
@@ -149,7 +149,7 @@ describe("EditPresetPage", () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/quality/i)).toHaveValue(75);
+      expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveValue(75);
     });
 
     // Save button is disabled when form is pristine
@@ -157,8 +157,9 @@ describe("EditPresetPage", () => {
     expect(saveButton).toBeDisabled();
 
     // Changing a field marks the form dirty → Save is enabled
-    await user.clear(screen.getByLabelText(/quality/i));
-    await user.type(screen.getByLabelText(/quality/i), "90");
+    const qualityInput = screen.getByRole("spinbutton", { name: /quality/i });
+    await user.clear(qualityInput);
+    await user.type(qualityInput, "90");
 
     expect(saveButton).not.toBeDisabled();
   });
@@ -169,12 +170,13 @@ describe("EditPresetPage", () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/quality/i)).toHaveValue(75);
+      expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveValue(75);
     });
 
     // Dirty the form
-    await user.clear(screen.getByLabelText(/quality/i));
-    await user.type(screen.getByLabelText(/quality/i), "90");
+    const qualityInput = screen.getByRole("spinbutton", { name: /quality/i });
+    await user.clear(qualityInput);
+    await user.type(qualityInput, "90");
 
     await user.click(screen.getByRole("button", { name: /save preset/i }));
 
@@ -200,12 +202,13 @@ describe("EditPresetPage", () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/quality/i)).toHaveValue(75);
+      expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveValue(75);
     });
 
     // Dirty the form
-    await user.clear(screen.getByLabelText(/quality/i));
-    await user.type(screen.getByLabelText(/quality/i), "90");
+    const qualityInput = screen.getByRole("spinbutton", { name: /quality/i });
+    await user.clear(qualityInput);
+    await user.type(qualityInput, "90");
 
     await user.click(screen.getByRole("button", { name: /save preset/i }));
 
@@ -230,12 +233,13 @@ describe("EditPresetPage", () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/quality/i)).toHaveValue(75);
+      expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveValue(75);
     });
 
     // Dirty the form
-    await user.clear(screen.getByLabelText(/quality/i));
-    await user.type(screen.getByLabelText(/quality/i), "90");
+    const qualityInput = screen.getByRole("spinbutton", { name: /quality/i });
+    await user.clear(qualityInput);
+    await user.type(qualityInput, "90");
 
     await user.click(screen.getByRole("button", { name: /save preset/i }));
 

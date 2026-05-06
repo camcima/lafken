@@ -219,6 +219,7 @@ export function NewPresetPage(): React.JSX.Element {
           </PresetNumberedSection>
 
           <PresetParamsFields<ICreatePresetValues>
+            control={control}
             register={register}
             errors={errors}
             idPrefix="np"

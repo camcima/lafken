@@ -117,18 +117,15 @@ describe("NewPresetPage", () => {
   it("renders the form with default values", () => {
     renderPage();
 
-    // Name input empty by default
     expect(screen.getByLabelText(/name/i)).toHaveValue("");
 
-    // Default selections
-    const fitSelect = screen.getByLabelText(/fit/i);
-    expect(fitSelect).toHaveValue("cover");
+    // Fit is now a radio-card group; the cover card should be checked.
+    expect(screen.getByRole("radio", { name: /cover/i })).toBeChecked();
 
-    const formatSelect = screen.getByLabelText(/format/i);
-    expect(formatSelect).toHaveValue("auto");
+    expect(screen.getByLabelText(/format/i)).toHaveValue("auto");
 
-    const qualityInput = screen.getByLabelText(/quality/i);
-    expect(qualityInput).toHaveValue(80);
+    // Quality is a slider + numeric pair sharing the same accessible name.
+    expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveValue(80);
   });
 
   it("disables submit while pending", () => {

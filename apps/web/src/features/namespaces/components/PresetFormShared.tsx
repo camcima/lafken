@@ -18,6 +18,9 @@ const MAX_QUALITY = 100;
 const MIN_DPR = 0.5;
 const MAX_DPR = 4;
 const DPR_STEP = 0.5;
+const RADIO_CARD_COLUMNS_2 = 2;
+const RADIO_CARD_COLUMNS_3 = 3;
+const RADIO_CARD_COLUMNS_4 = 4;
 
 interface INumberedSectionProps {
   num: number;
@@ -84,7 +87,166 @@ const inputClasses = cn(
 
 const selectClasses = inputClasses;
 
+function FieldHint({
+  children,
+}: Readonly<{ children?: React.ReactNode }>): React.JSX.Element | null {
+  if (!children) return null;
+  return <p className="text-muted-foreground mt-1 text-[11px]">{children}</p>;
+}
+
+interface IRadioCardOption<V extends string> {
+  value: V;
+  label: string;
+  description?: string;
+}
+
+interface IRadioCardGroupProps<T extends FieldValues, V extends string> {
+  control: Control<T>;
+  register: UseFormRegister<T>;
+  name: Path<T>;
+  options: ReadonlyArray<IRadioCardOption<V>>;
+  ariaLabelledBy?: string;
+  columns?: typeof RADIO_CARD_COLUMNS_2 | typeof RADIO_CARD_COLUMNS_3 | typeof RADIO_CARD_COLUMNS_4;
+}
+
+/**
+ * Radio-card group: each option renders as a clickable card with title and
+ * description, replacing a native <select> for enums where per-option meaning
+ * is non-obvious. The hidden radio inputs share `name` and integrate with
+ * react-hook-form via `register`; the selected card is highlighted by
+ * subscribing to the field value through useWatch.
+ */
+export function RadioCardGroup<T extends FieldValues, V extends string>(
+  props: Readonly<IRadioCardGroupProps<T, V>>,
+): React.JSX.Element {
+  const {
+    control,
+    register,
+    name,
+    options,
+    ariaLabelledBy,
+    columns = RADIO_CARD_COLUMNS_2,
+  } = props;
+  const current = useWatch({ control, name }) as V | undefined;
+
+  const colClass =
+    columns === RADIO_CARD_COLUMNS_4
+      ? "sm:grid-cols-2 lg:grid-cols-4"
+      : columns === RADIO_CARD_COLUMNS_3
+        ? "sm:grid-cols-3"
+        : "sm:grid-cols-2";
+
+  return (
+    <div role="radiogroup" aria-labelledby={ariaLabelledBy} className={cn("grid gap-2", colClass)}>
+      {options.map((opt) => {
+        const active = current === opt.value;
+        return (
+          <label
+            key={opt.value}
+            className={cn(
+              "relative flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2.5 transition-colors",
+              active
+                ? "border-latam-indigo bg-latam-indigo/[0.04] ring-latam-indigo/30 ring-1"
+                : "border-border bg-card hover:border-latam-indigo/30 hover:bg-secondary/40",
+            )}
+          >
+            <input type="radio" value={opt.value} className="sr-only" {...register(name)} />
+            <span
+              aria-hidden="true"
+              className={cn(
+                "mt-0.5 grid size-3.5 flex-none place-items-center rounded-full border-2",
+                active ? "border-latam-indigo" : "border-border",
+              )}
+            >
+              {active ? <span className="bg-latam-indigo size-1.5 rounded-full" /> : null}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="text-foreground block text-[12.5px] leading-tight font-medium">
+                {opt.label}
+              </span>
+              {opt.description ? (
+                <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug">
+                  {opt.description}
+                </span>
+              ) : null}
+            </span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+interface IQualitySliderProps<T extends FieldValues> {
+  control: Control<T>;
+  register: UseFormRegister<T>;
+  name: Path<T>;
+  inputId: string;
+  min: number;
+  max: number;
+  ariaInvalid?: boolean;
+  ariaDescribedBy?: string;
+  ariaLabelledBy?: string;
+}
+
+/**
+ * Quality slider — pairs a controlled range input (driven by useWatch so the
+ * thumb tracks edits to the number input) with an uncontrolled number input
+ * that registers directly with react-hook-form. Sharing the same field name
+ * keeps both inputs in sync without registering the field twice.
+ */
+function QualitySlider<T extends FieldValues>(
+  props: Readonly<IQualitySliderProps<T>>,
+): React.JSX.Element {
+  const {
+    control,
+    register,
+    name,
+    inputId,
+    min,
+    max,
+    ariaInvalid,
+    ariaDescribedBy,
+    ariaLabelledBy,
+  } = props;
+
+  const watched = useWatch({ control, name }) as number | undefined;
+  const rangeValue = typeof watched === "number" && Number.isFinite(watched) ? watched : min;
+  const registered = register(name, { valueAsNumber: true });
+
+  return (
+    <div className="flex items-center gap-3">
+      <input
+        type="range"
+        min={min}
+        max={max}
+        value={rangeValue}
+        onChange={(event) => {
+          void registered.onChange(event);
+        }}
+        onBlur={(event) => {
+          void registered.onBlur(event);
+        }}
+        aria-labelledby={ariaLabelledBy}
+        className="accent-latam-indigo flex-1"
+      />
+      <input
+        id={inputId}
+        type="number"
+        min={min}
+        max={max}
+        className={cn(inputClasses, "w-20 font-mono")}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
+        aria-labelledby={ariaLabelledBy}
+        {...registered}
+      />
+    </div>
+  );
+}
+
 interface IPresetParamsFieldsProps<T extends FieldValues> {
+  control: Control<T>;
   register: UseFormRegister<T>;
   errors: FieldErrors<T>;
   idPrefix: string;
@@ -97,7 +259,7 @@ interface IPresetParamsFieldsProps<T extends FieldValues> {
 export function PresetParamsFields<T extends FieldValues>(
   props: Readonly<IPresetParamsFieldsProps<T>>,
 ): React.JSX.Element {
-  const { register, errors, idPrefix } = props;
+  const { control, register, errors, idPrefix } = props;
   const { t } = useTranslation();
 
   const paramsErrors = (errors as FieldErrors<{ params: IPresetParamsValues }>).params;
@@ -109,6 +271,12 @@ export function PresetParamsFields<T extends FieldValues>(
   const qualityPath = "params.quality" as Path<T>;
   const dprPath = "params.dpr" as Path<T>;
 
+  const fitOptions = PRESET_FITS.map((fit) => ({
+    value: fit,
+    label: fit,
+    description: t(`pages.namespaces.presets.form.fitOptions.${fit}`),
+  }));
+
   return (
     <>
       <PresetNumberedSection
@@ -118,7 +286,7 @@ export function PresetParamsFields<T extends FieldValues>(
         hint={t("pages.namespaces.presets.form.sections.dimensionsHint")}
       >
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <div className="grid gap-2">
+          <div className="grid gap-1">
             <FieldLabel htmlFor={`${idPrefix}-width`}>
               {t("pages.namespaces.presets.form.width")}
             </FieldLabel>
@@ -130,7 +298,9 @@ export function PresetParamsFields<T extends FieldValues>(
               placeholder="—"
               className={cn(inputClasses, "font-mono")}
               aria-invalid={paramsErrors?.width ? true : undefined}
-              aria-describedby={paramsErrors?.width ? `${idPrefix}-width-error` : undefined}
+              aria-describedby={
+                paramsErrors?.width ? `${idPrefix}-width-error` : `${idPrefix}-width-hint`
+              }
               {...register(widthPath, {
                 setValueAs: (rawValue: string) => (rawValue === "" ? undefined : Number(rawValue)),
               })}
@@ -139,10 +309,12 @@ export function PresetParamsFields<T extends FieldValues>(
               <FieldMessage id={`${idPrefix}-width-error`}>
                 {paramsErrors.width.message}
               </FieldMessage>
-            ) : null}
+            ) : (
+              <FieldHint>{t("pages.namespaces.presets.form.widthHint")}</FieldHint>
+            )}
           </div>
 
-          <div className="grid gap-2">
+          <div className="grid gap-1">
             <FieldLabel htmlFor={`${idPrefix}-height`}>
               {t("pages.namespaces.presets.form.height")}
             </FieldLabel>
@@ -154,7 +326,9 @@ export function PresetParamsFields<T extends FieldValues>(
               placeholder="—"
               className={cn(inputClasses, "font-mono")}
               aria-invalid={paramsErrors?.height ? true : undefined}
-              aria-describedby={paramsErrors?.height ? `${idPrefix}-height-error` : undefined}
+              aria-describedby={
+                paramsErrors?.height ? `${idPrefix}-height-error` : `${idPrefix}-height-hint`
+              }
               {...register(heightPath, {
                 setValueAs: (rawValue: string) => (rawValue === "" ? undefined : Number(rawValue)),
               })}
@@ -163,32 +337,34 @@ export function PresetParamsFields<T extends FieldValues>(
               <FieldMessage id={`${idPrefix}-height-error`}>
                 {paramsErrors.height.message}
               </FieldMessage>
-            ) : null}
+            ) : (
+              <FieldHint>{t("pages.namespaces.presets.form.heightHint")}</FieldHint>
+            )}
           </div>
 
           <div className="grid gap-2 sm:col-span-2">
-            <FieldLabel htmlFor={`${idPrefix}-fit`}>
-              {t("pages.namespaces.presets.form.fit")}
-            </FieldLabel>
-            <select
-              id={`${idPrefix}-fit`}
-              className={selectClasses}
-              aria-invalid={paramsErrors?.fit ? true : undefined}
-              aria-describedby={paramsErrors?.fit ? `${idPrefix}-fit-error` : undefined}
-              {...register(fitPath)}
+            <span
+              id={`${idPrefix}-fit-label`}
+              className="text-foreground text-[11.5px] font-medium"
             >
-              {PRESET_FITS.map((fit) => (
-                <option key={fit} value={fit}>
-                  {fit}
-                </option>
-              ))}
-            </select>
+              {t("pages.namespaces.presets.form.fit")}
+            </span>
+            <RadioCardGroup<T, (typeof PRESET_FITS)[number]>
+              control={control}
+              register={register}
+              name={fitPath}
+              options={fitOptions}
+              ariaLabelledBy={`${idPrefix}-fit-label`}
+              columns={3}
+            />
             {paramsErrors?.fit?.message ? (
               <FieldMessage id={`${idPrefix}-fit-error`}>{paramsErrors.fit.message}</FieldMessage>
-            ) : null}
+            ) : (
+              <FieldHint>{t("pages.namespaces.presets.form.fitHint")}</FieldHint>
+            )}
           </div>
 
-          <div className="grid gap-2">
+          <div className="grid gap-1">
             <FieldLabel htmlFor={`${idPrefix}-dpr`}>
               {t("pages.namespaces.presets.form.dpr")}
             </FieldLabel>
@@ -201,14 +377,18 @@ export function PresetParamsFields<T extends FieldValues>(
               placeholder="—"
               className={cn(inputClasses, "font-mono")}
               aria-invalid={paramsErrors?.dpr ? true : undefined}
-              aria-describedby={paramsErrors?.dpr ? `${idPrefix}-dpr-error` : undefined}
+              aria-describedby={
+                paramsErrors?.dpr ? `${idPrefix}-dpr-error` : `${idPrefix}-dpr-hint`
+              }
               {...register(dprPath, {
                 setValueAs: (rawValue: string) => (rawValue === "" ? undefined : Number(rawValue)),
               })}
             />
             {paramsErrors?.dpr?.message ? (
               <FieldMessage id={`${idPrefix}-dpr-error`}>{paramsErrors.dpr.message}</FieldMessage>
-            ) : null}
+            ) : (
+              <FieldHint>{t("pages.namespaces.presets.form.dprHint")}</FieldHint>
+            )}
           </div>
         </div>
       </PresetNumberedSection>
@@ -220,7 +400,7 @@ export function PresetParamsFields<T extends FieldValues>(
         hint={t("pages.namespaces.presets.form.sections.encodingHint")}
       >
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <div className="grid gap-2">
+          <div className="grid gap-1">
             <FieldLabel htmlFor={`${idPrefix}-format`}>
               {t("pages.namespaces.presets.form.format")}
             </FieldLabel>
@@ -228,7 +408,9 @@ export function PresetParamsFields<T extends FieldValues>(
               id={`${idPrefix}-format`}
               className={selectClasses}
               aria-invalid={paramsErrors?.format ? true : undefined}
-              aria-describedby={paramsErrors?.format ? `${idPrefix}-format-error` : undefined}
+              aria-describedby={
+                paramsErrors?.format ? `${idPrefix}-format-error` : `${idPrefix}-format-hint`
+              }
               {...register(formatPath)}
             >
               {PRESET_FORMATS.map((format) => (
@@ -241,28 +423,38 @@ export function PresetParamsFields<T extends FieldValues>(
               <FieldMessage id={`${idPrefix}-format-error`}>
                 {paramsErrors.format.message}
               </FieldMessage>
-            ) : null}
+            ) : (
+              <FieldHint>{t("pages.namespaces.presets.form.formatHint")}</FieldHint>
+            )}
           </div>
 
-          <div className="grid gap-2">
-            <FieldLabel htmlFor={`${idPrefix}-quality`}>
+          <div className="grid gap-1">
+            <span
+              id={`${idPrefix}-quality-label`}
+              className="text-foreground text-[11.5px] font-medium"
+            >
               {t("pages.namespaces.presets.form.quality")}
-            </FieldLabel>
-            <input
-              id={`${idPrefix}-quality`}
-              type="number"
+            </span>
+            <QualitySlider<T>
+              control={control}
+              register={register}
+              name={qualityPath}
+              inputId={`${idPrefix}-quality`}
               min={MIN_QUALITY}
               max={MAX_QUALITY}
-              className={cn(inputClasses, "font-mono")}
-              aria-invalid={paramsErrors?.quality ? true : undefined}
-              aria-describedby={paramsErrors?.quality ? `${idPrefix}-quality-error` : undefined}
-              {...register(qualityPath, { valueAsNumber: true })}
+              ariaInvalid={paramsErrors?.quality ? true : undefined}
+              ariaLabelledBy={`${idPrefix}-quality-label`}
+              ariaDescribedBy={
+                paramsErrors?.quality ? `${idPrefix}-quality-error` : `${idPrefix}-quality-hint`
+              }
             />
             {paramsErrors?.quality?.message ? (
               <FieldMessage id={`${idPrefix}-quality-error`}>
                 {paramsErrors.quality.message}
               </FieldMessage>
-            ) : null}
+            ) : (
+              <FieldHint>{t("pages.namespaces.presets.form.qualityHint")}</FieldHint>
+            )}
           </div>
         </div>
       </PresetNumberedSection>

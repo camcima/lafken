@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
+import { RadioCardGroup } from "@/features/namespaces/components/PresetFormShared";
 import { useCreateNamespace } from "@/features/namespaces/hooks/useNamespaces";
 import { useStorageBindings } from "@/features/system/hooks/useSystem";
 import { ApiError } from "@/lib/api/api-error";
@@ -165,23 +166,27 @@ function FieldHelp({
 interface INumberedSectionProps {
   num: number;
   title: string;
+  hint?: string;
   children: React.ReactNode;
   labelledBy: string;
 }
 
 function NumberedSection(props: Readonly<INumberedSectionProps>): React.JSX.Element {
-  const { num, title, labelledBy, children } = props;
+  const { num, title, hint, labelledBy, children } = props;
   const numStr = String(num).padStart(2, "0");
   return (
     <Card className="p-0" aria-labelledby={labelledBy}>
       <div className="border-border/60 flex items-baseline gap-3 border-b px-6 py-4">
         <span className="text-latam-pink font-mono text-[11px] tabular-nums">{numStr}</span>
-        <h2
-          id={labelledBy}
-          className="text-foreground m-0 flex-1 text-[14px] font-semibold tracking-tight"
-        >
-          {title}
-        </h2>
+        <div className="flex-1">
+          <h2
+            id={labelledBy}
+            className="text-foreground m-0 text-[14px] font-semibold tracking-tight"
+          >
+            {title}
+          </h2>
+          {hint ? <div className="text-muted-foreground mt-0.5 text-[11.5px]">{hint}</div> : null}
+        </div>
       </div>
       <div className="space-y-4 px-6 py-5">{children}</div>
     </Card>
@@ -561,6 +566,7 @@ export function NewNamespacePage(): React.JSX.Element {
             num={1}
             labelledBy="section-identity"
             title={t("pages.namespaces.form.sections.identity")}
+            hint={t("pages.namespaces.form.sections.identityHint")}
           >
             {/* Slug */}
             <div className="grid gap-2">
@@ -616,6 +622,7 @@ export function NewNamespacePage(): React.JSX.Element {
             num={2}
             labelledBy="section-storage"
             title={t("pages.namespaces.form.sections.storage")}
+            hint={t("pages.namespaces.form.sections.storageHint")}
           >
             <div className="grid gap-2">
               <FieldLabel htmlFor="ns-storage-binding">
@@ -649,6 +656,7 @@ export function NewNamespacePage(): React.JSX.Element {
             num={3}
             labelledBy="section-validation"
             title={t("pages.namespaces.form.sections.validation")}
+            hint={t("pages.namespaces.form.sections.validationHint")}
           >
             {/* Max file size */}
             <div className="grid gap-2">
@@ -722,6 +730,7 @@ export function NewNamespacePage(): React.JSX.Element {
             num={4}
             labelledBy="section-lifecycle"
             title={t("pages.namespaces.form.sections.lifecycle")}
+            hint={t("pages.namespaces.form.sections.lifecycleHint")}
           >
             {/* Retention days */}
             <div className="grid gap-2">
@@ -747,19 +756,36 @@ export function NewNamespacePage(): React.JSX.Element {
 
             {/* Retention mode */}
             <div className="grid gap-2">
-              <FieldLabel htmlFor="ns-retention-mode">
-                {t("pages.namespaces.form.fields.retentionMode")}
-              </FieldLabel>
-              <SelectInput
-                id="ns-retention-mode"
-                aria-invalid={errors.retentionMode ? true : undefined}
-                aria-describedby={errors.retentionMode ? "ns-retention-mode-error" : undefined}
-                {...register("retentionMode")}
+              <span
+                id="ns-retention-mode-label"
+                className="text-foreground text-[11.5px] font-medium"
               >
-                <option value="delete">{t("pages.namespaces.form.retentionMode.delete")}</option>
-                <option value="archive">{t("pages.namespaces.form.retentionMode.archive")}</option>
-                <option value="none">{t("pages.namespaces.form.retentionMode.none")}</option>
-              </SelectInput>
+                {t("pages.namespaces.form.fields.retentionMode")}
+              </span>
+              <RadioCardGroup<IFormValues, "delete" | "archive" | "none">
+                control={form.control}
+                register={register}
+                name="retentionMode"
+                ariaLabelledBy="ns-retention-mode-label"
+                columns={3}
+                options={[
+                  {
+                    value: "delete",
+                    label: t("pages.namespaces.form.retentionMode.delete"),
+                    description: t("pages.namespaces.form.retentionModeHints.delete"),
+                  },
+                  {
+                    value: "archive",
+                    label: t("pages.namespaces.form.retentionMode.archive"),
+                    description: t("pages.namespaces.form.retentionModeHints.archive"),
+                  },
+                  {
+                    value: "none",
+                    label: t("pages.namespaces.form.retentionMode.none"),
+                    description: t("pages.namespaces.form.retentionModeHints.none"),
+                  },
+                ]}
+              />
               {errors.retentionMode?.message ? (
                 <FieldMessage id="ns-retention-mode-error">
                   {errors.retentionMode.message}
@@ -769,21 +795,36 @@ export function NewNamespacePage(): React.JSX.Element {
 
             {/* EXIF handling */}
             <div className="grid gap-2">
-              <FieldLabel htmlFor="ns-exif-handling">
-                {t("pages.namespaces.form.fields.exifHandling")}
-              </FieldLabel>
-              <SelectInput
-                id="ns-exif-handling"
-                aria-invalid={errors.exifHandling ? true : undefined}
-                aria-describedby={errors.exifHandling ? "ns-exif-handling-error" : undefined}
-                {...register("exifHandling")}
+              <span
+                id="ns-exif-handling-label"
+                className="text-foreground text-[11.5px] font-medium"
               >
-                <option value="strip">{t("pages.namespaces.form.exifHandling.strip")}</option>
-                <option value="preserve">{t("pages.namespaces.form.exifHandling.preserve")}</option>
-                <option value="extract_then_strip">
-                  {t("pages.namespaces.form.exifHandling.extract_then_strip")}
-                </option>
-              </SelectInput>
+                {t("pages.namespaces.form.fields.exifHandling")}
+              </span>
+              <RadioCardGroup<IFormValues, "strip" | "preserve" | "extract_then_strip">
+                control={form.control}
+                register={register}
+                name="exifHandling"
+                ariaLabelledBy="ns-exif-handling-label"
+                columns={3}
+                options={[
+                  {
+                    value: "strip",
+                    label: t("pages.namespaces.form.exifHandling.strip"),
+                    description: t("pages.namespaces.form.exifHandlingHints.strip"),
+                  },
+                  {
+                    value: "preserve",
+                    label: t("pages.namespaces.form.exifHandling.preserve"),
+                    description: t("pages.namespaces.form.exifHandlingHints.preserve"),
+                  },
+                  {
+                    value: "extract_then_strip",
+                    label: t("pages.namespaces.form.exifHandling.extract_then_strip"),
+                    description: t("pages.namespaces.form.exifHandlingHints.extract_then_strip"),
+                  },
+                ]}
+              />
               {errors.exifHandling?.message ? (
                 <FieldMessage id="ns-exif-handling-error">
                   {errors.exifHandling.message}
@@ -815,22 +856,40 @@ export function NewNamespacePage(): React.JSX.Element {
             num={5}
             labelledBy="section-serving"
             title={t("pages.namespaces.form.sections.serving")}
+            hint={t("pages.namespaces.form.sections.servingHint")}
           >
             {/* Serving mode */}
             <div className="grid gap-2">
-              <FieldLabel htmlFor="ns-serving-mode">
-                {t("pages.namespaces.form.fields.servingMode")}
-              </FieldLabel>
-              <SelectInput
-                id="ns-serving-mode"
-                aria-invalid={errors.servingMode ? true : undefined}
-                aria-describedby={errors.servingMode ? "ns-serving-mode-error" : undefined}
-                {...register("servingMode")}
+              <span
+                id="ns-serving-mode-label"
+                className="text-foreground text-[11.5px] font-medium"
               >
-                <option value="public">{t("pages.namespaces.form.servingMode.public")}</option>
-                <option value="signed">{t("pages.namespaces.form.servingMode.signed")}</option>
-                <option value="proxied">{t("pages.namespaces.form.servingMode.proxied")}</option>
-              </SelectInput>
+                {t("pages.namespaces.form.fields.servingMode")}
+              </span>
+              <RadioCardGroup<IFormValues, "public" | "signed" | "proxied">
+                control={form.control}
+                register={register}
+                name="servingMode"
+                ariaLabelledBy="ns-serving-mode-label"
+                columns={3}
+                options={[
+                  {
+                    value: "public",
+                    label: t("pages.namespaces.form.servingMode.public"),
+                    description: t("pages.namespaces.form.servingModeHints.public"),
+                  },
+                  {
+                    value: "signed",
+                    label: t("pages.namespaces.form.servingMode.signed"),
+                    description: t("pages.namespaces.form.servingModeHints.signed"),
+                  },
+                  {
+                    value: "proxied",
+                    label: t("pages.namespaces.form.servingMode.proxied"),
+                    description: t("pages.namespaces.form.servingModeHints.proxied"),
+                  },
+                ]}
+              />
               {errors.servingMode?.message ? (
                 <FieldMessage id="ns-serving-mode-error">{errors.servingMode.message}</FieldMessage>
               ) : null}
@@ -888,6 +947,7 @@ export function NewNamespacePage(): React.JSX.Element {
             num={6}
             labelledBy="section-advanced"
             title={t("pages.namespaces.form.sections.advanced")}
+            hint={t("pages.namespaces.form.sections.advancedHint")}
           >
             {/* Content moderation */}
             <div className="grid gap-2">

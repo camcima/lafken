@@ -300,6 +300,7 @@ export function EditPresetPage(): React.JSX.Element {
           </PresetNumberedSection>
 
           <PresetParamsFields<IUpdatePresetVersionValues>
+            control={control}
             register={register}
             errors={errors}
             idPrefix="ep"

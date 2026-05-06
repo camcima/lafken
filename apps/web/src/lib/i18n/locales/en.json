@@ -470,7 +470,13 @@
           "validation": "Validation",
           "lifecycle": "Lifecycle",
           "serving": "Serving",
-          "advanced": "Advanced"
+          "advanced": "Advanced",
+          "identityHint": "How this namespace is referenced in code, logs, and the audit trail.",
+          "storageHint": "Where uploaded objects are stored.",
+          "validationHint": "Constraints applied at upload time before an asset is accepted.",
+          "lifecycleHint": "Retention, EXIF handling, and immutability rules.",
+          "servingHint": "How rendered assets are delivered to clients.",
+          "advancedHint": "Optional JSON for moderation, required metadata, and retry policy."
         },
         "fields": {
           "slug": "Slug",
@@ -492,7 +498,20 @@
           "signedUrlBucketSize": "Signed URL bucket size (optional)",
           "contentModeration": "Content moderation config (JSON, optional)",
           "requiredMetadataSchema": "Required metadata schema (JSON, optional)",
-          "retryConfig": "Retry config (JSON, optional)"
+          "retryConfig": "Retry config (JSON, optional)",
+          "storageBindingHelp": "Pick the storage binding where uploaded objects land. Manage bindings under System.",
+          "maxFileSizeBytesHelp": "Maximum upload size in bytes. Defaults to 50 MiB (52,428,800).",
+          "virusScanRequiredHelp": "Reject uploads if the antivirus scanner is unreachable.",
+          "retentionDaysHelp": "Days to retain assets after upload. Leave empty for indefinite retention.",
+          "retentionModeHelp": "delete: hard-delete after retention. archive: keep with an archived marker. none: no automatic action.",
+          "exifHandlingHelp": "strip removes EXIF on store. preserve keeps it. extract_then_strip stores metadata server-side, then strips.",
+          "immutableHelp": "Once uploaded, assets cannot be replaced or edited in place.",
+          "servingModeHelp": "public: anyone can fetch. signed: short-lived pre-signed URLs only. proxied: every request streams through the app.",
+          "signedUrlTtlSecondsHelp": "How long a single signed URL stays valid, in seconds.",
+          "signedUrlBucketSizeHelp": "Cache window for batched signed-URL issuance, in seconds.",
+          "contentModerationHelp": "JSON config for moderation thresholds. Leave empty to disable.",
+          "requiredMetadataSchemaHelp": "JSON Schema describing metadata fields required at upload. Leave empty for none.",
+          "retryConfigHelp": "JSON config for the asset-upload retry policy. Leave empty to use defaults."
         },
         "retentionMode": {
           "delete": "Delete",
@@ -512,7 +531,22 @@
         "cancel": "Cancel",
         "submit": "Create namespace",
         "yamlPreviewLabel": "Live YAML preview",
-        "yamlPreviewTitle": "Live preview"
+        "yamlPreviewTitle": "Live preview",
+        "retentionModeHints": {
+          "delete": "Delete the asset and its renditions when retention expires.",
+          "archive": "Mark archived but keep the bytes; never serve again unless restored.",
+          "none": "No automatic action — assets live indefinitely."
+        },
+        "exifHandlingHints": {
+          "strip": "Remove all EXIF data on upload. Smallest object, no metadata.",
+          "preserve": "Keep all EXIF metadata as the camera wrote it.",
+          "extract_then_strip": "Extract EXIF into the database, then strip from the stored bytes."
+        },
+        "servingModeHints": {
+          "public": "Anyone with the URL can fetch — no signature required.",
+          "signed": "Issue short-lived pre-signed URLs to authorized callers.",
+          "proxied": "All requests stream through the application; nothing served direct from storage."
+        }
       },
       "edit": {
         "title": "Edit namespace",
@@ -612,7 +646,20 @@
           },
           "previewLabel": "Live preview",
           "sampleUrlTitle": "Sample URL",
-          "editNameLocked": "Names are immutable. Create a new preset to rename."
+          "editNameLocked": "Names are immutable. Create a new preset to rename.",
+          "fitOptions": {
+            "cover": "Crop to fill the box. Source aspect is preserved; edges may be cut.",
+            "contain": "Fit entirely inside the box. Aspect preserved; may leave empty space.",
+            "fill": "Stretch to fill the box exactly. May distort the image.",
+            "inside": "Resize so the image fits inside the box, but never upscale.",
+            "outside": "Resize so the image fills the box, but never downscale below it."
+          },
+          "widthHint": "Pixels. Leave empty to compute from height + aspect ratio.",
+          "heightHint": "Pixels. Leave empty to compute from width + aspect ratio.",
+          "fitHint": "How the source image is fitted into the target box.",
+          "formatHint": "auto picks the best format from the client's Accept header.",
+          "qualityHint": "Higher = better quality and larger files. 80 is a sensible default.",
+          "dprHint": "Output device-pixel ratio. 2 doubles dimensions for retina displays."
         },
         "history": {
           "title": "Past versions",

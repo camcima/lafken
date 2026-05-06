@@ -549,7 +549,20 @@
           },
           "previewLabel": "Pré-visualização ao vivo",
           "sampleUrlTitle": "URL de exemplo",
-          "editNameLocked": "Os nomes são imutáveis. Crie um novo preset para renomear."
+          "editNameLocked": "Os nomes são imutáveis. Crie um novo preset para renomear.",
+          "fitOptions": {
+            "cover": "Recorta para preencher a caixa. Mantém a proporção; bordas podem ser cortadas.",
+            "contain": "Cabe inteiro dentro da caixa. Mantém a proporção; pode deixar espaço vazio.",
+            "fill": "Estica para preencher exatamente a caixa. Pode distorcer a imagem.",
+            "inside": "Redimensiona para caber dentro, mas nunca amplia.",
+            "outside": "Redimensiona para preencher a caixa, mas nunca reduz abaixo dela."
+          },
+          "widthHint": "Pixels. Deixe vazio para calcular a partir da altura e da proporção.",
+          "heightHint": "Pixels. Deixe vazio para calcular a partir da largura e da proporção.",
+          "fitHint": "Como a imagem se encaixa na caixa de destino.",
+          "formatHint": "auto escolhe o melhor formato a partir do Accept do cliente.",
+          "qualityHint": "Maior = mais qualidade e arquivo maior. 80 é um padrão sensato.",
+          "dprHint": "Razão de pixels do dispositivo. 2 dobra as dimensões para telas retina."
         },
         "history": {
           "title": "Versões anteriores",
@@ -593,7 +606,13 @@
           "validation": "Validação",
           "lifecycle": "Ciclo de vida",
           "serving": "Entrega",
-          "advanced": "Avançado (JSON)"
+          "advanced": "Avançado (JSON)",
+          "identityHint": "Como este namespace é referenciado em código, logs e auditoria.",
+          "storageHint": "Onde os objetos enviados são armazenados.",
+          "validationHint": "Restrições aplicadas no upload antes de aceitar um ativo.",
+          "lifecycleHint": "Regras de retenção, tratamento de EXIF e imutabilidade.",
+          "servingHint": "Como os ativos renderizados são entregues aos clientes.",
+          "advancedHint": "JSON opcional para moderação, metadados obrigatórios e política de retentativas."
         },
         "fields": {
           "slug": "Slug",
@@ -615,7 +634,20 @@
           "signedUrlBucketSize": "Tamanho do bucket de URL assinada (segundos)",
           "contentModeration": "Configuração de moderação de conteúdo (JSON)",
           "requiredMetadataSchema": "Esquema de metadados obrigatório (JSON)",
-          "retryConfig": "Configuração de tentativas (JSON)"
+          "retryConfig": "Configuração de tentativas (JSON)",
+          "storageBindingHelp": "Escolha o binding de armazenamento onde os objetos serão guardados. Gerencie bindings em Sistema.",
+          "maxFileSizeBytesHelp": "Tamanho máximo de upload em bytes. Padrão 50 MiB (52.428.800).",
+          "virusScanRequiredHelp": "Rejeita uploads se o antivírus estiver indisponível.",
+          "retentionDaysHelp": "Dias para reter os ativos. Deixe vazio para retenção indefinida.",
+          "retentionModeHelp": "delete: exclusão definitiva ao expirar. archive: mantém com marca de arquivado. none: sem ação automática.",
+          "exifHandlingHelp": "strip remove EXIF ao salvar. preserve mantém. extract_then_strip guarda os metadados no servidor e depois remove.",
+          "immutableHelp": "Após o upload, os ativos não podem ser substituídos nem editados.",
+          "servingModeHelp": "public: acesso aberto. signed: apenas URLs pré-assinadas. proxied: cada requisição passa pela aplicação.",
+          "signedUrlTtlSecondsHelp": "Por quanto tempo uma URL assinada é válida, em segundos.",
+          "signedUrlBucketSizeHelp": "Janela de cache para emissão em lote de URLs assinadas, em segundos.",
+          "contentModerationHelp": "JSON com limiares de moderação. Deixe vazio para desativar.",
+          "requiredMetadataSchemaHelp": "JSON Schema com os metadados obrigatórios no upload. Deixe vazio para nenhum.",
+          "retryConfigHelp": "JSON com a política de retentativas. Deixe vazio para usar os padrões."
         },
         "retentionMode": {
           "delete": "Excluir",
@@ -635,7 +667,22 @@
         "cancel": "Cancelar",
         "submit": "Criar namespace",
         "yamlPreviewLabel": "Pré-visualização YAML ao vivo",
-        "yamlPreviewTitle": "Pré-visualização"
+        "yamlPreviewTitle": "Pré-visualização",
+        "retentionModeHints": {
+          "delete": "Exclui o ativo e suas variações quando a retenção expira.",
+          "archive": "Marca como arquivado mas mantém os bytes; só volta a servir se restaurado.",
+          "none": "Sem ação automática — os ativos permanecem indefinidamente."
+        },
+        "exifHandlingHints": {
+          "strip": "Remove todo o EXIF no upload. Objeto menor, sem metadados.",
+          "preserve": "Mantém todo o EXIF como a câmera gravou.",
+          "extract_then_strip": "Extrai o EXIF para o banco e depois remove dos bytes armazenados."
+        },
+        "servingModeHints": {
+          "public": "Qualquer pessoa com a URL pode acessar — sem assinatura.",
+          "signed": "Emite URLs pré-assinadas de curta duração para clientes autorizados.",
+          "proxied": "Todas as requisições passam pela aplicação; nada é servido direto do armazenamento."
+        }
       },
       "edit": {
         "title": "Editar namespace",
