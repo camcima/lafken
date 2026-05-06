@@ -64,6 +64,10 @@ export class OIDCAuthAdapter implements IAuthProvider {
   private readonly manager: UserManager;
   private currentUser: AuthUser | null = null;
   private readonly authStateCallbacks: Set<(user: AuthUser | null) => void> = new Set();
+  // Cached in-flight redirect callback. The OIDC code can only be redeemed
+  // once; concurrent callers (e.g. React 18 StrictMode double-firing the
+  // initialization effect) must share a single token-exchange request.
+  private redirectCallbackPromise: Promise<void> | null = null;
 
   constructor(config: OIDCAdapterConfig) {
     const settings: UserManagerSettings = {
@@ -167,24 +171,30 @@ export class OIDCAuthAdapter implements IAuthProvider {
   }
 
   async handleRedirectCallback(): Promise<void> {
+    if (this.redirectCallbackPromise) {
+      return this.redirectCallbackPromise;
+    }
     const url = globalThis.location.href;
     if (!url.includes("code=") && !url.includes("error=")) {
       return;
     }
-    logger.info("[OIDC] Handling redirect callback");
-    const result = await this.manager.signinRedirectCallback();
-    this.currentUser = this.toAuthUser(result);
-    this.notifyAuthStateChanged(this.currentUser);
+    this.redirectCallbackPromise = (async () => {
+      logger.info("[OIDC] Handling redirect callback");
+      const result = await this.manager.signinRedirectCallback();
+      this.currentUser = this.toAuthUser(result);
+      this.notifyAuthStateChanged(this.currentUser);
 
-    const state = result.state as { redirect?: string } | undefined;
-    const target = state?.redirect && isSafeRedirectPath(state.redirect) ? state.redirect : "/";
+      const state = result.state as { redirect?: string } | undefined;
+      const target = state?.redirect && isSafeRedirectPath(state.redirect) ? state.redirect : "/";
 
-    logger.auth("[OIDC] Redirect callback handled", {
-      userId: this.currentUser.id,
-      redirectTarget: target,
-    });
+      logger.auth("[OIDC] Redirect callback handled", {
+        userId: this.currentUser.id,
+        redirectTarget: target,
+      });
 
-    globalThis.history.replaceState({}, "", target);
+      globalThis.history.replaceState({}, "", target);
+    })();
+    return this.redirectCallbackPromise;
   }
 
   getProviderName(): string {
