@@ -1,6 +1,8 @@
+import type { ProcessingJobState } from "../value-objects/processing-job-state.value-object";
+
 export interface IProcessingJobProps {
   assetId: string;
-  state: string;
+  state: ProcessingJobState;
   workerId: string | null;
   currentStep: string | null;
   attemptNumber: number;

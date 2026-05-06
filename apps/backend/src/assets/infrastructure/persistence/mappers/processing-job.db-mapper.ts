@@ -1,10 +1,11 @@
 import { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
+import type { ProcessingJobState } from "@/assets/domain/value-objects/processing-job-state.value-object";
 
 export class ProcessingJobDbMapper {
   static toDomain(row: Record<string, any>): ProcessingJob {
     return ProcessingJob.fromProps({
       assetId: row["asset_id"] as string,
-      state: row["state"] as string,
+      state: row["state"] as ProcessingJobState,
       workerId: (row["worker_id"] as string | null) ?? null,
       currentStep: (row["current_step"] as string | null) ?? null,
       attemptNumber: row["attempt_number"] as number,

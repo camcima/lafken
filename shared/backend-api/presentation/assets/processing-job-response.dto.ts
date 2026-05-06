@@ -1,8 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
 
 export class ProcessingJobResponseDTO {
-  @ApiProperty({ enum: ["claimed", "released", "completed"] })
-  state!: "claimed" | "released" | "completed";
+  @ApiProperty({ enum: ["claimed", "released", "completed", "failed"] })
+  state!: "claimed" | "released" | "completed" | "failed";
 
   @ApiProperty({ required: false, type: String })
   workerId?: string;

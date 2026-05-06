@@ -5,7 +5,7 @@ import type { ProcessingJob } from "@/assets/domain/entities/processing-job.enti
 export class ProcessingJobResponseMapper {
   static fromDomain(job: ProcessingJob): ProcessingJobResponseDTO {
     return {
-      state: job.props.state as ProcessingJobResponseDTO["state"],
+      state: job.props.state,
       workerId: job.props.workerId ?? undefined,
       currentStep: job.props.currentStep ?? undefined,
       attemptNumber: job.props.attemptNumber,
