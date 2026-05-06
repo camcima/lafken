@@ -51,8 +51,14 @@ export class ImgproxyPreviewUrlSigner extends PreviewUrlSignerPort {
     const options: string = this.buildProcessingOptions(input.preset);
     const sourceB64: string = Buffer.from(input.sourceUrl, "utf8").toString("base64url");
     // For base64-encoded source URLs imgproxy expects the format extension as
-    // `.ext`, not the plain-style `@ext` suffix.
-    const formatSuffix: string = input.preset.format ? `.${input.preset.format}` : "";
+    // `.ext`, not the plain-style `@ext` suffix. The Lafken preset value
+    // `auto` means "no explicit output format" — emit no extension so imgproxy
+    // serves the source format (subject to its own auto-format negotiation).
+    const explicitFormat: boolean =
+      input.preset.format !== null &&
+      input.preset.format !== undefined &&
+      input.preset.format !== "auto";
+    const formatSuffix: string = explicitFormat ? `.${input.preset.format ?? ""}` : "";
     const path: string = `/${options}/${sourceB64}${formatSuffix}`;
     const hmac = createHmac("sha256", this.key);
     hmac.update(this.salt);

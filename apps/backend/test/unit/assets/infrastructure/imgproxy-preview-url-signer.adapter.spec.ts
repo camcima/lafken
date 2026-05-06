@@ -80,6 +80,18 @@ describe("ImgproxyPreviewUrlSigner", () => {
     expect(url.endsWith(".avif")).toBe(true);
   });
 
+  it("omits the format suffix when preset format is 'auto' (imgproxy serves source format)", () => {
+    const signer = makeSigner();
+    const url = signer.sign({
+      sourceUrl: "http://fake-gcs:4443/lafken-dev/x/source",
+      preset: { fit: "fit", width: 100, height: 100, format: "auto", quality: null, dpr: null },
+    });
+    expect(url.endsWith(".auto")).toBe(false);
+    // Last path segment should be the base64url-encoded source with no extension.
+    const lastSegment: string = url.split("/").at(-1) ?? "";
+    expect(lastSegment).not.toContain(".");
+  });
+
   it("appends a dpr option when set", () => {
     const signer = makeSigner();
     const url = signer.sign({
