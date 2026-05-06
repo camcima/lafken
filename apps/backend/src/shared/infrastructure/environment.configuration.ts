@@ -128,6 +128,16 @@ const environmentSchema = z
     PROCESSING_WORKER_STALE_CLAIM_MS: z.coerce.number().int().positive().default(60_000),
     PROCESSING_WORKER_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
     PROCESSING_WORKER_SHUTDOWN_GRACE_MS: z.coerce.number().int().positive().default(30_000),
+    /**
+     * Forces the local virus-scan adapter to report an infected outcome.
+     * Dev-only knob to dogfood the quarantine flow end-to-end.
+     */
+    PROCESSING_VIRUS_SCAN_FORCE_INFECTED: z
+      .enum(["true", "false"])
+      .transform((val) => val === "true")
+      .default(false),
+    /** Optional signature string reported by the local virus-scan adapter when forced infected. */
+    PROCESSING_VIRUS_SCAN_SIGNATURE: z.string().optional(),
   })
   .refine(
     (data) => {

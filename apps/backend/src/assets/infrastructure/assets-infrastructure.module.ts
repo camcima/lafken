@@ -47,7 +47,14 @@ import { SharpImageInspectionAdapter } from "./services/sharp-image-inspection.a
         }),
     },
     { provide: ImageInspectionPort, useClass: SharpImageInspectionAdapter },
-    { provide: VirusScanPort, useClass: LocalVirusScanAdapter },
+    {
+      provide: VirusScanPort,
+      useFactory: (): VirusScanPort =>
+        new LocalVirusScanAdapter({
+          infected: environmentConfiguration.PROCESSING_VIRUS_SCAN_FORCE_INFECTED,
+          signature: environmentConfiguration.PROCESSING_VIRUS_SCAN_SIGNATURE,
+        }),
+    },
     { provide: ContentModerationPort, useClass: LocalContentModerationAdapter },
     {
       provide: PreviewUrlSignerPort,
