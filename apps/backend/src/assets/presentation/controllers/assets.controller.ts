@@ -238,7 +238,7 @@ export class AssetsController {
       // and Lafken can host any number of bindings without per-bucket setup on
       // imgproxy. The TTL must outlive imgproxy's worst-case render+retry
       // window for a single asset.
-      const sourceUrl: string = await this.assetStorage.signReadUrl({
+      const sourceUrl: string = await this.assetStorage.signSourceUrlForRendering({
         binding: signCtx.binding,
         storageKey: result.asset.props.storageKey,
         ttlSeconds: PREVIEW_SOURCE_URL_TTL_SECONDS,

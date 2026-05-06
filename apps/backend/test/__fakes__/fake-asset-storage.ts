@@ -49,4 +49,11 @@ export class FakeAssetStorage extends AssetStoragePort {
       `https://fake-gcs.local/read/${encodeURIComponent(input.storageKey)}?sig=stub`,
     );
   }
+
+  signSourceUrlForRendering(input: ISignReadUrlInput): Promise<string> {
+    this.readSigned.push(input);
+    return Promise.resolve(
+      `https://fake-gcs.local/render-source/${encodeURIComponent(input.storageKey)}?sig=stub`,
+    );
+  }
 }

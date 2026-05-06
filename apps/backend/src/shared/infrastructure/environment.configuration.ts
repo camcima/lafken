@@ -98,8 +98,14 @@ const environmentSchema = z
 
     /** Service account JSON (stringified) for GCS. Optional; omit for fake-gcs / dev. */
     GCS_SERVICE_ACCOUNT_JSON: z.string().optional(),
-    /** Override GCS endpoint (e.g. http://localhost:4444 for fake-gcs-server). */
+    /** Override GCS endpoint the backend uses for its own API calls and for
+     *  signing browser-facing upload/download URLs (e.g. http://localhost:4443
+     *  for fake-gcs-server published on the host). */
     STORAGE_GCS_ENDPOINT: z.string().url().optional(),
+    /** Endpoint to sign preview-source URLs against. The renderer (imgproxy)
+     *  may resolve GCS through different DNS than the backend (e.g. fake-gcs
+     *  via container DNS in dev). Defaults to STORAGE_GCS_ENDPOINT. */
+    STORAGE_GCS_PREVIEW_SOURCE_ENDPOINT: z.string().url().optional(),
 
     /** Browser-facing imgproxy origin (e.g. http://localhost:8081). */
     IMGPROXY_BASE_URL: z.string().url().optional(),

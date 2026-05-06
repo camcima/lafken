@@ -43,6 +43,7 @@ import { SharpImageInspectionAdapter } from "./services/sharp-image-inspection.a
       useFactory: (): AssetStoragePort =>
         new GcsAssetStorageAdapter({
           endpoint: environmentConfiguration.STORAGE_GCS_ENDPOINT,
+          previewSourceEndpoint: environmentConfiguration.STORAGE_GCS_PREVIEW_SOURCE_ENDPOINT,
           credentialsJson: environmentConfiguration.GCS_SERVICE_ACCOUNT_JSON,
         }),
     },
