@@ -64,21 +64,20 @@ export function FilePropsCard({ asset, onCopy }: IFilePropsCardProps): React.JSX
         </DLRow>
         <DLRow label={t("pages.assetDetail.dl.contentHash")} last>
           {asset.contentHashHex !== undefined ? (
-            <span className="inline-flex items-center gap-1">
-              <span className="font-mono text-[11px] break-all">sha256:{asset.contentHashHex}</span>
+            <div className="flex items-start gap-1">
+              <span className="min-w-0 flex-1 font-mono text-[10px] leading-snug break-all">
+                {asset.contentHashHex}
+              </span>
               <button
                 type="button"
                 onClick={() => {
-                  onCopy(
-                    `sha256:${asset.contentHashHex ?? ""}`,
-                    t("pages.assetDetail.toasts.hashCopied"),
-                  );
+                  onCopy(asset.contentHashHex ?? "", t("pages.assetDetail.toasts.hashCopied"));
                 }}
-                className="text-muted-foreground hover:bg-secondary hover:text-foreground rounded p-0.5"
+                className="text-muted-foreground hover:bg-secondary hover:text-foreground flex-none rounded p-0.5"
               >
                 <Copy size={12} />
               </button>
-            </span>
+            </div>
           ) : (
             <span className="text-muted-foreground text-[12px]">{emptyDash}</span>
           )}

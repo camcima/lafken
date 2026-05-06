@@ -427,10 +427,6 @@
       "siblings": {
         "altLabel": "Alternative angle {{label}}"
       },
-      "visual": {
-        "fullSize": "Full size",
-        "original": "Original"
-      },
       "toasts": {
         "idCopied": "Public ID copied",
         "hashCopied": "Hash copied",
