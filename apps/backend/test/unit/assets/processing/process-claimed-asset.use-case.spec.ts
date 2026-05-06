@@ -82,6 +82,27 @@ describe("ProcessClaimedAssetUseCase", () => {
       "virus_scan",
     ]);
     expect(jobRepo.completed).toBe(true);
+    expect(jobRepo.currentStepUpdates.map((item) => item.currentStep)).toEqual([
+      "image_inspection",
+      "virus_scan",
+    ]);
+  });
+
+  it("records current_step transitions in order when moderation is enabled", async () => {
+    assetRepo.policy = makePolicy({ contentModeration: { localDecision: "pass" } });
+
+    const result = await useCase.execute({
+      assetId: TEST_UUIDS.asset1,
+      workerId: "worker-a",
+      attemptNumber: 1,
+    });
+
+    expect(result.kind).toBe("completed");
+    expect(jobRepo.currentStepUpdates.map((item) => item.currentStep)).toEqual([
+      "image_inspection",
+      "virus_scan",
+      "content_moderation",
+    ]);
   });
 
   it("rejects deterministic image inspection failures without retry", async () => {
@@ -194,6 +215,7 @@ class InMemoryAssetProcessingRepository extends AssetProcessingRepositoryPort {
 class InMemoryProcessingJobRepository extends ProcessingJobRepositoryPort {
   completed = false;
   failed = false;
+  readonly currentStepUpdates: Array<{ currentStep: string; assetId: string }> = [];
 
   claimAvailable(): never {
     throw new Error("claimAvailable is not used by ProcessClaimedAssetUseCase tests");
@@ -205,7 +227,10 @@ class InMemoryProcessingJobRepository extends ProcessingJobRepositoryPort {
   }
 
   updateCurrentStep(input: IHeartbeatInput & { currentStep: string }): Promise<boolean> {
-    void input;
+    this.currentStepUpdates.push({
+      currentStep: input.currentStep,
+      assetId: input.assetId,
+    });
     return Promise.resolve(true);
   }
 

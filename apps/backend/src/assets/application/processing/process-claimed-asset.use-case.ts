@@ -120,6 +120,11 @@ export class ProcessClaimedAssetUseCase {
       }),
     );
 
+    await this.recordCurrentStep({
+      assetId: asset.props.id,
+      workerId: input.workerId,
+      currentStep: "image_inspection",
+    });
     const inspectionStartedAt: Date = new Date();
     const inspection = await this.runStep("image_inspection", () =>
       this.imageInspection.inspect({
@@ -177,6 +182,11 @@ export class ProcessClaimedAssetUseCase {
       captureContext: inspection.captureContext,
     });
 
+    await this.recordCurrentStep({
+      assetId: asset.props.id,
+      workerId: input.workerId,
+      currentStep: "virus_scan",
+    });
     const scanStartedAt: Date = new Date();
     const scan = await this.runStep("virus_scan", () =>
       this.virusScan.scan({ bytes, contentHash: inspection.contentHash }),
@@ -223,6 +233,11 @@ export class ProcessClaimedAssetUseCase {
     const moderationConfig = policy.props.contentModeration;
     if (moderationConfig) {
       machine.send({ type: "MODERATION_REQUIRED" });
+      await this.recordCurrentStep({
+        assetId: asset.props.id,
+        workerId: input.workerId,
+        currentStep: "content_moderation",
+      });
       const moderationStartedAt: Date = new Date();
       const moderation = await this.runStep("content_moderation", () =>
         this.moderation.analyze({
@@ -321,6 +336,36 @@ export class ProcessClaimedAssetUseCase {
   private durationFromFindings(findings: Record<string, unknown>): number {
     const durationMs: unknown = findings["duration_ms"];
     return typeof durationMs === "number" ? durationMs : DEFAULT_DURATION_MS;
+  }
+
+  /**
+   * Updates the job's `current_step` so operators can see which pipeline stage
+   * the worker is executing. A `false` return means the row was either
+   * reclaimed by another worker (stale-claim recovery) or already terminal —
+   * we log a warning and continue; the subsequent step will fail naturally if
+   * the claim is truly lost.
+   */
+  private async recordCurrentStep(input: {
+    assetId: string;
+    workerId: string;
+    currentStep: ProcessingStepName;
+  }): Promise<void> {
+    const updated: boolean = await this.jobRepo.updateCurrentStep({
+      assetId: input.assetId,
+      workerId: input.workerId,
+      now: new Date(),
+      currentStep: input.currentStep,
+    });
+    if (!updated) {
+      this.logger.warn(
+        {
+          assetId: input.assetId,
+          workerId: input.workerId,
+          currentStep: input.currentStep,
+        },
+        "current_step update did not affect any row",
+      );
+    }
   }
 
   private workerActor(workerId: string): string {
