@@ -47,6 +47,7 @@ describe("[E2E] POST /v1/namespaces/:slug/archive", () => {
       await tx.deleteFrom("asset_state_transitions").execute();
       await tx.deleteFrom("processing_jobs").execute();
       await tx.deleteFrom("assets").execute();
+      await tx.deleteFrom("upload_intents").execute();
       await tx.deleteFrom("namespace_policies").execute();
       await tx.deleteFrom("namespaces").execute();
       await tx.deleteFrom("storage_bindings").execute();

@@ -34,6 +34,7 @@ describe("[E2E] GET /v1/namespaces", () => {
       // Delete policies first (deferred FK namespaces.current_policy_id checked at commit).
       // Namespaces must be deleted after policies to satisfy the RESTRICT FK
       // namespace_policies.namespace_id → namespaces.id.
+      await tx.deleteFrom("upload_intents").execute();
       await tx.deleteFrom("namespace_policies").execute();
       await tx.deleteFrom("namespaces").execute();
     });

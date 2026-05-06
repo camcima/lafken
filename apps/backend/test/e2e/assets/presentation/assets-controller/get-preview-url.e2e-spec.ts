@@ -58,6 +58,7 @@ describe.skipIf(!GATE)("[E2E] GET /v1/assets/:publicId/preview-url", () => {
       await tx.deleteFrom("processing_jobs").execute();
       await tx.deleteFrom("assets").execute();
       await tx.deleteFrom("namespace_presets").execute();
+      await tx.deleteFrom("upload_intents").execute();
       await tx.deleteFrom("namespace_policies").execute();
       await tx.deleteFrom("namespaces").execute();
       await tx.deleteFrom("storage_bindings").execute();
