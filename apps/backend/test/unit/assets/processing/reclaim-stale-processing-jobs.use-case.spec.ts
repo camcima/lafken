@@ -60,10 +60,35 @@ describe("ReclaimStaleProcessingJobsUseCase", () => {
     expect(assetRepo.transitions.at(-1)?.toState).toBe("processing_failed");
     expect(jobRepo.failed).toBe(true);
   });
+
+  it("skips markFailed when transitionAsset loses race during exhaustion", async () => {
+    assetRepo.assetState = "processing";
+    assetRepo.transitionResult = false;
+    jobRepo.staleJobs = [makeJob(TEST_UUIDS.asset1, 5)];
+
+    await useCase.execute({ now: new Date("2026-05-06T12:00:00.000Z") });
+
+    expect(assetRepo.transitions).toHaveLength(1);
+    expect(jobRepo.failed).toBe(false);
+  });
+
+  it("marks job failed without transitioning asset when asset is still uploaded at exhaustion", async () => {
+    // Worker died before the 'uploaded -> processing' transition ran. The
+    // reclaimer must not try 'uploaded -> processing_failed' (illegal); just
+    // mark the job failed so it stops being retried.
+    assetRepo.assetState = "uploaded";
+    jobRepo.staleJobs = [makeJob(TEST_UUIDS.asset1, 5)];
+
+    await useCase.execute({ now: new Date("2026-05-06T12:00:00.000Z") });
+
+    expect(assetRepo.transitions).toHaveLength(0);
+    expect(jobRepo.failed).toBe(true);
+  });
 });
 
 class StaleAssetRepository extends AssetProcessingRepositoryPort {
   assetState: AssetState = "processing";
+  transitionResult = true;
   readonly policy: NamespacePolicy = makePolicy();
   readonly transitions: ITransitionAssetInput[] = [];
 
@@ -74,7 +99,7 @@ class StaleAssetRepository extends AssetProcessingRepositoryPort {
 
   transitionAsset(input: ITransitionAssetInput): Promise<boolean> {
     this.transitions.push(input);
-    return Promise.resolve(true);
+    return Promise.resolve(this.transitionResult);
   }
 
   recordAnalysis(input: IRecordAnalysisInput): Promise<void> {

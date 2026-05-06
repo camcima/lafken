@@ -70,22 +70,45 @@ export class ReclaimStaleProcessingJobsUseCase {
     const nextAttemptNumber: number = job.props.attemptNumber + NEXT_ATTEMPT_INCREMENT;
     if (nextAttemptNumber > environmentConfiguration.PROCESSING_WORKER_MAX_ATTEMPTS) {
       this.logger.info(
-        { assetId: job.props.assetId, currentState: loaded.asset.props.state, action: "exhausted" },
+        {
+          assetId: job.props.assetId,
+          currentState: loaded.asset.props.state,
+          action: "exhausted",
+        },
         "stale job exceeded retry budget",
       );
-      await this.assets.transitionAsset({
-        assetId: job.props.assetId,
-        fromState: loaded.asset.props.state,
-        toState: "processing_failed",
-        reason: "retry_budget_exhausted",
-        metadata: makeTransitionMetadata({
-          workerId: STALE_SWEEPER_WORKER_ID,
-          attemptNumber: job.props.attemptNumber,
-          reasonCode: "retry_budget_exhausted",
-        }),
-        occurredBy: `worker:${STALE_SWEEPER_WORKER_ID}`,
-        now,
-      });
+      // Only transition the asset if it actually got into 'processing'. If the
+      // worker died before the 'uploaded -> processing' transition ran, the
+      // asset is still 'uploaded' and the only legal move from there is via
+      // the normal pipeline. Just mark the job failed so it stops being
+      // retried.
+      if (loaded.asset.props.state === "processing") {
+        const transitioned: boolean = await this.assets.transitionAsset({
+          assetId: job.props.assetId,
+          fromState: "processing",
+          toState: "processing_failed",
+          reason: "retry_budget_exhausted",
+          metadata: makeTransitionMetadata({
+            workerId: STALE_SWEEPER_WORKER_ID,
+            attemptNumber: job.props.attemptNumber,
+            reasonCode: "retry_budget_exhausted",
+          }),
+          occurredBy: `worker:${STALE_SWEEPER_WORKER_ID}`,
+          now,
+        });
+        if (!transitioned) {
+          this.logger.warn(
+            { assetId: job.props.assetId, currentState: loaded.asset.props.state },
+            "reclaim transition lost race; skipping markFailed",
+          );
+          return;
+        }
+      } else {
+        this.logger.warn(
+          { assetId: job.props.assetId, currentState: loaded.asset.props.state },
+          "reclaim found exhausted job whose asset is not in 'processing'; marking job failed without state transition",
+        );
+      }
       await this.jobs.markFailed({
         assetId: job.props.assetId,
         workerId,
@@ -104,10 +127,16 @@ export class ReclaimStaleProcessingJobsUseCase {
       },
       "releasing stale claim for retry",
     );
-    await this.jobs.releaseStaleClaim({
+    const released: boolean = await this.jobs.releaseStaleClaim({
       assetId: job.props.assetId,
       nextAttemptNumber,
       now,
     });
+    if (!released) {
+      this.logger.warn(
+        { assetId: job.props.assetId },
+        "releaseStaleClaim lost race; another reclaimer beat us",
+      );
+    }
   }
 }
