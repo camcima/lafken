@@ -803,6 +803,42 @@ paths:
       summary: Confirm a successful upload to a signed URL
       tags:
         - Assets
+  /v1/assets/{publicId}/retry-processing:
+    post:
+      description: >-
+        Re-primes the asset's processing job for another worker attempt and
+        transitions the asset from `processing_failed` back to `uploaded`. The
+        worker will pick the asset up on its next tick. Only valid when the
+        asset is currently in `processing_failed`.
+      operationId: AssetsController_retryProcessing_v1
+      parameters:
+        - name: publicId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+        '422':
+          description: ''
+      summary: Retry processing for an asset whose previous processing attempts failed
+      tags:
+        - Assets
   /v1/quarantine:
     get:
       operationId: QuarantineController_list_v1

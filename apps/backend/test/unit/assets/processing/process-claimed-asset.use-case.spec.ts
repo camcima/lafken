@@ -229,6 +229,10 @@ class InMemoryAssetProcessingRepository extends AssetProcessingRepositoryPort {
     this.derivedMetadata.push(input);
     return Promise.resolve();
   }
+
+  restartProcessing(): never {
+    throw new Error("restartProcessing is not used by ProcessClaimedAssetUseCase tests");
+  }
 }
 
 class InMemoryProcessingJobRepository extends ProcessingJobRepositoryPort {

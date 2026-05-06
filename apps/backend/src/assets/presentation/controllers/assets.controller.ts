@@ -39,8 +39,10 @@ import { GetAssetProcessingJobUseCase } from "@/assets/application/use-cases/get
 import { ListAssetAnalysesUseCase } from "@/assets/application/use-cases/list-asset-analyses.use-case";
 import { ListAssetStateTransitionsUseCase } from "@/assets/application/use-cases/list-asset-state-transitions.use-case";
 import { ListAssetsUseCase } from "@/assets/application/use-cases/list-assets.use-case";
+import { RetryAssetProcessingUseCase } from "@/assets/application/use-cases/retry-asset-processing.use-case";
 import type { Asset } from "@/assets/domain/entities/asset.entity";
 import { AssetNotFoundError } from "@/assets/domain/errors/asset-not-found.error";
+import { AssetNotInProcessingFailedStateError } from "@/assets/domain/errors/asset-not-in-processing-failed-state.error";
 import { FileSizeExceedsPolicyError } from "@/assets/domain/errors/file-size-exceeds-policy.error";
 import { MimeTypeNotAllowedError } from "@/assets/domain/errors/mime-type-not-allowed.error";
 import { ProcessingJobNotFoundError } from "@/assets/domain/errors/processing-job-not-found.error";
@@ -83,6 +85,7 @@ export class AssetsController {
     private readonly getAssetProcessingJobUseCase: GetAssetProcessingJobUseCase,
     private readonly createUploadIntentUseCase: CreateUploadIntentUseCase,
     private readonly confirmUploadUseCase: ConfirmUploadUseCase,
+    private readonly retryAssetProcessingUseCase: RetryAssetProcessingUseCase,
     private readonly assetQueryRepository: AssetQueryRepositoryPort,
     private readonly previewUrlSigner: PreviewUrlSignerPort,
     private readonly namespaceQueryRepository: NamespaceQueryRepositoryPort,
@@ -363,6 +366,40 @@ export class AssetsController {
         throw new NotFoundException(err.message, { cause: err });
       }
       if (err instanceof UploadIntentExpiredError || err instanceof UploadedObjectMissingError) {
+        throw new UnprocessableEntityException(err.message, { cause: err });
+      }
+      throw err;
+    }
+  }
+
+  @Post(":publicId/retry-processing")
+  @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Retry processing for an asset whose previous processing attempts failed",
+    description:
+      "Re-primes the asset's processing job for another worker attempt and " +
+      "transitions the asset from `processing_failed` back to `uploaded`. The " +
+      "worker will pick the asset up on its next tick. Only valid when the " +
+      "asset is currently in `processing_failed`.",
+  })
+  @ApiOkResponse()
+  @ApiNotFoundResponse()
+  @ApiUnprocessableEntityResponse()
+  async retryProcessing(
+    @Param("publicId") publicId: string,
+    @AuthenticatedUser() user: AuthenticatedUserType,
+  ): Promise<void> {
+    try {
+      await this.retryAssetProcessingUseCase.execute({
+        publicId,
+        requestedByEmail: user.emailAddress,
+      });
+    } catch (err) {
+      if (err instanceof AssetNotFoundError) {
+        throw new NotFoundException(err.message, { cause: err });
+      }
+      if (err instanceof AssetNotInProcessingFailedStateError) {
         throw new UnprocessableEntityException(err.message, { cause: err });
       }
       throw err;

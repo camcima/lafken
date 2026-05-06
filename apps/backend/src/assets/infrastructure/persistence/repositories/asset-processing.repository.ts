@@ -5,6 +5,7 @@ import {
   AssetProcessingRepositoryPort,
   type IAssetWithPolicy,
   type IRecordAnalysisInput,
+  type IRestartProcessingInput,
   type ITransitionAssetInput,
   type IUpdateDerivedMetadataInput,
 } from "@/assets/domain/repositories/asset-processing.repository.port";
@@ -113,6 +114,78 @@ export class AssetProcessingRepository extends AssetProcessingRepositoryPort {
       })
       .where("id", "=", input.assetId)
       .execute();
+  }
+
+  /**
+   * Re-primes a `processing_failed` asset for another worker attempt. The
+   * `processing_jobs.asset_id` column is the table's primary key, so there is
+   * always at most one row per asset; we use `onConflict ... doUpdateSet` to
+   * cover both "row exists from a previous attempt" (the common case) and the
+   * defensive "row is somehow absent" path in a single statement. The whole
+   * operation runs in one transaction so a race that loses the asset
+   * transition leaves the job row untouched.
+   */
+  async restartProcessing(input: IRestartProcessingInput): Promise<boolean> {
+    return this.db.connection.transaction().execute(async (tx): Promise<boolean> => {
+      const updated = await tx
+        .updateTable("assets")
+        .set({
+          state: "uploaded",
+          state_reason: input.reason,
+          state_changed_at: input.now,
+        })
+        .where("id", "=", input.assetId)
+        .where("state", "=", "processing_failed")
+        .executeTakeFirst();
+
+      if (!this.hasUpdatedRows(updated)) {
+        return false;
+      }
+
+      await tx
+        .insertInto("asset_state_transitions")
+        .values({
+          asset_id: input.assetId,
+          from_state: "processing_failed",
+          to_state: "uploaded",
+          reason: input.reason,
+          metadata: { reason_code: input.reason, requested_by: input.requestedByEmail },
+          occurred_by: input.requestedByEmail,
+          occurred_at: input.now,
+        })
+        .execute();
+
+      await tx
+        .insertInto("processing_jobs")
+        .values({
+          asset_id: input.assetId,
+          state: "released",
+          worker_id: null,
+          claimed_at: null,
+          heartbeat_at: null,
+          current_step: null,
+          attempt_number: 1,
+          not_before: input.now,
+          last_error: null,
+          last_error_at: null,
+        })
+        .onConflict((oc) =>
+          oc.column("asset_id").doUpdateSet({
+            state: "released",
+            worker_id: null,
+            claimed_at: null,
+            heartbeat_at: null,
+            current_step: null,
+            attempt_number: 1,
+            not_before: input.now,
+            last_error: null,
+            last_error_at: null,
+          }),
+        )
+        .execute();
+
+      return true;
+    });
   }
 
   private hasUpdatedRows(result: IUpdateResultLike): boolean {

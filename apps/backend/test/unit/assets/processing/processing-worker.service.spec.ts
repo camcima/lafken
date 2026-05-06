@@ -215,6 +215,10 @@ class FakeAssetProcessingRepository extends AssetProcessingRepositoryPort {
     void input;
     return Promise.resolve();
   }
+
+  restartProcessing(): never {
+    throw new Error("restartProcessing is not used by ProcessingWorkerService tests");
+  }
 }
 
 class FakeProcessClaimedAssetUseCase {

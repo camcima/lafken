@@ -73,6 +73,130 @@ describe("AssetProcessingRepository", () => {
     });
   });
 
+  it("restartProcessing flips processing_failed -> uploaded and re-primes the job", async () => {
+    // Arrange: move the seeded asset to processing_failed and the job to failed.
+    const failedAt = new Date("2026-05-06T11:00:00.000Z");
+    await db.connection
+      .updateTable("assets")
+      .set({ state: "processing_failed", state_reason: "max_attempts_reached" })
+      .where("id", "=", assetId)
+      .execute();
+    await db.connection
+      .updateTable("processing_jobs")
+      .set({
+        state: "failed",
+        worker_id: "worker-stale",
+        claimed_at: failedAt,
+        heartbeat_at: failedAt,
+        attempt_number: 4,
+        not_before: failedAt,
+        last_error: "boom",
+        last_error_at: failedAt,
+      })
+      .where("asset_id", "=", assetId)
+      .execute();
+
+    const now = new Date("2026-05-06T12:30:00.000Z");
+    const restarted = await repository.restartProcessing({
+      assetId,
+      reason: "retry_requested",
+      requestedByEmail: "ops@latam.com",
+      now,
+    });
+
+    expect(restarted).toBe(true);
+
+    const asset = await db.connection
+      .selectFrom("assets")
+      .select(["state", "state_reason", "state_changed_at"])
+      .where("id", "=", assetId)
+      .executeTakeFirstOrThrow();
+    expect(asset.state).toBe("uploaded");
+    expect(asset.state_reason).toBe("retry_requested");
+    expect(asset.state_changed_at).toEqual(now);
+
+    const transitions = await db.connection
+      .selectFrom("asset_state_transitions")
+      .select(["from_state", "to_state", "reason", "metadata", "occurred_by"])
+      .where("asset_id", "=", assetId)
+      .execute();
+    expect(transitions).toHaveLength(1);
+    const [transition] = transitions;
+    expect(transition?.from_state).toBe("processing_failed");
+    expect(transition?.to_state).toBe("uploaded");
+    expect(transition?.reason).toBe("retry_requested");
+    expect(transition?.occurred_by).toBe("ops@latam.com");
+    expect(transition?.metadata).toEqual({
+      reason_code: "retry_requested",
+      requested_by: "ops@latam.com",
+    });
+
+    const job = await db.connection
+      .selectFrom("processing_jobs")
+      .select([
+        "state",
+        "worker_id",
+        "claimed_at",
+        "heartbeat_at",
+        "current_step",
+        "attempt_number",
+        "not_before",
+        "last_error",
+        "last_error_at",
+      ])
+      .where("asset_id", "=", assetId)
+      .executeTakeFirstOrThrow();
+    expect(job.state).toBe("released");
+    expect(job.worker_id).toBeNull();
+    expect(job.claimed_at).toBeNull();
+    expect(job.heartbeat_at).toBeNull();
+    expect(job.current_step).toBeNull();
+    expect(job.attempt_number).toBe(1);
+    expect(job.not_before).toEqual(now);
+    expect(job.last_error).toBeNull();
+    expect(job.last_error_at).toBeNull();
+  });
+
+  it("restartProcessing returns false and does nothing when the asset is not in processing_failed", async () => {
+    // Seeded asset is `uploaded` (precondition not met).
+    const now = new Date("2026-05-06T12:30:00.000Z");
+
+    const restarted = await repository.restartProcessing({
+      assetId,
+      reason: "retry_requested",
+      requestedByEmail: "ops@latam.com",
+      now,
+    });
+
+    expect(restarted).toBe(false);
+
+    const asset = await db.connection
+      .selectFrom("assets")
+      .select(["state", "state_reason"])
+      .where("id", "=", assetId)
+      .executeTakeFirstOrThrow();
+    expect(asset.state).toBe("uploaded");
+    expect(asset.state_reason).toBeNull();
+
+    const transitions = await db.connection
+      .selectFrom("asset_state_transitions")
+      .selectAll()
+      .where("asset_id", "=", assetId)
+      .execute();
+    expect(transitions).toHaveLength(0);
+
+    // Seeded job remains untouched (still `released`, attempt_number 1, no last_error).
+    const job = await db.connection
+      .selectFrom("processing_jobs")
+      .select(["state", "attempt_number", "last_error", "worker_id"])
+      .where("asset_id", "=", assetId)
+      .executeTakeFirstOrThrow();
+    expect(job.state).toBe("released");
+    expect(job.attempt_number).toBe(1);
+    expect(job.last_error).toBeNull();
+    expect(job.worker_id).toBeNull();
+  });
+
   it("updates derived metadata and records analysis evidence", async () => {
     const contentHash = Buffer.alloc(32, 3);
 

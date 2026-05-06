@@ -36,9 +36,26 @@ export interface IUpdateDerivedMetadataInput {
   captureContext: Record<string, unknown> | null;
 }
 
+export interface IRestartProcessingInput {
+  assetId: string;
+  reason: string;
+  requestedByEmail: string;
+  now: Date;
+}
+
 export abstract class AssetProcessingRepositoryPort {
   abstract findAssetWithPolicy(assetId: string): Promise<IAssetWithPolicy | null>;
   abstract transitionAsset(input: ITransitionAssetInput): Promise<boolean>;
   abstract recordAnalysis(input: IRecordAnalysisInput): Promise<void>;
   abstract updateDerivedMetadata(input: IUpdateDerivedMetadataInput): Promise<void>;
+  /**
+   * Atomically transitions an asset from `processing_failed` back to `uploaded`
+   * and re-primes the existing `processing_jobs` row (or inserts a fresh one if
+   * absent) so the worker can pick the asset up again on its next tick.
+   *
+   * Returns `true` when the transition fired (precondition `state =
+   * 'processing_failed'` matched), `false` if it lost a race — caller decides
+   * how to handle the false case.
+   */
+  abstract restartProcessing(input: IRestartProcessingInput): Promise<boolean>;
 }

@@ -111,6 +111,10 @@ class StaleAssetRepository extends AssetProcessingRepositoryPort {
     void input;
     return Promise.resolve();
   }
+
+  restartProcessing(): never {
+    throw new Error("restartProcessing is not used by stale reclaim tests");
+  }
 }
 
 class StaleJobRepository extends ProcessingJobRepositoryPort {
