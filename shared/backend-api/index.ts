@@ -38,6 +38,8 @@ export * from "./presentation/quarantine/release-quarantined-asset-request.dto";
 export * from "./presentation/quarantine/reject-quarantined-asset-request.dto";
 
 export * from "./presentation/legal-holds/legal-hold-response.dto";
+export * from "./presentation/legal-holds/place-legal-hold.dto";
+export * from "./presentation/legal-holds/lift-legal-hold.dto";
 
 export * from "./presentation/audit/audit-entry-response.dto";
 export * from "./presentation/audit/list-audit-query.dto";
