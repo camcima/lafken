@@ -30,9 +30,12 @@ export * from "./presentation/assets/create-upload-intent-response.dto";
 export * from "./presentation/assets/confirm-upload-request.dto";
 export * from "./presentation/assets/preview-url-response.dto";
 export * from "./presentation/assets/asset-download-url-response.dto";
+export * from "./presentation/assets/namespace-storage-usage-response.dto";
 
 export * from "./presentation/quarantine/quarantined-asset-response.dto";
 export * from "./presentation/quarantine/list-quarantine-query.dto";
+export * from "./presentation/quarantine/release-quarantined-asset-request.dto";
+export * from "./presentation/quarantine/reject-quarantined-asset-request.dto";
 
 export * from "./presentation/legal-holds/legal-hold-response.dto";
 
