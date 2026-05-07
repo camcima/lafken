@@ -8,7 +8,7 @@ import { LegalHoldWriteRepositoryPort } from "@/legal-holds/domain/repositories/
 
 const MAX_NAMESPACE_SLUGS_IN_SUMMARY = 3;
 
-export interface IPlaceLegalHoldInput {
+export interface IPlaceLegalHoldUseCaseInput {
   caseReference: string;
   description: string;
   assetIds: string[]; // public ids, possibly with duplicates
@@ -22,7 +22,7 @@ export class PlaceLegalHoldUseCase {
     private readonly writeRepo: LegalHoldWriteRepositoryPort,
   ) {}
 
-  async execute(input: IPlaceLegalHoldInput): Promise<LegalHold> {
+  async execute(input: IPlaceLegalHoldUseCaseInput): Promise<LegalHold> {
     const dedupedPublicIds = [...new Set(input.assetIds)];
     if (dedupedPublicIds.length === 0) {
       throw new EmptyAssetSelectionError();

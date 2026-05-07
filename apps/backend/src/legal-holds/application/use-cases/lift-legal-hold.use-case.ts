@@ -6,7 +6,7 @@ import { LegalHoldNotFoundError } from "@/legal-holds/domain/errors/legal-hold-n
 import { LegalHoldQueryRepositoryPort } from "@/legal-holds/domain/repositories/legal-hold-query.repository.port";
 import { LegalHoldWriteRepositoryPort } from "@/legal-holds/domain/repositories/legal-hold-write.repository.port";
 
-export interface ILiftLegalHoldInput {
+export interface ILiftLegalHoldUseCaseInput {
   holdId: string;
   liftedBy: string;
   liftReason: string;
@@ -19,7 +19,7 @@ export class LiftLegalHoldUseCase {
     private readonly writeRepo: LegalHoldWriteRepositoryPort,
   ) {}
 
-  async execute(input: ILiftLegalHoldInput): Promise<LegalHold> {
+  async execute(input: ILiftLegalHoldUseCaseInput): Promise<LegalHold> {
     const hold = await this.queryRepo.findById(input.holdId);
     if (hold === null) {
       throw new LegalHoldNotFoundError({ id: input.holdId });
