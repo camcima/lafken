@@ -57,4 +57,13 @@ export class LegalHoldQueryRepository implements LegalHoldQueryRepositoryPort {
       .executeTakeFirstOrThrow();
     return Number((row as { count: string }).count);
   }
+
+  async listAssetInternalIds(holdId: string): Promise<string[]> {
+    const rows = await this.db.connection
+      .selectFrom("legal_hold_assets")
+      .select(["asset_id"])
+      .where("legal_hold_id", "=", holdId)
+      .execute();
+    return rows.map((row) => row.asset_id);
+  }
 }

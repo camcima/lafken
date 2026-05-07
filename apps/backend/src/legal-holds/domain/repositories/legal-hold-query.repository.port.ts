@@ -17,4 +17,5 @@ export abstract class LegalHoldQueryRepositoryPort {
   abstract list(input: ListLegalHoldsInput): Promise<LegalHoldPage>;
   abstract findById(id: string): Promise<LegalHold | null>;
   abstract countAffectedAssets(holdId: string): Promise<number>;
+  abstract listAssetInternalIds(holdId: string): Promise<string[]>;
 }

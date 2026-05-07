@@ -8,6 +8,7 @@ import {
 export class InMemoryLegalHoldQueryRepository implements LegalHoldQueryRepositoryPort {
   private legalHolds: LegalHold[] = [];
   private assetCounts = new Map<string, number>();
+  private assetInternalIds = new Map<string, string[]>();
 
   seed(legalHolds: LegalHold[]): void {
     this.legalHolds = legalHolds;
@@ -35,5 +36,9 @@ export class InMemoryLegalHoldQueryRepository implements LegalHoldQueryRepositor
 
   countAffectedAssets(holdId: string): Promise<number> {
     return Promise.resolve(this.assetCounts.get(holdId) ?? 0);
+  }
+
+  listAssetInternalIds(holdId: string): Promise<string[]> {
+    return Promise.resolve(this.assetInternalIds.get(holdId) ?? []);
   }
 }
