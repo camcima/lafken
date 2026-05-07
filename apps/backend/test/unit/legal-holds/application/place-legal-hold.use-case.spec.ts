@@ -6,7 +6,6 @@ import { EmptyAssetSelectionError } from "@/legal-holds/domain/errors/empty-asse
 
 import { FakeAssetPublicIdResolver } from "../../../__fakes__/fake-asset-public-id-resolver";
 import { FakeLegalHoldWriteRepository } from "../../../__fakes__/fake-legal-hold-write.repository";
-import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 
 describe("PlaceLegalHoldUseCase", () => {
   let resolver: FakeAssetPublicIdResolver;
@@ -101,6 +100,5 @@ describe("PlaceLegalHoldUseCase", () => {
     expect(writeRepo.placeCalls[0]?.assetInternalIds.sort()).toEqual(
       ["i-a", "i-b", "i-c", "i-d", "i-e"].sort(),
     );
-    expect(TEST_UUIDS.legalHold1).toBe("01900000-0000-7000-8000-000000000050"); // sanity-anchor
   });
 });
