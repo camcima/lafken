@@ -65,6 +65,8 @@ describe("[E2E] POST /v1/namespaces/:slug/policy-versions", () => {
       await tx.deleteFrom("asset_analyses").execute();
       await tx.deleteFrom("asset_state_transitions").execute();
       await tx.deleteFrom("processing_jobs").execute();
+      await tx.deleteFrom("legal_hold_assets").execute();
+      await tx.deleteFrom("legal_holds").execute();
       await tx.deleteFrom("assets").execute();
       await tx.deleteFrom("upload_intents").execute();
       await tx.deleteFrom("namespace_policies").execute();

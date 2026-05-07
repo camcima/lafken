@@ -30,6 +30,8 @@ describe("[E2E] GET /v1/namespaces", () => {
       await tx.deleteFrom("asset_analyses").execute();
       await tx.deleteFrom("asset_state_transitions").execute();
       await tx.deleteFrom("processing_jobs").execute();
+      await tx.deleteFrom("legal_hold_assets").execute();
+      await tx.deleteFrom("legal_holds").execute();
       await tx.deleteFrom("assets").execute();
       // Delete policies first (deferred FK namespaces.current_policy_id checked at commit).
       // Namespaces must be deleted after policies to satisfy the RESTRICT FK

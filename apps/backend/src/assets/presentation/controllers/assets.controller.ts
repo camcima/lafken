@@ -171,8 +171,11 @@ export class AssetsController {
       uploadedBy: query.uploadedBy,
       externalRefType: query.externalRefType,
       externalRefId: query.externalRefId,
+      tags: query.tags,
       uploadedFrom: query.uploadedFrom,
       uploadedTo: query.uploadedTo,
+      q: query.q,
+      legalHoldId: query.legalHoldId,
     });
 
     const data = page.data.map((item) =>
