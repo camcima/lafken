@@ -145,6 +145,16 @@ const environmentSchema = z
      * per-namespace policy. Unset disables the override.
      */
     PROCESSING_CONTENT_MODERATION_FORCE_DECISION: z.enum(["pass", "quarantine"]).optional(),
+    /** Selects which virus-scan adapter the processing worker uses. */
+    PROCESSING_VIRUS_SCAN_ADAPTER: z.enum(["local", "clamav"]).default("local"),
+    /** Hostname of the ClamAV daemon (used when PROCESSING_VIRUS_SCAN_ADAPTER=clamav). */
+    CLAMAV_HOST: z.string().default("clamav"),
+    /** TCP port the ClamAV daemon listens on. */
+    CLAMAV_PORT: z.coerce.number().int().positive().default(3310),
+    /** Timeout in milliseconds for ClamAV scan operations. */
+    CLAMAV_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
+    /** Chunk size in bytes used when streaming data to ClamAV. */
+    CLAMAV_CHUNK_SIZE_BYTES: z.coerce.number().int().positive().default(65_536),
   })
   .refine(
     (data) => {

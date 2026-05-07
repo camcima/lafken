@@ -110,6 +110,7 @@ export class AssetProcessingRepository extends AssetProcessingRepositoryPort {
         width: input.width,
         height: input.height,
         content_hash: input.contentHash,
+        phash: input.phash ?? null,
         capture_context: input.captureContext,
       })
       .where("id", "=", input.assetId)

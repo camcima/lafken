@@ -33,6 +33,8 @@ export interface IUpdateDerivedMetadataInput {
   width: number | null;
   height: number | null;
   contentHash: Buffer;
+  /** Perceptual hash of the image content; null when not applicable (e.g. non-image files). */
+  phash?: Buffer | null;
   captureContext: Record<string, unknown> | null;
 }
 

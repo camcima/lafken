@@ -49,14 +49,15 @@ export interface Assets {
   effective_expires_at: Timestamp | null;
   effective_max_size_bytes: Int8;
   effective_url_ttl: number;
+  external_ref_id: string | null;
+  external_ref_type: string | null;
   height: number | null;
   id: Generated<string>;
   legal_hold: Generated<boolean>;
   legal_hold_reference: string | null;
   mime_type: string | null;
   namespace_id: string;
-  external_ref_id: string | null;
-  external_ref_type: string | null;
+  phash: Buffer | null;
   policy_version_id: string;
   public_id: Generated<string>;
   size_bytes: Int8 | null;
@@ -65,6 +66,7 @@ export interface Assets {
   state_reason: string | null;
   storage_binding_id: string;
   storage_key: string;
+  tags: Generated<string[]>;
   updated_at: Generated<Timestamp>;
   uploaded_by: string | null;
   width: number | null;
@@ -109,9 +111,9 @@ export interface LegalHolds {
   created_at: Generated<Timestamp>;
   description: string;
   id: Generated<string>;
+  lift_reason: string | null;
   lifted_at: Timestamp | null;
   lifted_by: string | null;
-  lift_reason: string | null;
   placed_at: Generated<Timestamp>;
   placed_by: string;
   scope_summary: string;
@@ -214,8 +216,8 @@ export interface UploadIntents {
 
 export interface DB {
   asset_analyses: AssetAnalyses;
-  assets: Assets;
   asset_state_transitions: AssetStateTransitions;
+  assets: Assets;
   configuration_audit_log: ConfigurationAuditLog;
   legal_hold_assets: LegalHoldAssets;
   legal_holds: LegalHolds;
