@@ -108,7 +108,7 @@ export class LegalHoldsController {
       assetIds: body.assetIds,
       placedBy: user.emailAddress,
     });
-    return LegalHoldResponseMapper.fromDomain(hold, body.assetIds.length);
+    return LegalHoldResponseMapper.fromDomain(hold, new Set(body.assetIds).size);
   }
 
   @Post(":id/lift")
