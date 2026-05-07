@@ -112,6 +112,7 @@ export class LegalHoldsController {
   }
 
   @Post(":id/lift")
+  @HttpCode(HttpStatus.OK)
   @AuthenticatedEndpoint()
   @EndpointRequiredRoles([ApplicationRole.LEGAL_HOLD_ADMIN])
   @ApiOperation({
