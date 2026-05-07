@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { sql } from "kysely";
 
 import type { AssetAnalysis } from "@/assets/domain/entities/asset-analysis.entity";
 import type { AssetStateTransition } from "@/assets/domain/entities/asset-state-transition.entity";
@@ -7,7 +8,9 @@ import type { ProcessingJob } from "@/assets/domain/entities/processing-job.enti
 import {
   AssetPage,
   AssetQueryRepositoryPort,
+  IAssetPublicIdResolution,
   ListAssetsInput,
+  NamespaceStorageUsage,
 } from "@/assets/domain/repositories/asset-query.repository.port";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
@@ -70,6 +73,50 @@ export class AssetQueryRepository implements AssetQueryRepositoryPort {
     if (input.uploadedTo) {
       countQuery = countQuery.where("assets.created_at", "<=", new Date(input.uploadedTo));
       dataQuery = dataQuery.where("assets.created_at", "<=", new Date(input.uploadedTo));
+    }
+
+    if (input.tags && input.tags.length > 0) {
+      const tagsArray = input.tags;
+      countQuery = countQuery.where(
+        sql<boolean>`${sql.ref("assets.tags")} @> ${tagsArray}::text[]`,
+      );
+      dataQuery = dataQuery.where(sql<boolean>`${sql.ref("assets.tags")} @> ${tagsArray}::text[]`);
+    }
+
+    if (input.legalHoldId) {
+      countQuery = countQuery
+        .innerJoin("legal_hold_assets", "legal_hold_assets.asset_id", "assets.id")
+        .where("legal_hold_assets.legal_hold_id", "=", input.legalHoldId);
+
+      dataQuery = dataQuery
+        .innerJoin("legal_hold_assets", "legal_hold_assets.asset_id", "assets.id")
+        .where("legal_hold_assets.legal_hold_id", "=", input.legalHoldId);
+    }
+
+    const trimmedQ: string = input.q?.trim() ?? "";
+    if (trimmedQ.length > 0) {
+      // Escape LIKE wildcards so the user's input is matched literally; the
+      // bracketing % wildcards we add do the substring work.
+      const escaped: string = trimmedQ.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+      const pattern = `%${escaped}%`;
+      countQuery = countQuery.where((eb) =>
+        eb.or([
+          sql<boolean>`${eb.ref("assets.public_id")}::text ILIKE ${pattern}`,
+          eb("assets.external_ref_id", "ilike", pattern),
+          eb("assets.uploaded_by", "ilike", pattern),
+          sql<boolean>`encode(${eb.ref("assets.content_hash")}, 'hex') ILIKE ${pattern}`,
+          sql<boolean>`EXISTS (SELECT 1 FROM unnest(${eb.ref("assets.tags")}) AS t WHERE t ILIKE ${pattern})`,
+        ]),
+      );
+      dataQuery = dataQuery.where((eb) =>
+        eb.or([
+          sql<boolean>`${eb.ref("assets.public_id")}::text ILIKE ${pattern}`,
+          eb("assets.external_ref_id", "ilike", pattern),
+          eb("assets.uploaded_by", "ilike", pattern),
+          sql<boolean>`encode(${eb.ref("assets.content_hash")}, 'hex') ILIKE ${pattern}`,
+          sql<boolean>`EXISTS (SELECT 1 FROM unnest(${eb.ref("assets.tags")}) AS t WHERE t ILIKE ${pattern})`,
+        ]),
+      );
     }
 
     const [{ count }] = await countQuery.execute();
@@ -145,5 +192,48 @@ export class AssetQueryRepository implements AssetQueryRepositoryPort {
       .where("id", "=", policyVersionId)
       .executeTakeFirst();
     return (row as { version?: number } | undefined)?.version ?? null;
+  }
+
+  async getNamespaceStorageUsage(namespaceId: string): Promise<NamespaceStorageUsage> {
+    const row = await this.db.connection
+      .selectFrom("assets")
+      .select((eb) => [
+        eb.fn.sum<string | null>("size_bytes").as("total_bytes"),
+        eb.fn.countAll<string>().as("asset_count"),
+      ])
+      .where("namespace_id", "=", namespaceId)
+      .where("size_bytes", "is not", null)
+      .where("state", "not in", ["expired", "deleted"])
+      .executeTakeFirstOrThrow();
+
+    const ZERO_BYTES = 0n;
+    const totalBytesRaw = (row as { total_bytes: string | null }).total_bytes;
+    return {
+      totalBytes: totalBytesRaw === null ? ZERO_BYTES : BigInt(totalBytesRaw),
+      assetCount: Number((row as { asset_count: string }).asset_count),
+    };
+  }
+
+  async findInternalIdsAndNamespaceSlugsByPublicIds(
+    publicIds: string[],
+  ): Promise<IAssetPublicIdResolution[]> {
+    if (publicIds.length === 0) return [];
+
+    const rows = await this.db.connection
+      .selectFrom("assets")
+      .innerJoin("namespaces", "namespaces.id", "assets.namespace_id")
+      .select([
+        "assets.id as id",
+        "assets.public_id as public_id",
+        "namespaces.slug as namespace_slug",
+      ])
+      .where("assets.public_id", "in", publicIds)
+      .execute();
+
+    return rows.map((row) => ({
+      id: row.id,
+      publicId: row.public_id,
+      namespaceSlug: row.namespace_slug,
+    }));
   }
 }

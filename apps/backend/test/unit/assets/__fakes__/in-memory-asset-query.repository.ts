@@ -5,7 +5,9 @@ import type { ProcessingJob } from "@/assets/domain/entities/processing-job.enti
 import {
   AssetPage,
   AssetQueryRepositoryPort,
+  IAssetPublicIdResolution,
   ListAssetsInput,
+  NamespaceStorageUsage,
 } from "@/assets/domain/repositories/asset-query.repository.port";
 
 export class InMemoryAssetQueryRepository implements AssetQueryRepositoryPort {
@@ -41,10 +43,24 @@ export class InMemoryAssetQueryRepository implements AssetQueryRepositoryPort {
   }
 
   list(input: ListAssetsInput): Promise<AssetPage> {
-    const total = this.assets.length;
+    const trimmedQ: string = input.q?.trim() ?? "";
+    const filtered: Asset[] =
+      trimmedQ.length === 0
+        ? this.assets
+        : this.assets.filter((a) => {
+            const needle: string = trimmedQ.toLowerCase();
+            const hashHex: string = a.props.contentHash?.toString("hex") ?? "";
+            return (
+              a.props.publicId.toLowerCase().includes(needle) ||
+              (a.props.externalRefId?.toLowerCase().includes(needle) ?? false) ||
+              (a.props.uploadedBy?.toLowerCase().includes(needle) ?? false) ||
+              hashHex.toLowerCase().includes(needle)
+            );
+          });
+    const total = filtered.length;
     const start = (input.page - 1) * input.limit;
     return Promise.resolve({
-      data: this.assets.slice(start, start + input.limit),
+      data: filtered.slice(start, start + input.limit),
       total,
       page: input.page,
       limit: input.limit,
@@ -74,5 +90,40 @@ export class InMemoryAssetQueryRepository implements AssetQueryRepositoryPort {
 
   findPolicyVersion(policyVersionId: string): Promise<number | null> {
     return Promise.resolve(this.policyVersions.get(policyVersionId) ?? null);
+  }
+
+  getNamespaceStorageUsage(namespaceId: string): Promise<NamespaceStorageUsage> {
+    const EXCLUDED_STATES = new Set(["expired", "deleted"] as const);
+    const ZERO_BYTES = 0n;
+    const ZERO_COUNT = 0;
+    const ONE = 1;
+    let totalBytes = ZERO_BYTES;
+    let assetCount = ZERO_COUNT;
+    for (const asset of this.assets) {
+      if (asset.props.namespaceId !== namespaceId) continue;
+      if (asset.props.sizeBytes === null || asset.props.sizeBytes === undefined) continue;
+      if (EXCLUDED_STATES.has(asset.props.state as "expired" | "deleted")) continue;
+      totalBytes += BigInt(asset.props.sizeBytes);
+      assetCount += ONE;
+    }
+    return Promise.resolve({ totalBytes, assetCount });
+  }
+
+  findInternalIdsAndNamespaceSlugsByPublicIds(
+    publicIds: string[],
+  ): Promise<IAssetPublicIdResolution[]> {
+    if (publicIds.length === 0) return Promise.resolve([]);
+    const publicIdSet = new Set(publicIds);
+    const results: IAssetPublicIdResolution[] = [];
+    for (const asset of this.assets) {
+      if (!publicIdSet.has(asset.props.publicId)) continue;
+      const namespaceSlug = this.namespaceSlugs.get(asset.props.namespaceId) ?? "";
+      results.push({
+        id: asset.props.id,
+        publicId: asset.props.publicId,
+        namespaceSlug,
+      });
+    }
+    return Promise.resolve(results);
   }
 }
