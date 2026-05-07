@@ -3,6 +3,7 @@ export const ApplicationRole = {
   CONTENT_REVIEWER: "lafken_content_reviewer",
   APPLICATION_DEVELOPER: "lafken_application_developer",
   ASSET_DELETER: "lafken_asset_deleter",
+  LEGAL_HOLD_ADMIN: "lafken_legal_hold_admin",
 } as const;
 
 export type ApplicationRole = (typeof ApplicationRole)[keyof typeof ApplicationRole];
