@@ -289,7 +289,11 @@
         "comingSoon": "Bulk actions come in a later slice"
       },
       "summaryRange": "Showing {{from}}–{{to}} of {{total}} assets",
-      "summaryEmpty": "No matching assets"
+      "summaryEmpty": "No matching assets",
+      "legalHoldFilter": {
+        "banner": "Showing assets covered by legal hold {{holdId}}",
+        "clear": "Show all assets"
+      }
     },
     "assetDetail": {
       "title": "Asset",
@@ -904,6 +908,20 @@
         "export": "Export holds register",
         "place": "Place hold…",
         "placeNew": "Place hold…"
+      },
+      "lift": {
+        "title": "Lift legal hold",
+        "warning": "This action cannot be undone — the hold's history is preserved but the assets become eligible for deletion/retention again unless covered by another active hold.",
+        "reasonLabel": "Reason for lift",
+        "reasonPlaceholder": "Investigation closed; releasing per counsel approval.",
+        "reasonCounter": "{{count}} / 1,000 characters · minimum 10",
+        "submit": "Lift hold",
+        "cancel": "Cancel",
+        "toast": {
+          "success": "Legal hold {{caseReference}} lifted.",
+          "failure": "Could not lift legal hold: {{error}}",
+          "demo": "Demo mode — no changes will be persisted."
+        }
       },
       "stats": {
         "activeHolds": {

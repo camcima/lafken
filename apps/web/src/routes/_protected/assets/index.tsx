@@ -8,6 +8,7 @@ const assetsSearchSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   namespaceSlug: z.string().optional(),
   state: z.enum(ASSET_STATES).optional(),
+  legalHoldId: z.uuid().optional(),
 });
 
 export const Route = createFileRoute("/_protected/assets/")({

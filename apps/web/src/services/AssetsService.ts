@@ -23,6 +23,7 @@ export class AssetsService extends BaseService {
       externalRefId: query.externalRefId,
       uploadedFrom: query.uploadedFrom,
       uploadedTo: query.uploadedTo,
+      legalHoldId: query.legalHoldId,
     };
     return this.getApiClient().get<PaginatedResult<AssetResponseDTO>>(
       this.getServiceUrl(this.basePath),

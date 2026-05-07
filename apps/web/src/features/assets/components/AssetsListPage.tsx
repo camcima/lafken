@@ -1,5 +1,6 @@
 import type { AssetState, NamespaceResponseDTO } from "@shared/backend-api";
 import { useQuery } from "@tanstack/react-query";
+import { Link, useSearch } from "@tanstack/react-router";
 import { Download, Filter, Lock, Plus, Search, Tag, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -45,6 +46,7 @@ interface INamespaceOption {
 
 export function AssetsListPage(): React.JSX.Element {
   const { t } = useTranslation();
+  const { legalHoldId } = useSearch({ from: "/_protected/assets/" });
 
   const [view, setView] = useState<ViewMode>("rows");
   const [stateFilter, setStateFilter] = useState("all");
@@ -66,6 +68,7 @@ export function AssetsListPage(): React.JSX.Element {
         limit: PAGE_SIZE,
         namespaceSlug: namespaceFilter !== "all" ? namespaceFilter : undefined,
         states: stateFilter !== "all" ? [stateFilter as AssetState] : undefined,
+        legalHoldId,
       },
     ] as const,
     queryFn: () =>
@@ -74,6 +77,7 @@ export function AssetsListPage(): React.JSX.Element {
         limit: PAGE_SIZE,
         namespaceSlug: namespaceFilter !== "all" ? namespaceFilter : undefined,
         states: stateFilter !== "all" ? [stateFilter as AssetState] : undefined,
+        legalHoldId,
       }),
     enabled: !isDemoMode,
   });
@@ -377,6 +381,18 @@ export function AssetsListPage(): React.JSX.Element {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Legal hold filter banner ────────────────────────── */}
+      {legalHoldId !== undefined && !isDemoMode && (
+        <div className="border-warn/40 bg-warn-soft/40 mb-3 flex items-center justify-between rounded-md border px-4 py-2 text-sm">
+          <span>{t("pages.assets.legalHoldFilter.banner", { holdId: legalHoldId })}</span>
+          <Link to="/assets" search={{}}>
+            <span className="text-latam-indigo hover:underline">
+              {t("pages.assets.legalHoldFilter.clear")}
+            </span>
+          </Link>
         </div>
       )}
 

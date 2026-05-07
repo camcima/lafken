@@ -39,7 +39,7 @@ vi.mock("@/services", () => ({
   },
 }));
 
-// TanStack Router Link mock — same pattern as the demo-mode test file.
+// TanStack Router Link + useSearch mock — same pattern as the demo-mode test file.
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
@@ -49,6 +49,7 @@ vi.mock("@tanstack/react-router", () => ({
     to?: string;
     params?: Record<string, string>;
   }) => <a href={props.to ?? "#"}>{children}</a>,
+  useSearch: () => ({ legalHoldId: undefined }),
 }));
 
 function renderPage(): ReturnType<typeof render> {

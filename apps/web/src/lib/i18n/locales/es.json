@@ -289,7 +289,11 @@
         "comingSoon": "Las acciones masivas estarán disponibles en un slice posterior"
       },
       "summaryRange": "Mostrando {{from}}–{{to}} de {{total}} activos",
-      "summaryEmpty": "No hay activos que coincidan"
+      "summaryEmpty": "No hay activos que coincidan",
+      "legalHoldFilter": {
+        "banner": "Mostrando activos cubiertos por la retención legal {{holdId}}",
+        "clear": "Mostrar todos los activos"
+      }
     },
     "assetDetail": {
       "title": "Activo",
@@ -903,6 +907,20 @@
         "export": "Exportar registro de retenciones",
         "place": "Aplicar retención…",
         "placeNew": "Aplicar retención…"
+      },
+      "lift": {
+        "title": "Levantar retención legal",
+        "warning": "Esta acción no se puede deshacer — el historial de la retención se conserva, pero los activos vuelven a ser elegibles para eliminación/retención a menos que estén cubiertos por otra retención activa.",
+        "reasonLabel": "Motivo del levantamiento",
+        "reasonPlaceholder": "Investigación cerrada; liberación según aprobación del asesor legal.",
+        "reasonCounter": "{{count}} / 1.000 caracteres · mínimo 10",
+        "submit": "Levantar retención",
+        "cancel": "Cancelar",
+        "toast": {
+          "success": "Retención legal {{caseReference}} levantada.",
+          "failure": "No se pudo levantar la retención legal: {{error}}",
+          "demo": "Modo demo — los cambios no se guardarán."
+        }
       },
       "stats": {
         "activeHolds": {

@@ -1,8 +1,9 @@
+import type { LegalHoldResponseDTO } from "@shared/backend-api";
+import { Link } from "@tanstack/react-router";
 import {
   Check,
   ChevronRight,
   Clock,
-  Download,
   Eye,
   Globe,
   Image,
@@ -22,26 +23,84 @@ import { Label } from "@/components/common/Label";
 import { Paginator } from "@/components/common/Paginator";
 import { RightDrawer } from "@/components/common/RightDrawer";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
+import { LiftLegalHoldDialog } from "@/features/legal-holds/components/LiftLegalHoldDialog";
+import { useLegalHolds } from "@/features/legal-holds/hooks/useLegalHolds";
+import { isDemoMode } from "@/lib/demo/demo-mode";
 import { DEMO_LEGAL_HOLDS } from "@/lib/demo/lafken-demo-data";
-import type { DemoLegalHold } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
 
-// Slice 0: BE returns empty arrays; rendering against typed demo data
+// ── Constants ─────────────────────────────────────────────────────────────
 
-// Icon sizes
 const SCOPE_ICON_DEFAULT_SIZE = 12;
 const BADGE_ICON_SIZE = 10;
 const BTN_ICON_SIZE = 13;
 const CHEVRON_SIZE = 12;
 const CHECK_ICON_SIZE = 12;
 const SEARCH_ICON_SIZE = 13;
-
-// Date slice: first 10 chars = YYYY-MM-DD
 const DATE_SLICE_END = 10;
 
-// Shared grid column definition (header + row must stay in sync)
+/* eslint-disable no-magic-numbers */
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 25;
+/* eslint-enable no-magic-numbers */
+
+// Shared grid column definition
 const TABLE_COLS =
   "grid-cols-[minmax(0,1.4fr)_120px_minmax(0,2fr)_85px_minmax(0,1.2fr)_110px_120px_34px]";
+
+// ── Normalised row type ───────────────────────────────────────────────────
+//
+// Both DemoLegalHold and LegalHoldResponseDTO map onto this shape before
+// rendering. Only DemoLegalHold has a `scope` field — the API uses
+// `scopeSummary` (a pre-formatted string). We expose `scope` as a best-effort
+// "asset" fallback for the demo icon; for real rows we set `scope` from
+// scopeSummary parsing or leave it blank (the icon falls through to Globe).
+
+interface IHoldRow {
+  id: string;
+  caseRef: string;
+  /** Scope type key used for the icon (demo only; real API uses scopeSummary). */
+  scope: string;
+  scopeLabel: string;
+  assets: number;
+  placedBy: string;
+  placedAt: string;
+  lastReviewed: string;
+  reason: string;
+  active: boolean;
+}
+
+function demoToRow(hold: (typeof DEMO_LEGAL_HOLDS)[number]): IHoldRow {
+  return {
+    id: hold.id,
+    caseRef: hold.caseRef,
+    scope: hold.scope,
+    scopeLabel: hold.scopeLabel,
+    assets: hold.assets,
+    placedBy: hold.placedBy,
+    placedAt: hold.placedAt,
+    lastReviewed: hold.lastReviewed,
+    reason: hold.reason,
+    active: hold.status === "active" || hold.status === "pending_release",
+  };
+}
+
+function apiToRow(hold: LegalHoldResponseDTO): IHoldRow {
+  return {
+    id: hold.id,
+    caseRef: hold.caseReference,
+    scope: "", // real API uses scopeSummary; icon will render Globe
+    scopeLabel: hold.scopeSummary,
+    assets: hold.affectedAssetCount,
+    placedBy: hold.placedBy,
+    placedAt: hold.placedAt,
+    lastReviewed: hold.liftedAt ?? hold.placedAt,
+    reason: hold.description,
+    active: hold.active,
+  };
+}
+
+// ── ScopeIcon ─────────────────────────────────────────────────────────────
 
 interface IScopeIconProps {
   scope: string;
@@ -60,12 +119,15 @@ function ScopeIcon({
   return <Globe size={size} className={className} />;
 }
 
+// ── HoldDrawer ────────────────────────────────────────────────────────────
+
 interface IHoldDrawerProps {
-  hold: DemoLegalHold;
+  hold: IHoldRow;
   onClose: () => void;
+  onLift: () => void;
 }
 
-function HoldDrawer({ hold, onClose }: IHoldDrawerProps): React.JSX.Element {
+function HoldDrawer({ hold, onClose, onLift }: IHoldDrawerProps): React.JSX.Element {
   const { t } = useTranslation();
   const scopeLabels: Record<string, string> = {
     asset: t("pages.legalHolds.scopes.asset"),
@@ -101,18 +163,18 @@ function HoldDrawer({ hold, onClose }: IHoldDrawerProps): React.JSX.Element {
       maxWidthClass="max-w-[520px]"
       footer={
         <>
-          <Button variant="outline">
-            <Eye size={BTN_ICON_SIZE} />
-            {t("pages.legalHolds.drawer.actions.viewAssets")}
-          </Button>
-          <Button variant="outline">
-            <Download size={BTN_ICON_SIZE} />
-            {t("pages.legalHolds.drawer.actions.export")}
-          </Button>
-          <Button variant="danger">
-            <Lock size={BTN_ICON_SIZE} />
-            {t("pages.legalHolds.drawer.actions.requestLift")}
-          </Button>
+          <Link to="/assets" search={{ legalHoldId: hold.id }}>
+            <Button variant="outline">
+              <Eye size={BTN_ICON_SIZE} />
+              {t("pages.legalHolds.drawer.actions.viewAssets")}
+            </Button>
+          </Link>
+          {hold.active && (
+            <Button variant="danger" onClick={onLift}>
+              <Lock size={BTN_ICON_SIZE} />
+              {t("pages.legalHolds.lift.submit")}
+            </Button>
+          )}
         </>
       }
     >
@@ -126,11 +188,13 @@ function HoldDrawer({ hold, onClose }: IHoldDrawerProps): React.JSX.Element {
           <Label>{t("pages.legalHolds.drawer.scope")}</Label>
           <div className="border-border bg-secondary/50 mt-1 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px]">
             <ScopeIcon scope={hold.scope} />
-            {scopeLabels[hold.scope] ?? hold.scope}
+            {scopeLabels[hold.scope] ?? hold.scopeLabel}
           </div>
-          <div className="text-muted-foreground mt-1.5 font-mono text-[12px]">
-            {hold.scopeLabel}
-          </div>
+          {hold.scope !== "" && (
+            <div className="text-muted-foreground mt-1.5 font-mono text-[12px]">
+              {hold.scopeLabel}
+            </div>
+          )}
         </div>
 
         <div>
@@ -150,7 +214,7 @@ function HoldDrawer({ hold, onClose }: IHoldDrawerProps): React.JSX.Element {
           <div>
             <Label>{t("pages.legalHolds.drawer.status")}</Label>
             <div className="mt-1">
-              {hold.status === "active" ? (
+              {hold.active ? (
                 <Badge variant="warn">
                   <Lock size={BADGE_ICON_SIZE} />
                   {t("pages.legalHolds.statuses.active")}
@@ -203,44 +267,34 @@ function HoldDrawer({ hold, onClose }: IHoldDrawerProps): React.JSX.Element {
   );
 }
 
-// Page-size options for the rows-per-page selector
-/* eslint-disable no-magic-numbers */
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
-const DEFAULT_PAGE_SIZE = 25;
-/* eslint-enable no-magic-numbers */
-
-// Slice 0: oldest-hold stat — derived from demo data, not hardcoded.
-// Computed once at module load so Date.now() is stable across renders.
-const MS_PER_DAY = 86_400_000;
-const _oldestHold = DEMO_LEGAL_HOLDS.slice().sort((a, b) =>
-  a.placedAt.localeCompare(b.placedAt),
-)[0];
-const OLDEST_HOLD_STAT: { days: number; caseRef: string } =
-  _oldestHold === undefined
-    ? { days: 0, caseRef: "" }
-    : {
-        days: Math.floor((Date.now() - new Date(_oldestHold.placedAt).getTime()) / MS_PER_DAY),
-        caseRef: _oldestHold.caseRef,
-      };
+// ── Page ──────────────────────────────────────────────────────────────────
 
 export function LegalHoldsListPage(): React.JSX.Element {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
-  const [scopeFilter, setScopeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [liftDialogOpen, setLiftDialogOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  const filtered: DemoLegalHold[] = DEMO_LEGAL_HOLDS.filter((hold) => {
-    if (statusFilter !== "all" && hold.status !== statusFilter) return false;
-    if (scopeFilter !== "all" && hold.scope !== scopeFilter) return false;
+  // Real-API query (skipped in demo mode)
+  const realQuery = useLegalHolds({ page: page + 1, limit: pageSize });
+
+  // Normalise both sources to IHoldRow[]
+  const allRows: IHoldRow[] = isDemoMode
+    ? DEMO_LEGAL_HOLDS.map(demoToRow)
+    : (realQuery.data?.data ?? []).map(apiToRow);
+
+  const filtered: IHoldRow[] = allRows.filter((row) => {
+    if (statusFilter === "active" && !row.active) return false;
+    if (statusFilter === "lifted" && row.active) return false;
     if (query) {
       const lq = query.toLowerCase();
       if (
-        !hold.caseRef.toLowerCase().includes(lq) &&
-        !hold.scopeLabel.toLowerCase().includes(lq) &&
-        !hold.id.toLowerCase().includes(lq)
+        !row.caseRef.toLowerCase().includes(lq) &&
+        !row.scopeLabel.toLowerCase().includes(lq) &&
+        !row.id.toLowerCase().includes(lq)
       )
         return false;
     }
@@ -248,10 +302,10 @@ export function LegalHoldsListPage(): React.JSX.Element {
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const pageRows = filtered.slice(page * pageSize, (page + 1) * pageSize);
+  const pageRows = isDemoMode ? filtered.slice(page * pageSize, (page + 1) * pageSize) : filtered;
 
-  const totalAssets: number = filtered.reduce((sum, hold) => sum + hold.assets, 0);
-  const openHold: DemoLegalHold | undefined = DEMO_LEGAL_HOLDS.find((hold) => hold.id === openId);
+  const totalAssets: number = filtered.reduce((sum, row) => sum + row.assets, 0);
+  const openHold: IHoldRow | undefined = allRows.find((row) => row.id === openId);
 
   const rangeFrom = filtered.length === 0 ? 0 : page * pageSize + 1;
   const rangeTo = Math.min((page + 1) * pageSize, filtered.length);
@@ -262,6 +316,10 @@ export function LegalHoldsListPage(): React.JSX.Element {
     namespace: t("pages.legalHolds.scopes.namespace"),
     uploader_window: t("pages.legalHolds.scopes.uploaderWindow"),
   };
+
+  // Stats derived from allRows (not filtered)
+  const activeCount = allRows.filter((row) => row.active).length;
+  const totalAssetsAll = allRows.reduce((sum, row) => sum + row.assets, 0);
 
   return (
     <div className="space-y-4">
@@ -279,25 +337,23 @@ export function LegalHoldsListPage(): React.JSX.Element {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline">
-            <Download size={BTN_ICON_SIZE} />
-            {t("pages.legalHolds.actions.export")}
-          </Button>
-          <Button variant="indigo">
-            <Plus size={BTN_ICON_SIZE} />
-            {t("pages.legalHolds.actions.place")}
-          </Button>
+          <Link to="/legal-holds/new">
+            <Button variant="indigo">
+              <Plus size={BTN_ICON_SIZE} />
+              {t("pages.legalHolds.actions.placeNew")}
+            </Button>
+          </Link>
         </div>
       </div>
 
       {/* Stats grid */}
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Card className="px-4 py-3">
           <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
             {t("pages.legalHolds.stats.activeHolds.label")}
           </div>
           <div className="mt-0.5 font-mono text-[24px] leading-tight tabular-nums">
-            {DEMO_LEGAL_HOLDS.filter((hold) => hold.status === "active").length}
+            {activeCount}
           </div>
           <div className="text-muted-foreground text-[11px]">
             {t("pages.legalHolds.stats.activeHolds.sub")}
@@ -305,21 +361,10 @@ export function LegalHoldsListPage(): React.JSX.Element {
         </Card>
         <Card className="px-4 py-3">
           <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
-            {t("pages.legalHolds.stats.pendingRelease.label")}
-          </div>
-          <div className="text-warn mt-0.5 font-mono text-[24px] leading-tight tabular-nums">
-            {DEMO_LEGAL_HOLDS.filter((hold) => hold.status === "pending_release").length}
-          </div>
-          <div className="text-muted-foreground text-[11px]">
-            {t("pages.legalHolds.stats.pendingRelease.sub")}
-          </div>
-        </Card>
-        <Card className="px-4 py-3">
-          <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
             {t("pages.legalHolds.stats.assetsUnderHold.label")}
           </div>
           <div className="mt-0.5 font-mono text-[24px] leading-tight tabular-nums">
-            {DEMO_LEGAL_HOLDS.reduce((sum, hold) => sum + hold.assets, 0).toLocaleString()}
+            {totalAssetsAll.toLocaleString()}
           </div>
           <div className="text-muted-foreground text-[11px]">
             {t("pages.legalHolds.stats.assetsUnderHold.sub")}
@@ -329,10 +374,10 @@ export function LegalHoldsListPage(): React.JSX.Element {
           <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
             {t("pages.legalHolds.stats.oldestHold.label")}
           </div>
-          <div className="mt-0.5 font-mono text-[24px] leading-tight tabular-nums">
-            {OLDEST_HOLD_STAT.days}d
+          <div className="mt-0.5 font-mono text-[24px] leading-tight tabular-nums">—</div>
+          <div className="text-muted-foreground text-[11px]">
+            {t("pages.legalHolds.stats.oldestHold.sub")}
           </div>
-          <div className="text-muted-foreground text-[11px]">{OLDEST_HOLD_STAT.caseRef}</div>
         </Card>
       </div>
 
@@ -356,20 +401,6 @@ export function LegalHoldsListPage(): React.JSX.Element {
             />
           </div>
           <select
-            value={scopeFilter}
-            onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
-              setScopeFilter(ev.target.value);
-              setPage(0);
-            }}
-            className={SELECT_CLASS}
-          >
-            <option value="all">{t("pages.legalHolds.filters.allScopes")}</option>
-            <option value="asset">{t("pages.legalHolds.scopes.asset")}</option>
-            <option value="work_order">{t("pages.legalHolds.scopes.workOrder")}</option>
-            <option value="namespace">{t("pages.legalHolds.scopes.namespace")}</option>
-            <option value="uploader_window">{t("pages.legalHolds.scopes.uploaderWindow")}</option>
-          </select>
-          <select
             value={statusFilter}
             onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
               setStatusFilter(ev.target.value);
@@ -379,7 +410,7 @@ export function LegalHoldsListPage(): React.JSX.Element {
           >
             <option value="all">{t("pages.legalHolds.filters.allStatuses")}</option>
             <option value="active">{t("pages.legalHolds.statuses.active")}</option>
-            <option value="pending_release">{t("pages.legalHolds.statuses.pendingRelease")}</option>
+            <option value="lifted">{t("pages.legalHolds.statuses.pendingRelease")}</option>
           </select>
         </div>
       </Card>
@@ -402,12 +433,12 @@ export function LegalHoldsListPage(): React.JSX.Element {
             <span>{t("pages.legalHolds.table.status")}</span>
             <span />
           </div>
-          {pageRows.map((hold) => (
+          {pageRows.map((row) => (
             <button
-              key={hold.id}
+              key={row.id}
               type="button"
               onClick={() => {
-                setOpenId(hold.id);
+                setOpenId(row.id);
               }}
               className={cn(
                 "border-border/40 hover:bg-secondary/30 grid w-full items-center gap-3 border-b px-4 py-2.5 text-left text-[12.5px] last:border-b-0",
@@ -416,10 +447,10 @@ export function LegalHoldsListPage(): React.JSX.Element {
             >
               <div className="min-w-0">
                 <div className="text-latam-indigo-deep truncate font-mono text-[12.5px]">
-                  {hold.caseRef}
+                  {row.caseRef}
                 </div>
                 <div className="text-muted-foreground truncate font-mono text-[10.5px]">
-                  {hold.id}
+                  {row.id}
                 </div>
               </div>
               <div
@@ -427,23 +458,23 @@ export function LegalHoldsListPage(): React.JSX.Element {
                   "border-border bg-secondary/40 inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px]",
                 )}
               >
-                <ScopeIcon scope={hold.scope} />
-                {scopeLabels[hold.scope] ?? hold.scope}
+                <ScopeIcon scope={row.scope} />
+                {scopeLabels[row.scope] ?? row.scopeLabel}
               </div>
               <div className="text-muted-foreground truncate font-mono text-[11.5px]">
-                {hold.scopeLabel}
+                {row.scopeLabel}
               </div>
               <div className="text-right font-mono text-[12.5px] tabular-nums">
-                {hold.assets.toLocaleString()}
+                {row.assets.toLocaleString()}
               </div>
               <div className="text-muted-foreground truncate font-mono text-[11.5px]">
-                {hold.placedBy}
+                {row.placedBy}
               </div>
               <div className="text-muted-foreground text-[11.5px]">
-                {hold.lastReviewed.slice(0, DATE_SLICE_END)}
+                {row.lastReviewed.slice(0, DATE_SLICE_END)}
               </div>
               <div>
-                {hold.status === "active" ? (
+                {row.active ? (
                   <Badge variant="warn">
                     <Lock size={BADGE_ICON_SIZE} />
                     {t("pages.legalHolds.statuses.active")}
@@ -512,6 +543,21 @@ export function LegalHoldsListPage(): React.JSX.Element {
           hold={openHold}
           onClose={() => {
             setOpenId(null);
+          }}
+          onLift={() => {
+            setLiftDialogOpen(true);
+          }}
+        />
+      )}
+
+      {/* Lift dialog — rendered outside the drawer so it is not nested in a focus trap */}
+      {openHold !== undefined && (
+        <LiftLegalHoldDialog
+          open={liftDialogOpen}
+          holdId={openHold.id}
+          caseReference={openHold.caseRef}
+          onClose={() => {
+            setLiftDialogOpen(false);
           }}
         />
       )}

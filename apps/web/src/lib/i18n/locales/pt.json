@@ -289,7 +289,11 @@
         "comingSoon": "Ações em lote disponíveis em um próximo slice"
       },
       "summaryRange": "Exibindo {{from}}–{{to}} de {{total}} ativos",
-      "summaryEmpty": "Nenhum ativo encontrado"
+      "summaryEmpty": "Nenhum ativo encontrado",
+      "legalHoldFilter": {
+        "banner": "Exibindo ativos cobertos pela retenção legal {{holdId}}",
+        "clear": "Exibir todos os ativos"
+      }
     },
     "assetDetail": {
       "title": "Ativo",
@@ -903,6 +907,20 @@
         "export": "Exportar registro de retenções",
         "place": "Aplicar retenção…",
         "placeNew": "Aplicar retenção…"
+      },
+      "lift": {
+        "title": "Levantar retenção legal",
+        "warning": "Esta ação não pode ser desfeita — o histórico da retenção é preservado, mas os ativos voltam a ser elegíveis para exclusão/retenção, a menos que estejam cobertos por outra retenção ativa.",
+        "reasonLabel": "Motivo do levantamento",
+        "reasonPlaceholder": "Investigação encerrada; liberação conforme aprovação jurídica.",
+        "reasonCounter": "{{count}} / 1.000 caracteres · mínimo 10",
+        "submit": "Levantar retenção",
+        "cancel": "Cancelar",
+        "toast": {
+          "success": "Retenção legal {{caseReference}} levantada.",
+          "failure": "Não foi possível levantar a retenção legal: {{error}}",
+          "demo": "Modo demo — as alterações não serão salvas."
+        }
       },
       "stats": {
         "activeHolds": {

@@ -16,7 +16,7 @@ vi.mock("@lafken/react", () => ({
   AssetImage: () => null,
 }));
 
-// TanStack Router Link mock
+// TanStack Router Link + useSearch mock
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
@@ -26,6 +26,7 @@ vi.mock("@tanstack/react-router", () => ({
     to?: string;
     params?: Record<string, string>;
   }) => <a href={props.to ?? "#"}>{children}</a>,
+  useSearch: () => ({ legalHoldId: undefined }),
 }));
 
 function renderPage() {
