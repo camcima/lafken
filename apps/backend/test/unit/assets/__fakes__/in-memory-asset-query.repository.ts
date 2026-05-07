@@ -17,9 +17,16 @@ export class InMemoryAssetQueryRepository implements AssetQueryRepositoryPort {
   private processingJobs = new Map<string, ProcessingJob>();
   private namespaceSlugs = new Map<string, string>();
   private policyVersions = new Map<string, number>();
+  private legalHoldAssetMap = new Map<string, Set<string>>();
 
   seed(assets: Asset[]): void {
     this.assets = assets;
+  }
+
+  linkAssetToHold(assetPublicId: string, legalHoldId: string): void {
+    const existing = this.legalHoldAssetMap.get(legalHoldId) ?? new Set<string>();
+    existing.add(assetPublicId);
+    this.legalHoldAssetMap.set(legalHoldId, existing);
   }
 
   seedStateTransitions(assetId: string, transitions: AssetStateTransition[]): void {
@@ -44,7 +51,7 @@ export class InMemoryAssetQueryRepository implements AssetQueryRepositoryPort {
 
   list(input: ListAssetsInput): Promise<AssetPage> {
     const trimmedQ: string = input.q?.trim() ?? "";
-    const filtered: Asset[] =
+    const qFiltered: Asset[] =
       trimmedQ.length === 0
         ? this.assets
         : this.assets.filter((a) => {
@@ -57,6 +64,14 @@ export class InMemoryAssetQueryRepository implements AssetQueryRepositoryPort {
               hashHex.toLowerCase().includes(needle)
             );
           });
+    const legalHoldSet: Set<string> | null =
+      input.legalHoldId !== null && input.legalHoldId !== undefined
+        ? (this.legalHoldAssetMap.get(input.legalHoldId) ?? new Set<string>())
+        : null;
+    const filtered: Asset[] =
+      legalHoldSet === null
+        ? qFiltered
+        : qFiltered.filter((a) => legalHoldSet.has(a.props.publicId));
     const total = filtered.length;
     const start = (input.page - 1) * input.limit;
     return Promise.resolve({
