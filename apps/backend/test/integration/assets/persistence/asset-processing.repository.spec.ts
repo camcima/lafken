@@ -199,6 +199,7 @@ describe("AssetProcessingRepository", () => {
 
   it("updates derived metadata and records analysis evidence", async () => {
     const contentHash = Buffer.alloc(32, 3);
+    const phash = Buffer.alloc(8, 7);
 
     await repository.updateDerivedMetadata({
       assetId,
@@ -207,6 +208,7 @@ describe("AssetProcessingRepository", () => {
       width: 2,
       height: 3,
       contentHash,
+      phash,
       captureContext: { captured_at: "2026-05-06T12:00:00.000Z" },
     });
 
@@ -221,7 +223,15 @@ describe("AssetProcessingRepository", () => {
 
     const asset = await db.connection
       .selectFrom("assets")
-      .select(["mime_type", "size_bytes", "width", "height", "content_hash", "capture_context"])
+      .select([
+        "mime_type",
+        "size_bytes",
+        "width",
+        "height",
+        "content_hash",
+        "phash",
+        "capture_context",
+      ])
       .where("id", "=", assetId)
       .executeTakeFirstOrThrow();
 
@@ -232,6 +242,7 @@ describe("AssetProcessingRepository", () => {
     expect(Buffer.from(asset.content_hash as Buffer).toString("hex")).toBe(
       contentHash.toString("hex"),
     );
+    expect(Buffer.from(asset.phash as Buffer).toString("hex")).toBe(phash.toString("hex"));
     expect(asset.capture_context).toEqual({ captured_at: "2026-05-06T12:00:00.000Z" });
 
     const analyses = await db.connection

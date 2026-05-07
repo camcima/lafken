@@ -16,6 +16,7 @@ describe("QuarantineQueryRepository", () => {
 
   beforeEach(async () => {
     await db.connection.transaction().execute(async (tx) => {
+      await tx.deleteFrom("legal_hold_assets").execute();
       await tx.deleteFrom("asset_analyses").execute();
       await tx.deleteFrom("asset_state_transitions").execute();
       await tx.deleteFrom("processing_jobs").execute();

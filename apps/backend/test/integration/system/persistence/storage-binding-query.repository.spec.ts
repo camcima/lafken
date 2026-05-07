@@ -17,6 +17,7 @@ describe("StorageBindingQueryRepository", () => {
   beforeEach(async () => {
     // Clean storage_bindings; also remove namespaces that reference them first
     await db.connection.transaction().execute(async (tx) => {
+      await tx.deleteFrom("legal_hold_assets").execute();
       await tx.deleteFrom("namespace_presets").execute();
       await tx.deleteFrom("asset_analyses").execute();
       await tx.deleteFrom("asset_state_transitions").execute();
