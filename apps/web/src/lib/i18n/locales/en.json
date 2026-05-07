@@ -902,7 +902,8 @@
       "searchPlaceholder": "Search by case reference, scope, or hold ID…",
       "actions": {
         "export": "Export holds register",
-        "place": "Place hold…"
+        "place": "Place hold…",
+        "placeNew": "Place hold…"
       },
       "stats": {
         "activeHolds": {
@@ -977,6 +978,46 @@
       },
       "rowsPerPage": "Rows per page",
       "range": "{{from}}–{{to}} of {{total}}"
+    },
+    "placeLegalHold": {
+      "title": "Place legal hold",
+      "subtitle": "A hold suspends deletion and retention expiry for the picked assets until lifted.",
+      "back": "Back to legal holds",
+      "sections": {
+        "case": "Case",
+        "picker": "Find & pick assets",
+        "reason": "Reason",
+        "acknowledge": "Effects & acknowledgement"
+      },
+      "fields": {
+        "caseReference": "Case reference",
+        "caseReferenceHint": "Region-area-year-sequence convention recommended (e.g. CHL-AVN-2026-014).",
+        "description": "Reason / counsel note",
+        "descriptionCounter": "{{count}} / 1,000 characters · minimum 10",
+        "namespace": "Namespace",
+        "search": "Search",
+        "searchPlaceholder": "Search id, ref, hash, tag…"
+      },
+      "picker": {
+        "addAllVisible": "Add all visible",
+        "alreadyHeld": "already held",
+        "basket": "Basket",
+        "basketEmpty": "No assets picked yet — search and click + add.",
+        "clearAll": "Clear all",
+        "remove": "Remove from basket"
+      },
+      "acknowledgement": "I understand this hold suspends deletion until lifted.",
+      "footer": {
+        "summary_one": "{{count}} asset will be locked",
+        "summary_other": "{{count}} assets will be locked",
+        "submit": "Place hold",
+        "cancel": "Cancel"
+      },
+      "toast": {
+        "success": "Legal hold {{caseReference}} placed.",
+        "failure": "Could not place legal hold: {{error}}",
+        "demo": "Demo mode — no changes will be persisted."
+      }
     },
     "audit": {
       "title": "Audit log",

@@ -901,7 +901,8 @@
       "searchPlaceholder": "Buscar por referência do caso, escopo ou ID da retenção…",
       "actions": {
         "export": "Exportar registro de retenções",
-        "place": "Aplicar retenção…"
+        "place": "Aplicar retenção…",
+        "placeNew": "Aplicar retenção…"
       },
       "stats": {
         "activeHolds": {
@@ -976,6 +977,46 @@
       },
       "rowsPerPage": "Linhas por página",
       "range": "{{from}}–{{to}} de {{total}}"
+    },
+    "placeLegalHold": {
+      "title": "Aplicar retenção legal",
+      "subtitle": "Uma retenção suspende a exclusão e o vencimento de retenção dos ativos selecionados até ser levantada.",
+      "back": "Voltar às retenções legais",
+      "sections": {
+        "case": "Caso",
+        "picker": "Encontrar e selecionar ativos",
+        "reason": "Motivo",
+        "acknowledge": "Efeitos e reconhecimento"
+      },
+      "fields": {
+        "caseReference": "Referência do caso",
+        "caseReferenceHint": "Recomenda-se a convenção região-área-ano-sequência (ex.: CHL-AVN-2026-014).",
+        "description": "Motivo / nota jurídica",
+        "descriptionCounter": "{{count}} / 1.000 caracteres · mínimo 10",
+        "namespace": "Namespace",
+        "search": "Buscar",
+        "searchPlaceholder": "Buscar por id, ref, hash, tag…"
+      },
+      "picker": {
+        "addAllVisible": "Adicionar todos os visíveis",
+        "alreadyHeld": "já retido",
+        "basket": "Seleção",
+        "basketEmpty": "Nenhum ativo selecionado ainda — pesquise e clique em + adicionar.",
+        "clearAll": "Limpar tudo",
+        "remove": "Remover da seleção"
+      },
+      "acknowledgement": "Entendo que esta retenção suspende a exclusão até ser levantada.",
+      "footer": {
+        "summary_one": "{{count}} ativo será bloqueado",
+        "summary_other": "{{count}} ativos serão bloqueados",
+        "submit": "Aplicar retenção",
+        "cancel": "Cancelar"
+      },
+      "toast": {
+        "success": "Retenção legal {{caseReference}} aplicada.",
+        "failure": "Não foi possível aplicar a retenção legal: {{error}}",
+        "demo": "Modo demo — as alterações não serão persistidas."
+      }
     },
     "audit": {
       "title": "Registro de auditoria",
