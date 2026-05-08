@@ -209,8 +209,8 @@
         "quarantineDetail": "5 oldest are > 24h. Reviewer SLO: 4h.",
         "workerDownTitle": "Worker {{id}} not responding",
         "workerDownDetail": "Last seen 3m ago · pool: default",
-        "holdPendingTitle": "1 hold pending release",
-        "holdPendingDetail": "{{caseRef}} · awaiting counsel sign-off"
+        "holdPendingTitle": "1 hold recently lifted",
+        "holdPendingDetail": "{{caseRef}} · no longer enforced"
       },
       "policyVersion": "policy v{{version}}",
       "kpi": {
@@ -1097,9 +1097,9 @@
           "label": "Active holds",
           "sub": "currently enforced"
         },
-        "pendingRelease": {
-          "label": "Pending release",
-          "sub": "awaiting counsel sign-off"
+        "lifted": {
+          "label": "Lifted holds",
+          "sub": "no longer enforced"
         },
         "assetsUnderHold": {
           "label": "Assets under hold",
@@ -1122,7 +1122,7 @@
       },
       "statuses": {
         "active": "Active",
-        "pendingRelease": "Pending release",
+        "lifted": "Lifted",
         "pending": "Pending"
       },
       "table": {

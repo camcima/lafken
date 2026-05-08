@@ -209,8 +209,8 @@
         "quarantineDetail": "5 mais antigos têm > 24h. SLO do revisor: 4h.",
         "workerDownTitle": "Worker {{id}} sem resposta",
         "workerDownDetail": "Visto por último há 3m · pool: default",
-        "holdPendingTitle": "1 retenção pendente de liberação",
-        "holdPendingDetail": "{{caseRef}} · aguardando aprovação jurídica"
+        "holdPendingTitle": "1 retenção levantada recentemente",
+        "holdPendingDetail": "{{caseRef}} · não mais aplicada"
       },
       "policyVersion": "política v{{version}}",
       "kpi": {
@@ -1096,9 +1096,9 @@
           "label": "Retenções ativas",
           "sub": "atualmente aplicadas"
         },
-        "pendingRelease": {
-          "label": "Aguardando liberação",
-          "sub": "aguardando aprovação jurídica"
+        "lifted": {
+          "label": "Retenções levantadas",
+          "sub": "não mais aplicadas"
         },
         "assetsUnderHold": {
           "label": "Ativos sob retenção",
@@ -1121,7 +1121,7 @@
       },
       "statuses": {
         "active": "Ativo",
-        "pendingRelease": "Aguardando liberação",
+        "lifted": "Levantada",
         "pending": "Pendente"
       },
       "table": {

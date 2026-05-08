@@ -222,7 +222,7 @@ function HoldDrawer({ hold, onClose, onLift }: IHoldDrawerProps): React.JSX.Elem
               ) : (
                 <Badge variant="info">
                   <Clock size={BADGE_ICON_SIZE} />
-                  {t("pages.legalHolds.statuses.pendingRelease")}
+                  {t("pages.legalHolds.statuses.lifted")}
                 </Badge>
               )}
             </div>
@@ -411,7 +411,7 @@ export function LegalHoldsListPage(): React.JSX.Element {
           >
             <option value="all">{t("pages.legalHolds.filters.allStatuses")}</option>
             <option value="active">{t("pages.legalHolds.statuses.active")}</option>
-            <option value="lifted">{t("pages.legalHolds.statuses.pendingRelease")}</option>
+            <option value="lifted">{t("pages.legalHolds.statuses.lifted")}</option>
           </select>
         </div>
       </Card>
@@ -483,7 +483,7 @@ export function LegalHoldsListPage(): React.JSX.Element {
                 ) : (
                   <Badge variant="info">
                     <Clock size={BADGE_ICON_SIZE} />
-                    {t("pages.legalHolds.statuses.pendingRelease")}
+                    {t("pages.legalHolds.statuses.lifted")}
                   </Badge>
                 )}
               </div>

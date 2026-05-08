@@ -260,7 +260,7 @@ test.describe("Slice 6: Legal holds place + lift", () => {
       await expect(liftDialog).toBeHidden({ timeout: 10_000 });
 
       // After lifting, the hold should now show a non-active status badge.
-      // The API flips `active` to false → "Pending release" badge renders.
+      // The API flips `active` to false → "Lifted" badge renders.
       // We reload the page to let the list refresh from the server.
       await page.goto("/legal-holds");
       // The hold row should still be visible but with a non-active status.
