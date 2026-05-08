@@ -36,11 +36,13 @@ interface IServiceAccountCredentials {
 export class GcsAssetStorageAdapter extends AssetStoragePort {
   private readonly storage: Storage;
   /**
-   * Separate Storage client used solely to sign preview-source URLs against
-   * the renderer-side hostname. Falls back to {@link storage} when the
-   * preview endpoint matches the API endpoint (the prod-default case).
+   * Origin (`scheme://host[:port]`) the backend rewrites onto preview-source
+   * URLs after signing, so imgproxy can resolve them through compose DNS
+   * (e.g. `http://fake-gcs:4443`) while the URL is fetched via the JSON
+   * download API (which doesn't validate signatures). Undefined in prod,
+   * where signing endpoint and renderer endpoint coincide.
    */
-  private readonly previewStorage: Storage;
+  private readonly previewSourceOrigin?: string;
 
   constructor(options: IGcsAssetStorageOptions) {
     super();
@@ -53,13 +55,10 @@ export class GcsAssetStorageAdapter extends AssetStoragePort {
       credentials,
     });
 
-    const previewEndpointOverride: string | undefined =
+    this.previewSourceOrigin =
       options.previewSourceEndpoint && options.previewSourceEndpoint !== options.endpoint
         ? options.previewSourceEndpoint
         : undefined;
-    this.previewStorage = previewEndpointOverride
-      ? buildStorageClient({ endpoint: previewEndpointOverride, credentials })
-      : this.storage;
   }
 
   async issueSignedUploadUrl(
@@ -131,21 +130,24 @@ export class GcsAssetStorageAdapter extends AssetStoragePort {
   }
 
   async signSourceUrlForRendering(input: ISignReadUrlInput): Promise<string> {
-    const expiresAt = new Date(Date.now() + input.ttlSeconds * MS_PER_SECOND);
-    const [url] = await this.getPreviewBucket(input.binding).file(input.storageKey).getSignedUrl({
-      action: "read",
-      version: "v4",
-      expires: expiresAt,
-    });
-    return url;
+    if (this.previewSourceOrigin) {
+      // Dev path: fake-gcs reaches imgproxy through compose DNS at a different
+      // host than the browser uses. fake-gcs interprets unfamiliar Host headers
+      // as virtual-hosted bucket names, so a V4-signed path-style URL signed
+      // for one host (and fetched at another) gets routed to a non-existent
+      // bucket. The JSON download API serves objects on any host without
+      // signature validation, which is fine in a dev sandbox.
+      const encodedKey: string = encodeURIComponent(input.storageKey);
+      return (
+        `${this.previewSourceOrigin}/storage/v1/b/${input.binding.bucket}` +
+        `/o/${encodedKey}?alt=media`
+      );
+    }
+    return this.signReadUrl(input);
   }
 
   private getBucket(binding: IGcsBindingDescriptor): Bucket {
     return this.storage.bucket(binding.bucket, { userProject: binding.projectId });
-  }
-
-  private getPreviewBucket(binding: IGcsBindingDescriptor): Bucket {
-    return this.previewStorage.bucket(binding.bucket, { userProject: binding.projectId });
   }
 }
 

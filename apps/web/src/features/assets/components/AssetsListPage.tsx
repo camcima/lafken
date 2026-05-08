@@ -16,6 +16,7 @@ import {
   type ViewMode,
   ViewToggle,
 } from "@/features/assets/components/assets-list-view";
+import { assetsKeys } from "@/features/assets/keys";
 import { isDemoMode } from "@/lib/demo/demo-mode";
 import { DEMO_ASSET_LIST, DEMO_NAMESPACES } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
@@ -60,25 +61,16 @@ export function AssetsListPage(): React.JSX.Element {
   const PAGE_SIZE = pageSize || autoPageSize;
 
   // ── Real-API queries (skipped when in demo mode) ────────────────────────
+  const listQuery = {
+    page: page + 1,
+    limit: PAGE_SIZE,
+    namespaceSlug: namespaceFilter !== "all" ? namespaceFilter : undefined,
+    states: stateFilter !== "all" ? [stateFilter as AssetState] : undefined,
+    legalHoldId,
+  };
   const { data: realAssetsPage, isLoading: realAssetsLoading } = useQuery({
-    queryKey: [
-      "assets",
-      {
-        page: page + 1,
-        limit: PAGE_SIZE,
-        namespaceSlug: namespaceFilter !== "all" ? namespaceFilter : undefined,
-        states: stateFilter !== "all" ? [stateFilter as AssetState] : undefined,
-        legalHoldId,
-      },
-    ] as const,
-    queryFn: () =>
-      assetsService.list({
-        page: page + 1,
-        limit: PAGE_SIZE,
-        namespaceSlug: namespaceFilter !== "all" ? namespaceFilter : undefined,
-        states: stateFilter !== "all" ? [stateFilter as AssetState] : undefined,
-        legalHoldId,
-      }),
+    queryKey: assetsKeys.list(listQuery),
+    queryFn: () => assetsService.list(listQuery),
     enabled: !isDemoMode,
   });
 
