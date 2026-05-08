@@ -167,7 +167,15 @@ describe("ProcessClaimedAssetUseCase", () => {
     });
 
     expect(result.kind).toBe("completed");
-    expect(assetRepo.transitions.at(-1)?.toState).toBe("quarantined_virus");
+    const terminalTransition = assetRepo.transitions.at(-1);
+    expect(terminalTransition?.toState).toBe("quarantined_virus");
+    expect(terminalTransition?.newStorageKey).toBe("_quarantined/uploads/test.png");
+    expect(storage.moveCalls).toEqual([
+      expect.objectContaining({
+        fromKey: "uploads/test.png",
+        toKey: "_quarantined/uploads/test.png",
+      }),
+    ]);
   });
 
   it("quarantines moderation results when policy config is present", async () => {
@@ -187,7 +195,15 @@ describe("ProcessClaimedAssetUseCase", () => {
     });
 
     expect(result.kind).toBe("completed");
-    expect(assetRepo.transitions.at(-1)?.toState).toBe("quarantined_moderation");
+    const terminalTransition = assetRepo.transitions.at(-1);
+    expect(terminalTransition?.toState).toBe("quarantined_moderation");
+    expect(terminalTransition?.newStorageKey).toBe("_quarantined/uploads/test.png");
+    expect(storage.moveCalls).toEqual([
+      expect.objectContaining({
+        fromKey: "uploads/test.png",
+        toKey: "_quarantined/uploads/test.png",
+      }),
+    ]);
   });
 });
 

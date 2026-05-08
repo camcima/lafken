@@ -4,7 +4,8 @@ export type TransientProcessingStep =
   | ProcessingStepName
   | "load_asset"
   | "load_binding"
-  | "read_object";
+  | "read_object"
+  | "move_to_quarantine";
 
 /**
  * Thrown by ProcessClaimedAssetUseCase when a pipeline step fails transiently

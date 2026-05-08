@@ -9,6 +9,7 @@ import {
   type ITransitionAssetInput,
   type IUpdateDerivedMetadataInput,
 } from "@/assets/domain/repositories/asset-processing.repository.port";
+import type { AssetState } from "@/assets/domain/value-objects/asset-state.value-object";
 import type { NamespacePolicy } from "@/namespaces/domain/entities/namespace-policy.entity";
 import { NamespacePolicyDbMapper } from "@/namespaces/infrastructure/persistence/mappers/namespace-policy.db-mapper";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
@@ -55,13 +56,22 @@ export class AssetProcessingRepository extends AssetProcessingRepositoryPort {
 
   async transitionAsset(input: ITransitionAssetInput): Promise<boolean> {
     return this.db.connection.transaction().execute(async (tx): Promise<boolean> => {
+      const updateValues: {
+        state: AssetState;
+        state_reason: string;
+        state_changed_at: Date;
+        storage_key?: string;
+      } = {
+        state: input.toState,
+        state_reason: input.reason,
+        state_changed_at: input.now,
+      };
+      if (input.newStorageKey !== undefined) {
+        updateValues.storage_key = input.newStorageKey;
+      }
       const updated = await tx
         .updateTable("assets")
-        .set({
-          state: input.toState,
-          state_reason: input.reason,
-          state_changed_at: input.now,
-        })
+        .set(updateValues)
         .where("id", "=", input.assetId)
         .where("state", "=", input.fromState)
         .executeTakeFirst();

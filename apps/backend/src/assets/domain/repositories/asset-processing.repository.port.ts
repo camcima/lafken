@@ -15,6 +15,12 @@ export interface ITransitionAssetInput {
   metadata: Record<string, unknown>;
   occurredBy: string;
   now: Date;
+  /**
+   * When provided, also rewrites `assets.storage_key` in the same UPDATE.
+   * Used by the move-on-quarantine flow so the DB and the actual object
+   * location stay in sync atomically with the state transition.
+   */
+  newStorageKey?: string;
 }
 
 export interface IRecordAnalysisInput {

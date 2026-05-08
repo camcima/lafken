@@ -7,7 +7,11 @@ import { AssetStoragePort } from "@/assets/domain/services/asset-storage.service
 import { ContentModerationPort } from "@/assets/domain/services/content-moderation.service.port";
 import { ImageInspectionPort } from "@/assets/domain/services/image-inspection.service.port";
 import { VirusScanPort } from "@/assets/domain/services/virus-scan.service.port";
-import type { AssetState } from "@/assets/domain/value-objects/asset-state.value-object";
+import {
+  type AssetState,
+  QUARANTINE_KEY_PREFIX,
+  toQuarantinedStorageKey,
+} from "@/assets/domain/value-objects/asset-state.value-object";
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
@@ -234,6 +238,10 @@ export class ProcessClaimedAssetUseCase {
     if (scan.decision === "quarantine") {
       machine.send({ type: "VIRUS_INFECTED" });
       const reason: string = scan.reason ?? "virus_detected";
+      const newStorageKey: string | undefined = await this.moveBytesToQuarantine({
+        binding: { bucket: gcs.bucket, projectId: gcs.projectId },
+        storageKey: asset.props.storageKey,
+      });
       this.logger.info(
         { assetId: asset.props.id, toState: "quarantined_virus", reason },
         "transitioning to terminal state",
@@ -247,6 +255,7 @@ export class ProcessClaimedAssetUseCase {
         attemptNumber: input.attemptNumber,
         step: "virus_scan",
         durationMs: this.durationFromFindings(scan.findings),
+        newStorageKey,
       });
       return { kind: "completed" };
     }
@@ -296,6 +305,10 @@ export class ProcessClaimedAssetUseCase {
       if (moderation.decision === "quarantine") {
         machine.send({ type: "MODERATION_QUARANTINE" });
         const reason: string = moderation.reason ?? "moderation_quarantined";
+        const newStorageKey: string | undefined = await this.moveBytesToQuarantine({
+          binding: { bucket: gcs.bucket, projectId: gcs.projectId },
+          storageKey: asset.props.storageKey,
+        });
         this.logger.info(
           { assetId: asset.props.id, toState: "quarantined_moderation", reason },
           "transitioning to terminal state",
@@ -309,6 +322,7 @@ export class ProcessClaimedAssetUseCase {
           attemptNumber: input.attemptNumber,
           step: "content_moderation",
           durationMs: this.durationFromFindings(moderation.findings),
+          newStorageKey,
         });
         return { kind: "completed" };
       }
@@ -341,6 +355,7 @@ export class ProcessClaimedAssetUseCase {
     attemptNumber: number;
     step?: ProcessingStepName;
     durationMs?: number;
+    newStorageKey?: string;
   }): Promise<void> {
     await this.assetRepo.transitionAsset({
       assetId: input.assetId,
@@ -356,12 +371,43 @@ export class ProcessClaimedAssetUseCase {
       }),
       occurredBy: this.workerActor(input.workerId),
       now: new Date(),
+      newStorageKey: input.newStorageKey,
     });
     await this.jobRepo.markCompleted({
       assetId: input.assetId,
       workerId: input.workerId,
       now: new Date(),
     });
+  }
+
+  /**
+   * Moves the source bytes from `<key>` to `_quarantined/<key>` and returns
+   * the new key, so the DB transition can update `storage_key` in the same
+   * UPDATE. Skips the move when bytes are already at the quarantined path —
+   * this happens when a previous attempt completed the move but failed before
+   * the DB transition committed (worker retry path). The adapter's
+   * `moveObject` is itself idempotent on (source missing, target present).
+   *
+   * Wrapped in `runStep("move_to_quarantine", …)` so a transient storage
+   * error becomes a TransientProcessingError and triggers retry rather than
+   * leaving the bytes accessible to imgproxy.
+   */
+  private async moveBytesToQuarantine(input: {
+    binding: { bucket: string; projectId: string };
+    storageKey: string;
+  }): Promise<string | undefined> {
+    if (input.storageKey.startsWith(QUARANTINE_KEY_PREFIX)) {
+      return undefined;
+    }
+    const newStorageKey: string = toQuarantinedStorageKey(input.storageKey);
+    await this.runStep("move_to_quarantine", () =>
+      this.assetStorage.moveObject({
+        binding: input.binding,
+        fromKey: input.storageKey,
+        toKey: newStorageKey,
+      }),
+    );
+    return newStorageKey;
   }
 
   /**
