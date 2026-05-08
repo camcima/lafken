@@ -6,8 +6,18 @@ import { cn } from "@/lib/utils";
 
 interface IStateHeroProps {
   state: string;
+  stateReason: string | null;
   legalHold: boolean;
   legalHoldReference: string | null;
+}
+
+const VIRUS_REASON_PREFIX = "virus_detected:";
+
+function parseVirusSignature(stateReason: string | null): string | null {
+  if (stateReason === null) return null;
+  if (!stateReason.startsWith(VIRUS_REASON_PREFIX)) return null;
+  const sig: string = stateReason.slice(VIRUS_REASON_PREFIX.length).trim();
+  return sig.length > 0 ? sig : null;
 }
 
 interface IHeroField {
@@ -77,6 +87,7 @@ function HeroFields({ fields }: { fields: IHeroField[] }): React.JSX.Element {
 
 export function StateHero({
   state,
+  stateReason,
   legalHold,
   legalHoldReference,
 }: IStateHeroProps): React.JSX.Element {
@@ -174,6 +185,75 @@ export function StateHero({
     );
   }
 
+  if (state === "quarantined_virus") {
+    const signature: string | null = parseVirusSignature(stateReason);
+    const fields: IHeroField[] = [
+      {
+        fieldKey: t("pages.assetDetail.stateHero.fields.flaggedBy"),
+        fieldValue: "clamav",
+      },
+      {
+        fieldKey: t("pages.assetDetail.stateHero.fields.signature"),
+        fieldValue: signature ?? t("pages.assetDetail.stateHero.fields.signatureUnknown"),
+        muted: signature === null,
+      },
+    ];
+    return (
+      <>
+        {legalHold && <LegalHoldBanner legalHoldReference={legalHoldReference} />}
+        <div className="border-border bg-card mb-5 flex flex-col items-stretch overflow-hidden rounded-md border md:flex-row">
+          <div className="border-alert-line bg-alert-soft flex min-w-[280px] items-center gap-3 border-b px-5 py-3.5 md:border-r md:border-b-0">
+            <span
+              className="bg-alert size-2.5 rounded-full"
+              style={{ boxShadow: "0 0 0 4px rgba(138,66,9,0.2)" }}
+            />
+            <div>
+              <div className="text-alert text-[14px] font-semibold">
+                {t("pages.assetDetail.stateHero.quarantinedVirus.title")}
+              </div>
+              <div className="text-alert/85 text-[11.5px]">
+                {t("pages.assetDetail.stateHero.quarantinedVirus.subtitleFallback")}
+              </div>
+            </div>
+          </div>
+          <HeroFields fields={fields} />
+        </div>
+      </>
+    );
+  }
+
+  if (state === "quarantined_invalid_format") {
+    const fields: IHeroField[] = [
+      {
+        fieldKey: t("pages.assetDetail.stateHero.fields.reason"),
+        fieldValue: stateReason ?? t("pages.assetDetail.stateHero.fields.reasonUnknown"),
+        muted: stateReason === null,
+      },
+    ];
+    return (
+      <>
+        {legalHold && <LegalHoldBanner legalHoldReference={legalHoldReference} />}
+        <div className="border-border bg-card mb-5 flex flex-col items-stretch overflow-hidden rounded-md border md:flex-row">
+          <div className="border-alert-line bg-alert-soft flex min-w-[280px] items-center gap-3 border-b px-5 py-3.5 md:border-r md:border-b-0">
+            <span
+              className="bg-alert size-2.5 rounded-full"
+              style={{ boxShadow: "0 0 0 4px rgba(138,66,9,0.2)" }}
+            />
+            <div>
+              <div className="text-alert text-[14px] font-semibold">
+                {t("pages.assetDetail.stateHero.quarantinedInvalidFormat.title")}
+              </div>
+              <div className="text-alert/85 text-[11.5px]">
+                {t("pages.assetDetail.stateHero.quarantinedInvalidFormat.subtitleFallback")}
+              </div>
+            </div>
+          </div>
+          <HeroFields fields={fields} />
+        </div>
+      </>
+    );
+  }
+
   if (state === "quarantined_moderation") {
     const fields: IHeroField[] = [
       { fieldKey: t("pages.assetDetail.stateHero.fields.flaggedBy"), fieldValue: "moderation-v2" },
@@ -216,48 +296,81 @@ export function StateHero({
     );
   }
 
-  // ready (default)
-  const fields: IHeroField[] = [
-    {
-      fieldKey: t("pages.assetDetail.stateHero.fields.pipeline"),
-      fieldValue: t("pages.assetDetail.stateHeroValues.ready.pipelineValue", { seconds: 11.2 }),
-    },
-    {
-      fieldKey: t("pages.assetDetail.stateHero.fields.retention"),
-      fieldValue: t("pages.assetDetail.stateHeroValues.ready.retentionValue", {
-        years: 7,
-        date: "2033-05-03",
-      }),
-    },
-    {
-      fieldKey: t("pages.assetDetail.stateHero.fields.legalHold"),
-      fieldValue: t("pages.assetDetail.stateHeroValues.ready.legalHoldNone"),
-      muted: true,
-    },
-    {
-      fieldKey: t("pages.assetDetail.stateHero.fields.serving"),
-      fieldValue: t("pages.assetDetail.stateHeroValues.ready.servingValue", { ttl: "5m" }),
-    },
-  ];
+  if (state === "ready") {
+    const fields: IHeroField[] = [
+      {
+        fieldKey: t("pages.assetDetail.stateHero.fields.pipeline"),
+        fieldValue: t("pages.assetDetail.stateHeroValues.ready.pipelineValue", { seconds: 11.2 }),
+      },
+      {
+        fieldKey: t("pages.assetDetail.stateHero.fields.retention"),
+        fieldValue: t("pages.assetDetail.stateHeroValues.ready.retentionValue", {
+          years: 7,
+          date: "2033-05-03",
+        }),
+      },
+      {
+        fieldKey: t("pages.assetDetail.stateHero.fields.legalHold"),
+        fieldValue: t("pages.assetDetail.stateHeroValues.ready.legalHoldNone"),
+        muted: true,
+      },
+      {
+        fieldKey: t("pages.assetDetail.stateHero.fields.serving"),
+        fieldValue: t("pages.assetDetail.stateHeroValues.ready.servingValue", { ttl: "5m" }),
+      },
+    ];
+    return (
+      <>
+        {legalHold && <LegalHoldBanner legalHoldReference={legalHoldReference} />}
+        <div className="border-border bg-card mb-5 flex flex-col items-stretch overflow-hidden rounded-md border md:flex-row">
+          <div className="border-ok-line bg-ok-soft flex min-w-[240px] items-center gap-3 border-b px-5 py-3.5 md:border-r md:border-b-0">
+            <span
+              className="bg-ok size-2.5 rounded-full"
+              style={{ boxShadow: "0 0 0 4px rgba(26,107,70,0.22)" }}
+            />
+            <div>
+              <div className="text-ok text-[14px] font-semibold">
+                {t("pages.assetDetail.stateHero.ready.title")}
+              </div>
+              <div className="text-ok/85 text-[11.5px]">
+                {t("pages.assetDetail.stateHero.ready.subtitle", { since: "May 3, 08:14 UTC" })}
+              </div>
+            </div>
+          </div>
+          <HeroFields fields={fields} />
+        </div>
+      </>
+    );
+  }
+
+  // Generic fallback for transitional / terminal states the UI doesn't yet
+  // specialize on (uploaded, pending, rejected, expired, deleted, …). Surfaces
+  // the raw state so the page never silently masquerades as "Ready".
+  const fallbackFields: IHeroField[] =
+    stateReason === null
+      ? []
+      : [
+          {
+            fieldKey: t("pages.assetDetail.stateHero.fields.reason"),
+            fieldValue: stateReason,
+          },
+        ];
   return (
     <>
       {legalHold && <LegalHoldBanner legalHoldReference={legalHoldReference} />}
       <div className="border-border bg-card mb-5 flex flex-col items-stretch overflow-hidden rounded-md border md:flex-row">
-        <div className="border-ok-line bg-ok-soft flex min-w-[240px] items-center gap-3 border-b px-5 py-3.5 md:border-r md:border-b-0">
-          <span
-            className="bg-ok size-2.5 rounded-full"
-            style={{ boxShadow: "0 0 0 4px rgba(26,107,70,0.22)" }}
-          />
+        <div className="bg-muted/30 flex min-w-[240px] items-center gap-3 border-b px-5 py-3.5 md:border-r md:border-b-0">
+          <span className="bg-muted-foreground size-2.5 rounded-full" />
           <div>
-            <div className="text-ok text-[14px] font-semibold">
-              {t("pages.assetDetail.stateHero.ready.title")}
+            <div className="text-foreground text-[14px] font-semibold">
+              {t(`assetStates.${state}`, { defaultValue: state })}
             </div>
-            <div className="text-ok/85 text-[11.5px]">
-              {t("pages.assetDetail.stateHero.ready.subtitle", { since: "May 3, 08:14 UTC" })}
+            <div className="text-muted-foreground text-[11.5px]">
+              {t("pages.assetDetail.stateHero.generic.subtitle")}
             </div>
           </div>
         </div>
-        <HeroFields fields={fields} />
+        <HeroFields fields={fallbackFields} />
       </div>
     </>
   );

@@ -501,7 +501,14 @@
           "inQueue": "En cola",
           "retention": "Retención",
           "legalHold": "Retención legal",
-          "serving": "En servicio"
+          "serving": "En servicio",
+          "signature": "Firma",
+          "signatureUnknown": "desconocida",
+          "reason": "Motivo",
+          "reasonUnknown": "desconocido"
+        },
+        "generic": {
+          "subtitle": "Estado"
         }
       },
       "sections": {

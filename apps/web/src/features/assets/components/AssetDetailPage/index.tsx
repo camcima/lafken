@@ -144,6 +144,7 @@ export function AssetDetailPage({ id }: IAssetDetailPageProps): React.JSX.Elemen
 
       <StateHero
         state={asset.state}
+        stateReason={asset.stateReason ?? null}
         legalHold={asset.legalHold}
         legalHoldReference={asset.legalHoldReference ?? null}
       />

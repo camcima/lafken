@@ -501,7 +501,14 @@
           "inQueue": "In queue",
           "retention": "Retention",
           "legalHold": "Legal hold",
-          "serving": "Serving"
+          "serving": "Serving",
+          "signature": "Signature",
+          "signatureUnknown": "unknown",
+          "reason": "Reason",
+          "reasonUnknown": "unknown"
+        },
+        "generic": {
+          "subtitle": "State"
         }
       },
       "sections": {
