@@ -41,6 +41,7 @@ describe("AssetResponseMapper", () => {
     );
 
     expect(result).toEqual({
+      id: "01900000-0000-7000-8000-000000000040",
       publicId: "abc-123",
       namespaceSlug: "aircraft-photos",
       policyVersion: 3,

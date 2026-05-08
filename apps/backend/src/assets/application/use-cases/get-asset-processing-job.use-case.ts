@@ -9,17 +9,17 @@ import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-que
 export class GetAssetProcessingJobUseCase {
   constructor(private readonly repository: AssetQueryRepositoryPort) {}
 
-  async execute(input: { publicId: string }): Promise<ProcessingJob> {
-    const asset = await this.repository.findByPublicId(input.publicId);
+  async execute(input: { id: string }): Promise<ProcessingJob> {
+    const asset = await this.repository.findById(input.id);
 
     if (!asset) {
-      throw new AssetNotFoundError({ publicId: input.publicId });
+      throw new AssetNotFoundError({ publicId: input.id });
     }
 
     const job = await this.repository.findProcessingJob(asset.props.id);
 
     if (!job) {
-      throw new ProcessingJobNotFoundError({ assetPublicId: input.publicId });
+      throw new ProcessingJobNotFoundError({ assetPublicId: input.id });
     }
 
     return job;

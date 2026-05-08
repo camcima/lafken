@@ -30,7 +30,7 @@ import { Timeline } from "./timeline";
 import { VisualBlock } from "./visual-block";
 
 interface IAssetDetailPageProps {
-  publicId: string;
+  id: string;
 }
 
 interface IToast {
@@ -45,12 +45,12 @@ function isNotFoundError(err: unknown): boolean {
   return err instanceof ApiError && err.status === HTTP_NOT_FOUND;
 }
 
-export function AssetDetailPage({ publicId }: IAssetDetailPageProps): React.JSX.Element {
+export function AssetDetailPage({ id }: IAssetDetailPageProps): React.JSX.Element {
   const { t } = useTranslation();
-  const assetQuery = useAsset(publicId);
-  const transitionsQuery = useAssetStateTransitions(publicId);
-  const analysesQuery = useAssetAnalyses(publicId);
-  const processingJobQuery = useAssetProcessingJob(publicId);
+  const assetQuery = useAsset(id);
+  const transitionsQuery = useAssetStateTransitions(id);
+  const analysesQuery = useAssetAnalyses(id);
+  const processingJobQuery = useAssetProcessingJob(id);
 
   const asset: AssetResponseDTO | undefined = assetQuery.data;
   const externalRefType = asset?.externalRefType;

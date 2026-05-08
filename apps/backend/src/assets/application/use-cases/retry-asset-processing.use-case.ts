@@ -8,7 +8,7 @@ import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-que
 const RETRY_REQUESTED_REASON = "retry_requested";
 
 export interface IRetryAssetProcessingInput {
-  publicId: string;
+  id: string;
   requestedByEmail: string;
 }
 
@@ -20,14 +20,14 @@ export class RetryAssetProcessingUseCase {
   ) {}
 
   async execute(input: IRetryAssetProcessingInput): Promise<void> {
-    const asset = await this.assetQueryRepo.findByPublicId(input.publicId);
+    const asset = await this.assetQueryRepo.findById(input.id);
     if (!asset) {
-      throw new AssetNotFoundError({ publicId: input.publicId });
+      throw new AssetNotFoundError({ publicId: input.id });
     }
 
     if (asset.props.state !== "processing_failed") {
       throw new AssetNotInProcessingFailedStateError({
-        publicId: input.publicId,
+        publicId: asset.props.publicId,
         currentState: asset.props.state,
       });
     }
@@ -45,7 +45,7 @@ export class RetryAssetProcessingUseCase {
     // "the asset is no longer in processing_failed".
     if (!restarted) {
       throw new AssetNotInProcessingFailedStateError({
-        publicId: input.publicId,
+        publicId: asset.props.publicId,
         currentState: asset.props.state,
       });
     }

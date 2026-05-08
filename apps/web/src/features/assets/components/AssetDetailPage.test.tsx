@@ -16,6 +16,7 @@ import { AssetDetailPage } from "./AssetDetailPage";
 const TEST_PUBLIC_ID = "01HXJ8K3QF7T2ZN9V6BQWPDXM4";
 
 const TEST_ASSET: AssetResponseDTO = {
+  id: "01900000-0000-7000-8000-000000000040",
   publicId: TEST_PUBLIC_ID,
   namespaceSlug: "aircraft-photos",
   policyVersion: 7,
@@ -138,7 +139,7 @@ function renderPage(): void {
   render(
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
-        <AssetDetailPage publicId={TEST_PUBLIC_ID} />
+        <AssetDetailPage id={TEST_ASSET.id} />
       </I18nProvider>
     </QueryClientProvider>,
   );
@@ -193,7 +194,7 @@ describe("AssetDetailPage", () => {
     const button = screen.getByRole("button", { name: /retry processing/i });
     await userEvent.click(button);
     expect(mockRetryAssetProcessing).toHaveBeenCalledTimes(1);
-    expect(mockRetryAssetProcessing).toHaveBeenCalledWith({ publicId: TEST_PUBLIC_ID });
+    expect(mockRetryAssetProcessing).toHaveBeenCalledWith({ id: TEST_ASSET.id });
   });
 
   it("renders system preset rows in the PresetsCard", () => {

@@ -12,6 +12,7 @@ export class QuarantinedAssetViewDbMapper {
           : "moderation";
 
     return QuarantinedAssetView.fromProps({
+      id: row["id"] as string,
       publicId: row["public_id"] as string,
       namespaceSlug: row["namespace_slug"] as string,
       policyVersion: row["policy_version"] as number,

@@ -239,8 +239,10 @@ export function AssetsListPage(): React.JSX.Element {
             <Button type="button" variant="outline">
               <Download /> {t("pages.assets.actions.export")}
             </Button>
-            <Button type="button" variant="indigo">
-              <Plus /> {t("pages.assets.actions.upload")}
+            <Button asChild variant="indigo">
+              <Link to="/assets/upload">
+                <Plus /> {t("pages.assets.actions.upload")}
+              </Link>
             </Button>
           </div>
         </div>

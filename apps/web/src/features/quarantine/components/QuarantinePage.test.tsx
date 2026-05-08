@@ -23,6 +23,7 @@ function renderWithProviders(ui: ReactElement): ReturnType<typeof render> {
 function makeAsset(overrides: Partial<QuarantinedAssetResponseDTO>): QuarantinedAssetResponseDTO {
   const now = new Date();
   return {
+    id: overrides.id ?? "01900000-0000-7000-8000-000000000040",
     publicId: overrides.publicId ?? "11111111-1111-1111-1111-111111111111",
     namespaceSlug: overrides.namespaceSlug ?? "fleet-photos",
     policyVersion: 1,

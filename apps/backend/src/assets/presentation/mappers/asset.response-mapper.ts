@@ -17,6 +17,7 @@ export interface IPreviewSignContext {
 export class AssetResponseMapper {
   static fromDomain(asset: Asset, namespaceSlug: string, policyVersion: number): AssetResponseDTO {
     return {
+      id: asset.props.id,
       publicId: asset.props.publicId,
       namespaceSlug,
       policyVersion,

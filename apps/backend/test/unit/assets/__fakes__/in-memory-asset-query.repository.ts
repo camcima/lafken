@@ -83,6 +83,10 @@ export class InMemoryAssetQueryRepository implements AssetQueryRepositoryPort {
     });
   }
 
+  findById(id: string): Promise<Asset | null> {
+    return Promise.resolve(this.assets.find((a) => a.props.id === id) ?? null);
+  }
+
   findByPublicId(publicId: string): Promise<Asset | null> {
     return Promise.resolve(this.assets.find((a) => a.props.publicId === publicId) ?? null);
   }

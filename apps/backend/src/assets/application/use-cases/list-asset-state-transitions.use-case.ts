@@ -8,11 +8,11 @@ import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-que
 export class ListAssetStateTransitionsUseCase {
   constructor(private readonly repository: AssetQueryRepositoryPort) {}
 
-  async execute(input: { publicId: string }): Promise<AssetStateTransition[]> {
-    const asset = await this.repository.findByPublicId(input.publicId);
+  async execute(input: { id: string }): Promise<AssetStateTransition[]> {
+    const asset = await this.repository.findById(input.id);
 
     if (!asset) {
-      throw new AssetNotFoundError({ publicId: input.publicId });
+      throw new AssetNotFoundError({ publicId: input.id });
     }
 
     return this.repository.listStateTransitions(asset.props.id);

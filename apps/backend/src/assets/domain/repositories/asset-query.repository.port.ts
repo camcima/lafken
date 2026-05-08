@@ -52,6 +52,7 @@ export interface NamespaceStorageUsage {
 
 export abstract class AssetQueryRepositoryPort {
   abstract list(input: ListAssetsInput): Promise<AssetPage>;
+  abstract findById(id: string): Promise<Asset | null>;
   abstract findByPublicId(publicId: string): Promise<Asset | null>;
   abstract listStateTransitions(assetId: string): Promise<AssetStateTransition[]>;
   abstract listAnalyses(assetId: string): Promise<AssetAnalysis[]>;

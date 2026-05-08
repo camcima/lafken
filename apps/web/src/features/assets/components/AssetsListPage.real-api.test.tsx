@@ -64,6 +64,7 @@ function renderPage(): ReturnType<typeof render> {
 }
 
 const ASSET: AssetResponseDTO = {
+  id: "01900000-0000-7000-8000-000000000040",
   publicId: "abcdef12-3456-7890-abcd-ef1234567890",
   namespaceSlug: "fleet-photos",
   policyVersion: 1,

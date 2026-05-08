@@ -26,9 +26,9 @@ export function SiblingStrip({ siblings }: ISiblingStripProps): React.JSX.Elemen
           const label: string = sibling.publicId.slice(0, PUBLIC_ID_LABEL_LEN);
           return (
             <Link
-              key={sibling.publicId}
-              to="/assets/$publicId"
-              params={{ publicId: sibling.publicId }}
+              key={sibling.id}
+              to="/assets/$id"
+              params={{ id: sibling.id }}
               className="border-border bg-secondary relative h-[42px] w-14 flex-none cursor-pointer overflow-hidden rounded border no-underline"
             >
               {previewable && (

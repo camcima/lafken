@@ -41,10 +41,10 @@ export class LafkenClient {
     return response.url;
   }
 
-  async retryAssetProcessing(input: { publicId: string }): Promise<void> {
+  async retryAssetProcessing(input: { id: string }): Promise<void> {
     await this.request(
       "POST",
-      `/v1/assets/${encodeURIComponent(input.publicId)}/retry-processing`,
+      `/v1/assets/${encodeURIComponent(input.id)}/retry-processing`,
       {},
     );
   }

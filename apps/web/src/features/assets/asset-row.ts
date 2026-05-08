@@ -5,7 +5,9 @@ import type { DemoAsset } from "@/lib/demo/lafken-demo-data";
 export interface IAssetRow {
   /** Stable React key + selection key. */
   rowKey: string;
-  /** Full publicId (used for routing to /assets/$publicId). */
+  /** Internal id (uuidv7) — used for admin URLs (`/assets/$id`) and admin BE calls. */
+  id: string;
+  /** External publicId (uuidv4) — what's displayed to humans (header, copy chip, list). */
   publicId: string;
   /** Short id for display (~8 chars). */
   shortId: string;
@@ -68,7 +70,8 @@ const SHORT_ID_LENGTH = 8;
 export function assetResponseToRow(dto: AssetResponseDTO): IAssetRow {
   const uploadedAt: string = dto.confirmedAt ?? dto.createdAt;
   return {
-    rowKey: dto.publicId,
+    rowKey: dto.id,
+    id: dto.id,
     publicId: dto.publicId,
     shortId: dto.publicId.slice(0, SHORT_ID_LENGTH),
     state: dto.state,
@@ -90,6 +93,7 @@ export function assetResponseToRow(dto: AssetResponseDTO): IAssetRow {
 export function demoAssetToRow(demo: DemoAsset): IAssetRow {
   return {
     rowKey: demo.id,
+    id: demo.id,
     publicId: demo.publicId,
     shortId: demo.id,
     state: demo.state,

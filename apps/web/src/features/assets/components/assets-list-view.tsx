@@ -204,8 +204,8 @@ function RowsView({
         {pageRows.map((asset) => (
           <Link
             key={asset.rowKey}
-            to="/assets/$publicId"
-            params={{ publicId: asset.publicId }}
+            to="/assets/$id"
+            params={{ id: asset.id }}
             className={cn(
               "border-border/40 hover:bg-secondary/30 grid items-center gap-3 border-b px-4 py-2 text-[12.5px] no-underline last:border-b-0",
               colsClass,
@@ -293,8 +293,8 @@ function GridView({ pageRows, hideNamespace }: IGridViewProps): React.JSX.Elemen
       {pageRows.map((asset) => (
         <Link
           key={asset.rowKey}
-          to="/assets/$publicId"
-          params={{ publicId: asset.publicId }}
+          to="/assets/$id"
+          params={{ id: asset.id }}
           className="group border-border bg-card hover:border-latam-indigo/30 block overflow-hidden rounded-md border no-underline transition-all hover:shadow-md"
         >
           <div className="relative">
@@ -347,8 +347,8 @@ function HybridView({ pageRows, hideNamespace }: IHybridViewProps): React.JSX.El
       {pageRows.map((asset) => (
         <Link
           key={asset.rowKey}
-          to="/assets/$publicId"
-          params={{ publicId: asset.publicId }}
+          to="/assets/$id"
+          params={{ id: asset.id }}
           className="border-border bg-card hover:border-latam-indigo/30 flex gap-3 overflow-hidden rounded-md border p-2.5 no-underline transition-all hover:shadow-sm"
         >
           <div className="flex-none">

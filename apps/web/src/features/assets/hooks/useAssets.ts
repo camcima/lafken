@@ -11,34 +11,34 @@ export function useAssets(q: Partial<ListAssetsQueryDTO> = {}) {
   });
 }
 
-export function useAsset(publicId: string) {
+export function useAsset(id: string) {
   return useQuery({
-    queryKey: assetsKeys.detail(publicId),
-    queryFn: () => assetsService.getByPublicId(publicId),
-    enabled: Boolean(publicId),
+    queryKey: assetsKeys.detail(id),
+    queryFn: () => assetsService.getById(id),
+    enabled: Boolean(id),
   });
 }
 
-export function useAssetStateTransitions(publicId: string) {
+export function useAssetStateTransitions(id: string) {
   return useQuery({
-    queryKey: assetsKeys.stateTransitions(publicId),
-    queryFn: () => assetsService.listStateTransitions(publicId),
-    enabled: Boolean(publicId),
+    queryKey: assetsKeys.stateTransitions(id),
+    queryFn: () => assetsService.listStateTransitions(id),
+    enabled: Boolean(id),
   });
 }
 
-export function useAssetAnalyses(publicId: string) {
+export function useAssetAnalyses(id: string) {
   return useQuery({
-    queryKey: assetsKeys.analyses(publicId),
-    queryFn: () => assetsService.listAnalyses(publicId),
-    enabled: Boolean(publicId),
+    queryKey: assetsKeys.analyses(id),
+    queryFn: () => assetsService.listAnalyses(id),
+    enabled: Boolean(id),
   });
 }
 
-export function useAssetProcessingJob(publicId: string) {
+export function useAssetProcessingJob(id: string) {
   return useQuery({
-    queryKey: assetsKeys.processingJob(publicId),
-    queryFn: () => assetsService.getProcessingJob(publicId),
-    enabled: Boolean(publicId),
+    queryKey: assetsKeys.processingJob(id),
+    queryFn: () => assetsService.getProcessingJob(id),
+    enabled: Boolean(id),
   });
 }

@@ -9,7 +9,7 @@ const ASSET_DELETED_REASON = "asset_deleted";
 const DELETED_STATE = "deleted" as const;
 
 export interface IDeleteAssetInput {
-  publicId: string;
+  id: string;
   requestedByEmail: string;
 }
 
@@ -21,13 +21,13 @@ export class DeleteAssetUseCase {
   ) {}
 
   async execute(input: IDeleteAssetInput): Promise<void> {
-    const asset = await this.assetQueryRepo.findByPublicId(input.publicId);
+    const asset = await this.assetQueryRepo.findById(input.id);
     if (!asset) {
-      throw new AssetNotFoundError({ publicId: input.publicId });
+      throw new AssetNotFoundError({ publicId: input.id });
     }
 
     if (asset.props.legalHold) {
-      throw new AssetUnderLegalHoldError({ publicId: input.publicId, operation: "deleted" });
+      throw new AssetUnderLegalHoldError({ publicId: asset.props.publicId, operation: "deleted" });
     }
 
     // Idempotent: deleting an already-deleted asset is a no-op. Avoids a
@@ -50,11 +50,11 @@ export class DeleteAssetUseCase {
     // the conditional update. Re-read and either succeed (now deleted) or
     // surface the not-found behavior the user would otherwise expect.
     if (!transitioned) {
-      const refreshed = await this.assetQueryRepo.findByPublicId(input.publicId);
+      const refreshed = await this.assetQueryRepo.findById(input.id);
       if (!refreshed || refreshed.props.state === DELETED_STATE) {
         return;
       }
-      throw new AssetNotFoundError({ publicId: input.publicId });
+      throw new AssetNotFoundError({ publicId: input.id });
     }
   }
 }

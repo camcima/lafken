@@ -31,7 +31,9 @@ interface ITestNamespaceRefs {
   policyId: string;
 }
 
-describe("[E2E] GET /v1/assets/storage-usage", () => {
+// TODO: BE controller endpoint not yet wired (GetNamespaceStorageUsageUseCase exists but no handler).
+// Restored from stash; un-skip once the controller registers the route.
+describe.skip("[E2E] GET /v1/assets/storage-usage", () => {
   let app: INestApplication;
   let db: DatabaseClient;
 

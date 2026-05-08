@@ -97,7 +97,7 @@ describe("RetryAssetProcessingUseCase", () => {
     queryRepo.seed([makeAsset({ state: "processing_failed" })]);
 
     await useCase.execute({
-      publicId: TEST_UUIDS.asset1,
+      id: ASSET_ID,
       requestedByEmail: REQUESTER_EMAIL,
     });
 
@@ -111,7 +111,7 @@ describe("RetryAssetProcessingUseCase", () => {
 
   it("throws AssetNotFoundError when no asset matches the publicId", async () => {
     await expect(
-      useCase.execute({ publicId: TEST_UUIDS.asset1, requestedByEmail: REQUESTER_EMAIL }),
+      useCase.execute({ id: ASSET_ID, requestedByEmail: REQUESTER_EMAIL }),
     ).rejects.toBeInstanceOf(AssetNotFoundError);
     expect(processingRepo.restartCalls).toHaveLength(0);
   });
@@ -120,7 +120,7 @@ describe("RetryAssetProcessingUseCase", () => {
     queryRepo.seed([makeAsset({ state: "ready" })]);
 
     await expect(
-      useCase.execute({ publicId: TEST_UUIDS.asset1, requestedByEmail: REQUESTER_EMAIL }),
+      useCase.execute({ id: ASSET_ID, requestedByEmail: REQUESTER_EMAIL }),
     ).rejects.toBeInstanceOf(AssetNotInProcessingFailedStateError);
     expect(processingRepo.restartCalls).toHaveLength(0);
   });
@@ -132,7 +132,7 @@ describe("RetryAssetProcessingUseCase", () => {
     processingRepo.restartResult = false;
 
     await expect(
-      useCase.execute({ publicId: TEST_UUIDS.asset1, requestedByEmail: REQUESTER_EMAIL }),
+      useCase.execute({ id: ASSET_ID, requestedByEmail: REQUESTER_EMAIL }),
     ).rejects.toBeInstanceOf(AssetNotInProcessingFailedStateError);
     expect(processingRepo.restartCalls).toHaveLength(1);
   });

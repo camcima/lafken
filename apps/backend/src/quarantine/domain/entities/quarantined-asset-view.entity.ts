@@ -2,6 +2,7 @@ import type { QuarantineKind } from "../value-objects/quarantine-kind.value-obje
 
 export interface QuarantinedAssetViewProps {
   // base asset fields (subset needed for response)
+  id: string;
   publicId: string;
   namespaceSlug: string;
   policyVersion: number;

@@ -133,6 +133,20 @@ export class AssetQueryRepository implements AssetQueryRepositoryPort {
     };
   }
 
+  async findById(id: string): Promise<Asset | null> {
+    // PostgreSQL will reject non-UUID strings with an error; treat those as not found.
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_REGEX.test(id)) {
+      return null;
+    }
+    const row = await this.db.connection
+      .selectFrom("assets")
+      .selectAll()
+      .where("id", "=", id)
+      .executeTakeFirst();
+    return row ? AssetDbMapper.toDomain(row as Record<string, any>) : null;
+  }
+
   async findByPublicId(publicId: string): Promise<Asset | null> {
     // PostgreSQL will reject non-UUID strings with an error; treat those as not found.
     const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

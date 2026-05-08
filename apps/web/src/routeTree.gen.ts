@@ -24,7 +24,7 @@ import { Route as ProtectedNamespacesNewRouteImport } from './routes/_protected/
 import { Route as ProtectedNamespacesSlugRouteImport } from './routes/_protected/namespaces/$slug'
 import { Route as ProtectedLegalHoldsNewRouteImport } from './routes/_protected/legal-holds.new'
 import { Route as ProtectedAssetsUploadRouteImport } from './routes/_protected/assets/upload'
-import { Route as ProtectedAssetsPublicIdRouteImport } from './routes/_protected/assets/$publicId'
+import { Route as ProtectedAssetsIdRouteImport } from './routes/_protected/assets/$id'
 import { Route as ProtectedNamespacesSlugPresetsNewRouteImport } from './routes/_protected/namespaces/$slug_.presets.new'
 import { Route as ProtectedNamespacesSlugPolicyEditRouteImport } from './routes/_protected/namespaces/$slug_.policy.edit'
 import { Route as ProtectedNamespacesSlugPresetsNameEditRouteImport } from './routes/_protected/namespaces/$slug_.presets.$name_.edit'
@@ -74,8 +74,8 @@ const ProtectedLegalHoldsNewRoute = ProtectedLegalHoldsNewRouteImport.update({
 const ProtectedAssetsUploadRoute = ProtectedAssetsUploadRouteImport.update({
             id: '/assets/upload',path: '/assets/upload',getParentRoute: () => ProtectedRoute
           }as any)
-const ProtectedAssetsPublicIdRoute = ProtectedAssetsPublicIdRouteImport.update({
-            id: '/assets/$publicId',path: '/assets/$publicId',getParentRoute: () => ProtectedRoute
+const ProtectedAssetsIdRoute = ProtectedAssetsIdRouteImport.update({
+            id: '/assets/$id',path: '/assets/$id',getParentRoute: () => ProtectedRoute
           }as any)
 const ProtectedNamespacesSlugPresetsNewRoute = ProtectedNamespacesSlugPresetsNewRouteImport.update({
             id: '/namespaces/$slug_/presets/new',path: '/namespaces/$slug/presets/new',getParentRoute: () => ProtectedRoute
@@ -88,21 +88,21 @@ const ProtectedNamespacesSlugPresetsNameEditRoute = ProtectedNamespacesSlugPrese
           }as any)
 
 export interface FileRoutesByFullPath {
-'/': typeof ProtectedIndexRoute,'/audit': typeof ProtectedAuditRoute,'/legal-holds': typeof ProtectedLegalHoldsRouteWithChildren,'/quarantine': typeof ProtectedQuarantineRoute,'/settings': typeof ProtectedSettingsRoute,'/system': typeof ProtectedSystemRoute,'/auth/callback': typeof AuthCallbackRoute,'/auth/login': typeof AuthLoginRoute,'/assets/$publicId': typeof ProtectedAssetsPublicIdRoute,'/assets/upload': typeof ProtectedAssetsUploadRoute,'/legal-holds/new': typeof ProtectedLegalHoldsNewRoute,'/namespaces/$slug': typeof ProtectedNamespacesSlugRoute,'/namespaces/new': typeof ProtectedNamespacesNewRoute,'/assets/': typeof ProtectedAssetsIndexRoute,'/namespaces/': typeof ProtectedNamespacesIndexRoute,'/namespaces/$slug/policy/edit': typeof ProtectedNamespacesSlugPolicyEditRoute,'/namespaces/$slug/presets/new': typeof ProtectedNamespacesSlugPresetsNewRoute,'/namespaces/$slug/presets/$name/edit': typeof ProtectedNamespacesSlugPresetsNameEditRoute
+'/': typeof ProtectedIndexRoute,'/audit': typeof ProtectedAuditRoute,'/legal-holds': typeof ProtectedLegalHoldsRouteWithChildren,'/quarantine': typeof ProtectedQuarantineRoute,'/settings': typeof ProtectedSettingsRoute,'/system': typeof ProtectedSystemRoute,'/auth/callback': typeof AuthCallbackRoute,'/auth/login': typeof AuthLoginRoute,'/assets/$id': typeof ProtectedAssetsIdRoute,'/assets/upload': typeof ProtectedAssetsUploadRoute,'/legal-holds/new': typeof ProtectedLegalHoldsNewRoute,'/namespaces/$slug': typeof ProtectedNamespacesSlugRoute,'/namespaces/new': typeof ProtectedNamespacesNewRoute,'/assets/': typeof ProtectedAssetsIndexRoute,'/namespaces/': typeof ProtectedNamespacesIndexRoute,'/namespaces/$slug/policy/edit': typeof ProtectedNamespacesSlugPolicyEditRoute,'/namespaces/$slug/presets/new': typeof ProtectedNamespacesSlugPresetsNewRoute,'/namespaces/$slug/presets/$name/edit': typeof ProtectedNamespacesSlugPresetsNameEditRoute
 }
 export interface FileRoutesByTo {
-'/audit': typeof ProtectedAuditRoute,'/legal-holds': typeof ProtectedLegalHoldsRouteWithChildren,'/quarantine': typeof ProtectedQuarantineRoute,'/settings': typeof ProtectedSettingsRoute,'/system': typeof ProtectedSystemRoute,'/auth/callback': typeof AuthCallbackRoute,'/auth/login': typeof AuthLoginRoute,'/': typeof ProtectedIndexRoute,'/assets/$publicId': typeof ProtectedAssetsPublicIdRoute,'/assets/upload': typeof ProtectedAssetsUploadRoute,'/legal-holds/new': typeof ProtectedLegalHoldsNewRoute,'/namespaces/$slug': typeof ProtectedNamespacesSlugRoute,'/namespaces/new': typeof ProtectedNamespacesNewRoute,'/assets': typeof ProtectedAssetsIndexRoute,'/namespaces': typeof ProtectedNamespacesIndexRoute,'/namespaces/$slug/policy/edit': typeof ProtectedNamespacesSlugPolicyEditRoute,'/namespaces/$slug/presets/new': typeof ProtectedNamespacesSlugPresetsNewRoute,'/namespaces/$slug/presets/$name/edit': typeof ProtectedNamespacesSlugPresetsNameEditRoute
+'/audit': typeof ProtectedAuditRoute,'/legal-holds': typeof ProtectedLegalHoldsRouteWithChildren,'/quarantine': typeof ProtectedQuarantineRoute,'/settings': typeof ProtectedSettingsRoute,'/system': typeof ProtectedSystemRoute,'/auth/callback': typeof AuthCallbackRoute,'/auth/login': typeof AuthLoginRoute,'/': typeof ProtectedIndexRoute,'/assets/$id': typeof ProtectedAssetsIdRoute,'/assets/upload': typeof ProtectedAssetsUploadRoute,'/legal-holds/new': typeof ProtectedLegalHoldsNewRoute,'/namespaces/$slug': typeof ProtectedNamespacesSlugRoute,'/namespaces/new': typeof ProtectedNamespacesNewRoute,'/assets': typeof ProtectedAssetsIndexRoute,'/namespaces': typeof ProtectedNamespacesIndexRoute,'/namespaces/$slug/policy/edit': typeof ProtectedNamespacesSlugPolicyEditRoute,'/namespaces/$slug/presets/new': typeof ProtectedNamespacesSlugPresetsNewRoute,'/namespaces/$slug/presets/$name/edit': typeof ProtectedNamespacesSlugPresetsNameEditRoute
 }
 export interface FileRoutesById {
 '__root__': typeof rootRouteImport,
-'/_protected': typeof ProtectedRouteWithChildren,'/_protected/audit': typeof ProtectedAuditRoute,'/_protected/legal-holds': typeof ProtectedLegalHoldsRouteWithChildren,'/_protected/quarantine': typeof ProtectedQuarantineRoute,'/_protected/settings': typeof ProtectedSettingsRoute,'/_protected/system': typeof ProtectedSystemRoute,'/auth/callback': typeof AuthCallbackRoute,'/auth/login': typeof AuthLoginRoute,'/_protected/': typeof ProtectedIndexRoute,'/_protected/assets/$publicId': typeof ProtectedAssetsPublicIdRoute,'/_protected/assets/upload': typeof ProtectedAssetsUploadRoute,'/_protected/legal-holds/new': typeof ProtectedLegalHoldsNewRoute,'/_protected/namespaces/$slug': typeof ProtectedNamespacesSlugRoute,'/_protected/namespaces/new': typeof ProtectedNamespacesNewRoute,'/_protected/assets/': typeof ProtectedAssetsIndexRoute,'/_protected/namespaces/': typeof ProtectedNamespacesIndexRoute,'/_protected/namespaces/$slug_/policy/edit': typeof ProtectedNamespacesSlugPolicyEditRoute,'/_protected/namespaces/$slug_/presets/new': typeof ProtectedNamespacesSlugPresetsNewRoute,'/_protected/namespaces/$slug_/presets/$name_/edit': typeof ProtectedNamespacesSlugPresetsNameEditRoute
+'/_protected': typeof ProtectedRouteWithChildren,'/_protected/audit': typeof ProtectedAuditRoute,'/_protected/legal-holds': typeof ProtectedLegalHoldsRouteWithChildren,'/_protected/quarantine': typeof ProtectedQuarantineRoute,'/_protected/settings': typeof ProtectedSettingsRoute,'/_protected/system': typeof ProtectedSystemRoute,'/auth/callback': typeof AuthCallbackRoute,'/auth/login': typeof AuthLoginRoute,'/_protected/': typeof ProtectedIndexRoute,'/_protected/assets/$id': typeof ProtectedAssetsIdRoute,'/_protected/assets/upload': typeof ProtectedAssetsUploadRoute,'/_protected/legal-holds/new': typeof ProtectedLegalHoldsNewRoute,'/_protected/namespaces/$slug': typeof ProtectedNamespacesSlugRoute,'/_protected/namespaces/new': typeof ProtectedNamespacesNewRoute,'/_protected/assets/': typeof ProtectedAssetsIndexRoute,'/_protected/namespaces/': typeof ProtectedNamespacesIndexRoute,'/_protected/namespaces/$slug_/policy/edit': typeof ProtectedNamespacesSlugPolicyEditRoute,'/_protected/namespaces/$slug_/presets/new': typeof ProtectedNamespacesSlugPresetsNewRoute,'/_protected/namespaces/$slug_/presets/$name_/edit': typeof ProtectedNamespacesSlugPresetsNameEditRoute
 }
 export interface FileRouteTypes {
 fileRoutesByFullPath: FileRoutesByFullPath
-fullPaths: '/'|'/audit'|'/legal-holds'|'/quarantine'|'/settings'|'/system'|'/auth/callback'|'/auth/login'|'/assets/$publicId'|'/assets/upload'|'/legal-holds/new'|'/namespaces/$slug'|'/namespaces/new'|'/assets/'|'/namespaces/'|'/namespaces/$slug/policy/edit'|'/namespaces/$slug/presets/new'|'/namespaces/$slug/presets/$name/edit'
+fullPaths: '/'|'/audit'|'/legal-holds'|'/quarantine'|'/settings'|'/system'|'/auth/callback'|'/auth/login'|'/assets/$id'|'/assets/upload'|'/legal-holds/new'|'/namespaces/$slug'|'/namespaces/new'|'/assets/'|'/namespaces/'|'/namespaces/$slug/policy/edit'|'/namespaces/$slug/presets/new'|'/namespaces/$slug/presets/$name/edit'
 fileRoutesByTo: FileRoutesByTo
-to: '/audit'|'/legal-holds'|'/quarantine'|'/settings'|'/system'|'/auth/callback'|'/auth/login'|'/'|'/assets/$publicId'|'/assets/upload'|'/legal-holds/new'|'/namespaces/$slug'|'/namespaces/new'|'/assets'|'/namespaces'|'/namespaces/$slug/policy/edit'|'/namespaces/$slug/presets/new'|'/namespaces/$slug/presets/$name/edit'
-id: '__root__'|'/_protected'|'/_protected/audit'|'/_protected/legal-holds'|'/_protected/quarantine'|'/_protected/settings'|'/_protected/system'|'/auth/callback'|'/auth/login'|'/_protected/'|'/_protected/assets/$publicId'|'/_protected/assets/upload'|'/_protected/legal-holds/new'|'/_protected/namespaces/$slug'|'/_protected/namespaces/new'|'/_protected/assets/'|'/_protected/namespaces/'|'/_protected/namespaces/$slug_/policy/edit'|'/_protected/namespaces/$slug_/presets/new'|'/_protected/namespaces/$slug_/presets/$name_/edit'
+to: '/audit'|'/legal-holds'|'/quarantine'|'/settings'|'/system'|'/auth/callback'|'/auth/login'|'/'|'/assets/$id'|'/assets/upload'|'/legal-holds/new'|'/namespaces/$slug'|'/namespaces/new'|'/assets'|'/namespaces'|'/namespaces/$slug/policy/edit'|'/namespaces/$slug/presets/new'|'/namespaces/$slug/presets/$name/edit'
+id: '__root__'|'/_protected'|'/_protected/audit'|'/_protected/legal-holds'|'/_protected/quarantine'|'/_protected/settings'|'/_protected/system'|'/auth/callback'|'/auth/login'|'/_protected/'|'/_protected/assets/$id'|'/_protected/assets/upload'|'/_protected/legal-holds/new'|'/_protected/namespaces/$slug'|'/_protected/namespaces/new'|'/_protected/assets/'|'/_protected/namespaces/'|'/_protected/namespaces/$slug_/policy/edit'|'/_protected/namespaces/$slug_/presets/new'|'/_protected/namespaces/$slug_/presets/$name_/edit'
 fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -216,11 +216,11 @@ declare module '@tanstack/react-router' {
           preLoaderRoute: typeof ProtectedAssetsUploadRouteImport
           parentRoute: typeof ProtectedRoute
         }
-'/_protected/assets/$publicId': {
-          id: '/_protected/assets/$publicId'
-          path: '/assets/$publicId'
-          fullPath: '/assets/$publicId'
-          preLoaderRoute: typeof ProtectedAssetsPublicIdRouteImport
+'/_protected/assets/$id': {
+          id: '/_protected/assets/$id'
+          path: '/assets/$id'
+          fullPath: '/assets/$id'
+          preLoaderRoute: typeof ProtectedAssetsIdRouteImport
           parentRoute: typeof ProtectedRoute
         }
 '/_protected/namespaces/$slug_/presets/new': {
@@ -260,11 +260,11 @@ const ProtectedLegalHoldsRouteChildren: ProtectedLegalHoldsRouteChildren = {
 const ProtectedLegalHoldsRouteWithChildren = ProtectedLegalHoldsRoute._addFileChildren(ProtectedLegalHoldsRouteChildren)
 
 interface ProtectedRouteChildren {
-  ProtectedAuditRoute: typeof ProtectedAuditRoute,ProtectedLegalHoldsRoute: typeof ProtectedLegalHoldsRouteWithChildren,ProtectedQuarantineRoute: typeof ProtectedQuarantineRoute,ProtectedSettingsRoute: typeof ProtectedSettingsRoute,ProtectedSystemRoute: typeof ProtectedSystemRoute,ProtectedIndexRoute: typeof ProtectedIndexRoute,ProtectedAssetsPublicIdRoute: typeof ProtectedAssetsPublicIdRoute,ProtectedAssetsUploadRoute: typeof ProtectedAssetsUploadRoute,ProtectedNamespacesSlugRoute: typeof ProtectedNamespacesSlugRoute,ProtectedNamespacesNewRoute: typeof ProtectedNamespacesNewRoute,ProtectedAssetsIndexRoute: typeof ProtectedAssetsIndexRoute,ProtectedNamespacesIndexRoute: typeof ProtectedNamespacesIndexRoute,ProtectedNamespacesSlugPolicyEditRoute: typeof ProtectedNamespacesSlugPolicyEditRoute,ProtectedNamespacesSlugPresetsNewRoute: typeof ProtectedNamespacesSlugPresetsNewRoute,ProtectedNamespacesSlugPresetsNameEditRoute: typeof ProtectedNamespacesSlugPresetsNameEditRoute
+  ProtectedAuditRoute: typeof ProtectedAuditRoute,ProtectedLegalHoldsRoute: typeof ProtectedLegalHoldsRouteWithChildren,ProtectedQuarantineRoute: typeof ProtectedQuarantineRoute,ProtectedSettingsRoute: typeof ProtectedSettingsRoute,ProtectedSystemRoute: typeof ProtectedSystemRoute,ProtectedIndexRoute: typeof ProtectedIndexRoute,ProtectedAssetsIdRoute: typeof ProtectedAssetsIdRoute,ProtectedAssetsUploadRoute: typeof ProtectedAssetsUploadRoute,ProtectedNamespacesSlugRoute: typeof ProtectedNamespacesSlugRoute,ProtectedNamespacesNewRoute: typeof ProtectedNamespacesNewRoute,ProtectedAssetsIndexRoute: typeof ProtectedAssetsIndexRoute,ProtectedNamespacesIndexRoute: typeof ProtectedNamespacesIndexRoute,ProtectedNamespacesSlugPolicyEditRoute: typeof ProtectedNamespacesSlugPolicyEditRoute,ProtectedNamespacesSlugPresetsNewRoute: typeof ProtectedNamespacesSlugPresetsNewRoute,ProtectedNamespacesSlugPresetsNameEditRoute: typeof ProtectedNamespacesSlugPresetsNameEditRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
-  ProtectedAuditRoute: ProtectedAuditRoute,ProtectedLegalHoldsRoute: ProtectedLegalHoldsRouteWithChildren,ProtectedQuarantineRoute: ProtectedQuarantineRoute,ProtectedSettingsRoute: ProtectedSettingsRoute,ProtectedSystemRoute: ProtectedSystemRoute,ProtectedIndexRoute: ProtectedIndexRoute,ProtectedAssetsPublicIdRoute: ProtectedAssetsPublicIdRoute,ProtectedAssetsUploadRoute: ProtectedAssetsUploadRoute,ProtectedNamespacesSlugRoute: ProtectedNamespacesSlugRoute,ProtectedNamespacesNewRoute: ProtectedNamespacesNewRoute,ProtectedAssetsIndexRoute: ProtectedAssetsIndexRoute,ProtectedNamespacesIndexRoute: ProtectedNamespacesIndexRoute,ProtectedNamespacesSlugPolicyEditRoute: ProtectedNamespacesSlugPolicyEditRoute,ProtectedNamespacesSlugPresetsNewRoute: ProtectedNamespacesSlugPresetsNewRoute,ProtectedNamespacesSlugPresetsNameEditRoute: ProtectedNamespacesSlugPresetsNameEditRoute
+  ProtectedAuditRoute: ProtectedAuditRoute,ProtectedLegalHoldsRoute: ProtectedLegalHoldsRouteWithChildren,ProtectedQuarantineRoute: ProtectedQuarantineRoute,ProtectedSettingsRoute: ProtectedSettingsRoute,ProtectedSystemRoute: ProtectedSystemRoute,ProtectedIndexRoute: ProtectedIndexRoute,ProtectedAssetsIdRoute: ProtectedAssetsIdRoute,ProtectedAssetsUploadRoute: ProtectedAssetsUploadRoute,ProtectedNamespacesSlugRoute: ProtectedNamespacesSlugRoute,ProtectedNamespacesNewRoute: ProtectedNamespacesNewRoute,ProtectedAssetsIndexRoute: ProtectedAssetsIndexRoute,ProtectedNamespacesIndexRoute: ProtectedNamespacesIndexRoute,ProtectedNamespacesSlugPolicyEditRoute: ProtectedNamespacesSlugPolicyEditRoute,ProtectedNamespacesSlugPresetsNewRoute: ProtectedNamespacesSlugPresetsNewRoute,ProtectedNamespacesSlugPresetsNameEditRoute: ProtectedNamespacesSlugPresetsNameEditRoute
 }
 
 const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(ProtectedRouteChildren)

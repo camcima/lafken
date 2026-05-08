@@ -17,7 +17,16 @@ export const ASSET_STATES = [
 export type AssetState = (typeof ASSET_STATES)[number];
 
 export class AssetResponseDTO {
-  @ApiProperty()
+  @ApiProperty({
+    description:
+      "Internal admin-console identifier (uuidv7). Stable, never rotated. Used by the admin console for routes and admin-API paths. Do NOT expose to external consumers — they get `publicId`.",
+  })
+  id!: string;
+
+  @ApiProperty({
+    description:
+      "External-facing identifier (uuidv4). What clients of the public Lafken API see and persist. Used in URLs and bodies of external endpoints (upload-intent confirm, preview-url, download-url).",
+  })
   publicId!: string;
 
   @ApiProperty()

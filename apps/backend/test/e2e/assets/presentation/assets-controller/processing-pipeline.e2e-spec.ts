@@ -160,7 +160,7 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
     });
 
     const asset = await request(app.getHttpServer())
-      .get(`/v1/assets/${uploadIntent.body.publicId}`)
+      .get(`/v1/assets/${assetRow.id}`)
       .set(AUTH_HEADERS)
       .expect(200);
 
@@ -171,7 +171,7 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
     expect(asset.body.contentHashHex).toHaveLength(64);
 
     const transitions = await request(app.getHttpServer())
-      .get(`/v1/assets/${uploadIntent.body.publicId}/state-transitions`)
+      .get(`/v1/assets/${assetRow.id}/state-transitions`)
       .set(AUTH_HEADERS)
       .expect(200);
     const transitionBody = transitions.body as Array<{ toState: string }>;
@@ -180,7 +180,7 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
     expect(transitionBody.map((item: { toState: string }) => item.toState)).toContain("ready");
 
     const analyses = await request(app.getHttpServer())
-      .get(`/v1/assets/${uploadIntent.body.publicId}/analyses`)
+      .get(`/v1/assets/${assetRow.id}/analyses`)
       .set(AUTH_HEADERS)
       .expect(200);
     const analysisBody = analyses.body as Array<{ analyzer: string }>;

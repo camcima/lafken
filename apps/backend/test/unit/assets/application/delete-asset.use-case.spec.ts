@@ -99,7 +99,7 @@ describe("DeleteAssetUseCase", () => {
     queryRepo.seed([makeAsset({ state: "uploaded" })]);
 
     await useCase.execute({
-      publicId: TEST_UUIDS.asset1,
+      id: ASSET_ID,
       requestedByEmail: REQUESTER_EMAIL,
     });
 
@@ -115,7 +115,7 @@ describe("DeleteAssetUseCase", () => {
 
   it("throws AssetNotFoundError when no asset matches the publicId", async () => {
     await expect(
-      useCase.execute({ publicId: TEST_UUIDS.asset1, requestedByEmail: REQUESTER_EMAIL }),
+      useCase.execute({ id: ASSET_ID, requestedByEmail: REQUESTER_EMAIL }),
     ).rejects.toBeInstanceOf(AssetNotFoundError);
     expect(processingRepo.transitionCalls).toHaveLength(0);
   });
@@ -124,7 +124,7 @@ describe("DeleteAssetUseCase", () => {
     queryRepo.seed([makeAsset({ state: "ready", legalHold: true })]);
 
     await expect(
-      useCase.execute({ publicId: TEST_UUIDS.asset1, requestedByEmail: REQUESTER_EMAIL }),
+      useCase.execute({ id: ASSET_ID, requestedByEmail: REQUESTER_EMAIL }),
     ).rejects.toBeInstanceOf(AssetUnderLegalHoldError);
     expect(processingRepo.transitionCalls).toHaveLength(0);
   });
@@ -133,7 +133,7 @@ describe("DeleteAssetUseCase", () => {
     queryRepo.seed([makeAsset({ state: "deleted" })]);
 
     await useCase.execute({
-      publicId: TEST_UUIDS.asset1,
+      id: ASSET_ID,
       requestedByEmail: REQUESTER_EMAIL,
     });
 
@@ -151,7 +151,7 @@ describe("DeleteAssetUseCase", () => {
     };
 
     await useCase.execute({
-      publicId: TEST_UUIDS.asset1,
+      id: ASSET_ID,
       requestedByEmail: REQUESTER_EMAIL,
     });
 
@@ -168,7 +168,7 @@ describe("DeleteAssetUseCase", () => {
     };
 
     await useCase.execute({
-      publicId: TEST_UUIDS.asset1,
+      id: ASSET_ID,
       requestedByEmail: REQUESTER_EMAIL,
     });
   });
@@ -184,7 +184,7 @@ describe("DeleteAssetUseCase", () => {
     };
 
     await expect(
-      useCase.execute({ publicId: TEST_UUIDS.asset1, requestedByEmail: REQUESTER_EMAIL }),
+      useCase.execute({ id: ASSET_ID, requestedByEmail: REQUESTER_EMAIL }),
     ).rejects.toBeInstanceOf(AssetNotFoundError);
   });
 });

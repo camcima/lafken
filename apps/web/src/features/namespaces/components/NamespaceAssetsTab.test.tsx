@@ -85,6 +85,7 @@ describe("NamespaceAssetsTab", () => {
 
   it("renders the asset list", async () => {
     const asset: AssetResponseDTO = {
+      id: "01900000-0000-7000-8000-000000000040",
       publicId: "11111111-1111-1111-1111-111111111111",
       namespaceSlug: "active-ns",
       policyVersion: 1,

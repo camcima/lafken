@@ -12,6 +12,7 @@ describe("QuarantinedAssetResponseMapper", () => {
 
     const result = QuarantinedAssetResponseMapper.fromDomain(
       QuarantinedAssetView.fromProps({
+        id: "01900000-0000-7000-8000-000000000040",
         publicId: "abc-123",
         namespaceSlug: "aircraft-photos",
         policyVersion: 3,
@@ -42,6 +43,7 @@ describe("QuarantinedAssetResponseMapper", () => {
     );
 
     expect(result).toEqual({
+      id: "01900000-0000-7000-8000-000000000040",
       publicId: "abc-123",
       namespaceSlug: "aircraft-photos",
       policyVersion: 3,
@@ -76,6 +78,7 @@ describe("QuarantinedAssetResponseMapper", () => {
 
     const result = QuarantinedAssetResponseMapper.fromDomain(
       QuarantinedAssetView.fromProps({
+        id: "01900000-0000-7000-8000-000000000040",
         publicId: "xyz-456",
         namespaceSlug: "user-uploads",
         policyVersion: 1,

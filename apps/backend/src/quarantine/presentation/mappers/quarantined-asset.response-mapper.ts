@@ -5,6 +5,7 @@ import type { QuarantinedAssetView } from "@/quarantine/domain/entities/quaranti
 export class QuarantinedAssetResponseMapper {
   static fromDomain(view: QuarantinedAssetView): QuarantinedAssetResponseDTO {
     return {
+      id: view.props.id,
       publicId: view.props.publicId,
       namespaceSlug: view.props.namespaceSlug,
       policyVersion: view.props.policyVersion,

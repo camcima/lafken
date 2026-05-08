@@ -31,7 +31,7 @@ interface ISeededAsset {
   assetId: string;
 }
 
-describe("[E2E] POST /v1/assets/:publicId/retry-processing", () => {
+describe("[E2E] POST /v1/assets/:id/retry-processing", () => {
   let app: INestApplication;
   let db: DatabaseClient;
   let storageBindingId: string;
@@ -144,10 +144,10 @@ describe("[E2E] POST /v1/assets/:publicId/retry-processing", () => {
   }
 
   it("returns 200 and re-primes the processing job for a processing_failed asset", async () => {
-    const { assetId, publicId } = await seedAsset("processing_failed");
+    const { assetId } = await seedAsset("processing_failed");
 
     const response = await request(app.getHttpServer())
-      .post(`/v1/assets/${publicId}/retry-processing`)
+      .post(`/v1/assets/${assetId}/retry-processing`)
       .set("Authorization", "Bearer test-token");
 
     expect(response.status).toBe(200);
@@ -190,10 +190,10 @@ describe("[E2E] POST /v1/assets/:publicId/retry-processing", () => {
   });
 
   it("returns RFC 9457 422 when the asset is not in processing_failed", async () => {
-    const { publicId } = await seedAsset("ready");
+    const { assetId, publicId } = await seedAsset("ready");
 
     const response = await request(app.getHttpServer())
-      .post(`/v1/assets/${publicId}/retry-processing`)
+      .post(`/v1/assets/${assetId}/retry-processing`)
       .set("Authorization", "Bearer test-token");
 
     expect(response.status).toBe(422);
@@ -216,10 +216,10 @@ describe("[E2E] POST /v1/assets/:publicId/retry-processing", () => {
   });
 
   it("returns 403 when caller lacks PLATFORM_OPERATOR role", async () => {
-    const { publicId } = await seedAsset("processing_failed");
+    const { assetId } = await seedAsset("processing_failed");
 
     const response = await request(app.getHttpServer())
-      .post(`/v1/assets/${publicId}/retry-processing`)
+      .post(`/v1/assets/${assetId}/retry-processing`)
       .set("Authorization", "Bearer test-token")
       .set("x-test-roles", ApplicationRole.CONTENT_REVIEWER);
 

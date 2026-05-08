@@ -31,27 +31,25 @@ export class AssetsService extends BaseService {
     );
   }
 
-  async getByPublicId(publicId: string): Promise<AssetResponseDTO> {
-    return this.getApiClient().get<AssetResponseDTO>(
-      this.getServiceUrl(`${this.basePath}/${publicId}`),
-    );
+  async getById(id: string): Promise<AssetResponseDTO> {
+    return this.getApiClient().get<AssetResponseDTO>(this.getServiceUrl(`${this.basePath}/${id}`));
   }
 
-  async listStateTransitions(publicId: string): Promise<AssetStateTransitionResponseDTO[]> {
+  async listStateTransitions(id: string): Promise<AssetStateTransitionResponseDTO[]> {
     return this.getApiClient().get<AssetStateTransitionResponseDTO[]>(
-      this.getServiceUrl(`${this.basePath}/${publicId}/state-transitions`),
+      this.getServiceUrl(`${this.basePath}/${id}/state-transitions`),
     );
   }
 
-  async listAnalyses(publicId: string): Promise<AssetAnalysisResponseDTO[]> {
+  async listAnalyses(id: string): Promise<AssetAnalysisResponseDTO[]> {
     return this.getApiClient().get<AssetAnalysisResponseDTO[]>(
-      this.getServiceUrl(`${this.basePath}/${publicId}/analyses`),
+      this.getServiceUrl(`${this.basePath}/${id}/analyses`),
     );
   }
 
-  async getProcessingJob(publicId: string): Promise<ProcessingJobResponseDTO> {
+  async getProcessingJob(id: string): Promise<ProcessingJobResponseDTO> {
     return this.getApiClient().get<ProcessingJobResponseDTO>(
-      this.getServiceUrl(`${this.basePath}/${publicId}/processing-job`),
+      this.getServiceUrl(`${this.basePath}/${id}/processing-job`),
     );
   }
 }

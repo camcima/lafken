@@ -35,6 +35,7 @@ import {
 
 import { ConfirmUploadUseCase } from "@/assets/application/use-cases/confirm-upload.use-case";
 import { CreateUploadIntentUseCase } from "@/assets/application/use-cases/create-upload-intent.use-case";
+import { GetAssetByIdUseCase } from "@/assets/application/use-cases/get-asset-by-id.use-case";
 import { GetAssetByPublicIdUseCase } from "@/assets/application/use-cases/get-asset-by-public-id.use-case";
 import { GetAssetDownloadUrlUseCase } from "@/assets/application/use-cases/get-asset-download-url.use-case";
 import { GetAssetProcessingJobUseCase } from "@/assets/application/use-cases/get-asset-processing-job.use-case";
@@ -88,6 +89,7 @@ const PREVIEW_SOURCE_URL_TTL_SECONDS = 900;
 export class AssetsController {
   constructor(
     private readonly listAssetsUseCase: ListAssetsUseCase,
+    private readonly getAssetByIdUseCase: GetAssetByIdUseCase,
     private readonly getAssetByPublicIdUseCase: GetAssetByPublicIdUseCase,
     private readonly listAssetStateTransitionsUseCase: ListAssetStateTransitionsUseCase,
     private readonly listAssetAnalysesUseCase: ListAssetAnalysesUseCase,
@@ -185,14 +187,14 @@ export class AssetsController {
     return { data, total: page.total, page: page.page, limit: page.limit, lastPage: page.lastPage };
   }
 
-  @Get(":publicId")
+  @Get(":id")
   @AuthenticatedEndpoint()
-  @ApiOperation({ summary: "Get an asset by public ID" })
+  @ApiOperation({ summary: "Get an asset by internal id" })
   @ApiOkResponse({ type: AssetResponseDTO })
   @ApiNotFoundResponse()
-  async getOne(@Param("publicId") publicId: string): Promise<AssetResponseDTO> {
+  async getOne(@Param("id") id: string): Promise<AssetResponseDTO> {
     try {
-      const result = await this.getAssetByPublicIdUseCase.execute({ publicId });
+      const result = await this.getAssetByIdUseCase.execute({ id });
       return AssetResponseMapper.fromDomain(
         result.asset,
         result.namespaceSlug,
@@ -282,16 +284,14 @@ export class AssetsController {
     }
   }
 
-  @Get(":publicId/state-transitions")
+  @Get(":id/state-transitions")
   @AuthenticatedEndpoint()
   @ApiOperation({ summary: "List state transitions for an asset" })
   @ApiOkResponse({ type: AssetStateTransitionResponseDTO, isArray: true })
   @ApiNotFoundResponse()
-  async listStateTransitions(
-    @Param("publicId") publicId: string,
-  ): Promise<AssetStateTransitionResponseDTO[]> {
+  async listStateTransitions(@Param("id") id: string): Promise<AssetStateTransitionResponseDTO[]> {
     try {
-      const transitions = await this.listAssetStateTransitionsUseCase.execute({ publicId });
+      const transitions = await this.listAssetStateTransitionsUseCase.execute({ id });
       return transitions.map((transition) =>
         AssetStateTransitionResponseMapper.fromDomain(transition),
       );
@@ -303,14 +303,14 @@ export class AssetsController {
     }
   }
 
-  @Get(":publicId/analyses")
+  @Get(":id/analyses")
   @AuthenticatedEndpoint()
   @ApiOperation({ summary: "List analyses for an asset" })
   @ApiOkResponse({ type: AssetAnalysisResponseDTO, isArray: true })
   @ApiNotFoundResponse()
-  async listAnalyses(@Param("publicId") publicId: string): Promise<AssetAnalysisResponseDTO[]> {
+  async listAnalyses(@Param("id") id: string): Promise<AssetAnalysisResponseDTO[]> {
     try {
-      const analyses = await this.listAssetAnalysesUseCase.execute({ publicId });
+      const analyses = await this.listAssetAnalysesUseCase.execute({ id });
       return analyses.map((analysis) => AssetAnalysisResponseMapper.fromDomain(analysis));
     } catch (err) {
       if (err instanceof AssetNotFoundError) {
@@ -320,14 +320,14 @@ export class AssetsController {
     }
   }
 
-  @Get(":publicId/processing-job")
+  @Get(":id/processing-job")
   @AuthenticatedEndpoint()
   @ApiOperation({ summary: "Get the processing job for an asset" })
   @ApiOkResponse({ type: ProcessingJobResponseDTO })
   @ApiNotFoundResponse()
-  async getProcessingJob(@Param("publicId") publicId: string): Promise<ProcessingJobResponseDTO> {
+  async getProcessingJob(@Param("id") id: string): Promise<ProcessingJobResponseDTO> {
     try {
-      const job = await this.getAssetProcessingJobUseCase.execute({ publicId });
+      const job = await this.getAssetProcessingJobUseCase.execute({ id });
       return ProcessingJobResponseMapper.fromDomain(job);
     } catch (err) {
       if (err instanceof AssetNotFoundError || err instanceof ProcessingJobNotFoundError) {
@@ -412,7 +412,7 @@ export class AssetsController {
     }
   }
 
-  @Post(":publicId/retry-processing")
+  @Post(":id/retry-processing")
   @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -427,12 +427,12 @@ export class AssetsController {
   @ApiNotFoundResponse()
   @ApiUnprocessableEntityResponse()
   async retryProcessing(
-    @Param("publicId") publicId: string,
+    @Param("id") id: string,
     @AuthenticatedUser() user: AuthenticatedUserType,
   ): Promise<void> {
     try {
       await this.retryAssetProcessingUseCase.execute({
-        publicId,
+        id,
         requestedByEmail: user.emailAddress,
       });
     } catch (err) {
