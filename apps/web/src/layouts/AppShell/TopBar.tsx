@@ -3,6 +3,7 @@ import { Bell, ChevronRight, RefreshCw } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useAsset } from "@/features/assets/hooks/useAssets";
 import { DEMO_NOTIFICATIONS } from "@/lib/demo/lafken-notifications";
 import { cn } from "@/lib/utils";
 
@@ -14,12 +15,23 @@ interface IBreadcrumb {
   href?: string;
 }
 
-function buildCrumbs(pathname: string, t: (key: string) => string): IBreadcrumb[] {
+function buildCrumbs(
+  pathname: string,
+  t: (key: string) => string,
+  assetDetailLabel: string | null,
+): IBreadcrumb[] {
   if (pathname === "/" || pathname === "") return [{ label: t("nav.home") }];
   const parts = pathname.split("/").filter(Boolean);
   if (parts[0] === "assets") {
     if (parts.length === 1) return [{ label: t("nav.assets") }];
-    return [{ label: t("nav.assets"), href: "/assets" }, { label: parts[1] ?? "" }];
+    // Detail routes use the internal uuidv7 as the URL param; we surface the
+    // external publicId (uuidv4) in the breadcrumb so it matches the page UI.
+    // Fall back to the URL slug while the asset query is still loading or the
+    // asset turns out not to exist.
+    return [
+      { label: t("nav.assets"), href: "/assets" },
+      { label: assetDetailLabel ?? parts[1] ?? "" },
+    ];
   }
   if (parts[0] === "namespaces") {
     if (parts.length === 1) return [{ label: t("nav.namespaces") }];
@@ -33,10 +45,27 @@ function buildCrumbs(pathname: string, t: (key: string) => string): IBreadcrumb[
   return [{ label: parts[0] ?? "" }];
 }
 
+/**
+ * When the current route is `/assets/<id>` returns the asset's external
+ * publicId (uuidv4) so the breadcrumb can show the user-facing identifier
+ * instead of the internal admin uuidv7 baked into the URL. Reuses the same
+ * query key as AssetDetailPage so this is a cache read after first paint,
+ * not a second network round-trip.
+ */
+function useAssetBreadcrumbLabel(pathname: string): string | null {
+  const parts: string[] = pathname.split("/").filter(Boolean);
+  const onAssetDetail: boolean = parts[0] === "assets" && parts.length >= 2;
+  const assetId: string = onAssetDetail ? (parts[1] ?? "") : "";
+  const { data } = useAsset(assetId);
+  if (!onAssetDetail) return null;
+  return data?.publicId ?? null;
+}
+
 export function TopBar(): React.ReactElement {
   const { t } = useTranslation();
   const pathname = useRouterState({ select: (routerState) => routerState.location.pathname });
-  const crumbs = buildCrumbs(pathname, t);
+  const assetDetailLabel: string | null = useAssetBreadcrumbLabel(pathname);
+  const crumbs = buildCrumbs(pathname, t, assetDetailLabel);
 
   const [notifOpen, setNotifOpen] = useState(false);
   const bellRef = useRef<HTMLButtonElement>(null);
