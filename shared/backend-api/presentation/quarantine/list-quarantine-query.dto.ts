@@ -5,9 +5,9 @@ import { makePaginatedRequestInputDto } from "../../shared/pagination-dto-factor
 
 export class ListQuarantineQueryDTO extends makePaginatedRequestInputDto() {
   @IsOptional()
-  @IsIn(["virus", "moderation"])
-  @ApiProperty({ required: false, enum: ["virus", "moderation"] })
-  kind?: "virus" | "moderation";
+  @IsIn(["virus", "moderation", "invalid_format"])
+  @ApiProperty({ required: false, enum: ["virus", "moderation", "invalid_format"] })
+  kind?: "virus" | "moderation" | "invalid_format";
 
   @IsOptional()
   @IsString()

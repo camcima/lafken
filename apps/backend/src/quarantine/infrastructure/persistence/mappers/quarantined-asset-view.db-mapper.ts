@@ -4,7 +4,12 @@ import type { QuarantineKind } from "@/quarantine/domain/value-objects/quarantin
 export class QuarantinedAssetViewDbMapper {
   static toDomain(row: Record<string, any>): QuarantinedAssetView {
     const state = row["state"] as string;
-    const quarantineKind: QuarantineKind = state === "quarantined_virus" ? "virus" : "moderation";
+    const quarantineKind: QuarantineKind =
+      state === "quarantined_virus"
+        ? "virus"
+        : state === "quarantined_invalid_format"
+          ? "invalid_format"
+          : "moderation";
 
     return QuarantinedAssetView.fromProps({
       publicId: row["public_id"] as string,

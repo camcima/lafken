@@ -9,7 +9,11 @@ import { DatabaseClient } from "@/shared/infrastructure/persistence/database-cli
 
 import { QuarantinedAssetViewDbMapper } from "../mappers/quarantined-asset-view.db-mapper";
 
-const QUARANTINED_STATES = ["quarantined_virus", "quarantined_moderation"] as const;
+const QUARANTINED_STATES = [
+  "quarantined_virus",
+  "quarantined_moderation",
+  "quarantined_invalid_format",
+] as const;
 
 @Injectable()
 export class QuarantineQueryRepository implements QuarantineQueryRepositoryPort {
@@ -24,7 +28,9 @@ export class QuarantineQueryRepository implements QuarantineQueryRepositoryPort 
         ? ["quarantined_virus"]
         : input.kind === "moderation"
           ? ["quarantined_moderation"]
-          : [...QUARANTINED_STATES];
+          : input.kind === "invalid_format"
+            ? ["quarantined_invalid_format"]
+            : [...QUARANTINED_STATES];
 
     let countQuery = this.db.connection
       .selectFrom("assets")

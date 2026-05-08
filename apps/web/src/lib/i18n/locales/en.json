@@ -135,6 +135,7 @@
     "rejected": "Rejected",
     "quarantined_virus": "Virus",
     "quarantined_moderation": "Moderation",
+    "quarantined_invalid_format": "Invalid format",
     "processing_failed": "Failed",
     "expired": "Expired",
     "deleted": "Deleted"
@@ -303,6 +304,106 @@
         "clear": "Show all assets"
       }
     },
+    "uploadAssets": {
+      "title": "Upload assets",
+      "subtitle": "Pick a namespace, drop in files, and link them to a record in the calling system. The namespace policy decides allowed types, max size, retention, and moderation.",
+      "loading": "Loading…",
+      "noNamespace": "no namespace",
+      "backToAssets": "Back to assets",
+      "optional": "optional",
+      "sections": {
+        "namespace": {
+          "title": "Destination namespace",
+          "hint": "Each namespace defines its own storage, allowed formats, retention, and moderation."
+        },
+        "files": {
+          "title": "Files",
+          "hint": "Allowed types per namespace policy. Max {{max}} per file."
+        },
+        "reference": {
+          "title": "External reference",
+          "hint": "The owning record in the calling system. Lafken stores only these two fields — domain shape stays out of Lafken.",
+          "hintOptional": "Optional. Link the upload to a record in the calling system. Lafken stores only these two fields — domain shape stays out of Lafken."
+        }
+      },
+      "policyChips": {
+        "maxFile": "max/file",
+        "retention": "retention"
+      },
+      "dropzone": {
+        "prompt": "Drop files here",
+        "browse": "browse files"
+      },
+      "fileTile": {
+        "remove": "Remove file",
+        "state": {
+          "uploading": "uploading…",
+          "uploaded": "uploaded",
+          "error": "error"
+        }
+      },
+      "statusBar": {
+        "files": "files"
+      },
+      "reference": {
+        "typeLabel": "Reference type",
+        "idLabel": "Reference ID",
+        "typeHint": "The kind of record. Free-text — your service decides the vocabulary. e.g. work_package, tail, work_order.",
+        "idHint": "The identifier of that record. Indexed verbatim. e.g. WP-2026-04-29-001, PR-LATAM, WO-2026-04-29-N12345-018."
+      },
+      "note": {
+        "label": "Note",
+        "placeholder": "e.g. Packaging photo, daily walk-around inspection, pre-departure."
+      },
+      "tags": {
+        "label": "Tags",
+        "placeholder": "preflight, line-maintenance, daytime…",
+        "hint": "Free tags. Press Enter to add. Up to 32 tags, 64 characters each.",
+        "remove": "Remove tag {{tag}}"
+      },
+      "summary": {
+        "title": "Summary",
+        "namespace": "Namespace",
+        "files": "Files",
+        "totalSize": "Total size",
+        "tags": "Tags"
+      },
+      "pipeline": {
+        "title": "Pipeline",
+        "steps": {
+          "validate": "Validate format · size · MIME",
+          "virusScan": "Virus scan",
+          "stripExif": "Strip EXIF (preserve GPS)",
+          "moderation": "Content moderation",
+          "noModeration": "No moderation",
+          "derivatives": "Compute derivatives",
+          "indexEmit": "Index + emit asset.ready"
+        }
+      },
+      "footer": {
+        "ready": "Ready to upload {{count}} files · {{size}}",
+        "addFiles": "Add files to continue",
+        "resolveIssues": "Resolve issues to continue",
+        "cancel": "Cancel",
+        "uploadCount": "Upload {{count}}",
+        "uploadEmpty": "Upload"
+      },
+      "rejection": {
+        "dismiss": "Dismiss"
+      },
+      "results": {
+        "partial": "Uploaded {{uploaded}} of {{total}} · {{failed}} failed",
+        "viewUploaded": "View uploaded"
+      },
+      "errors": {
+        "quarantined": {
+          "invalidFormat": "Quarantined — file content does not match its declared type. Pending review.",
+          "virus": "Quarantined — virus scan flagged this file. Pending review.",
+          "moderation": "Quarantined — content review required. Pending review.",
+          "generic": "Quarantined — pending review."
+        }
+      }
+    },
     "assetDetail": {
       "title": "Asset",
       "loading": "Loading…",
@@ -317,6 +418,7 @@
         "noExternalRef": "No external reference",
         "unknown": "Unknown",
         "noCustomMetadata": "No custom metadata for this asset.",
+        "noTags": "No tags on this asset.",
         "noCaptureContext": "No capture context recorded.",
         "noTransitions": "No state transitions yet.",
         "noAnalyses": "No analyses yet.",
@@ -341,12 +443,23 @@
           "openInApi": "Open in API",
           "viewAuditTrail": "View audit trail",
           "editMetadata": "Edit metadata",
-          "forceExpire": "Force expire…"
+          "forceExpire": "Force expire…",
+          "delete": "Delete"
         },
         "toasts": {
           "downloadFailed": "Could not start download. Please try again.",
           "retryStarted": "Processing restarted.",
           "retryFailed": "Could not restart processing. Please try again."
+        }
+      },
+      "delete": {
+        "confirmTitle": "Delete this asset?",
+        "confirmBody": "The asset will be marked as deleted and hidden from listings. The stored object remains in place; a separate purge process removes it from object storage later. Assets under a legal hold cannot be deleted.",
+        "cancel": "Cancel",
+        "confirm": "Delete",
+        "toasts": {
+          "deleted": "Asset deleted.",
+          "failed": "Could not delete this asset. Please try again."
         }
       },
       "stateHero": {
@@ -365,6 +478,14 @@
         "quarantinedModeration": {
           "title": "Quarantined · moderation",
           "subtitle": "Awaiting reviewer · flagged {{flagSec}}s into pipeline"
+        },
+        "quarantinedInvalidFormat": {
+          "title": "Quarantined · invalid format",
+          "subtitleFallback": "Awaiting reviewer · declared MIME does not match the file's actual format"
+        },
+        "quarantinedVirus": {
+          "title": "Quarantined · virus",
+          "subtitleFallback": "Awaiting reviewer · virus signature detected"
         },
         "fields": {
           "pipeline": "Pipeline",
@@ -393,6 +514,8 @@
         "presets": "Presets",
         "customMetadata": "Custom metadata",
         "customMetadataMeta": "schema validated · {{count}} fields",
+        "tags": "Tags",
+        "tagsMeta": "{{count}} tags",
         "captureContext": "Capture context",
         "captureContextMeta": "structured · separate from EXIF",
         "captureLocationNote": "Location stored in capture_context per namespace policy. EXIF GPS stripped from bytes.",
@@ -413,6 +536,7 @@
         "size": "Size",
         "mime": "MIME",
         "contentHash": "Content hash",
+        "phash": "Perceptual hash",
         "capturedAt": "Captured at",
         "device": "Device",
         "app": "App",
@@ -442,6 +566,7 @@
       "toasts": {
         "idCopied": "Public ID copied",
         "hashCopied": "Hash copied",
+        "phashCopied": "Perceptual hash copied",
         "urlCopied": "URL copied: {{name}}"
       },
       "analyses": {
@@ -631,6 +756,12 @@
         "inactive": "Inactive",
         "version": "v{{version}}",
         "summaryFormat": "{{width}}×{{height}} {{format}} q{{quality}}",
+        "deactivate": {
+          "confirmTitle": "Deactivate preset \"{{name}}\"?",
+          "confirmBody": "Existing URLs that reference this preset will stop rendering. You can reactivate it later from this page.",
+          "cancel": "Cancel",
+          "confirm": "Deactivate"
+        },
         "new": {
           "title": "New preset",
           "subtitle": "Add an image transformation preset to namespace {{slug}}.",
@@ -689,27 +820,6 @@
           "versionConflict": "Another operator edited this preset. Refresh and re-apply your changes."
         }
       },
-      "assets": {
-        "title": "Assets",
-        "upload": {
-          "cta": "Upload assets",
-          "dialogTitle": "Upload assets",
-          "dropzonePrompt": "Drop image files here or click to choose",
-          "startButton": "Start upload",
-          "cancelButton": "Cancel",
-          "fileStateIdle": "Ready",
-          "fileStateUploading": "Uploading…",
-          "fileStateUploaded": "Uploaded",
-          "fileStateError": "Failed"
-        },
-        "empty": {
-          "title": "No assets yet",
-          "body": "Upload your first asset to get started."
-        },
-        "list": {
-          "columnFile": "Recent uploads"
-        }
-      },
       "actions": {
         "newNamespace": "New namespace",
         "editMetadata": "Edit metadata",
@@ -717,7 +827,9 @@
         "editPolicyDeferred": "Policy editing arrives in the next slice.",
         "editPolicyArchivedTooltip": "Cannot edit policy on an archived namespace.",
         "archive": "Archive",
-        "unarchive": "Unarchive"
+        "unarchive": "Unarchive",
+        "viewAssets": "View assets",
+        "uploadAssets": "Upload assets"
       },
       "archive": {
         "confirmArchiveTitle": "Archive {{name}}?",
@@ -755,6 +867,27 @@
           "quarantine": "Quarantine",
           "holds": "Holds"
         }
+      },
+      "assets": {
+        "title": "Assets",
+        "upload": {
+          "cta": "Upload assets",
+          "dialogTitle": "Upload assets",
+          "dropzonePrompt": "Drop image files here or click to choose",
+          "startButton": "Start upload",
+          "cancelButton": "Cancel",
+          "fileStateIdle": "Ready",
+          "fileStateUploading": "Uploading…",
+          "fileStateUploaded": "Uploaded",
+          "fileStateError": "Failed"
+        },
+        "empty": {
+          "title": "No assets yet",
+          "body": "Upload your first asset to get started."
+        },
+        "list": {
+          "columnFile": "Recent uploads"
+        }
       }
     },
     "namespaceDetail": {
@@ -777,6 +910,8 @@
           "policyVersion": "Policy version",
           "storageBinding": "Storage binding",
           "presetsActive": "Presets active",
+          "storageUsed": "Storage used",
+          "assetsTotal": "Assets",
           "created": "Created",
           "updated": "Updated",
           "state": "State"
@@ -829,18 +964,31 @@
       "exportQueue": "Export queue",
       "policyBadge": "policy v7",
       "decisionNote": "All decisions write to the audit log with your principal, the asset ID, the analyzer name, and your note.",
+      "loading": "Loading…",
+      "legalHold": "Legal hold",
       "filters": {
         "all": "All",
         "moderation": "Moderation",
-        "virus": "Virus"
+        "virus": "Virus",
+        "invalidFormat": "Invalid format"
       },
-      "reasons": {
-        "all": "All reasons",
-        "violence": "Violence",
-        "medical": "Medical",
-        "adult": "Adult",
-        "gore": "Gore",
-        "virus": "Virus"
+      "shortReason": {
+        "moderation": "Content moderation",
+        "virus": "Virus scan",
+        "invalidFormat": "File content does not match declared type"
+      },
+      "verdict": {
+        "invalidFormat": {
+          "title": "Magic-byte mismatch",
+          "fallback": "Declared and detected MIME types disagree."
+        },
+        "virus": {
+          "title": "Virus scanner flagged this file"
+        },
+        "moderation": {
+          "title": "Content moderation flagged this file"
+        },
+        "pendingAnalyzer": "Awaiting analyzer details."
       },
       "keys": {
         "label": "Keys:",
@@ -858,19 +1006,51 @@
         "description": "Nothing awaiting review with the current filters."
       },
       "detail": {
+        "declaredMime": "Declared MIME",
+        "size": "Size",
+        "dimensions": "Dimensions",
+        "uploadedBy": "Uploaded by",
+        "externalRef": "External ref",
+        "flaggedAt": "Flagged at",
+        "tags": "Tags",
         "asset": "Asset",
         "flag": "Flag",
         "analyzer": "Analyzer",
         "scoreVsThreshold": "Score vs threshold",
         "score": "score",
-        "threshold": "threshold",
-        "uploadedBy": "Uploaded by"
+        "threshold": "threshold"
       },
       "actions": {
         "release": "Release to ready",
         "reject": "Reject…",
         "escalate": "Escalate to legal…",
         "openDetail": "Open detail"
+      },
+      "rejectModal": {
+        "title": "Reject asset",
+        "description": "Rejecting marks this asset terminal. The original bytes are scheduled for shred per namespace policy. This action is logged and cannot be undone without legal hold.",
+        "noteLabel": "Reviewer note (required, ≥ 12 chars)",
+        "notePlaceholder": "e.g. confirms moderation flag — image contains graphic injury detail",
+        "cancel": "Cancel",
+        "confirm": "Reject asset"
+      },
+      "toast": {
+        "released": "Released {{id}}. Asset is now ready.",
+        "rejected": "Rejected {{id}}. Asset terminal-rejected.",
+        "releaseFailed": "Could not release {{id}}: {{error}}",
+        "rejectFailed": "Could not reject {{id}}: {{error}}"
+      },
+      "empty": {
+        "title": "Nothing to review right now",
+        "description": "Flagged assets will appear here."
+      },
+      "reasons": {
+        "all": "All reasons",
+        "violence": "Violence",
+        "medical": "Medical",
+        "adult": "Adult",
+        "gore": "Gore",
+        "virus": "Virus"
       },
       "flagged": {
         "title": "Why this was flagged",
@@ -893,22 +1073,6 @@
         "flagged": "flagged",
         "flagRate": "flag rate",
         "note": "Flag rate is within normal range for this uploader. No reviewer escalation pattern detected."
-      },
-      "rejectModal": {
-        "title": "Reject asset",
-        "description": "Rejecting marks this asset terminal. The original bytes are scheduled for shred per namespace policy. This action is logged and cannot be undone without legal hold.",
-        "noteLabel": "Reviewer note (required, ≥ 12 chars)",
-        "notePlaceholder": "e.g. confirms moderation flag — image contains graphic injury detail",
-        "cancel": "Cancel",
-        "confirm": "Reject asset"
-      },
-      "toast": {
-        "released": "Released {{id}}. Asset is now ready.",
-        "rejected": "Rejected {{id}}. Asset terminal-rejected."
-      },
-      "empty": {
-        "title": "Nothing to review right now",
-        "description": "Flagged assets will appear here."
       }
     },
     "legalHolds": {
@@ -920,20 +1084,6 @@
         "export": "Export holds register",
         "place": "Place hold…",
         "placeNew": "Place hold…"
-      },
-      "lift": {
-        "title": "Lift legal hold",
-        "warning": "This action cannot be undone — the hold's history is preserved but the assets become eligible for deletion/retention again unless covered by another active hold.",
-        "reasonLabel": "Reason for lift",
-        "reasonPlaceholder": "Investigation closed; releasing per counsel approval.",
-        "reasonCounter": "{{count}} / 1,000 characters · minimum 10",
-        "submit": "Lift hold",
-        "cancel": "Cancel",
-        "toast": {
-          "success": "Legal hold {{caseReference}} lifted.",
-          "failure": "Could not lift legal hold: {{error}}",
-          "demo": "Demo mode — no changes will be persisted."
-        }
       },
       "stats": {
         "activeHolds": {
@@ -1007,46 +1157,20 @@
         "description": "Holds you place will appear here."
       },
       "rowsPerPage": "Rows per page",
-      "range": "{{from}}–{{to}} of {{total}}"
-    },
-    "placeLegalHold": {
-      "title": "Place legal hold",
-      "subtitle": "A hold suspends deletion and retention expiry for the picked assets until lifted.",
-      "back": "Back to legal holds",
-      "sections": {
-        "case": "Case",
-        "picker": "Find & pick assets",
-        "reason": "Reason",
-        "acknowledge": "Effects & acknowledgement"
-      },
-      "fields": {
-        "caseReference": "Case reference",
-        "caseReferenceHint": "Region-area-year-sequence convention recommended (e.g. CHL-AVN-2026-014).",
-        "description": "Reason / counsel note",
-        "descriptionCounter": "{{count}} / 1,000 characters · minimum 10",
-        "namespace": "Namespace",
-        "search": "Search",
-        "searchPlaceholder": "Search id, ref, hash, tag…"
-      },
-      "picker": {
-        "addAllVisible": "Add all visible",
-        "alreadyHeld": "already held",
-        "basket": "Basket",
-        "basketEmpty": "No assets picked yet — search and click + add.",
-        "clearAll": "Clear all",
-        "remove": "Remove from basket"
-      },
-      "acknowledgement": "I understand this hold suspends deletion until lifted.",
-      "footer": {
-        "summary_one": "{{count}} asset will be locked",
-        "summary_other": "{{count}} assets will be locked",
-        "submit": "Place hold",
-        "cancel": "Cancel"
-      },
-      "toast": {
-        "success": "Legal hold {{caseReference}} placed.",
-        "failure": "Could not place legal hold: {{error}}",
-        "demo": "Demo mode — no changes will be persisted."
+      "range": "{{from}}–{{to}} of {{total}}",
+      "lift": {
+        "title": "Lift legal hold",
+        "warning": "This action cannot be undone — the hold's history is preserved but the assets become eligible for deletion/retention again unless covered by another active hold.",
+        "reasonLabel": "Reason for lift",
+        "reasonPlaceholder": "Investigation closed; releasing per counsel approval.",
+        "reasonCounter": "{{count}} / 1,000 characters · minimum 10",
+        "submit": "Lift hold",
+        "cancel": "Cancel",
+        "toast": {
+          "success": "Legal hold {{caseReference}} lifted.",
+          "failure": "Could not lift legal hold: {{error}}",
+          "demo": "Demo mode — no changes will be persisted."
+        }
       }
     },
     "audit": {
@@ -1329,6 +1453,46 @@
             "btn": "Disable…"
           }
         }
+      }
+    },
+    "placeLegalHold": {
+      "title": "Place legal hold",
+      "subtitle": "A hold suspends deletion and retention expiry for the picked assets until lifted.",
+      "back": "Back to legal holds",
+      "sections": {
+        "case": "Case",
+        "picker": "Find & pick assets",
+        "reason": "Reason",
+        "acknowledge": "Effects & acknowledgement"
+      },
+      "fields": {
+        "caseReference": "Case reference",
+        "caseReferenceHint": "Region-area-year-sequence convention recommended (e.g. CHL-AVN-2026-014).",
+        "description": "Reason / counsel note",
+        "descriptionCounter": "{{count}} / 1,000 characters · minimum 10",
+        "namespace": "Namespace",
+        "search": "Search",
+        "searchPlaceholder": "Search id, ref, hash, tag…"
+      },
+      "picker": {
+        "addAllVisible": "Add all visible",
+        "alreadyHeld": "already held",
+        "basket": "Basket",
+        "basketEmpty": "No assets picked yet — search and click + add.",
+        "clearAll": "Clear all",
+        "remove": "Remove from basket"
+      },
+      "acknowledgement": "I understand this hold suspends deletion until lifted.",
+      "footer": {
+        "summary_one": "{{count}} asset will be locked",
+        "summary_other": "{{count}} assets will be locked",
+        "submit": "Place hold",
+        "cancel": "Cancel"
+      },
+      "toast": {
+        "success": "Legal hold {{caseReference}} placed.",
+        "failure": "Could not place legal hold: {{error}}",
+        "demo": "Demo mode — no changes will be persisted."
       }
     }
   },

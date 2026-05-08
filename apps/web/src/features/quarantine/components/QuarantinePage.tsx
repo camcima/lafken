@@ -1,143 +1,45 @@
-// Slice 0: BE returns empty arrays; rendering against typed demo data
-import { Check, Download, ExternalLink, Flag, Info, Shield, X } from "lucide-react";
-import React, { useCallback, useEffect, useId, useRef, useState } from "react";
+import type { QuarantinedAssetResponseDTO } from "@shared/backend-api";
+import { Check, Download, Flag, Image as ImageIcon, Shield, X } from "lucide-react";
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/common/Badge";
 import { Button } from "@/components/common/Button";
-import { Card, CardContent, CardHeader, CardMeta, CardTitle } from "@/components/common/Card";
-import { SELECT_CLASS } from "@/components/common/select-styles";
+import { Card, CardHeader, CardMeta, CardTitle } from "@/components/common/Card";
+import { RelativeTime } from "@/components/common/RelativeTime";
 import { StatePill } from "@/components/common/StatePill";
-import { DEMO_QUARANTINE, type DemoQuarantineItem, fmtMinAgo } from "@/lib/demo/lafken-demo-data";
-import { cn } from "@/lib/utils";
+import { useQuarantine } from "@/features/quarantine/hooks/useQuarantine";
+import {
+  useRejectQuarantinedAsset,
+  useReleaseQuarantinedAsset,
+} from "@/features/quarantine/hooks/useQuarantineMutations";
+import { cn, fmtBytes } from "@/lib/utils";
 
-// ── Icon sizes ────────────────────────────────────────────
 const ICON_XS = 10;
 const ICON_SM = 11;
 const ICON_MD = 13;
 const ICON_LG = 24;
-const SHIELD_SM = 12;
-const SHIELD_LG = 28;
+const REJECT_MIN_CHARS = 12;
+const TOAST_DURATION_MS = 2800;
+const QUEUE_FETCH_LIMIT = 100;
+const PUBLIC_ID_PREVIEW_CHARS = 8;
 
-// ── Numeric constants ─────────────────────────────────────
-const BYTES_PER_MB = 1_048_576;
-const SCORE_DECIMAL_PLACES = 3;
+type IFilterType = "all" | "moderation" | "virus" | "invalid_format";
+type QuarantineKind = "moderation" | "virus" | "invalid_format";
 
-// ── Thumbnail ─────────────────────────────────────────────
-
-interface IThumbProps {
-  item: DemoQuarantineItem;
-  large?: boolean;
+interface IToast {
+  kind: "ok" | "alert";
+  msg: string;
 }
 
-function Thumb({ item, large }: IThumbProps): React.JSX.Element {
-  return (
-    <div
-      className={cn(
-        "border-border relative overflow-hidden rounded border",
-        large ? "aspect-[4/3] w-full" : "h-12 w-16",
-      )}
-      style={{
-        background: `linear-gradient(135deg, hsl(${item.thumbHue} 50% 55%), hsl(${item.thumbHue} 60% 35%))`,
-      }}
-    >
-      <span
-        className={cn(
-          "absolute inset-0 grid place-items-center font-bold tracking-wider text-white uppercase",
-          "bg-[repeating-linear-gradient(45deg,rgba(139,39,26,0.78)_0_8px,rgba(139,39,26,0.55)_8px_16px)]",
-          large ? "text-[14px]" : "text-[9px]",
-        )}
-      >
-        {large ? <Shield size={SHIELD_LG} /> : <Shield size={SHIELD_SM} />}
-      </span>
-      {large && (
-        <span className="absolute bottom-3 left-3 rounded bg-black/55 px-2 py-1 font-mono text-[10.5px] tracking-wider text-white uppercase">
-          {item.category}
-        </span>
-      )}
-    </div>
-  );
-}
-
-// ── Score bars ────────────────────────────────────────────
-
-const SCORE_PERCENT = 100;
-const DEFAULT_THRESHOLD = 0.65;
-const DEFAULT_VIOLENCE_SCORE = 0.04;
-const DEFAULT_MEDICAL_SCORE = 0.18;
-const DEFAULT_ADULT_SCORE = 0.001;
-const DEFAULT_RACY_SCORE = 0.012;
-
-interface ICategoryBar {
-  label: string;
-  value: number;
-  threshold: number;
-}
-
-function CategoryBars({ selected }: { selected: DemoQuarantineItem }): React.JSX.Element {
-  const { t } = useTranslation();
-  const bars: ICategoryBar[] = [
-    {
-      label: "violence",
-      value: selected.category === "violence" ? selected.score : DEFAULT_VIOLENCE_SCORE,
-      threshold: DEFAULT_THRESHOLD,
-    },
-    {
-      label: "medical",
-      value: selected.category === "medical" ? selected.score : DEFAULT_MEDICAL_SCORE,
-      threshold: DEFAULT_THRESHOLD,
-    },
-    {
-      label: "adult",
-      value: selected.category === "adult" ? selected.score : DEFAULT_ADULT_SCORE,
-      threshold: DEFAULT_THRESHOLD,
-    },
-    {
-      label: "gore",
-      value: selected.category === "gore" ? selected.score : 0.0,
-      threshold: DEFAULT_THRESHOLD,
-    },
-    { label: "racy", value: DEFAULT_RACY_SCORE, threshold: DEFAULT_THRESHOLD },
-    { label: "self_harm", value: 0.0, threshold: DEFAULT_THRESHOLD },
-  ];
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("pages.quarantine.flagged.title")}</CardTitle>
-        <CardMeta>{t("pages.quarantine.flagged.meta")}</CardMeta>
-      </CardHeader>
-      <CardContent className="grid grid-cols-2 gap-x-6 gap-y-3 p-5">
-        {bars.map((bar) => (
-          <div key={bar.label}>
-            <div className="flex justify-between font-mono text-[11.5px]">
-              <span className="text-muted-foreground">{bar.label}</span>
-              <span
-                className={cn(
-                  bar.value >= bar.threshold ? "text-alert font-medium" : "text-muted-foreground",
-                )}
-              >
-                {bar.value.toFixed(SCORE_DECIMAL_PLACES)}
-              </span>
-            </div>
-            <div className="bg-secondary relative mt-1 h-1.5 overflow-hidden rounded">
-              <div
-                className={cn(
-                  "h-full",
-                  bar.value >= bar.threshold ? "bg-alert" : "bg-latam-indigo/50",
-                )}
-                style={{ width: `${Math.min(SCORE_PERCENT, bar.value * SCORE_PERCENT)}%` }}
-              />
-              <div
-                className="bg-foreground/40 absolute top-0 h-full w-px"
-                style={{ left: `${bar.threshold * SCORE_PERCENT}%` }}
-              />
-            </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
+function shortReason(asset: QuarantinedAssetResponseDTO, t: (key: string) => string): string {
+  if (asset.quarantineKind === "invalid_format") {
+    return asset.stateReason ?? t("pages.quarantine.shortReason.invalidFormat");
+  }
+  if (asset.quarantineKind === "virus") {
+    return asset.flaggedCategory ?? t("pages.quarantine.shortReason.virus");
+  }
+  return asset.flaggedCategory ?? t("pages.quarantine.shortReason.moderation");
 }
 
 // ── Reject modal ──────────────────────────────────────────
@@ -146,8 +48,6 @@ interface IRejectModalProps {
   onClose: () => void;
   onConfirm: (note: string) => void;
 }
-
-const REJECT_MIN_CHARS = 12;
 
 function RejectModal({ onClose, onConfirm }: IRejectModalProps): React.JSX.Element {
   const { t } = useTranslation();
@@ -222,39 +122,181 @@ function RejectModal({ onClose, onConfirm }: IRejectModalProps): React.JSX.Eleme
   );
 }
 
-// ── Types ─────────────────────────────────────────────────
+// ── Detail pane ───────────────────────────────────────────
 
-interface IDecision {
-  decision: "release" | "reject";
-  note: string;
-  at: number;
+interface IDetailFieldProps {
+  label: string;
+  children: React.ReactNode;
 }
 
-interface IToast {
-  kind: "ok" | "alert";
-  msg: string;
+function DetailField({ label, children }: IDetailFieldProps): React.JSX.Element {
+  return (
+    <div>
+      <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">{label}</div>
+      <div className="mt-1 font-mono text-[11.5px]">{children}</div>
+    </div>
+  );
 }
 
-type IFilterType = "all" | "moderation" | "virus";
+interface IInvalidFormatVerdictProps {
+  asset: QuarantinedAssetResponseDTO;
+}
 
-const TOAST_DURATION_MS = 2800;
+function InvalidFormatVerdict({ asset }: IInvalidFormatVerdictProps): React.JSX.Element {
+  const { t } = useTranslation();
+  return (
+    <div className="border-warn-line bg-warn-soft text-warn rounded-md border px-3 py-2.5 text-[12px]">
+      <div className="font-semibold">{t("pages.quarantine.verdict.invalidFormat.title")}</div>
+      <div className="mt-1 font-mono text-[11.5px]">
+        {asset.stateReason ?? t("pages.quarantine.verdict.invalidFormat.fallback")}
+      </div>
+    </div>
+  );
+}
 
-// ── Uploader history demo constants ───────────────────────
-const DEMO_UPLOADER_HISTORY = {
-  uploaded: 412,
-  flagged: 3,
-  flagRate: "0.7%",
-} as const;
+interface IFlaggedAnalyzerVerdictProps {
+  asset: QuarantinedAssetResponseDTO;
+}
+
+function FlaggedAnalyzerVerdict({ asset }: IFlaggedAnalyzerVerdictProps): React.JSX.Element {
+  const { t } = useTranslation();
+  return (
+    <div className="border-alert-line bg-alert-soft text-alert rounded-md border px-3 py-2.5 text-[12px]">
+      <div className="font-semibold">
+        {asset.quarantineKind === "virus"
+          ? t("pages.quarantine.verdict.virus.title")
+          : t("pages.quarantine.verdict.moderation.title")}
+      </div>
+      <div className="text-muted-foreground mt-1 font-mono text-[11.5px]">
+        {asset.flaggedAnalyzer
+          ? `${asset.flaggedAnalyzer}${asset.flaggedCategory ? ` · ${asset.flaggedCategory}` : ""}`
+          : t("pages.quarantine.verdict.pendingAnalyzer")}
+      </div>
+    </div>
+  );
+}
+
+interface IDetailPaneProps {
+  asset: QuarantinedAssetResponseDTO;
+  onRelease: () => void;
+  onReject: () => void;
+  busy: boolean;
+}
+
+function DetailPane({ asset, onRelease, onReject, busy }: IDetailPaneProps): React.JSX.Element {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>{asset.publicId}</CardTitle>
+          <CardMeta>
+            <span className="font-mono">{asset.namespaceSlug}</span>
+            {" · "}
+            <RelativeTime iso={asset.flaggedAt} />
+          </CardMeta>
+        </CardHeader>
+
+        <div className="space-y-4 px-5 py-4">
+          <div className="flex flex-wrap items-center gap-2 text-[11.5px]">
+            <StatePill state={asset.state} />
+            <Badge variant="muted">{t("pages.quarantine.policyBadge")}</Badge>
+            {asset.legalHold ? (
+              <Badge variant="warn">
+                <Shield size={ICON_XS} />
+                {t("pages.quarantine.legalHold")}
+              </Badge>
+            ) : null}
+          </div>
+
+          {asset.quarantineKind === "invalid_format" ? (
+            <InvalidFormatVerdict asset={asset} />
+          ) : (
+            <FlaggedAnalyzerVerdict asset={asset} />
+          )}
+
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <DetailField label={t("pages.quarantine.detail.declaredMime")}>
+              {asset.declaredMimeType ?? "—"}
+            </DetailField>
+            <DetailField label={t("pages.quarantine.detail.size")}>
+              {typeof asset.sizeBytes === "number" ? fmtBytes(asset.sizeBytes) : "—"}
+            </DetailField>
+            <DetailField label={t("pages.quarantine.detail.dimensions")}>
+              {typeof asset.width === "number" && typeof asset.height === "number"
+                ? `${String(asset.width)} × ${String(asset.height)}`
+                : "—"}
+            </DetailField>
+            <DetailField label={t("pages.quarantine.detail.uploadedBy")}>
+              {asset.uploadedBy ?? "—"}
+            </DetailField>
+            <DetailField label={t("pages.quarantine.detail.externalRef")}>
+              {asset.externalRefType && asset.externalRefId
+                ? `${asset.externalRefType}: ${asset.externalRefId}`
+                : "—"}
+            </DetailField>
+            <DetailField label={t("pages.quarantine.detail.flaggedAt")}>
+              {asset.flaggedAt ? new Date(asset.flaggedAt).toLocaleString() : "—"}
+            </DetailField>
+          </div>
+
+          {asset.tags && asset.tags.length > 0 ? (
+            <div>
+              <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
+                {t("pages.quarantine.detail.tags")}
+              </div>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {asset.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="border-border bg-muted/40 text-foreground/90 rounded-full border px-2.5 py-0.5 text-[11px]"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="border-border bg-secondary/30 border-t px-5 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="pink" size="sm" onClick={onRelease} disabled={busy}>
+              <Check size={ICON_MD} />
+              {t("pages.quarantine.actions.release")}
+            </Button>
+            <Button variant="danger" size="sm" onClick={onReject} disabled={busy}>
+              <X size={ICON_MD} />
+              {t("pages.quarantine.actions.reject")}
+            </Button>
+            <Button variant="outline" size="sm" disabled={busy}>
+              <Flag size={ICON_MD} />
+              {t("pages.quarantine.actions.escalate")}
+            </Button>
+          </div>
+          <div className="text-muted-foreground mt-2 text-[10.5px]">
+            {t("pages.quarantine.decisionNote")}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
 
 // ── Main page ─────────────────────────────────────────────
 
 export function QuarantinePage(): React.JSX.Element {
   const { t } = useTranslation();
+  const { data, isLoading } = useQuarantine({ page: 1, limit: QUEUE_FETCH_LIMIT });
+  const allAssets: QuarantinedAssetResponseDTO[] = useMemo(() => data?.data ?? [], [data]);
+
+  const releaseMutation = useReleaseQuarantinedAsset();
+  const rejectMutation = useRejectQuarantinedAsset();
+  const mutating = releaseMutation.isPending || rejectMutation.isPending;
 
   const [filter, setFilter] = useState<IFilterType>("all");
-  const [reasonFilter, setReasonFilter] = useState("all");
-  const [selectedId, setSelectedId] = useState<string | undefined>(DEMO_QUARANTINE[0]?.id);
-  const [decided, setDecided] = useState<Record<string, IDecision>>({});
+  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+  const [reviewedToday, setReviewedToday] = useState(0);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [toast, setToast] = useState<IToast | null>(null);
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -268,74 +310,107 @@ export function QuarantinePage(): React.JSX.Element {
     };
   }, []);
 
-  const filtered = DEMO_QUARANTINE.filter((a) => {
-    if (decided[a.id]) return false;
-    if (filter === "moderation" && a.state !== "quarantined_moderation") return false;
-    if (filter === "virus" && a.state !== "quarantined_virus") return false;
-    if (reasonFilter !== "all" && a.category !== reasonFilter) return false;
-    return true;
-  });
+  const filtered: QuarantinedAssetResponseDTO[] = useMemo(() => {
+    return allAssets.filter((a) => filter === "all" || a.quarantineKind === filter);
+  }, [allAssets, filter]);
 
-  const selected = filtered.find((a) => a.id === selectedId) ?? filtered[0];
+  // The "selected item" is derived from the filtered list. If the user hasn't
+  // clicked anything yet (or their previous selection is now filtered out),
+  // we fall through to the first row. We deliberately don't sync `selectedId`
+  // back via an effect — derived-only avoids a render cascade.
+  const selected = filtered.find((a) => a.publicId === selectedId) ?? filtered[0];
 
-  const decide = useCallback(
-    (decision: "release" | "reject", note = "") => {
+  const showToast = useCallback((kind: "ok" | "alert", msg: string): void => {
+    setToast({ kind, msg });
+    if (toastTimerRef.current !== null) {
+      clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, TOAST_DURATION_MS);
+  }, []);
+
+  const release = useCallback(
+    (note?: string): void => {
       if (!selected) return;
-      setDecided((prev) => ({ ...prev, [selected.id]: { decision, note, at: Date.now() } }));
-      setToast({
-        kind: decision === "release" ? "ok" : "alert",
-        msg:
-          decision === "release"
-            ? t("pages.quarantine.toast.released", { id: selected.id })
-            : t("pages.quarantine.toast.rejected", { id: selected.id }),
-      });
-      if (toastTimerRef.current !== null) {
-        clearTimeout(toastTimerRef.current);
-      }
-      toastTimerRef.current = setTimeout(() => {
-        setToast(null);
-        toastTimerRef.current = null;
-      }, TOAST_DURATION_MS);
-      // Compute next selection from the post-decision filtered list
-      const remaining = filtered.filter((a) => a.id !== selected.id);
-      const idx = filtered.findIndex((a) => a.id === selected.id);
-      const next = remaining[idx] ?? remaining[idx - 1] ?? null;
-      setSelectedId(next?.id ?? undefined);
+      const { publicId } = selected;
+      releaseMutation.mutate(
+        { publicId, note },
+        {
+          onSuccess: () => {
+            setReviewedToday((prev) => prev + 1);
+            showToast("ok", t("pages.quarantine.toast.released", { id: publicId }));
+          },
+          onError: (err) => {
+            showToast(
+              "alert",
+              t("pages.quarantine.toast.releaseFailed", { id: publicId, error: err.message }),
+            );
+          },
+        },
+      );
     },
-    [selected, filtered, t],
+    [releaseMutation, selected, showToast, t],
   );
 
-  // Keyboard shortcuts
+  const reject = useCallback(
+    (note: string): void => {
+      if (!selected) return;
+      const { publicId } = selected;
+      rejectMutation.mutate(
+        { publicId, note },
+        {
+          onSuccess: () => {
+            setReviewedToday((prev) => prev + 1);
+            showToast("alert", t("pages.quarantine.toast.rejected", { id: publicId }));
+          },
+          onError: (err) => {
+            showToast(
+              "alert",
+              t("pages.quarantine.toast.rejectFailed", { id: publicId, error: err.message }),
+            );
+          },
+        },
+      );
+    },
+    [rejectMutation, selected, showToast, t],
+  );
+
+  // Keyboard shortcuts (j/k navigate, a release, r reject). We index off
+  // `selected` rather than `selectedId` so j/k still work on first load,
+  // before the user has clicked anything (selectedId is undefined but
+  // `selected` falls through to filtered[0]).
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if ((e.target as HTMLElement).matches("input, textarea")) return;
+      if (!selected) return;
+      const currentIdx = filtered.findIndex((a) => a.publicId === selected.publicId);
       if (e.key === "j") {
-        const idx = filtered.findIndex((a) => a.id === selectedId);
-        const next = filtered[Math.min(filtered.length - 1, idx + 1)];
-        if (next) setSelectedId(next.id);
+        const next = filtered[Math.min(filtered.length - 1, currentIdx + 1)];
+        if (next) setSelectedId(next.publicId);
       } else if (e.key === "k") {
-        const idx = filtered.findIndex((a) => a.id === selectedId);
-        const prev = filtered[Math.max(0, idx - 1)];
-        if (prev) setSelectedId(prev.id);
-      } else if (e.key === "a" && selected) {
-        decide("release");
-      } else if (e.key === "r" && selected) {
-        setShowRejectModal(true);
+        const prev = filtered[Math.max(0, currentIdx - 1)];
+        if (prev) setSelectedId(prev.publicId);
+      } else if (e.key === "a") {
+        if (!mutating) release();
+      } else if (e.key === "r") {
+        if (!mutating) setShowRejectModal(true);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
     };
-  }, [filtered, selectedId, selected, decide]);
+  }, [filtered, selected, release, mutating]);
 
-  const moderationCount = DEMO_QUARANTINE.filter(
-    (a) => a.state === "quarantined_moderation" && !decided[a.id],
-  ).length;
-  const virusCount = DEMO_QUARANTINE.filter(
-    (a) => a.state === "quarantined_virus" && !decided[a.id],
-  ).length;
-  const reviewedToday = Object.keys(decided).length;
+  const counts: Record<QuarantineKind, number> = useMemo(() => {
+    return {
+      moderation: allAssets.filter((a) => a.quarantineKind === "moderation").length,
+      virus: allAssets.filter((a) => a.quarantineKind === "virus").length,
+      invalid_format: allAssets.filter((a) => a.quarantineKind === "invalid_format").length,
+    };
+  }, [allAssets]);
 
   return (
     <div className="space-y-4">
@@ -365,24 +440,28 @@ export function QuarantinePage(): React.JSX.Element {
 
       {/* Filter strip */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        {/* Tab toggle */}
         <div className="border-border bg-card inline-flex rounded-md border p-0.5 text-[12px]">
           {(
             [
               {
                 id: "all" as IFilterType,
                 label: t("pages.quarantine.filters.all"),
-                count: moderationCount + virusCount,
+                count: counts.moderation + counts.virus + counts.invalid_format,
               },
               {
                 id: "moderation" as IFilterType,
                 label: t("pages.quarantine.filters.moderation"),
-                count: moderationCount,
+                count: counts.moderation,
               },
               {
                 id: "virus" as IFilterType,
                 label: t("pages.quarantine.filters.virus"),
-                count: virusCount,
+                count: counts.virus,
+              },
+              {
+                id: "invalid_format" as IFilterType,
+                label: t("pages.quarantine.filters.invalidFormat"),
+                count: counts.invalid_format,
               },
             ] as const
           ).map((tab) => (
@@ -414,22 +493,6 @@ export function QuarantinePage(): React.JSX.Element {
           ))}
         </div>
 
-        {/* Reason select */}
-        <select
-          value={reasonFilter}
-          onChange={(e) => {
-            setReasonFilter(e.target.value);
-          }}
-          className={SELECT_CLASS}
-        >
-          <option value="all">{t("pages.quarantine.reasons.all")}</option>
-          <option value="violence">{t("pages.quarantine.reasons.violence")}</option>
-          <option value="medical">{t("pages.quarantine.reasons.medical")}</option>
-          <option value="adult">{t("pages.quarantine.reasons.adult")}</option>
-          <option value="gore">{t("pages.quarantine.reasons.gore")}</option>
-          <option value="virus">{t("pages.quarantine.reasons.virus")}</option>
-        </select>
-
         {/* Keyboard hints */}
         <div className="text-muted-foreground ml-auto flex items-center gap-2 text-[11.5px]">
           <span>{t("pages.quarantine.keys.label")}</span>
@@ -456,7 +519,11 @@ export function QuarantinePage(): React.JSX.Element {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]">
         {/* Queue list */}
         <Card className="max-h-[calc(100vh-220px)] overflow-y-auto p-0">
-          {filtered.length === 0 ? (
+          {isLoading ? (
+            <div className="text-muted-foreground px-6 py-12 text-center text-[12.5px]">
+              {t("pages.quarantine.loading")}
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <div className="bg-ok-soft text-ok mx-auto mb-2 grid size-12 place-items-center rounded-full">
                 <Check size={20} />
@@ -467,33 +534,42 @@ export function QuarantinePage(): React.JSX.Element {
               </div>
             </div>
           ) : (
-            filtered.map((a) => (
+            filtered.map((asset) => (
               <button
-                key={a.id}
+                key={asset.publicId}
                 type="button"
-                aria-current={selected?.id === a.id ? "true" : undefined}
+                aria-current={selected?.publicId === asset.publicId ? "true" : undefined}
                 onClick={() => {
-                  setSelectedId(a.id);
+                  setSelectedId(asset.publicId);
                 }}
                 className={cn(
                   "border-border/60 flex w-full gap-3 border-b px-3 py-2.5 text-left transition-colors",
-                  selected?.id === a.id
+                  selected?.publicId === asset.publicId
                     ? "border-l-latam-indigo bg-latam-indigo/[0.08] border-l-2"
                     : "hover:bg-secondary/40",
                 )}
               >
-                <Thumb item={a} />
+                <div className="border-border bg-secondary text-muted-foreground grid h-12 w-16 flex-none place-items-center rounded border">
+                  <ImageIcon size={16} />
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-foreground font-mono text-[11.5px]">{a.id}</span>
-                    <span className="text-muted-foreground font-mono text-[10.5px]">
-                      {fmtMinAgo(a.minutesAgo)}
+                    <span className="text-foreground truncate font-mono text-[11.5px]">
+                      {asset.publicId.slice(0, PUBLIC_ID_PREVIEW_CHARS)}…
                     </span>
+                    <RelativeTime
+                      iso={asset.flaggedAt}
+                      className="text-muted-foreground font-mono text-[10.5px]"
+                    />
                   </div>
-                  <div className="text-alert mt-0.5 text-[11.5px]">{a.reason}</div>
+                  <div className="text-alert mt-0.5 line-clamp-1 text-[11.5px]">
+                    {shortReason(asset, t)}
+                  </div>
                   <div className="text-muted-foreground mt-0.5 flex items-center justify-between text-[10.5px]">
-                    <span className="truncate font-mono">{a.namespace}</span>
-                    <span>{(a.sizeBytes / BYTES_PER_MB).toFixed(1)}&nbsp;MB</span>
+                    <span className="truncate font-mono">{asset.namespaceSlug}</span>
+                    <span>
+                      {typeof asset.sizeBytes === "number" ? fmtBytes(asset.sizeBytes) : "—"}
+                    </span>
                   </div>
                 </div>
               </button>
@@ -517,197 +593,16 @@ export function QuarantinePage(): React.JSX.Element {
             </div>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {/* Decision card */}
-            <Card>
-              <div className="grid grid-cols-1 gap-0 xl:grid-cols-[minmax(0,1fr)_360px]">
-                {/* Thumbnail side */}
-                <div className="border-border border-b p-5 xl:border-r xl:border-b-0">
-                  <Thumb item={selected} large />
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-[11.5px]">
-                    <StatePill state={selected.state} />
-                    <Badge variant="muted">{t("pages.quarantine.policyBadge")}</Badge>
-                    <span className="text-muted-foreground font-mono">{selected.namespace}</span>
-                  </div>
-                </div>
-                {/* Info side */}
-                <div className="p-5">
-                  <div className="text-muted-foreground text-[10.5px] font-medium tracking-wider uppercase">
-                    {t("pages.quarantine.detail.asset")}
-                  </div>
-                  <div className="mt-1 font-mono text-[13px]">{selected.id}</div>
-                  <div className="mt-3 grid gap-3 text-[12.5px]">
-                    <div>
-                      <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
-                        {t("pages.quarantine.detail.flag")}
-                      </div>
-                      <div className="text-alert mt-1">{selected.reason}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
-                        {t("pages.quarantine.detail.analyzer")}
-                      </div>
-                      <div className="mt-1 font-mono text-[11.5px]">{selected.analyzer}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
-                        {t("pages.quarantine.detail.scoreVsThreshold")}
-                      </div>
-                      <div className="bg-secondary mt-1.5 h-2.5 overflow-hidden rounded">
-                        <div
-                          className="bg-alert h-full"
-                          style={{ width: `${selected.score * SCORE_PERCENT}%` }}
-                        />
-                      </div>
-                      <div className="text-muted-foreground mt-1 flex justify-between font-mono text-[10.5px]">
-                        <span>
-                          {t("pages.quarantine.detail.score")}{" "}
-                          <b className="text-alert">{selected.score.toFixed(2)}</b>
-                        </span>
-                        <span>
-                          {t("pages.quarantine.detail.threshold")} {selected.threshold.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
-                        {t("pages.quarantine.detail.uploadedBy")}
-                      </div>
-                      <div className="mt-1 font-mono text-[11.5px]">{selected.uploadedBy}</div>
-                      <div className="text-muted-foreground text-[11px]">
-                        {fmtMinAgo(selected.minutesAgo)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Decision bar */}
-              <div className="border-border bg-secondary/30 border-t px-5 py-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="pink"
-                    size="sm"
-                    onClick={() => {
-                      decide("release");
-                    }}
-                  >
-                    <Check size={ICON_MD} />
-                    {t("pages.quarantine.actions.release")}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => {
-                      setShowRejectModal(true);
-                    }}
-                  >
-                    <X size={ICON_MD} />
-                    {t("pages.quarantine.actions.reject")}
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Flag size={ICON_MD} />
-                    {t("pages.quarantine.actions.escalate")}
-                  </Button>
-                  <div className="ml-auto">
-                    <Button variant="ghost" size="sm">
-                      <ExternalLink size={ICON_XS + 2} />
-                      {t("pages.quarantine.actions.openDetail")}
-                    </Button>
-                  </div>
-                </div>
-                <div className="text-muted-foreground mt-2 text-[10.5px]">
-                  {t("pages.quarantine.decisionNote")}
-                </div>
-              </div>
-            </Card>
-
-            {/* Score bars */}
-            <CategoryBars selected={selected} />
-
-            {/* Context + uploader history */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t("pages.quarantine.context.title")}</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 p-5 text-[11.5px]">
-                  {(
-                    [
-                      [
-                        t("pages.quarantine.context.namespace"),
-                        <span key="ns" className="font-mono">
-                          {selected.namespace}
-                        </span>,
-                      ],
-                      [
-                        t("pages.quarantine.context.workOrder"),
-                        <span key="wo" className="font-mono">
-                          WO-2026-04-29-{selected.tail}-018
-                        </span>,
-                      ],
-                      [
-                        t("pages.quarantine.context.aircraft"),
-                        <span key="ac" className="font-mono">
-                          {selected.tail}
-                        </span>,
-                      ],
-                      [t("pages.quarantine.context.inspectionType"), selected.inspectionType],
-                      [t("pages.quarantine.context.defectArea"), selected.defectArea],
-                      [t("pages.quarantine.context.capturedAt"), selected.capturedAtLocal],
-                      [t("pages.quarantine.context.device"), selected.device],
-                    ] as Array<[string, React.ReactNode]>
-                  ).map(([rowKey, rowVal]) => (
-                    <React.Fragment key={rowKey}>
-                      <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
-                        {rowKey}
-                      </div>
-                      <div>{rowVal}</div>
-                    </React.Fragment>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t("pages.quarantine.uploaderHistory.title")}</CardTitle>
-                  <CardMeta>{t("pages.quarantine.uploaderHistory.meta")}</CardMeta>
-                </CardHeader>
-                <CardContent className="p-5 text-[12px]">
-                  <div className="grid grid-cols-3 gap-3 text-center">
-                    <div className="border-border bg-secondary/30 rounded border px-2 py-3">
-                      <div className="font-mono text-[20px] tabular-nums">
-                        {DEMO_UPLOADER_HISTORY.uploaded}
-                      </div>
-                      <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
-                        {t("pages.quarantine.uploaderHistory.uploaded")}
-                      </div>
-                    </div>
-                    <div className="border-border bg-secondary/30 rounded border px-2 py-3">
-                      <div className="text-warn font-mono text-[20px] tabular-nums">
-                        {DEMO_UPLOADER_HISTORY.flagged}
-                      </div>
-                      <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
-                        {t("pages.quarantine.uploaderHistory.flagged")}
-                      </div>
-                    </div>
-                    <div className="border-border bg-secondary/30 rounded border px-2 py-3">
-                      <div className="text-ok font-mono text-[20px] tabular-nums">
-                        {DEMO_UPLOADER_HISTORY.flagRate}
-                      </div>
-                      <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
-                        {t("pages.quarantine.uploaderHistory.flagRate")}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="border-info-line bg-info-soft text-info mt-3 rounded border px-3 py-2 text-[11.5px]">
-                    <Info size={ICON_SM} className="mr-1 inline -translate-y-px" />
-                    {t("pages.quarantine.uploaderHistory.note")}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          <DetailPane
+            asset={selected}
+            busy={mutating}
+            onRelease={() => {
+              release();
+            }}
+            onReject={() => {
+              setShowRejectModal(true);
+            }}
+          />
         )}
       </div>
 
@@ -718,7 +613,7 @@ export function QuarantinePage(): React.JSX.Element {
             setShowRejectModal(false);
           }}
           onConfirm={(note) => {
-            decide("reject", note);
+            reject(note);
             setShowRejectModal(false);
           }}
         />

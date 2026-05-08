@@ -135,6 +135,7 @@
     "rejected": "Rechazado",
     "quarantined_virus": "Virus",
     "quarantined_moderation": "Moderación",
+    "quarantined_invalid_format": "Formato inválido",
     "processing_failed": "Falló",
     "expired": "Expirado",
     "deleted": "Eliminado"
@@ -303,6 +304,106 @@
         "clear": "Mostrar todos los activos"
       }
     },
+    "uploadAssets": {
+      "title": "Subir assets",
+      "subtitle": "Elige un namespace, suelta los archivos y vincúlalos a un registro del sistema solicitante. La política del namespace decide tipos permitidos, tamaño máximo, retención y moderación.",
+      "loading": "Cargando…",
+      "noNamespace": "sin namespace",
+      "backToAssets": "Volver a assets",
+      "optional": "opcional",
+      "sections": {
+        "namespace": {
+          "title": "Namespace de destino",
+          "hint": "Cada namespace define su almacenamiento, formatos permitidos, retención y moderación."
+        },
+        "files": {
+          "title": "Archivos",
+          "hint": "Tipos permitidos según la política del namespace. Máximo {{max}} por archivo."
+        },
+        "reference": {
+          "title": "Referencia externa",
+          "hint": "El registro propietario en el sistema solicitante. Lafken solo guarda estos dos campos — la forma del dominio se queda fuera de Lafken.",
+          "hintOptional": "Opcional. Vincula la carga con un registro del sistema solicitante. Lafken solo guarda estos dos campos — la forma del dominio se queda fuera de Lafken."
+        }
+      },
+      "policyChips": {
+        "maxFile": "máx/archivo",
+        "retention": "retención"
+      },
+      "dropzone": {
+        "prompt": "Suelta los archivos aquí",
+        "browse": "buscar archivos"
+      },
+      "fileTile": {
+        "remove": "Quitar archivo",
+        "state": {
+          "uploading": "subiendo…",
+          "uploaded": "subido",
+          "error": "error"
+        }
+      },
+      "statusBar": {
+        "files": "archivos"
+      },
+      "reference": {
+        "typeLabel": "Tipo de referencia",
+        "idLabel": "ID de referencia",
+        "typeHint": "El tipo de registro. Texto libre — tu servicio define el vocabulario. p. ej. work_package, tail, work_order.",
+        "idHint": "El identificador de ese registro. Se indexa tal cual. p. ej. WP-2026-04-29-001, PR-LATAM, WO-2026-04-29-N12345-018."
+      },
+      "note": {
+        "label": "Nota",
+        "placeholder": "p. ej., foto de embalaje, inspección de circunvalación diaria, antes del despegue."
+      },
+      "tags": {
+        "label": "Etiquetas",
+        "placeholder": "preflight, line-maintenance, daytime…",
+        "hint": "Etiquetas libres. Pulsa Enter para añadir. Hasta 32 etiquetas, 64 caracteres cada una.",
+        "remove": "Quitar etiqueta {{tag}}"
+      },
+      "summary": {
+        "title": "Resumen",
+        "namespace": "Namespace",
+        "files": "Archivos",
+        "totalSize": "Tamaño total",
+        "tags": "Etiquetas"
+      },
+      "pipeline": {
+        "title": "Procesamiento",
+        "steps": {
+          "validate": "Validar formato · tamaño · MIME",
+          "virusScan": "Análisis antivirus",
+          "stripExif": "Eliminar EXIF (preservar GPS)",
+          "moderation": "Moderación de contenido",
+          "noModeration": "Sin moderación",
+          "derivatives": "Calcular derivados",
+          "indexEmit": "Indexar + emitir asset.ready"
+        }
+      },
+      "footer": {
+        "ready": "Listo para subir {{count}} archivos · {{size}}",
+        "addFiles": "Añade archivos para continuar",
+        "resolveIssues": "Resuelve los problemas para continuar",
+        "cancel": "Cancelar",
+        "uploadCount": "Subir {{count}}",
+        "uploadEmpty": "Subir"
+      },
+      "rejection": {
+        "dismiss": "Descartar"
+      },
+      "results": {
+        "partial": "Subidos {{uploaded}} de {{total}} · {{failed}} con error",
+        "viewUploaded": "Ver subidos"
+      },
+      "errors": {
+        "quarantined": {
+          "invalidFormat": "En cuarentena — el contenido del archivo no coincide con el tipo declarado. Pendiente de revisión.",
+          "virus": "En cuarentena — el análisis de virus marcó este archivo. Pendiente de revisión.",
+          "moderation": "En cuarentena — se requiere revisión de contenido. Pendiente de revisión.",
+          "generic": "En cuarentena — pendiente de revisión."
+        }
+      }
+    },
     "assetDetail": {
       "title": "Activo",
       "loading": "Cargando…",
@@ -317,6 +418,7 @@
         "noExternalRef": "Sin referencia externa",
         "unknown": "Desconocido",
         "noCustomMetadata": "Sin metadatos personalizados para este activo.",
+        "noTags": "Este activo no tiene etiquetas.",
         "noCaptureContext": "Sin contexto de captura registrado.",
         "noTransitions": "Aún no hay transiciones de estado.",
         "noAnalyses": "Aún no hay análisis.",
@@ -341,12 +443,23 @@
           "openInApi": "Abrir en API",
           "viewAuditTrail": "Ver registro de auditoría",
           "editMetadata": "Editar metadatos",
-          "forceExpire": "Forzar expiración…"
+          "forceExpire": "Forzar expiración…",
+          "delete": "Eliminar"
         },
         "toasts": {
           "downloadFailed": "No se pudo iniciar la descarga. Inténtelo de nuevo.",
           "retryStarted": "Procesamiento reiniciado.",
           "retryFailed": "No se pudo reiniciar el procesamiento. Inténtelo de nuevo."
+        }
+      },
+      "delete": {
+        "confirmTitle": "¿Eliminar este archivo?",
+        "confirmBody": "El archivo se marcará como eliminado y se ocultará de los listados. El objeto permanece en almacenamiento; un proceso de purga separado lo eliminará después. Los archivos bajo retención legal no pueden eliminarse.",
+        "cancel": "Cancelar",
+        "confirm": "Eliminar",
+        "toasts": {
+          "deleted": "Archivo eliminado.",
+          "failed": "No se pudo eliminar el archivo. Inténtelo de nuevo."
         }
       },
       "stateHero": {
@@ -365,6 +478,14 @@
         "quarantinedModeration": {
           "title": "Cuarentena · moderación",
           "subtitle": "Esperando revisor · marcado {{flagSec}}s en el pipeline"
+        },
+        "quarantinedInvalidFormat": {
+          "title": "Cuarentena · formato inválido",
+          "subtitleFallback": "Esperando revisor · el MIME declarado no coincide con el formato real del archivo"
+        },
+        "quarantinedVirus": {
+          "title": "Cuarentena · virus",
+          "subtitleFallback": "Esperando revisor · firma de virus detectada"
         },
         "fields": {
           "pipeline": "Pipeline",
@@ -393,6 +514,8 @@
         "presets": "Presets",
         "customMetadata": "Metadatos personalizados",
         "customMetadataMeta": "validado por esquema · {{count}} campos",
+        "tags": "Etiquetas",
+        "tagsMeta": "{{count}} etiquetas",
         "captureContext": "Contexto de captura",
         "captureContextMeta": "estructurado · separado del EXIF",
         "captureLocationNote": "Ubicación almacenada en capture_context según la política del namespace. GPS EXIF eliminado de los bytes.",
@@ -413,6 +536,7 @@
         "size": "Tamaño",
         "mime": "MIME",
         "contentHash": "Hash del contenido",
+        "phash": "Hash perceptual",
         "capturedAt": "Capturado el",
         "device": "Dispositivo",
         "app": "Aplicación",
@@ -442,6 +566,7 @@
       "toasts": {
         "idCopied": "ID público copiado",
         "hashCopied": "Hash copiado",
+        "phashCopied": "Hash perceptual copiado",
         "urlCopied": "URL copiada: {{name}}"
       },
       "analyses": {
@@ -508,7 +633,9 @@
         "editPolicyDeferred": "La edición de la política llegará en la próxima entrega.",
         "editPolicyArchivedTooltip": "No se puede editar la política de un namespace archivado.",
         "archive": "Archivar",
-        "unarchive": "Desarchivar"
+        "unarchive": "Desarchivar",
+        "viewAssets": "Ver assets",
+        "uploadAssets": "Subir assets"
       },
       "policy": {
         "edit": {
@@ -534,6 +661,12 @@
         "inactive": "Inactivo",
         "version": "v{{version}}",
         "summaryFormat": "{{width}}×{{height}} {{format}} q{{quality}}",
+        "deactivate": {
+          "confirmTitle": "¿Desactivar el preset \"{{name}}\"?",
+          "confirmBody": "Las URLs existentes que usen este preset dejarán de renderizarse. Puedes reactivarlo más tarde desde esta página.",
+          "cancel": "Cancelar",
+          "confirm": "Desactivar"
+        },
         "new": {
           "title": "Nuevo preset",
           "subtitle": "Agregar un preset de transformación de imagen al namespace {{slug}}.",
@@ -590,27 +723,6 @@
           "duplicateName": "Ya existe un preset con este nombre en este namespace.",
           "presetNotFound": "Este preset fue eliminado; actualice la página.",
           "versionConflict": "Otro operador editó este preset. Actualice y vuelva a aplicar sus cambios."
-        }
-      },
-      "assets": {
-        "title": "Activos",
-        "upload": {
-          "cta": "Subir activos",
-          "dialogTitle": "Subir activos",
-          "dropzonePrompt": "Arrastra archivos de imagen aquí o haz clic para elegir",
-          "startButton": "Iniciar carga",
-          "cancelButton": "Cancelar",
-          "fileStateIdle": "Listo",
-          "fileStateUploading": "Subiendo…",
-          "fileStateUploaded": "Subido",
-          "fileStateError": "Falló"
-        },
-        "empty": {
-          "title": "Aún no hay activos",
-          "body": "Sube tu primer activo para comenzar."
-        },
-        "list": {
-          "columnFile": "Cargas recientes"
         }
       },
       "form": {
@@ -754,6 +866,27 @@
           "quarantine": "Cuarentena",
           "holds": "Retenciones"
         }
+      },
+      "assets": {
+        "title": "Activos",
+        "upload": {
+          "cta": "Subir activos",
+          "dialogTitle": "Subir activos",
+          "dropzonePrompt": "Arrastra archivos de imagen aquí o haz clic para elegir",
+          "startButton": "Iniciar carga",
+          "cancelButton": "Cancelar",
+          "fileStateIdle": "Listo",
+          "fileStateUploading": "Subiendo…",
+          "fileStateUploaded": "Subido",
+          "fileStateError": "Falló"
+        },
+        "empty": {
+          "title": "Aún no hay activos",
+          "body": "Sube tu primer activo para comenzar."
+        },
+        "list": {
+          "columnFile": "Cargas recientes"
+        }
       }
     },
     "namespaceDetail": {
@@ -776,6 +909,8 @@
           "policyVersion": "Versión de política",
           "storageBinding": "Vinculación de almacenamiento",
           "presetsActive": "Presets activos",
+          "storageUsed": "Almacenamiento usado",
+          "assetsTotal": "Archivos",
           "created": "Creado",
           "updated": "Actualizado",
           "state": "Estado"
@@ -828,18 +963,31 @@
       "exportQueue": "Exportar cola",
       "policyBadge": "política v7",
       "decisionNote": "Todas las decisiones se registran en el log de auditoría con tu principal, el ID del activo, el nombre del analizador y tu nota.",
+      "loading": "Cargando…",
+      "legalHold": "Retención legal",
       "filters": {
         "all": "Todos",
         "moderation": "Moderación",
-        "virus": "Virus"
+        "virus": "Virus",
+        "invalidFormat": "Formato inválido"
       },
-      "reasons": {
-        "all": "Todos los motivos",
-        "violence": "Violencia",
-        "medical": "Médico",
-        "adult": "Adulto",
-        "gore": "Gore",
-        "virus": "Virus"
+      "shortReason": {
+        "moderation": "Moderación de contenido",
+        "virus": "Análisis de virus",
+        "invalidFormat": "El contenido del archivo no coincide con el tipo declarado"
+      },
+      "verdict": {
+        "invalidFormat": {
+          "title": "Discrepancia de bytes mágicos",
+          "fallback": "Los tipos MIME declarado y detectado no coinciden."
+        },
+        "virus": {
+          "title": "El analizador de virus marcó este archivo"
+        },
+        "moderation": {
+          "title": "La moderación de contenido marcó este archivo"
+        },
+        "pendingAnalyzer": "Esperando detalles del analizador."
       },
       "keys": {
         "label": "Teclas:",
@@ -857,19 +1005,51 @@
         "description": "Nada en espera de revisión con los filtros actuales."
       },
       "detail": {
+        "declaredMime": "MIME declarado",
+        "size": "Tamaño",
+        "dimensions": "Dimensiones",
+        "uploadedBy": "Subido por",
+        "externalRef": "Referencia externa",
+        "flaggedAt": "Señalizado el",
+        "tags": "Etiquetas",
         "asset": "Activo",
         "flag": "Señalización",
         "analyzer": "Analizador",
         "scoreVsThreshold": "Puntuación vs umbral",
         "score": "puntuación",
-        "threshold": "umbral",
-        "uploadedBy": "Subido por"
+        "threshold": "umbral"
       },
       "actions": {
         "release": "Liberar como listo",
         "reject": "Rechazar…",
         "escalate": "Escalar a legal…",
         "openDetail": "Abrir detalle"
+      },
+      "rejectModal": {
+        "title": "Rechazar activo",
+        "description": "Rechazar marca este activo como terminal. Los bytes originales están programados para destrucción según la política del namespace. Esta acción se registra y no puede deshacerse sin retención legal.",
+        "noteLabel": "Nota del revisor (obligatoria, ≥ 12 caracteres)",
+        "notePlaceholder": "ej.: confirma señalización de moderación — la imagen contiene detalles gráficos de lesión",
+        "cancel": "Cancelar",
+        "confirm": "Rechazar activo"
+      },
+      "toast": {
+        "released": "{{id}} liberado. El activo ahora está listo.",
+        "rejected": "{{id}} rechazado. Activo rechazado de forma terminal.",
+        "releaseFailed": "No se pudo liberar {{id}}: {{error}}",
+        "rejectFailed": "No se pudo rechazar {{id}}: {{error}}"
+      },
+      "empty": {
+        "title": "Nada que revisar ahora",
+        "description": "Los activos señalizados aparecerán aquí."
+      },
+      "reasons": {
+        "all": "Todos los motivos",
+        "violence": "Violencia",
+        "medical": "Médico",
+        "adult": "Adulto",
+        "gore": "Gore",
+        "virus": "Virus"
       },
       "flagged": {
         "title": "Por qué fue señalizado",
@@ -892,22 +1072,6 @@
         "flagged": "señalizados",
         "flagRate": "tasa de señalización",
         "note": "La tasa de señalización está dentro del rango normal para este cargador. No se detectó ningún patrón de escalada de revisor."
-      },
-      "rejectModal": {
-        "title": "Rechazar activo",
-        "description": "Rechazar marca este activo como terminal. Los bytes originales están programados para destrucción según la política del namespace. Esta acción se registra y no puede deshacerse sin retención legal.",
-        "noteLabel": "Nota del revisor (obligatoria, ≥ 12 caracteres)",
-        "notePlaceholder": "ej.: confirma señalización de moderación — la imagen contiene detalles gráficos de lesión",
-        "cancel": "Cancelar",
-        "confirm": "Rechazar activo"
-      },
-      "toast": {
-        "released": "{{id}} liberado. El activo ahora está listo.",
-        "rejected": "{{id}} rechazado. Activo rechazado de forma terminal."
-      },
-      "empty": {
-        "title": "Nada que revisar ahora",
-        "description": "Los activos señalizados aparecerán aquí."
       }
     },
     "legalHolds": {
@@ -919,20 +1083,6 @@
         "export": "Exportar registro de retenciones",
         "place": "Aplicar retención…",
         "placeNew": "Aplicar retención…"
-      },
-      "lift": {
-        "title": "Levantar retención legal",
-        "warning": "Esta acción no se puede deshacer — el historial de la retención se conserva, pero los activos vuelven a ser elegibles para eliminación/retención a menos que estén cubiertos por otra retención activa.",
-        "reasonLabel": "Motivo del levantamiento",
-        "reasonPlaceholder": "Investigación cerrada; liberación según aprobación del asesor legal.",
-        "reasonCounter": "{{count}} / 1.000 caracteres · mínimo 10",
-        "submit": "Levantar retención",
-        "cancel": "Cancelar",
-        "toast": {
-          "success": "Retención legal {{caseReference}} levantada.",
-          "failure": "No se pudo levantar la retención legal: {{error}}",
-          "demo": "Modo demo — los cambios no se guardarán."
-        }
       },
       "stats": {
         "activeHolds": {
@@ -1006,46 +1156,20 @@
         "description": "Las retenciones que apliques aparecerán aquí."
       },
       "rowsPerPage": "Filas por página",
-      "range": "{{from}}–{{to}} de {{total}}"
-    },
-    "placeLegalHold": {
-      "title": "Aplicar retención legal",
-      "subtitle": "Una retención suspende la eliminación y el vencimiento de retención de los activos seleccionados hasta que se levante.",
-      "back": "Volver a retenciones legales",
-      "sections": {
-        "case": "Caso",
-        "picker": "Buscar y seleccionar activos",
-        "reason": "Motivo",
-        "acknowledge": "Efectos y reconocimiento"
-      },
-      "fields": {
-        "caseReference": "Referencia del caso",
-        "caseReferenceHint": "Se recomienda la convención región-área-año-secuencia (p. ej. CHL-AVN-2026-014).",
-        "description": "Motivo / nota legal",
-        "descriptionCounter": "{{count}} / 1.000 caracteres · mínimo 10",
-        "namespace": "Namespace",
-        "search": "Buscar",
-        "searchPlaceholder": "Buscar por id, ref, hash, etiqueta…"
-      },
-      "picker": {
-        "addAllVisible": "Agregar todos los visibles",
-        "alreadyHeld": "ya retenido",
-        "basket": "Selección",
-        "basketEmpty": "Aún no hay activos seleccionados — busca y haz clic en + agregar.",
-        "clearAll": "Limpiar todo",
-        "remove": "Quitar de la selección"
-      },
-      "acknowledgement": "Entiendo que esta retención suspende la eliminación hasta que se levante.",
-      "footer": {
-        "summary_one": "{{count}} activo será bloqueado",
-        "summary_other": "{{count}} activos serán bloqueados",
-        "submit": "Aplicar retención",
-        "cancel": "Cancelar"
-      },
-      "toast": {
-        "success": "Retención legal {{caseReference}} aplicada.",
-        "failure": "No se pudo aplicar la retención legal: {{error}}",
-        "demo": "Modo demo — los cambios no se guardarán."
+      "range": "{{from}}–{{to}} de {{total}}",
+      "lift": {
+        "title": "Levantar retención legal",
+        "warning": "Esta acción no se puede deshacer — el historial de la retención se conserva, pero los activos vuelven a ser elegibles para eliminación/retención a menos que estén cubiertos por otra retención activa.",
+        "reasonLabel": "Motivo del levantamiento",
+        "reasonPlaceholder": "Investigación cerrada; liberación según aprobación del asesor legal.",
+        "reasonCounter": "{{count}} / 1.000 caracteres · mínimo 10",
+        "submit": "Levantar retención",
+        "cancel": "Cancelar",
+        "toast": {
+          "success": "Retención legal {{caseReference}} levantada.",
+          "failure": "No se pudo levantar la retención legal: {{error}}",
+          "demo": "Modo demo — los cambios no se guardarán."
+        }
       }
     },
     "audit": {
@@ -1328,6 +1452,46 @@
             "btn": "Deshabilitar…"
           }
         }
+      }
+    },
+    "placeLegalHold": {
+      "title": "Aplicar retención legal",
+      "subtitle": "Una retención suspende la eliminación y el vencimiento de retención de los activos seleccionados hasta que se levante.",
+      "back": "Volver a retenciones legales",
+      "sections": {
+        "case": "Caso",
+        "picker": "Buscar y seleccionar activos",
+        "reason": "Motivo",
+        "acknowledge": "Efectos y reconocimiento"
+      },
+      "fields": {
+        "caseReference": "Referencia del caso",
+        "caseReferenceHint": "Se recomienda la convención región-área-año-secuencia (p. ej. CHL-AVN-2026-014).",
+        "description": "Motivo / nota legal",
+        "descriptionCounter": "{{count}} / 1.000 caracteres · mínimo 10",
+        "namespace": "Namespace",
+        "search": "Buscar",
+        "searchPlaceholder": "Buscar por id, ref, hash, etiqueta…"
+      },
+      "picker": {
+        "addAllVisible": "Agregar todos los visibles",
+        "alreadyHeld": "ya retenido",
+        "basket": "Selección",
+        "basketEmpty": "Aún no hay activos seleccionados — busca y haz clic en + agregar.",
+        "clearAll": "Limpiar todo",
+        "remove": "Quitar de la selección"
+      },
+      "acknowledgement": "Entiendo que esta retención suspende la eliminación hasta que se levante.",
+      "footer": {
+        "summary_one": "{{count}} activo será bloqueado",
+        "summary_other": "{{count}} activos serán bloqueados",
+        "submit": "Aplicar retención",
+        "cancel": "Cancelar"
+      },
+      "toast": {
+        "success": "Retención legal {{caseReference}} aplicada.",
+        "failure": "No se pudo aplicar la retención legal: {{error}}",
+        "demo": "Modo demo — los cambios no se guardarán."
       }
     }
   },
