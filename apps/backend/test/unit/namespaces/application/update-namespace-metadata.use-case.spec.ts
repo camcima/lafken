@@ -6,6 +6,7 @@ import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
+import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
 import { InMemoryNamespaceWriteRepository } from "../__fakes__/in-memory-namespace-write.repository";
 
@@ -26,12 +27,14 @@ function makeNamespace(overrides: Partial<{ slug: string; displayName: string }>
 describe("UpdateNamespaceMetadataUseCase", () => {
   let queryRepo: InMemoryNamespaceQueryRepository;
   let writeRepo: InMemoryNamespaceWriteRepository;
+  let auditRepo: InMemoryAuditWriteRepository;
   let useCase: UpdateNamespaceMetadataUseCase;
 
   beforeEach(() => {
     queryRepo = new InMemoryNamespaceQueryRepository();
     writeRepo = new InMemoryNamespaceWriteRepository();
-    useCase = new UpdateNamespaceMetadataUseCase(queryRepo, writeRepo);
+    auditRepo = new InMemoryAuditWriteRepository();
+    useCase = new UpdateNamespaceMetadataUseCase(queryRepo, writeRepo, auditRepo);
   });
 
   it("updates metadata and returns the updated namespace when the namespace exists", async () => {
@@ -43,11 +46,21 @@ describe("UpdateNamespaceMetadataUseCase", () => {
       slug: "my-namespace",
       displayName: "New Name",
       description: "A fresh description",
+      occurredBy: "ada@example.com",
     });
 
     expect(result.namespace.props.displayName).toBe("New Name");
     expect(result.namespace.props.description).toBe("A fresh description");
     expect(writeRepo.get("my-namespace")?.props.displayName).toBe("New Name");
+    expect(auditRepo.records).toHaveLength(1);
+    expect(auditRepo.records[0]).toMatchObject({
+      entityType: "namespace",
+      entityId: "my-namespace",
+      action: "update",
+      occurredBy: "ada@example.com",
+      beforeState: { displayName: "Old Name", description: null },
+      afterState: { displayName: "New Name", description: "A fresh description" },
+    });
   });
 
   it("throws NamespaceNotFoundError and does not write when the namespace does not exist", async () => {
@@ -56,8 +69,10 @@ describe("UpdateNamespaceMetadataUseCase", () => {
         slug: "ghost-namespace",
         displayName: "Whatever",
         description: null,
+        occurredBy: null,
       }),
     ).rejects.toBeInstanceOf(NamespaceNotFoundError);
     expect(writeRepo.size()).toBe(0);
+    expect(auditRepo.records).toHaveLength(0);
   });
 });

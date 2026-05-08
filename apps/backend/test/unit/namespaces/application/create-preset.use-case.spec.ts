@@ -10,6 +10,7 @@ import { ReservedPresetNameError } from "@/namespaces/domain/errors/reserved-pre
 import { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
+import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 import { InMemoryNamespacePresetWriteRepository } from "../__fakes__/in-memory-namespace-preset-write.repository";
 import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
 
@@ -39,12 +40,14 @@ function makeNamespace(opts: { slug: string; archived?: boolean }): Namespace {
 describe("CreatePresetUseCase", () => {
   let queryRepo: InMemoryNamespaceQueryRepository;
   let writeRepo: InMemoryNamespacePresetWriteRepository;
+  let auditRepo: InMemoryAuditWriteRepository;
   let useCase: CreatePresetUseCase;
 
   beforeEach(() => {
     queryRepo = new InMemoryNamespaceQueryRepository();
     writeRepo = new InMemoryNamespacePresetWriteRepository();
-    useCase = new CreatePresetUseCase(queryRepo, writeRepo);
+    auditRepo = new InMemoryAuditWriteRepository();
+    useCase = new CreatePresetUseCase(queryRepo, writeRepo, auditRepo);
   });
 
   it("creates v1 with active=true on an active namespace", async () => {

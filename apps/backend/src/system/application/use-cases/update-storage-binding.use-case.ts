@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
+import { AuditWriteRepositoryPort } from "@/audit/domain/repositories/audit-write.repository.port";
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 import {
   InvalidStorageBindingConfigError,
@@ -11,9 +12,12 @@ import { StorageBindingWriteRepositoryPort } from "@/system/domain/repositories/
 import { gcsBindingConfigSchema } from "@/system/domain/schemas/gcs-binding-config.schema";
 import { BucketExistsCheckerPort } from "@/system/domain/services/bucket-exists-checker.service.port";
 
+const AUDIT_FALLBACK_PRINCIPAL = "system";
+
 interface IUpdateStorageBindingInput {
   name: string;
   config: unknown;
+  occurredBy: string | null;
 }
 
 @Injectable()
@@ -22,6 +26,7 @@ export class UpdateStorageBindingUseCase {
     private readonly queryRepository: StorageBindingQueryRepositoryPort,
     private readonly writeRepository: StorageBindingWriteRepositoryPort,
     private readonly bucketExistsChecker: BucketExistsCheckerPort,
+    private readonly auditWriteRepo: AuditWriteRepositoryPort,
   ) {}
 
   async execute(input: IUpdateStorageBindingInput): Promise<StorageBinding> {
@@ -51,6 +56,17 @@ export class UpdateStorageBindingUseCase {
       updatedAt: new Date(),
     });
 
-    return this.writeRepository.update(updated);
+    const result: StorageBinding = await this.writeRepository.update(updated);
+
+    await this.auditWriteRepo.record({
+      entityType: "storage_binding",
+      entityId: result.props.name,
+      action: "update",
+      occurredBy: input.occurredBy ?? AUDIT_FALLBACK_PRINCIPAL,
+      beforeState: { adapterType: existing.props.adapterType },
+      afterState: { adapterType: result.props.adapterType },
+    });
+
+    return result;
   }
 }

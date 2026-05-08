@@ -32,7 +32,9 @@ import {
 
 import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 import { AuthenticatedEndpoint } from "@/shared/presentation/auth/decorators/authenticated-endpoint.decorator";
+import { AuthenticatedUser } from "@/shared/presentation/auth/decorators/authenticated-user.decorator";
 import { EndpointRequiredRoles } from "@/shared/presentation/auth/decorators/endpoint-required-roles.decorator";
+import type { CurrentAuthenticatedUserDTO } from "@/shared/presentation/auth/dto/current-authenticated-user.dto";
 import { CreateStorageBindingUseCase } from "@/system/application/use-cases/create-storage-binding.use-case";
 import { DeleteStorageBindingUseCase } from "@/system/application/use-cases/delete-storage-binding.use-case";
 import { GetStorageBindingByNameUseCase } from "@/system/application/use-cases/get-storage-binding-by-name.use-case";
@@ -97,12 +99,14 @@ export class SystemController {
   @ApiBadRequestResponse()
   async createStorageBinding(
     @Body() body: CreateStorageBindingRequestDTO,
+    @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
   ): Promise<StorageBindingResponseDTO> {
     try {
       const binding = await this.createStorageBindingUseCase.execute({
         name: body.name,
         adapterType: body.adapterType,
         config: body.config,
+        occurredBy: user.emailAddress,
       });
       return StorageBindingResponseMapper.fromDomain(binding);
     } catch (err) {
@@ -123,11 +127,13 @@ export class SystemController {
   async updateStorageBinding(
     @Param("name") name: string,
     @Body() body: UpdateStorageBindingRequestDTO,
+    @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
   ): Promise<StorageBindingResponseDTO> {
     try {
       const binding = await this.updateStorageBindingUseCase.execute({
         name,
         config: body.config,
+        occurredBy: user.emailAddress,
       });
       return StorageBindingResponseMapper.fromDomain(binding);
     } catch (err) {
@@ -145,9 +151,12 @@ export class SystemController {
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
   @ApiConflictResponse()
-  async deleteStorageBinding(@Param("name") name: string): Promise<void> {
+  async deleteStorageBinding(
+    @Param("name") name: string,
+    @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+  ): Promise<void> {
     try {
-      await this.deleteStorageBindingUseCase.execute({ name });
+      await this.deleteStorageBindingUseCase.execute({ name, occurredBy: user.emailAddress });
     } catch (err) {
       if (err instanceof StorageBindingNotFoundError) {
         throw new NotFoundException(err.message, { cause: err });

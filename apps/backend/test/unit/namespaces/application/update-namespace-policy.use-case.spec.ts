@@ -8,6 +8,7 @@ import { PolicyVersionConflictError } from "@/namespaces/domain/errors/policy-ve
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
+import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
 import { InMemoryNamespaceWriteRepository } from "../__fakes__/in-memory-namespace-write.repository";
 
@@ -44,12 +45,14 @@ function makeNamespace(opts: { slug: string; archived?: boolean }): Namespace {
 describe("UpdateNamespacePolicyUseCase", () => {
   let queryRepo: InMemoryNamespaceQueryRepository;
   let writeRepo: InMemoryNamespaceWriteRepository;
+  let auditRepo: InMemoryAuditWriteRepository;
   let useCase: UpdateNamespacePolicyUseCase;
 
   beforeEach(() => {
     queryRepo = new InMemoryNamespaceQueryRepository();
     writeRepo = new InMemoryNamespaceWriteRepository();
-    useCase = new UpdateNamespacePolicyUseCase(queryRepo, writeRepo);
+    auditRepo = new InMemoryAuditWriteRepository();
+    useCase = new UpdateNamespacePolicyUseCase(queryRepo, writeRepo, auditRepo);
   });
 
   it("creates a new policy version on an active namespace and returns the result", async () => {

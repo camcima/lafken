@@ -1,14 +1,20 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
 
 import { AuditPage } from "./AuditPage";
 
+vi.mock("@/lib/demo/demo-mode", () => ({ isDemoMode: true }));
+
 function renderPage() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <I18nProvider>
-      <AuditPage />
+      <QueryClientProvider client={client}>
+        <AuditPage />
+      </QueryClientProvider>
     </I18nProvider>,
   );
 }
@@ -26,7 +32,6 @@ describe("AuditPage", () => {
 
   it("renders demo audit rows — at least one event type is visible", () => {
     renderPage();
-    // DEMO_AUDIT has event types like asset.uploaded, legal_hold.placed, etc.
     const rows = screen.getAllByRole("button", { name: /ago/i });
     expect(rows.length).toBeGreaterThan(0);
   });
@@ -50,14 +55,11 @@ describe("AuditPage", () => {
 
   it("drawer opens on row click and closes on X button", () => {
     renderPage();
-    // Click the first audit row (which opens the drawer)
     const rows = screen.getAllByRole("button", { name: /ago/i });
     fireEvent.click(rows[0]);
 
-    // Drawer should be open — Copy JSON button is visible
     expect(screen.getByRole("button", { name: /copy json/i })).toBeInTheDocument();
 
-    // Close button closes the drawer
     const closeBtn = screen.getByRole("button", { name: /close drawer/i });
     fireEvent.click(closeBtn);
     expect(screen.queryByRole("button", { name: /copy json/i })).not.toBeInTheDocument();

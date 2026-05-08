@@ -217,12 +217,14 @@ export class NamespacesController {
   async updateNamespaceMetadata(
     @Param("slug") slug: string,
     @Body() body: UpdateNamespaceMetadataRequestDTO,
+    @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
   ): Promise<NamespaceResponseDTO> {
     try {
       const result = await this.updateNamespaceMetadataUseCase.execute({
         slug,
         displayName: body.displayName,
         description: body.description,
+        occurredBy: user.emailAddress,
       });
       return NamespaceResponseMapper.fromDomain(
         result.namespace,
@@ -243,9 +245,15 @@ export class NamespacesController {
   @ApiOperation({ summary: "Archive a namespace (soft)" })
   @ApiOkResponse({ type: NamespaceResponseDTO })
   @ApiNotFoundResponse()
-  async archiveNamespace(@Param("slug") slug: string): Promise<NamespaceResponseDTO> {
+  async archiveNamespace(
+    @Param("slug") slug: string,
+    @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+  ): Promise<NamespaceResponseDTO> {
     try {
-      const result = await this.archiveNamespaceUseCase.execute({ slug });
+      const result = await this.archiveNamespaceUseCase.execute({
+        slug,
+        occurredBy: user.emailAddress,
+      });
       return NamespaceResponseMapper.fromDomain(
         result.namespace,
         result.storageBindingName,
@@ -265,9 +273,15 @@ export class NamespacesController {
   @ApiOperation({ summary: "Unarchive a namespace" })
   @ApiOkResponse({ type: NamespaceResponseDTO })
   @ApiNotFoundResponse()
-  async unarchiveNamespace(@Param("slug") slug: string): Promise<NamespaceResponseDTO> {
+  async unarchiveNamespace(
+    @Param("slug") slug: string,
+    @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+  ): Promise<NamespaceResponseDTO> {
     try {
-      const result = await this.unarchiveNamespaceUseCase.execute({ slug });
+      const result = await this.unarchiveNamespaceUseCase.execute({
+        slug,
+        occurredBy: user.emailAddress,
+      });
       return NamespaceResponseMapper.fromDomain(
         result.namespace,
         result.storageBindingName,

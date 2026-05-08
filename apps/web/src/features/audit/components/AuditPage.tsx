@@ -1,3 +1,4 @@
+import type { AuditEntryResponseDTO } from "@shared/backend-api";
 import {
   Check,
   ChevronRight,
@@ -21,30 +22,84 @@ import { Card } from "@/components/common/Card";
 import { Paginator } from "@/components/common/Paginator";
 import { RightDrawer } from "@/components/common/RightDrawer";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
+import { useAuditEntries } from "@/features/audit/hooks/useAudit";
+import { isDemoMode } from "@/lib/demo/demo-mode";
 import { DEMO_AUDIT, fmtMinAgo } from "@/lib/demo/lafken-demo-data";
-import type { DemoAuditEntry } from "@/lib/demo/lafken-demo-data";
+import type { AuditResult, DemoAuditEntry } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
 
-// Slice 0: from CLAUDE.md spec; future: read from policy
 const AUDIT_RETENTION = "10y";
 
-// Icon sizes
 const TYPE_ICON_DEFAULT_SIZE = 12;
 const TYPE_ICON_DRAWER_SIZE = 14;
 const CHEVRON_SIZE = 12;
 const BTN_ICON_SIZE = 13;
 const COPY_ICON_SIZE = 11;
 
-// Drawer JSON hour arithmetic
-const DEMO_HOUR_BASE = 8;
-const MINUTES_PER_HOUR = 60;
-const ID_SLICE_REQ_START = 4;
-const ID_SLICE_REQ_END = 18;
-const ID_SLICE_TRACE_END = 32;
+const MS_PER_MINUTE = 60_000;
 
-// Shared grid column definition (header + row must stay in sync)
 const TABLE_COLS =
   "grid-cols-[110px_minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,1.4fr)_120px_70px_34px]";
+
+interface IAuditRow {
+  id: string;
+  type: string;
+  actor: string;
+  target: string;
+  namespace: string;
+  ip: string;
+  minutesAgo: number;
+  result: AuditResult;
+  payload?: Pick<
+    AuditEntryResponseDTO,
+    "beforeState" | "afterState" | "reason" | "occurredAt" | "entityType" | "entityId" | "action"
+  >;
+}
+
+function demoToRow(entry: DemoAuditEntry): IAuditRow {
+  return {
+    id: entry.id,
+    type: entry.type,
+    actor: entry.actor,
+    target: entry.target,
+    namespace: entry.namespace,
+    ip: entry.ip,
+    minutesAgo: entry.minutesAgo,
+    result: entry.result,
+  };
+}
+
+function apiToRow(entry: AuditEntryResponseDTO): IAuditRow {
+  const occurredAtMs = Date.parse(entry.occurredAt);
+  const minutesAgo = Number.isFinite(occurredAtMs)
+    ? Math.max(0, Math.floor((Date.now() - occurredAtMs) / MS_PER_MINUTE))
+    : 0;
+  const namespace =
+    entry.entityType === "namespace_preset" && entry.entityId.includes("/")
+      ? (entry.entityId.split("/")[0] ?? "")
+      : entry.entityType === "namespace" || entry.entityType === "namespace_policy"
+        ? entry.entityId
+        : "";
+  return {
+    id: entry.id,
+    type: `${entry.entityType}.${entry.action}`,
+    actor: entry.occurredBy,
+    target: entry.entityId,
+    namespace,
+    ip: "—",
+    minutesAgo,
+    result: "ok",
+    payload: {
+      beforeState: entry.beforeState,
+      afterState: entry.afterState,
+      reason: entry.reason,
+      occurredAt: entry.occurredAt,
+      entityType: entry.entityType,
+      entityId: entry.entityId,
+      action: entry.action,
+    },
+  };
+}
 
 type ITypeIconProps = {
   type: string;
@@ -61,6 +116,8 @@ function TypeIcon({ type, size = TYPE_ICON_DEFAULT_SIZE }: ITypeIconProps): Reac
     return <X size={size} className={cn(cls, "text-danger")} />;
   if (type.includes("policy") || type.includes("namespace"))
     return <Layers size={size} className={cn(cls, "text-latam-indigo")} />;
+  if (type.includes("storage_binding"))
+    return <Settings size={size} className={cn(cls, "text-latam-indigo")} />;
   if (type.includes("api_key") || type.includes("user"))
     return <Settings size={size} className={cn(cls, "text-latam-indigo")} />;
   if (type.includes("export"))
@@ -68,17 +125,42 @@ function TypeIcon({ type, size = TYPE_ICON_DEFAULT_SIZE }: ITypeIconProps): Reac
   return <Info size={size} className={cn(cls, "text-muted-foreground")} />;
 }
 
+const DEMO_HOUR_BASE = 8;
+const MINUTES_PER_HOUR = 60;
+const ID_SLICE_REQ_START = 4;
+const ID_SLICE_REQ_END = 18;
+const ID_SLICE_TRACE_END = 32;
+
 interface IAuditDrawerProps {
-  entry: DemoAuditEntry;
+  entry: IAuditRow;
   onClose: () => void;
 }
 
 function AuditDrawer({ entry, onClose }: IAuditDrawerProps): React.JSX.Element {
   const { t } = useTranslation();
-  const hourStr = String(
-    Math.max(0, DEMO_HOUR_BASE - Math.floor(entry.minutesAgo / MINUTES_PER_HOUR)),
-  ).padStart(2, "0");
-  const jsonText = `{
+
+  const jsonText: string = entry.payload
+    ? JSON.stringify(
+        {
+          event_id: entry.id,
+          type: entry.type,
+          entity_type: entry.payload.entityType,
+          entity_id: entry.payload.entityId,
+          action: entry.payload.action,
+          occurred_at: entry.payload.occurredAt,
+          occurred_by: entry.actor,
+          before_state: entry.payload.beforeState ?? null,
+          after_state: entry.payload.afterState ?? null,
+          reason: entry.payload.reason ?? null,
+        },
+        null,
+        2,
+      )
+    : (() => {
+        const hourStr = String(
+          Math.max(0, DEMO_HOUR_BASE - Math.floor(entry.minutesAgo / MINUTES_PER_HOUR)),
+        ).padStart(2, "0");
+        return `{
   "event_id":   "${entry.id}",
   "type":       "${entry.type}",
   "result":     "${entry.result}",
@@ -96,6 +178,7 @@ function AuditDrawer({ entry, onClose }: IAuditDrawerProps): React.JSX.Element {
   "request_id": "rq_${entry.id.slice(ID_SLICE_REQ_START, ID_SLICE_REQ_END)}",
   "trace_id":   "tr_${entry.id.slice(ID_SLICE_REQ_START, ID_SLICE_TRACE_END)}"
 }`;
+      })();
 
   return (
     <RightDrawer
@@ -127,7 +210,6 @@ function AuditDrawer({ entry, onClose }: IAuditDrawerProps): React.JSX.Element {
   );
 }
 
-// Page-size options for the rows-per-page selector
 /* eslint-disable no-magic-numbers */
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const;
 const DEFAULT_PAGE_SIZE = 50;
@@ -142,7 +224,13 @@ export function AuditPage(): React.JSX.Element {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  const filtered: DemoAuditEntry[] = DEMO_AUDIT.filter((entry) => {
+  const realQuery = useAuditEntries(isDemoMode ? {} : { page: page + 1, limit: pageSize });
+
+  const allRows: IAuditRow[] = isDemoMode
+    ? DEMO_AUDIT.map(demoToRow)
+    : (realQuery.data?.data ?? []).map(apiToRow);
+
+  const filtered: IAuditRow[] = allRows.filter((entry) => {
     if (resultFilter !== "all" && entry.result !== resultFilter) return false;
     if (typeFilter !== "all" && !entry.type.startsWith(typeFilter)) return false;
     if (query) {
@@ -158,24 +246,35 @@ export function AuditPage(): React.JSX.Element {
     return true;
   });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const pageRows = filtered.slice(page * pageSize, (page + 1) * pageSize);
+  const realTotal: number = realQuery.data?.total ?? 0;
+  const totalPages: number = isDemoMode
+    ? Math.max(1, Math.ceil(filtered.length / pageSize))
+    : Math.max(1, Math.ceil(realTotal / pageSize));
+  const pageRows: IAuditRow[] = isDemoMode
+    ? filtered.slice(page * pageSize, (page + 1) * pageSize)
+    : filtered;
 
-  const openEntry: DemoAuditEntry | undefined = DEMO_AUDIT.find((entry) => entry.id === openId);
+  const openEntry: IAuditRow | undefined = allRows.find((entry) => entry.id === openId);
 
-  const rangeFrom = filtered.length === 0 ? 0 : page * pageSize + 1;
-  const rangeTo = Math.min((page + 1) * pageSize, filtered.length);
+  const visibleTotal: number = isDemoMode ? filtered.length : realTotal;
+  const rangeFrom = visibleTotal === 0 ? 0 : page * pageSize + 1;
+  const rangeTo = isDemoMode
+    ? Math.min((page + 1) * pageSize, filtered.length)
+    : Math.min((page + 1) * pageSize, realTotal);
+
+  const anchorMinutesAgo: number = isDemoMode
+    ? (DEMO_AUDIT[0]?.minutesAgo ?? 2)
+    : (allRows[0]?.minutesAgo ?? 0);
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="m-0 text-[22px] font-bold tracking-tight">{t("pages.audit.title")}</h1>
           <div className="text-muted-foreground mt-1 text-[12.5px]">
             {t("pages.audit.subtitle", {
               retention: AUDIT_RETENTION,
-              anchor: fmtMinAgo(DEMO_AUDIT[0]?.minutesAgo ?? 2),
+              anchor: fmtMinAgo(anchorMinutesAgo),
             })}
           </div>
         </div>
@@ -187,7 +286,6 @@ export function AuditPage(): React.JSX.Element {
         </div>
       </div>
 
-      {/* Filter card */}
       <Card className="mb-4 p-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[260px] flex-1">
@@ -239,7 +337,6 @@ export function AuditPage(): React.JSX.Element {
         </div>
       </Card>
 
-      {/* Table card */}
       <Card className="overflow-x-auto">
         <div className="min-w-[920px]">
           <div
@@ -306,7 +403,6 @@ export function AuditPage(): React.JSX.Element {
         </div>
       </Card>
 
-      {/* Footer paginator */}
       <div className="text-muted-foreground mt-3 flex flex-wrap items-center justify-between gap-3 text-[11.5px]">
         <div className="flex items-center gap-2">
           <span>{t("paginator.rowsPerPage")}</span>
@@ -325,14 +421,14 @@ export function AuditPage(): React.JSX.Element {
               </option>
             ))}
           </select>
-          {filtered.length > 0 && (
+          {visibleTotal > 0 && (
             <>
               <span className="hidden sm:inline">·</span>
               <span className="hidden font-mono tabular-nums sm:inline">
                 {t("paginator.range", {
                   from: rangeFrom.toLocaleString(),
                   to: rangeTo.toLocaleString(),
-                  total: filtered.length.toLocaleString(),
+                  total: visibleTotal.toLocaleString(),
                 })}
               </span>
             </>
@@ -348,7 +444,6 @@ export function AuditPage(): React.JSX.Element {
         />
       </div>
 
-      {/* Detail drawer */}
       {openEntry !== undefined && (
         <AuditDrawer
           entry={openEntry}

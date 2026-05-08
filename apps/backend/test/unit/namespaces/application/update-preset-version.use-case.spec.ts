@@ -11,6 +11,7 @@ import { ReservedPresetNameError } from "@/namespaces/domain/errors/reserved-pre
 import { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
+import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 import { InMemoryNamespacePresetWriteRepository } from "../__fakes__/in-memory-namespace-preset-write.repository";
 import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
 
@@ -57,12 +58,14 @@ function makePresetV1(opts: { active: boolean }): NamespacePreset {
 describe("UpdatePresetVersionUseCase", () => {
   let queryRepo: InMemoryNamespaceQueryRepository;
   let writeRepo: InMemoryNamespacePresetWriteRepository;
+  let auditRepo: InMemoryAuditWriteRepository;
   let useCase: UpdatePresetVersionUseCase;
 
   beforeEach(() => {
     queryRepo = new InMemoryNamespaceQueryRepository();
     writeRepo = new InMemoryNamespacePresetWriteRepository();
-    useCase = new UpdatePresetVersionUseCase(queryRepo, writeRepo);
+    auditRepo = new InMemoryAuditWriteRepository();
+    useCase = new UpdatePresetVersionUseCase(queryRepo, writeRepo, auditRepo);
   });
 
   it("creates v2 inheriting active=true from latest v1", async () => {

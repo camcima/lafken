@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
+import { AuditWriteRepositoryPort } from "@/audit/domain/repositories/audit-write.repository.port";
 import { NamespacePreset } from "@/namespaces/domain/entities/namespace-preset.entity";
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
@@ -9,6 +10,8 @@ import { NamespacePresetWriteRepositoryPort } from "@/namespaces/domain/reposito
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import type { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
 import { SYSTEM_PRESET_NAME_PREFIX } from "@/shared/kernel/domain/preset-naming";
+
+const AUDIT_FALLBACK_PRINCIPAL = "system";
 
 export interface ICreatePresetInput {
   slug: string;
@@ -22,6 +25,7 @@ export class CreatePresetUseCase {
   constructor(
     private readonly queryRepository: NamespaceQueryRepositoryPort,
     private readonly writeRepository: NamespacePresetWriteRepositoryPort,
+    private readonly auditWriteRepo: AuditWriteRepositoryPort,
   ) {}
 
   async execute(input: ICreatePresetInput): Promise<NamespacePreset> {
@@ -46,12 +50,24 @@ export class CreatePresetUseCase {
     }
 
     try {
-      return await this.writeRepository.createPreset({
+      const preset = await this.writeRepository.createPreset({
         namespaceId: namespace.props.id,
         name: input.name,
         params: input.params,
         createdBy: input.createdBy,
       });
+      await this.auditWriteRepo.record({
+        entityType: "namespace_preset",
+        entityId: `${namespace.props.slug.value}/${preset.props.name}`,
+        action: "create",
+        occurredBy: input.createdBy ?? AUDIT_FALLBACK_PRINCIPAL,
+        afterState: {
+          namespace: namespace.props.slug.value,
+          name: preset.props.name,
+          version: preset.props.version,
+        },
+      });
+      return preset;
     } catch (err) {
       if (err instanceof PresetNameAlreadyExistsError) {
         throw new PresetNameAlreadyExistsError({ slug: input.slug, name: input.name });

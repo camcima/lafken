@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 
+import { AuditInfrastructureModule } from "@/audit/infrastructure/audit-infrastructure.module";
+
 import { CreateStorageBindingUseCase } from "./application/use-cases/create-storage-binding.use-case";
 import { DeleteStorageBindingUseCase } from "./application/use-cases/delete-storage-binding.use-case";
 import { GetStorageBindingByNameUseCase } from "./application/use-cases/get-storage-binding-by-name.use-case";
@@ -11,7 +13,7 @@ import { SystemInfrastructureModule } from "./infrastructure/system-infrastructu
 import { SystemController } from "./presentation/controllers/system.controller";
 
 @Module({
-  imports: [SystemInfrastructureModule],
+  imports: [SystemInfrastructureModule, AuditInfrastructureModule],
   controllers: [SystemController],
   providers: [
     ListStorageBindingsUseCase,

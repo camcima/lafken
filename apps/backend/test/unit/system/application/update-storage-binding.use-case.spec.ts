@@ -7,6 +7,7 @@ import { InvalidStorageBindingConfigError } from "@/system/domain/errors/invalid
 import { StorageBindingNotFoundError } from "@/system/domain/errors/storage-binding-not-found.error";
 
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
+import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 import { InMemoryBucketExistsChecker } from "../__fakes__/in-memory-bucket-exists-checker";
 import { InMemoryStorageBindingQueryRepository } from "../__fakes__/in-memory-storage-binding-query.repository";
 import { InMemoryStorageBindingWriteRepository } from "../__fakes__/in-memory-storage-binding-write.repository";
@@ -15,6 +16,7 @@ describe("UpdateStorageBindingUseCase", () => {
   let queryRepository: InMemoryStorageBindingQueryRepository;
   let writeRepository: InMemoryStorageBindingWriteRepository;
   let bucketChecker: InMemoryBucketExistsChecker;
+  let auditRepo: InMemoryAuditWriteRepository;
   let useCase: UpdateStorageBindingUseCase;
 
   const originalConfig = {
@@ -33,7 +35,13 @@ describe("UpdateStorageBindingUseCase", () => {
     writeRepository = new InMemoryStorageBindingWriteRepository();
     bucketChecker = new InMemoryBucketExistsChecker();
     bucketChecker.existingBuckets.add("lafken-dev");
-    useCase = new UpdateStorageBindingUseCase(queryRepository, writeRepository, bucketChecker);
+    auditRepo = new InMemoryAuditWriteRepository();
+    useCase = new UpdateStorageBindingUseCase(
+      queryRepository,
+      writeRepository,
+      bucketChecker,
+      auditRepo,
+    );
 
     queryRepository.seed([
       StorageBinding.fromProps({
@@ -48,18 +56,29 @@ describe("UpdateStorageBindingUseCase", () => {
   });
 
   it("updates the config of an existing binding", async () => {
-    const result = await useCase.execute({ name: "default", config: newConfig });
+    const result = await useCase.execute({
+      name: "default",
+      config: newConfig,
+      occurredBy: "ops@latam.com",
+    });
 
     expect(result.props.name).toBe("default");
     expect(result.props.config).toEqual(newConfig);
     expect(result.props.id).toBe(TEST_UUIDS.storageBinding1);
     expect(writeRepository.get("default")?.props.config).toEqual(newConfig);
+    expect(auditRepo.records).toHaveLength(1);
+    expect(auditRepo.records[0]).toMatchObject({
+      entityType: "storage_binding",
+      entityId: "default",
+      action: "update",
+      occurredBy: "ops@latam.com",
+    });
   });
 
   it("rejects when the named binding does not exist", async () => {
-    await expect(useCase.execute({ name: "missing", config: newConfig })).rejects.toBeInstanceOf(
-      StorageBindingNotFoundError,
-    );
+    await expect(
+      useCase.execute({ name: "missing", config: newConfig, occurredBy: null }),
+    ).rejects.toBeInstanceOf(StorageBindingNotFoundError);
   });
 
   it("rejects when the config does not match the GCS schema and leaves the existing binding unchanged", async () => {
@@ -67,6 +86,7 @@ describe("UpdateStorageBindingUseCase", () => {
       useCase.execute({
         name: "default",
         config: { bucket: "ab", projectId: "lafken-project" },
+        occurredBy: null,
       }),
     ).rejects.toBeInstanceOf(InvalidStorageBindingConfigError);
     expect(writeRepository.size()).toBe(0);
@@ -77,6 +97,7 @@ describe("UpdateStorageBindingUseCase", () => {
       useCase.execute({
         name: "default",
         config: { bucket: "vanished-bucket", projectId: "lafken-project" },
+        occurredBy: null,
       }),
     ).rejects.toBeInstanceOf(BucketNotFoundError);
     expect(writeRepository.size()).toBe(0);

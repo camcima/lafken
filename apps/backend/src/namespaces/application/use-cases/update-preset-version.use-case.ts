@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
+import { AuditWriteRepositoryPort } from "@/audit/domain/repositories/audit-write.repository.port";
 import { NamespacePreset } from "@/namespaces/domain/entities/namespace-preset.entity";
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
@@ -12,6 +13,7 @@ import type { PresetParams } from "@/namespaces/domain/value-objects/preset-para
 import { SYSTEM_PRESET_NAME_PREFIX } from "@/shared/kernel/domain/preset-naming";
 
 const RETRY_LIMIT = 1;
+const AUDIT_FALLBACK_PRINCIPAL = "system";
 
 export interface IUpdatePresetVersionInput {
   slug: string;
@@ -25,6 +27,7 @@ export class UpdatePresetVersionUseCase {
   constructor(
     private readonly queryRepository: NamespaceQueryRepositoryPort,
     private readonly writeRepository: NamespacePresetWriteRepositoryPort,
+    private readonly auditWriteRepo: AuditWriteRepositoryPort,
   ) {}
 
   async execute(input: IUpdatePresetVersionInput): Promise<NamespacePreset> {
@@ -51,12 +54,21 @@ export class UpdatePresetVersionUseCase {
     let lastConflict: PresetVersionConflictError | null = null;
     for (let attempt = 0; attempt <= RETRY_LIMIT; attempt += 1) {
       try {
-        return await this.writeRepository.createVersion({
+        const preset = await this.writeRepository.createVersion({
           namespaceId: namespace.props.id,
           name: input.name,
           params: input.params,
           createdBy: input.createdBy,
         });
+        await this.auditWriteRepo.record({
+          entityType: "namespace_preset",
+          entityId: `${namespace.props.slug.value}/${preset.props.name}`,
+          action: "update",
+          occurredBy: input.createdBy ?? AUDIT_FALLBACK_PRINCIPAL,
+          beforeState: { version: existing.props.version },
+          afterState: { version: preset.props.version },
+        });
+        return preset;
       } catch (err) {
         if (err instanceof PresetVersionConflictError) {
           lastConflict = err;

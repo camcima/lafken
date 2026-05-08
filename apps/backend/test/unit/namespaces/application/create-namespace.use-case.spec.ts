@@ -8,6 +8,7 @@ import { StorageBindingMissingError } from "@/namespaces/domain/errors/storage-b
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
+import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
 import { InMemoryNamespaceWriteRepository } from "../__fakes__/in-memory-namespace-write.repository";
 
@@ -37,18 +38,27 @@ const VALID_INPUT = {
 describe("CreateNamespaceUseCase", () => {
   let queryRepo: InMemoryNamespaceQueryRepository;
   let writeRepo: InMemoryNamespaceWriteRepository;
+  let auditRepo: InMemoryAuditWriteRepository;
   let useCase: CreateNamespaceUseCase;
 
   beforeEach(() => {
     queryRepo = new InMemoryNamespaceQueryRepository();
     writeRepo = new InMemoryNamespaceWriteRepository();
-    useCase = new CreateNamespaceUseCase(queryRepo, writeRepo);
+    auditRepo = new InMemoryAuditWriteRepository();
+    useCase = new CreateNamespaceUseCase(queryRepo, writeRepo, auditRepo);
   });
 
   it("creates a namespace and returns it when the slug is unique and binding exists", async () => {
     const result = await useCase.execute(VALID_INPUT);
     expect(result.namespace.props.slug.value).toBe("aircraft-photos");
     expect(writeRepo.has("aircraft-photos")).toBe(true);
+    expect(auditRepo.records).toHaveLength(1);
+    expect(auditRepo.records[0]).toMatchObject({
+      entityType: "namespace",
+      entityId: "aircraft-photos",
+      action: "create",
+      occurredBy: "ops@latam.com",
+    });
   });
 
   it("throws NamespaceAlreadyExistsError when the slug is taken", async () => {

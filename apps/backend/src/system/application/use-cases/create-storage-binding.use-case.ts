@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
+import { AuditWriteRepositoryPort } from "@/audit/domain/repositories/audit-write.repository.port";
 import { NIL_UUID } from "@/shared/kernel/domain/nil-uuid.constant";
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 import { DuplicateStorageBindingNameError } from "@/system/domain/errors/duplicate-storage-binding-name.error";
@@ -13,10 +14,13 @@ import { gcsBindingConfigSchema } from "@/system/domain/schemas/gcs-binding-conf
 import { BucketExistsCheckerPort } from "@/system/domain/services/bucket-exists-checker.service.port";
 import { StorageBindingName } from "@/system/domain/value-objects/storage-binding-name.value-object";
 
+const AUDIT_FALLBACK_PRINCIPAL = "system";
+
 interface ICreateStorageBindingInput {
   name: string;
   adapterType: "gcs";
   config: unknown;
+  occurredBy: string | null;
 }
 
 @Injectable()
@@ -25,6 +29,7 @@ export class CreateStorageBindingUseCase {
     private readonly queryRepository: StorageBindingQueryRepositoryPort,
     private readonly writeRepository: StorageBindingWriteRepositoryPort,
     private readonly bucketExistsChecker: BucketExistsCheckerPort,
+    private readonly auditWriteRepo: AuditWriteRepositoryPort,
   ) {}
 
   async execute(input: ICreateStorageBindingInput): Promise<StorageBinding> {
@@ -60,6 +65,19 @@ export class CreateStorageBindingUseCase {
       updatedAt: now,
     });
 
-    return this.writeRepository.insert(binding);
+    const inserted: StorageBinding = await this.writeRepository.insert(binding);
+
+    await this.auditWriteRepo.record({
+      entityType: "storage_binding",
+      entityId: inserted.props.name,
+      action: "create",
+      occurredBy: input.occurredBy ?? AUDIT_FALLBACK_PRINCIPAL,
+      afterState: {
+        name: inserted.props.name,
+        adapterType: inserted.props.adapterType,
+      },
+    });
+
+    return inserted;
   }
 }

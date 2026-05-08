@@ -6,6 +6,7 @@ import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
+import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
 import { InMemoryNamespaceWriteRepository } from "../__fakes__/in-memory-namespace-write.repository";
 
@@ -26,12 +27,14 @@ function makeNamespace(archivedAt: Date | null): Namespace {
 describe("UnarchiveNamespaceUseCase", () => {
   let queryRepo: InMemoryNamespaceQueryRepository;
   let writeRepo: InMemoryNamespaceWriteRepository;
+  let auditRepo: InMemoryAuditWriteRepository;
   let useCase: UnarchiveNamespaceUseCase;
 
   beforeEach(() => {
     queryRepo = new InMemoryNamespaceQueryRepository();
     writeRepo = new InMemoryNamespaceWriteRepository();
-    useCase = new UnarchiveNamespaceUseCase(queryRepo, writeRepo);
+    auditRepo = new InMemoryAuditWriteRepository();
+    useCase = new UnarchiveNamespaceUseCase(queryRepo, writeRepo, auditRepo);
   });
 
   it("unarchives an archived namespace and returns it with archivedAt === null", async () => {
@@ -39,10 +42,17 @@ describe("UnarchiveNamespaceUseCase", () => {
     queryRepo.seed([archived]);
     writeRepo.seed(archived);
 
-    const result = await useCase.execute({ slug: "my-namespace" });
+    const result = await useCase.execute({ slug: "my-namespace", occurredBy: "ada@example.com" });
 
     expect(result.namespace.props.archivedAt).toBeNull();
     expect(writeRepo.get("my-namespace")?.props.archivedAt).toBeNull();
+    expect(auditRepo.records).toHaveLength(1);
+    expect(auditRepo.records[0]).toMatchObject({
+      entityType: "namespace",
+      entityId: "my-namespace",
+      action: "unarchive",
+      occurredBy: "ada@example.com",
+    });
   });
 
   it("returns the existing namespace unchanged when it is already active (idempotent)", async () => {
@@ -50,15 +60,16 @@ describe("UnarchiveNamespaceUseCase", () => {
     queryRepo.seed([active]);
     writeRepo.seed(active);
 
-    const result = await useCase.execute({ slug: "my-namespace" });
+    const result = await useCase.execute({ slug: "my-namespace", occurredBy: "ada@example.com" });
 
     expect(result.namespace).toBe(active);
     expect(result.namespace.props.archivedAt).toBeNull();
+    expect(auditRepo.records).toHaveLength(0);
   });
 
   it("throws NamespaceNotFoundError when the namespace does not exist", async () => {
-    await expect(useCase.execute({ slug: "ghost-namespace" })).rejects.toBeInstanceOf(
-      NamespaceNotFoundError,
-    );
+    await expect(
+      useCase.execute({ slug: "ghost-namespace", occurredBy: null }),
+    ).rejects.toBeInstanceOf(NamespaceNotFoundError);
   });
 });
