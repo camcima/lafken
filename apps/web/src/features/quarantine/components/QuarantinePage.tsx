@@ -1,5 +1,6 @@
 import type { QuarantinedAssetResponseDTO } from "@shared/backend-api";
-import { Check, Download, Flag, Image as ImageIcon, Shield, X } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Check, ExternalLink, Image as ImageIcon, Shield, X } from "lucide-react";
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -269,9 +270,11 @@ function DetailPane({ asset, onRelease, onReject, busy }: IDetailPaneProps): Rea
               <X size={ICON_MD} />
               {t("pages.quarantine.actions.reject")}
             </Button>
-            <Button variant="outline" size="sm" disabled={busy}>
-              <Flag size={ICON_MD} />
-              {t("pages.quarantine.actions.escalate")}
+            <Button asChild variant="outline" size="sm">
+              <Link to="/assets/$id" params={{ id: asset.id }}>
+                <ExternalLink size={ICON_MD} />
+                {t("pages.quarantine.actions.openDetail")}
+              </Link>
             </Button>
           </div>
           <div className="text-muted-foreground mt-2 text-[10.5px]">
@@ -377,33 +380,6 @@ export function QuarantinePage(): React.JSX.Element {
     [rejectMutation, selected, showToast, t],
   );
 
-  // Keyboard shortcuts (j/k navigate, a release, r reject). We index off
-  // `selected` rather than `selectedId` so j/k still work on first load,
-  // before the user has clicked anything (selectedId is undefined but
-  // `selected` falls through to filtered[0]).
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if ((e.target as HTMLElement).matches("input, textarea")) return;
-      if (!selected) return;
-      const currentIdx = filtered.findIndex((a) => a.publicId === selected.publicId);
-      if (e.key === "j") {
-        const next = filtered[Math.min(filtered.length - 1, currentIdx + 1)];
-        if (next) setSelectedId(next.publicId);
-      } else if (e.key === "k") {
-        const prev = filtered[Math.max(0, currentIdx - 1)];
-        if (prev) setSelectedId(prev.publicId);
-      } else if (e.key === "a") {
-        if (!mutating) release();
-      } else if (e.key === "r") {
-        if (!mutating) setShowRejectModal(true);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [filtered, selected, release, mutating]);
-
   const counts: Record<QuarantineKind, number> = useMemo(() => {
     return {
       moderation: allAssets.filter((a) => a.quarantineKind === "moderation").length,
@@ -420,21 +396,12 @@ export function QuarantinePage(): React.JSX.Element {
           <h1 className="m-0 text-[22px] font-bold tracking-tight">
             {t("pages.quarantine.title")}
           </h1>
-          <div className="text-muted-foreground mt-1 text-[12.5px]">
-            <b className="text-foreground">{filtered.length}</b>{" "}
-            {t("pages.quarantine.subtitle.awaitingReview")}{" "}
-            <span className="text-warn">{t("pages.quarantine.subtitle.slo")}</span>
-          </div>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="ok">
             <Check size={ICON_SM} />
             {t("pages.quarantine.reviewedToday", { count: reviewedToday })}
           </Badge>
-          <Button variant="outline">
-            <Download size={ICON_MD} />
-            {t("pages.quarantine.exportQueue")}
-          </Button>
         </div>
       </div>
 
@@ -491,27 +458,6 @@ export function QuarantinePage(): React.JSX.Element {
               </span>
             </button>
           ))}
-        </div>
-
-        {/* Keyboard hints */}
-        <div className="text-muted-foreground ml-auto flex items-center gap-2 text-[11.5px]">
-          <span>{t("pages.quarantine.keys.label")}</span>
-          <kbd className="border-border bg-secondary rounded border px-1.5 py-0.5 font-mono text-[10.5px]">
-            J
-          </kbd>
-          <span>{t("pages.quarantine.keys.next")}</span>
-          <kbd className="border-border bg-secondary rounded border px-1.5 py-0.5 font-mono text-[10.5px]">
-            K
-          </kbd>
-          <span>{t("pages.quarantine.keys.prev")}</span>
-          <kbd className="border-border bg-secondary rounded border px-1.5 py-0.5 font-mono text-[10.5px]">
-            A
-          </kbd>
-          <span>{t("pages.quarantine.keys.release")}</span>
-          <kbd className="border-border bg-secondary rounded border px-1.5 py-0.5 font-mono text-[10.5px]">
-            R
-          </kbd>
-          <span>{t("pages.quarantine.keys.reject")}</span>
         </div>
       </div>
 

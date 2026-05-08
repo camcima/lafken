@@ -75,6 +75,17 @@ vi.mock("@/features/quarantine/hooks/useQuarantine", () => ({
   }),
 }));
 
+vi.mock("@tanstack/react-router", async () => {
+  const actual =
+    await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
+  return {
+    ...actual,
+    Link: ({ children, ...props }: { children: React.ReactNode; [k: string]: unknown }) => (
+      <a {...(props as React.AnchorHTMLAttributes<HTMLAnchorElement>)}>{children}</a>
+    ),
+  };
+});
+
 describe("QuarantinePage", () => {
   it("renders the title heading", () => {
     renderWithProviders(<QuarantinePage />);
@@ -133,25 +144,10 @@ describe("QuarantinePage", () => {
     expect(confirm).toBeDisabled();
   });
 
-  it("j/k keyboard shortcuts move selection between queue items", async () => {
-    const user = userEvent.setup();
+  it("renders an Open detail link for the selected asset", () => {
     renderWithProviders(<QuarantinePage />);
-
-    const selectedButtons = (): HTMLElement[] =>
-      screen.getAllByRole("button").filter((btn) => btn.getAttribute("aria-current") === "true");
-
-    const before = selectedButtons();
-    expect(before).toHaveLength(1);
-    const firstText = before[0]?.textContent ?? "";
-
-    await user.keyboard("j");
-    const afterJ = selectedButtons();
-    expect(afterJ).toHaveLength(1);
-    expect(afterJ[0]?.textContent).not.toBe(firstText);
-
-    await user.keyboard("k");
-    const afterK = selectedButtons();
-    expect(afterK).toHaveLength(1);
-    expect(afterK[0]?.textContent).toBe(firstText);
+    // Button asChild + Link renders the trailing CTA as an anchor.
+    const openDetailEl = screen.getByText(/open detail/i);
+    expect(openDetailEl.closest("a")).toBeInTheDocument();
   });
 });
