@@ -1,6 +1,16 @@
 import { AssetImage } from "@lafken/react";
 import { Link } from "@tanstack/react-router";
-import { Check, ChevronRight, Copy, Image, LayoutGrid, Lock, Shield, Sliders } from "lucide-react";
+import {
+  Ban,
+  Check,
+  ChevronRight,
+  Copy,
+  Image,
+  LayoutGrid,
+  Lock,
+  Shield,
+  Sliders,
+} from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -43,8 +53,8 @@ const THUMB_DIMS: Record<ThumbSize, string> = {
   lg: "h-32 w-full",
 };
 
-const THUMB_SHIELD_SM = 12;
-const THUMB_SHIELD_MD = 16;
+const THUMB_ICON_SM = 12;
+const THUMB_ICON_MD = 16;
 
 interface IThumbProps {
   asset: IAssetRow;
@@ -52,17 +62,31 @@ interface IThumbProps {
 }
 
 function Thumb({ asset, size = "md" }: IThumbProps): React.JSX.Element {
-  const isQuarantined =
-    asset.state === "quarantined_moderation" || asset.state === "quarantined_virus";
-  const previewable =
+  const isQuarantined: boolean =
+    asset.state === "quarantined_moderation" ||
+    asset.state === "quarantined_virus" ||
+    asset.state === "quarantined_invalid_format";
+  const isRejected: boolean = asset.state === "rejected";
+  const previewable: boolean =
     asset.state === "uploaded" || asset.state === "processing" || asset.state === "ready";
+  // Per-asset hue is purely a visual hash for previewable rows so the eye can
+  // tell similar uploads apart at a glance. Terminal / blocked states get a
+  // standard neutral chrome instead, so reviewers see "rejected" or
+  // "quarantined" rather than a kaleidoscope of unrelated colors.
+  const useStandardChrome: boolean = isQuarantined || isRejected;
+  const iconSize: number = size === "sm" ? THUMB_ICON_SM : THUMB_ICON_MD;
   return (
     <div
       className={cn("border-border relative overflow-hidden rounded border", THUMB_DIMS[size])}
-      style={{
-        background: `linear-gradient(135deg, hsl(${asset.thumbHue} 50% 55%), hsl(${asset.thumbHue} 60% 35%))`,
-      }}
+      style={
+        useStandardChrome
+          ? undefined
+          : {
+              background: `linear-gradient(135deg, hsl(${asset.thumbHue} 50% 55%), hsl(${asset.thumbHue} 60% 35%))`,
+            }
+      }
     >
+      {useStandardChrome && <span className="bg-muted absolute inset-0" />}
       {previewable && (
         <AssetImage
           publicId={asset.publicId}
@@ -75,10 +99,18 @@ function Thumb({ asset, size = "md" }: IThumbProps): React.JSX.Element {
       {asset.state === "processing" && (
         <span className="absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.18)_0_4px,transparent_4px_8px)]" />
       )}
-      {/* Quarantine hazard stripe */}
+      {/* Quarantine hazard stripe — same chrome for virus / moderation /
+          invalid_format so the queue reads as one bucket. */}
       {isQuarantined && (
         <span className="absolute inset-0 grid place-items-center bg-[repeating-linear-gradient(45deg,rgba(138,66,9,0.85)_0_8px,rgba(138,66,9,0.7)_8px_16px)] text-[10px] font-bold tracking-wider text-white uppercase">
-          <Shield size={size === "sm" ? THUMB_SHIELD_SM : THUMB_SHIELD_MD} />
+          <Shield size={iconSize} />
+        </span>
+      )}
+      {/* Rejected: solid muted background + Ban glyph; no hazard stripe so
+          the row reads as terminal-but-benign rather than under review. */}
+      {isRejected && (
+        <span className="text-muted-foreground absolute inset-0 grid place-items-center">
+          <Ban size={iconSize} />
         </span>
       )}
       {/* Tail chip — only when present (demo data) */}
