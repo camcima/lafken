@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Ip,
   NotFoundException,
   Param,
   Post,
@@ -101,12 +102,14 @@ export class LegalHoldsController {
   async place(
     @Body() body: PlaceLegalHoldRequestDTO,
     @AuthenticatedUser() user: AuthenticatedUserType,
+    @Ip() requestIp: string,
   ): Promise<LegalHoldResponseDTO> {
     const hold = await this.placeLegalHoldUseCase.execute({
       caseReference: body.caseReference,
       description: body.description,
       assetIds: body.assetIds,
       placedBy: user.emailAddress,
+      requestIp,
     });
     return LegalHoldResponseMapper.fromDomain(hold, new Set(body.assetIds).size);
   }
@@ -125,12 +128,14 @@ export class LegalHoldsController {
     @Param("id") id: string,
     @Body() body: LiftLegalHoldRequestDTO,
     @AuthenticatedUser() user: AuthenticatedUserType,
+    @Ip() requestIp: string,
   ): Promise<LegalHoldResponseDTO> {
     try {
       const hold = await this.liftLegalHoldUseCase.execute({
         holdId: id,
         liftedBy: user.emailAddress,
         liftReason: body.liftReason,
+        requestIp,
       });
       const affectedAssetCount = await this.computeAffectedAssetCount(id);
       return LegalHoldResponseMapper.fromDomain(hold, affectedAssetCount);

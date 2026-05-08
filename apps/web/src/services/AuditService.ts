@@ -24,6 +24,7 @@ export class AuditService extends BaseService {
           entityId: query.entityId,
           occurredFrom: query.occurredFrom,
           occurredTo: query.occurredTo,
+          q: query.q,
         },
       },
     );

@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 
+import { AuditInfrastructureModule } from "@/audit/infrastructure/audit-infrastructure.module";
+
 import { GetLegalHoldByIdUseCase } from "./application/use-cases/get-legal-hold-by-id.use-case";
 import { LiftLegalHoldUseCase } from "./application/use-cases/lift-legal-hold.use-case";
 import { ListLegalHoldsUseCase } from "./application/use-cases/list-legal-holds.use-case";
@@ -8,7 +10,7 @@ import { LegalHoldsInfrastructureModule } from "./infrastructure/legal-holds-inf
 import { LegalHoldsController } from "./presentation/controllers/legal-holds.controller";
 
 @Module({
-  imports: [LegalHoldsInfrastructureModule],
+  imports: [LegalHoldsInfrastructureModule, AuditInfrastructureModule],
   controllers: [LegalHoldsController],
   providers: [
     ListLegalHoldsUseCase,

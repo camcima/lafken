@@ -13,7 +13,7 @@ import {
   Shield,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/common/Badge";
@@ -229,7 +229,10 @@ const TYPE_FILTER_TO_ENTITY_TYPE: Record<string, string | undefined> = {
   namespace_policy: "namespace_policy",
   namespace_preset: "namespace_preset",
   storage_binding: "storage_binding",
+  legal_hold: "legal_hold",
 };
+
+const SEARCH_DEBOUNCE_MS = 250;
 
 export function AuditPage(): React.JSX.Element {
   const { t } = useTranslation();
@@ -242,10 +245,25 @@ export function AuditPage(): React.JSX.Element {
 
   const beEntityType: string | undefined = TYPE_FILTER_TO_ENTITY_TYPE[typeFilter];
 
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setDebouncedQuery(query);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(handle);
+    };
+  }, [query]);
+
   const realQuery = useAuditEntries(
     isDemoMode
       ? {}
-      : { page: page + 1, limit: pageSize, ...(beEntityType ? { entityType: beEntityType } : {}) },
+      : {
+          page: page + 1,
+          limit: pageSize,
+          ...(beEntityType ? { entityType: beEntityType } : {}),
+          ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
+        },
   );
 
   const allRows: IAuditRow[] = isDemoMode
@@ -253,8 +271,9 @@ export function AuditPage(): React.JSX.Element {
     : (realQuery.data?.data ?? []).map(apiToRow);
 
   const filtered: IAuditRow[] = allRows.filter((entry) => {
-    if (isDemoMode && resultFilter !== "all" && entry.result !== resultFilter) return false;
-    if (isDemoMode && typeFilter !== "all" && !entry.type.startsWith(typeFilter)) return false;
+    if (!isDemoMode) return true;
+    if (resultFilter !== "all" && entry.result !== resultFilter) return false;
+    if (typeFilter !== "all" && !entry.type.startsWith(typeFilter)) return false;
     if (query) {
       const lq = query.toLowerCase();
       if (
@@ -352,6 +371,7 @@ export function AuditPage(): React.JSX.Element {
                 <option value="namespace_policy">namespace_policy.*</option>
                 <option value="namespace_preset">namespace_preset.*</option>
                 <option value="storage_binding">storage_binding.*</option>
+                <option value="legal_hold">legal_hold.*</option>
               </>
             )}
           </select>

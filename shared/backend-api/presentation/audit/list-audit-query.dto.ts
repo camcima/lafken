@@ -33,4 +33,13 @@ export class ListAuditQueryDTO extends makePaginatedRequestInputDto() {
   @IsString()
   @ApiProperty({ required: false, type: String })
   occurredTo?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    required: false,
+    type: String,
+    description: "Case-insensitive substring match against entity_id, occurred_by, and action.",
+  })
+  q?: string;
 }

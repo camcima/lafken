@@ -8,6 +8,7 @@ import { LegalHoldNotFoundError } from "@/legal-holds/domain/errors/legal-hold-n
 import { FakeLegalHoldQueryRepository } from "../../../__fakes__/fake-legal-hold-query.repository";
 import { FakeLegalHoldWriteRepository } from "../../../__fakes__/fake-legal-hold-write.repository";
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
+import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 
 function makeActiveHold(id: string): LegalHold {
   const now = new Date();
@@ -30,12 +31,14 @@ function makeActiveHold(id: string): LegalHold {
 describe("LiftLegalHoldUseCase", () => {
   let queryRepo: FakeLegalHoldQueryRepository;
   let writeRepo: FakeLegalHoldWriteRepository;
+  let auditRepo: InMemoryAuditWriteRepository;
   let useCase: LiftLegalHoldUseCase;
 
   beforeEach(() => {
     queryRepo = new FakeLegalHoldQueryRepository();
     writeRepo = new FakeLegalHoldWriteRepository();
-    useCase = new LiftLegalHoldUseCase(queryRepo, writeRepo);
+    auditRepo = new InMemoryAuditWriteRepository();
+    useCase = new LiftLegalHoldUseCase(queryRepo, writeRepo, auditRepo);
   });
 
   it("lifts a hold and forwards the covered internal ids to the write repo", async () => {
@@ -46,6 +49,7 @@ describe("LiftLegalHoldUseCase", () => {
       holdId: TEST_UUIDS.legalHold1,
       liftedBy: "legal@example.com",
       liftReason: "Investigation closed.",
+      requestIp: null,
     });
 
     expect(result.props.active).toBe(false);
@@ -53,6 +57,13 @@ describe("LiftLegalHoldUseCase", () => {
     expect(writeRepo.liftCalls).toHaveLength(1);
     expect(writeRepo.liftCalls[0]?.id).toBe(TEST_UUIDS.legalHold1);
     expect(writeRepo.liftCalls[0]?.assetInternalIds.sort()).toEqual(["i-1", "i-2"].sort());
+    expect(auditRepo.records).toHaveLength(1);
+    expect(auditRepo.records[0]).toMatchObject({
+      entityType: "legal_hold",
+      action: "lift",
+      occurredBy: "legal@example.com",
+      reason: "Investigation closed.",
+    });
   });
 
   it("throws LegalHoldNotFoundError when the hold does not exist", async () => {
@@ -61,6 +72,7 @@ describe("LiftLegalHoldUseCase", () => {
         holdId: TEST_UUIDS.legalHold1,
         liftedBy: "legal@example.com",
         liftReason: "any reason ten chars",
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(LegalHoldNotFoundError);
   });
@@ -80,6 +92,7 @@ describe("LiftLegalHoldUseCase", () => {
         holdId: TEST_UUIDS.legalHold1,
         liftedBy: "legal@example.com",
         liftReason: "any reason ten chars",
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(LegalHoldAlreadyLiftedError);
   });
@@ -92,6 +105,7 @@ describe("LiftLegalHoldUseCase", () => {
       holdId: TEST_UUIDS.legalHold1,
       liftedBy: "legal@example.com",
       liftReason: "Closure for empty hold.",
+      requestIp: null,
     });
 
     expect(writeRepo.liftCalls[0]?.assetInternalIds).toEqual([]);

@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
+import { AuditWriteRepositoryPort } from "@/audit/domain/repositories/audit-write.repository.port";
 import type { LegalHold } from "@/legal-holds/domain/entities/legal-hold.entity";
 import { LegalHoldAlreadyLiftedError } from "@/legal-holds/domain/errors/legal-hold-already-lifted.error";
 import { LegalHoldNotFoundError } from "@/legal-holds/domain/errors/legal-hold-not-found.error";
@@ -10,6 +11,7 @@ export interface ILiftLegalHoldUseCaseInput {
   holdId: string;
   liftedBy: string;
   liftReason: string;
+  requestIp: string | null;
 }
 
 @Injectable()
@@ -17,6 +19,7 @@ export class LiftLegalHoldUseCase {
   constructor(
     private readonly queryRepo: LegalHoldQueryRepositoryPort,
     private readonly writeRepo: LegalHoldWriteRepositoryPort,
+    private readonly auditWriteRepo: AuditWriteRepositoryPort,
   ) {}
 
   async execute(input: ILiftLegalHoldUseCaseInput): Promise<LegalHold> {
@@ -30,11 +33,24 @@ export class LiftLegalHoldUseCase {
 
     const assetInternalIds = await this.queryRepo.listAssetInternalIds(input.holdId);
 
-    return this.writeRepo.liftHold({
+    const lifted: LegalHold = await this.writeRepo.liftHold({
       id: input.holdId,
       liftedBy: input.liftedBy,
       liftReason: input.liftReason,
       assetInternalIds,
     });
+
+    await this.auditWriteRepo.record({
+      entityType: "legal_hold",
+      entityId: lifted.props.id,
+      action: "lift",
+      occurredBy: input.liftedBy,
+      requestIp: input.requestIp,
+      reason: input.liftReason,
+      beforeState: { active: true },
+      afterState: { active: false, assetCount: assetInternalIds.length },
+    });
+
+    return lifted;
   }
 }

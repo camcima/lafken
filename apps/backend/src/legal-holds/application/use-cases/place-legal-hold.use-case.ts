@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-query.repository.port";
+import { AuditWriteRepositoryPort } from "@/audit/domain/repositories/audit-write.repository.port";
 import type { LegalHold } from "@/legal-holds/domain/entities/legal-hold.entity";
 import { AssetsNotFoundForLegalHoldError } from "@/legal-holds/domain/errors/assets-not-found-for-legal-hold.error";
 import { EmptyAssetSelectionError } from "@/legal-holds/domain/errors/empty-asset-selection.error";
@@ -13,6 +14,7 @@ export interface IPlaceLegalHoldUseCaseInput {
   description: string;
   assetIds: string[]; // public ids, possibly with duplicates
   placedBy: string;
+  requestIp: string | null;
 }
 
 @Injectable()
@@ -20,6 +22,7 @@ export class PlaceLegalHoldUseCase {
   constructor(
     private readonly assetQueryRepo: AssetQueryRepositoryPort,
     private readonly writeRepo: LegalHoldWriteRepositoryPort,
+    private readonly auditWriteRepo: AuditWriteRepositoryPort,
   ) {}
 
   async execute(input: IPlaceLegalHoldUseCaseInput): Promise<LegalHold> {
@@ -42,13 +45,28 @@ export class PlaceLegalHoldUseCase {
       namespaceSlugs: resolved.map((resolution) => resolution.namespaceSlug),
     });
 
-    return this.writeRepo.placeHold({
+    const hold: LegalHold = await this.writeRepo.placeHold({
       caseReference: input.caseReference,
       description: input.description,
       scopeSummary,
       placedBy: input.placedBy,
       assetInternalIds: resolved.map((resolution) => resolution.id),
     });
+
+    await this.auditWriteRepo.record({
+      entityType: "legal_hold",
+      entityId: hold.props.id,
+      action: "place",
+      occurredBy: input.placedBy,
+      requestIp: input.requestIp,
+      afterState: {
+        caseReference: hold.props.caseReference,
+        scopeSummary: hold.props.scopeSummary,
+        assetCount: resolved.length,
+      },
+    });
+
+    return hold;
   }
 }
 

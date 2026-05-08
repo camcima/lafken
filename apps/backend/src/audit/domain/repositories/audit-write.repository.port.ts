@@ -1,11 +1,19 @@
-// Scoped to config-mutating entities only; asset state lives on `asset_state_transitions`.
+// Asset state changes live on `asset_state_transitions`; this log covers everything else.
 export type AuditEntityType =
   | "namespace"
   | "namespace_policy"
   | "namespace_preset"
-  | "storage_binding";
+  | "storage_binding"
+  | "legal_hold";
 
-export type AuditAction = "create" | "update" | "archive" | "unarchive" | "delete";
+export type AuditAction =
+  | "create"
+  | "update"
+  | "archive"
+  | "unarchive"
+  | "delete"
+  | "place"
+  | "lift";
 
 export interface IRecordAuditInput {
   entityType: AuditEntityType;

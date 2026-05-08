@@ -6,16 +6,19 @@ import { EmptyAssetSelectionError } from "@/legal-holds/domain/errors/empty-asse
 
 import { FakeAssetPublicIdResolver } from "../../../__fakes__/fake-asset-public-id-resolver";
 import { FakeLegalHoldWriteRepository } from "../../../__fakes__/fake-legal-hold-write.repository";
+import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 
 describe("PlaceLegalHoldUseCase", () => {
   let resolver: FakeAssetPublicIdResolver;
   let writeRepo: FakeLegalHoldWriteRepository;
+  let auditRepo: InMemoryAuditWriteRepository;
   let useCase: PlaceLegalHoldUseCase;
 
   beforeEach(() => {
     resolver = new FakeAssetPublicIdResolver();
     writeRepo = new FakeLegalHoldWriteRepository();
-    useCase = new PlaceLegalHoldUseCase(resolver as never, writeRepo);
+    auditRepo = new InMemoryAuditWriteRepository();
+    useCase = new PlaceLegalHoldUseCase(resolver as never, writeRepo, auditRepo);
   });
 
   it("places a hold over the resolved internal ids and computes a single-namespace scopeSummary", async () => {
@@ -27,6 +30,7 @@ describe("PlaceLegalHoldUseCase", () => {
       description: "Investigation per DGAC requirement.",
       assetIds: ["p-1", "p-2"],
       placedBy: "ops@example.com",
+      requestIp: null,
     });
 
     expect(result.props.caseReference).toBe("CHL-AVN-2026-001");
@@ -34,6 +38,12 @@ describe("PlaceLegalHoldUseCase", () => {
     expect(writeRepo.placeCalls).toHaveLength(1);
     expect(writeRepo.placeCalls[0]?.assetInternalIds.sort()).toEqual(["i-1", "i-2"].sort());
     expect(writeRepo.placeCalls[0]?.placedBy).toBe("ops@example.com");
+    expect(auditRepo.records).toHaveLength(1);
+    expect(auditRepo.records[0]).toMatchObject({
+      entityType: "legal_hold",
+      action: "place",
+      occurredBy: "ops@example.com",
+    });
   });
 
   it("dedupes input assetIds before resolving", async () => {
@@ -44,6 +54,7 @@ describe("PlaceLegalHoldUseCase", () => {
       description: "Investigation per DGAC requirement.",
       assetIds: ["p-1", "p-1", "p-1"],
       placedBy: "ops@example.com",
+      requestIp: null,
     });
 
     expect(writeRepo.placeCalls[0]?.assetInternalIds).toEqual(["i-1"]);
@@ -57,6 +68,7 @@ describe("PlaceLegalHoldUseCase", () => {
         description: "Investigation per DGAC requirement.",
         assetIds: [],
         placedBy: "ops@example.com",
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(EmptyAssetSelectionError);
   });
@@ -70,6 +82,7 @@ describe("PlaceLegalHoldUseCase", () => {
         description: "Investigation per DGAC requirement.",
         assetIds: ["p-1", "p-missing-a", "p-missing-b"],
         placedBy: "ops@example.com",
+        requestIp: null,
       });
       expect.fail("expected AssetsNotFoundForLegalHoldError");
     } catch (err) {
@@ -92,6 +105,7 @@ describe("PlaceLegalHoldUseCase", () => {
       description: "Investigation per DGAC requirement.",
       assetIds: ["p-a", "p-b", "p-c", "p-d", "p-e"],
       placedBy: "ops@example.com",
+      requestIp: null,
     });
 
     expect(writeRepo.placeCalls[0]?.scopeSummary).toBe(

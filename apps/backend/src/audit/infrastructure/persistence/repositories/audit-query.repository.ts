@@ -57,6 +57,24 @@ export class AuditQueryRepository implements AuditQueryRepositoryPort {
       dataQuery = dataQuery.where("occurred_at", "<=", to);
     }
 
+    if (input.q && input.q.trim().length > 0) {
+      const needle = `%${input.q.trim()}%`;
+      countQuery = countQuery.where((eb) =>
+        eb.or([
+          eb("entity_id", "ilike", needle),
+          eb("occurred_by", "ilike", needle),
+          eb("action", "ilike", needle),
+        ]),
+      );
+      dataQuery = dataQuery.where((eb) =>
+        eb.or([
+          eb("entity_id", "ilike", needle),
+          eb("occurred_by", "ilike", needle),
+          eb("action", "ilike", needle),
+        ]),
+      );
+    }
+
     const [{ count }] = await countQuery.execute();
     const total = Number(count);
 

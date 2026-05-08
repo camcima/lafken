@@ -9,6 +9,7 @@ export interface ListAuditInput {
   entityId?: string;
   occurredFrom?: string;
   occurredTo?: string;
+  q?: string;
 }
 
 export interface AuditPage {
