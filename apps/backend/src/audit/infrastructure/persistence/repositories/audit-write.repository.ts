@@ -7,12 +7,8 @@ import {
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
-/**
- * Writes config-mutating events to `configuration_audit_log`. Failures here
- * are logged at error level but do not throw — the audit log is best-effort
- * relative to the underlying mutation that already committed. We never want
- * a transient audit-table issue to mask a successful business operation.
- */
+// Best-effort writer: failures are logged but never thrown so a transient audit
+// issue can't roll back the business mutation that already committed.
 @Injectable()
 export class AuditWriteRepository extends AuditWriteRepositoryPort {
   constructor(

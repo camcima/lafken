@@ -57,9 +57,7 @@ export class UpdateNamespacePolicyUseCase {
           occurredBy: input.createdBy ?? AUDIT_FALLBACK_PRINCIPAL,
           requestIp: input.requestIp,
           beforeState: beforeVersion === null ? null : { version: beforeVersion },
-          // Policy field summary only — the full payload contains bigint
-          // values that don't serialize directly to jsonb. The new version
-          // number is the canonical handle for diff inspection.
+          // Version-only diff — the full policy payload contains bigint values that don't serialize to jsonb.
           afterState: { version: result.newPolicyVersion },
         });
         return result;

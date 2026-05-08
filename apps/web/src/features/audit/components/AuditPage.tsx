@@ -224,6 +224,13 @@ const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const;
 const DEFAULT_PAGE_SIZE = 50;
 /* eslint-enable no-magic-numbers */
 
+const TYPE_FILTER_TO_ENTITY_TYPE: Record<string, string | undefined> = {
+  namespace: "namespace",
+  namespace_policy: "namespace_policy",
+  namespace_preset: "namespace_preset",
+  storage_binding: "storage_binding",
+};
+
 export function AuditPage(): React.JSX.Element {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
@@ -233,15 +240,21 @@ export function AuditPage(): React.JSX.Element {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  const realQuery = useAuditEntries(isDemoMode ? {} : { page: page + 1, limit: pageSize });
+  const beEntityType: string | undefined = TYPE_FILTER_TO_ENTITY_TYPE[typeFilter];
+
+  const realQuery = useAuditEntries(
+    isDemoMode
+      ? {}
+      : { page: page + 1, limit: pageSize, ...(beEntityType ? { entityType: beEntityType } : {}) },
+  );
 
   const allRows: IAuditRow[] = isDemoMode
     ? DEMO_AUDIT.map(demoToRow)
     : (realQuery.data?.data ?? []).map(apiToRow);
 
   const filtered: IAuditRow[] = allRows.filter((entry) => {
-    if (resultFilter !== "all" && entry.result !== resultFilter) return false;
-    if (typeFilter !== "all" && !entry.type.startsWith(typeFilter)) return false;
+    if (isDemoMode && resultFilter !== "all" && entry.result !== resultFilter) return false;
+    if (isDemoMode && typeFilter !== "all" && !entry.type.startsWith(typeFilter)) return false;
     if (query) {
       const lq = query.toLowerCase();
       if (
@@ -322,27 +335,40 @@ export function AuditPage(): React.JSX.Element {
             className={SELECT_CLASS}
           >
             <option value="all">{t("pages.audit.filters.allTypes")}</option>
-            <option value="asset">asset.*</option>
-            <option value="legal_hold">legal_hold.*</option>
-            <option value="policy">policy.*</option>
-            <option value="namespace">namespace.*</option>
-            <option value="api_key">api_key.*</option>
-            <option value="user">user.*</option>
-            <option value="review">review.*</option>
-            <option value="export">export.*</option>
+            {isDemoMode ? (
+              <>
+                <option value="asset">asset.*</option>
+                <option value="legal_hold">legal_hold.*</option>
+                <option value="policy">policy.*</option>
+                <option value="namespace">namespace.*</option>
+                <option value="api_key">api_key.*</option>
+                <option value="user">user.*</option>
+                <option value="review">review.*</option>
+                <option value="export">export.*</option>
+              </>
+            ) : (
+              <>
+                <option value="namespace">namespace.*</option>
+                <option value="namespace_policy">namespace_policy.*</option>
+                <option value="namespace_preset">namespace_preset.*</option>
+                <option value="storage_binding">storage_binding.*</option>
+              </>
+            )}
           </select>
-          <select
-            value={resultFilter}
-            onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
-              setResultFilter(ev.target.value);
-              setPage(0);
-            }}
-            className={SELECT_CLASS}
-          >
-            <option value="all">{t("pages.audit.filters.allResults")}</option>
-            <option value="ok">{t("pages.audit.filters.results.ok")}</option>
-            <option value="fail">{t("pages.audit.filters.results.fail")}</option>
-          </select>
+          {isDemoMode && (
+            <select
+              value={resultFilter}
+              onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
+                setResultFilter(ev.target.value);
+                setPage(0);
+              }}
+              className={SELECT_CLASS}
+            >
+              <option value="all">{t("pages.audit.filters.allResults")}</option>
+              <option value="ok">{t("pages.audit.filters.results.ok")}</option>
+              <option value="fail">{t("pages.audit.filters.results.fail")}</option>
+            </select>
+          )}
         </div>
       </Card>
 
