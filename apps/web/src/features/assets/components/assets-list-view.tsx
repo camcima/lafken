@@ -102,7 +102,7 @@ function Thumb({ asset, size = "md" }: IThumbProps): React.JSX.Element {
           publicId={asset.publicId}
           preset="lafken:thumbnail"
           alt=""
-          className="absolute inset-0 h-full w-full object-contain"
+          className="absolute inset-0 h-full w-full object-cover object-center"
         />
       )}
       {/* Static processing scan stripe (no animation per React port spec) */}
