@@ -6,6 +6,7 @@ import {
   type IGcsBindingDescriptor,
   type IIssueSignedUploadUrlInput,
   type IIssueSignedUploadUrlResult,
+  type IMoveObjectInput,
   type IObjectExistsInput,
   type IReadObjectBytesInput,
   type ISignReadUrlInput,
@@ -92,8 +93,31 @@ export class GcsAssetStorageAdapter extends AssetStoragePort {
   }
 
   async readObjectBytes(input: IReadObjectBytesInput): Promise<Buffer> {
-    const [bytes] = await this.getBucket(input.binding).file(input.storageKey).download();
+    const downloadOptions = input.maxBytes ? { start: 0, end: input.maxBytes - 1 } : undefined;
+    const [bytes] = await this.getBucket(input.binding)
+      .file(input.storageKey)
+      .download(downloadOptions);
     return bytes;
+  }
+
+  async moveObject(input: IMoveObjectInput): Promise<void> {
+    if (input.fromKey === input.toKey) return;
+    const bucket = this.getBucket(input.binding);
+    const source = bucket.file(input.fromKey);
+    const target = bucket.file(input.toKey);
+    const [sourceExists] = await source.exists();
+    if (!sourceExists) {
+      // Idempotency: a previous attempt may have moved the bytes successfully
+      // before its caller's DB write completed. If the target is in place,
+      // treat as already-done; otherwise the asset is genuinely gone.
+      const [targetExists] = await target.exists();
+      if (targetExists) return;
+      throw new Error(
+        `moveObject: neither "${input.fromKey}" nor "${input.toKey}" exists in bucket "${input.binding.bucket}".`,
+      );
+    }
+    await source.copy(target);
+    await source.delete({ ignoreNotFound: true });
   }
 
   async signReadUrl(input: ISignReadUrlInput): Promise<string> {

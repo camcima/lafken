@@ -90,6 +90,7 @@ describe("NamespaceAssetsTab", () => {
       policyVersion: 1,
       state: "uploaded",
       customMetadata: {},
+      tags: [],
       legalHold: false,
       stateChangedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),

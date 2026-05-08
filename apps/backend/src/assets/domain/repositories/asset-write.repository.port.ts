@@ -1,4 +1,5 @@
 import type { Asset } from "../entities/asset.entity";
+import type { AssetState } from "../value-objects/asset-state.value-object";
 
 export interface ICreateUploadedAssetInput {
   publicId: string;
@@ -14,6 +15,50 @@ export interface ICreateUploadedAssetInput {
   intentId: string;
   width?: number | null;
   height?: number | null;
+  externalRefType?: string | null;
+  externalRefId?: string | null;
+  customMetadata?: Record<string, unknown>;
+  tags?: string[];
+  /**
+   * Initial state for the new asset. Defaults to 'uploaded' for the happy
+   * path. May be set to a quarantine state (e.g. 'quarantined_invalid_format')
+   * when an inline check at confirm time decides the bytes shouldn't be
+   * served until reviewed.
+   */
+  initialState?: AssetState;
+  /** Free-text reason persisted on the asset (visible in audit + UI). */
+  initialStateReason?: string;
+  /**
+   * Optional analysis row to write inside the same transaction. Used so the
+   * audit/triage trail reflects exactly why an asset landed in its initial
+   * state without a follow-up write.
+   */
+  initialAnalysis?: {
+    analyzer: string;
+    analyzerVersion: string;
+    findings: Record<string, unknown>;
+    decision: string;
+  };
+}
+
+export interface ITransitionStateInput {
+  publicId: string;
+  toState: AssetState;
+  /** Persisted on the asset and on the new state-transition row. */
+  reason: string;
+  /** Authenticated actor (user id / email) attributed in the audit row. */
+  by: string | null;
+  /**
+   * Optional structured payload tucked under `asset_state_transitions.metadata`
+   * — typical use: `{ note: "<reviewer note>" }` for release/reject decisions.
+   */
+  metadata?: Record<string, unknown>;
+  /**
+   * When provided, also rewrites `assets.storage_key` in the same UPDATE.
+   * Used by the release flow to relocate bytes back from the `_quarantined/`
+   * path to the original key.
+   */
+  newStorageKey?: string;
 }
 
 export abstract class AssetWriteRepositoryPort {
@@ -30,4 +75,13 @@ export abstract class AssetWriteRepositoryPort {
    * Returns the new Asset (with DB-populated id / timestamps).
    */
   abstract createUploadedAsset(input: ICreateUploadedAssetInput): Promise<Asset>;
+
+  /**
+   * Atomically transitions an asset to a new state and writes a matching
+   * `asset_state_transitions` row. The asset's `state`, `state_reason`, and
+   * `state_changed_at` are updated in the same transaction. Returns the
+   * post-transition Asset, or `null` when no asset exists with that
+   * `publicId` (callers can map this to a 404).
+   */
+  abstract transitionState(input: ITransitionStateInput): Promise<Asset | null>;
 }

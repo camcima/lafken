@@ -24,6 +24,7 @@ export class QuarantinedAssetResponseMapper {
       externalRefId: view.props.externalRefId ?? undefined,
       customMetadata: view.props.customMetadata,
       captureContext: view.props.captureContext ?? undefined,
+      tags: view.props.tags,
       legalHold: view.props.legalHold,
       confirmedAt: view.props.confirmedAt?.toISOString() ?? undefined,
       stateChangedAt: view.props.stateChangedAt.toISOString(),

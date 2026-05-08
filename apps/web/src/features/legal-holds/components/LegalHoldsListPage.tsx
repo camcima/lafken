@@ -163,12 +163,12 @@ function HoldDrawer({ hold, onClose, onLift }: IHoldDrawerProps): React.JSX.Elem
       maxWidthClass="max-w-[520px]"
       footer={
         <>
-          <Link to="/assets" search={{ legalHoldId: hold.id }}>
-            <Button variant="outline">
+          <Button asChild variant="outline">
+            <Link to="/assets" search={{ legalHoldId: hold.id }}>
               <Eye size={BTN_ICON_SIZE} />
               {t("pages.legalHolds.drawer.actions.viewAssets")}
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           {hold.active && (
             <Button variant="danger" onClick={onLift}>
               <Lock size={BTN_ICON_SIZE} />
@@ -338,12 +338,12 @@ export function LegalHoldsListPage(): React.JSX.Element {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/legal-holds/new">
-            <Button variant="indigo">
+          <Button asChild variant="indigo">
+            <Link to="/legal-holds/new">
               <Plus size={BTN_ICON_SIZE} />
               {t("pages.legalHolds.actions.placeNew")}
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </div>
 

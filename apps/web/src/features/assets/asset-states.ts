@@ -6,6 +6,7 @@ export const ASSET_STATES = [
   "rejected",
   "quarantined_virus",
   "quarantined_moderation",
+  "quarantined_invalid_format",
   "processing_failed",
   "expired",
   "deleted",

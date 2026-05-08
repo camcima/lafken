@@ -69,6 +69,7 @@ const ASSET: AssetResponseDTO = {
   policyVersion: 1,
   state: "ready",
   customMetadata: {},
+  tags: [],
   legalHold: false,
   stateChangedAt: new Date().toISOString(),
   createdAt: new Date().toISOString(),

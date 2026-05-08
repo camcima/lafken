@@ -15,11 +15,19 @@ export interface IAssetProps {
   width: number | null;
   height: number | null;
   contentHash: Buffer | null;
+  /**
+   * 64-bit DCT-based perceptual hash (sharp-phash output, packed into 8
+   * bytes). Null until image inspection runs; null forever for non-image
+   * payloads. Used for visual-similarity reasoning, not for identity —
+   * `contentHash` is still the canonical bytewise fingerprint.
+   */
+  phash: Buffer | null;
   uploadedBy: string | null;
   externalRefType: string | null;
   externalRefId: string | null;
   customMetadata: Record<string, unknown>;
   captureContext: Record<string, unknown> | null;
+  tags: string[];
   legalHold: boolean;
   legalHoldReference: string | null;
   confirmedAt: Date | null;
@@ -72,11 +80,13 @@ export class Asset {
       width: input.width ?? null,
       height: input.height ?? null,
       contentHash: null,
+      phash: null,
       uploadedBy: input.uploadedBy,
       externalRefType: null,
       externalRefId: null,
       customMetadata: {},
       captureContext: null,
+      tags: [],
       legalHold: false,
       legalHoldReference: null,
       confirmedAt: now,

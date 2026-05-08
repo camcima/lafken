@@ -8,6 +8,7 @@ export const ASSET_STATES = [
   "rejected",
   "quarantined_virus",
   "quarantined_moderation",
+  "quarantined_invalid_format",
   "processing_failed",
   "expired",
   "deleted",
@@ -49,6 +50,16 @@ export class AssetResponseDTO {
   @ApiProperty({ required: false, type: String })
   contentHashHex?: string;
 
+  @ApiProperty({
+    required: false,
+    type: String,
+    description:
+      "16-char hex of the 64-bit DCT perceptual hash. Two visually similar " +
+      "images produce a low Hamming distance over these 64 bits. Null/absent " +
+      "for non-image payloads or when computation failed.",
+  })
+  phashHex?: string;
+
   @ApiProperty({ required: false, type: String })
   uploadedBy?: string;
 
@@ -63,6 +74,13 @@ export class AssetResponseDTO {
 
   @ApiProperty({ required: false, type: Object })
   captureContext?: Record<string, unknown>;
+
+  @ApiProperty({
+    type: [String],
+    description:
+      "Free-form tags attached to the asset. First-class column; filterable via `?tags=`.",
+  })
+  tags!: string[];
 
   @ApiProperty()
   legalHold!: boolean;

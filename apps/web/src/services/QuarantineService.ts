@@ -1,7 +1,10 @@
 import type {
+  AssetResponseDTO,
   ListQuarantineQueryDTO,
   PaginatedResult,
   QuarantinedAssetResponseDTO,
+  RejectQuarantinedAssetRequestDTO,
+  ReleaseQuarantinedAssetRequestDTO,
 } from "@shared/backend-api";
 
 import { BaseService } from "./BaseService";
@@ -24,6 +27,20 @@ export class QuarantineService extends BaseService {
           flaggedTo: query.flaggedTo,
         },
       },
+    );
+  }
+
+  async release(publicId: string, note?: string): Promise<AssetResponseDTO> {
+    return this.getApiClient().post<ReleaseQuarantinedAssetRequestDTO, AssetResponseDTO>(
+      this.getServiceUrl(`${this.basePath}/${publicId}/release`),
+      { note },
+    );
+  }
+
+  async reject(publicId: string, note: string): Promise<AssetResponseDTO> {
+    return this.getApiClient().post<RejectQuarantinedAssetRequestDTO, AssetResponseDTO>(
+      this.getServiceUrl(`${this.basePath}/${publicId}/reject`),
+      { note },
     );
   }
 }

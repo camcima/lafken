@@ -34,6 +34,7 @@ const TEST_ASSET: AssetResponseDTO = {
     captured_at: "2026-05-03T08:11:48Z",
     device: { make: "Apple", model: "iPhone 15 Pro", os: "iOS 17.4" },
   },
+  tags: [],
   legalHold: false,
   confirmedAt: "2026-05-03T08:14:22Z",
   stateChangedAt: "2026-05-03T08:14:33Z",

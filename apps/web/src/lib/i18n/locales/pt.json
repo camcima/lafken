@@ -4,6 +4,14 @@
     "health": "Verificando serviços...",
     "redirectToLogin": "Redirecionando para o login..."
   },
+  "relativeTime": {
+    "justNow": "agora mesmo",
+    "seconds": "há {{count}}s",
+    "minutes": "há {{count}}m",
+    "hours": "há {{count}}h",
+    "days": "há {{count}}d",
+    "weeks": "há {{count}} sem"
+  },
   "auth": {
     "welcomeToLafken": "",
     "signInWithSso": "",

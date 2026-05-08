@@ -1,10 +1,13 @@
 import type { LafkenClient } from "@lafken/client";
+import type { ISharedUploadMetadata, IUploadRestrictions } from "@lafken/upload";
 import React, { useCallback, useState } from "react";
 
 import { type IUseImageUploadResult, useImageUpload } from "./use-image-upload";
 
 export interface IUploadDropzoneRenderProps {
   files: IUseImageUploadResult["files"];
+  rejections: IUseImageUploadResult["rejections"];
+  dismissRejection: IUseImageUploadResult["dismissRejection"];
   isDragOver: boolean;
   isUploading: boolean;
   startUpload: () => Promise<void>;
@@ -18,16 +21,36 @@ export interface IUploadDropzoneRenderProps {
 export interface IUploadDropzoneProps {
   client: LafkenClient;
   namespaceSlug: string;
+  /**
+   * HTML `accept` attribute for the file picker (a UX hint only — does not
+   * enforce). For enforcement, use `restrictions.allowedFileTypes`. If
+   * omitted and `restrictions.allowedFileTypes` is set, the picker filter is
+   * derived from the restriction.
+   */
   accept?: string;
   multiple?: boolean;
+  /**
+   * Shared metadata to apply to every confirmed upload in the next batch.
+   * Read at `startUpload` time, so callers can mutate it freely between batches.
+   */
+  sharedMetadata?: ISharedUploadMetadata;
+  /**
+   * File-level restrictions (allowed types, max size, etc.) enforced at drop
+   * time. Disallowed files are surfaced via `rejections` and never enter the
+   * upload queue.
+   */
+  restrictions?: IUploadRestrictions;
   render: (props: IUploadDropzoneRenderProps) => React.ReactNode;
 }
 
 export function UploadDropzone(props: IUploadDropzoneProps): React.JSX.Element {
-  const { files, addFiles, removeFile, startUpload, isUploading } = useImageUpload({
-    client: props.client,
-    namespaceSlug: props.namespaceSlug,
-  });
+  const { files, rejections, dismissRejection, addFiles, removeFile, startUpload, isUploading } =
+    useImageUpload({
+      client: props.client,
+      namespaceSlug: props.namespaceSlug,
+      sharedMetadata: props.sharedMetadata,
+      restrictions: props.restrictions,
+    });
   const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -41,11 +64,17 @@ export function UploadDropzone(props: IUploadDropzoneProps): React.JSX.Element {
     [addFiles],
   );
 
+  // Auto-derive the picker filter from restrictions when the consumer didn't
+  // pass an explicit `accept`. Saves callers the boilerplate of joining the
+  // same array a second time.
+  const derivedAccept: string | undefined =
+    props.accept ?? props.restrictions?.allowedFileTypes?.join(",");
+
   const getInputProps = useCallback(
     () => ({
       ref: inputRef,
       type: "file" as const,
-      accept: props.accept,
+      accept: derivedAccept,
       multiple: props.multiple ?? true,
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
         const list = e.target.files ? Array.from(e.target.files) : [];
@@ -53,7 +82,7 @@ export function UploadDropzone(props: IUploadDropzoneProps): React.JSX.Element {
         e.target.value = "";
       },
     }),
-    [addFiles, props.accept, props.multiple],
+    [addFiles, derivedAccept, props.multiple],
   );
 
   const getRootProps = useCallback(
@@ -77,6 +106,8 @@ export function UploadDropzone(props: IUploadDropzoneProps): React.JSX.Element {
     <>
       {props.render({
         files,
+        rejections,
+        dismissRejection,
         isDragOver,
         isUploading,
         startUpload,

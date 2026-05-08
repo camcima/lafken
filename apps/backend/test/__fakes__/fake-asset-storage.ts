@@ -2,6 +2,7 @@ import {
   AssetStoragePort,
   type IIssueSignedUploadUrlInput,
   type IIssueSignedUploadUrlResult,
+  type IMoveObjectInput,
   type IObjectExistsInput,
   type IReadObjectBytesInput,
   type ISignReadUrlInput,
@@ -14,6 +15,7 @@ export class FakeAssetStorage extends AssetStoragePort {
   readonly existsCalls: IObjectExistsInput[] = [];
   readonly readCalls: IReadObjectBytesInput[] = [];
   readonly readSigned: ISignReadUrlInput[] = [];
+  readonly moveCalls: IMoveObjectInput[] = [];
   readonly objects: Map<string, Buffer> = new Map();
   existsResult = true;
 
@@ -54,6 +56,24 @@ export class FakeAssetStorage extends AssetStoragePort {
     this.readSigned.push(input);
     return Promise.resolve(
       `https://fake-gcs.local/render-source/${encodeURIComponent(input.storageKey)}?sig=stub`,
+    );
+  }
+
+  moveObject(input: IMoveObjectInput): Promise<void> {
+    this.moveCalls.push(input);
+    if (input.fromKey === input.toKey) return Promise.resolve();
+    const bytes: Buffer | undefined = this.objects.get(input.fromKey);
+    if (bytes) {
+      this.objects.set(input.toKey, bytes);
+      this.objects.delete(input.fromKey);
+      return Promise.resolve();
+    }
+    if (this.objects.has(input.toKey)) {
+      // Idempotent already-moved case.
+      return Promise.resolve();
+    }
+    return Promise.reject(
+      new Error(`Object "${input.fromKey}" not found and "${input.toKey}" not in place.`),
     );
   }
 }

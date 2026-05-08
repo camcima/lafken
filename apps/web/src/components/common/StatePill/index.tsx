@@ -10,6 +10,7 @@ export type AssetState =
   | "rejected"
   | "quarantined_virus"
   | "quarantined_moderation"
+  | "quarantined_invalid_format"
   | "processing_failed"
   | "expired"
   | "deleted";
@@ -22,6 +23,7 @@ const STATE_COLORS: Record<AssetState, string> = {
   rejected: "#a16207",
   quarantined_virus: "#8A4209",
   quarantined_moderation: "#8A4209",
+  quarantined_invalid_format: "#8A4209",
   processing_failed: "#8B271A",
   expired: "#cbd5e1",
   deleted: "#cbd5e1",
@@ -35,6 +37,7 @@ const STATE_TEXT_CLASSES: Record<AssetState, string> = {
   rejected: "bg-warn-soft text-warn border-warn-line",
   quarantined_virus: "bg-alert-soft text-alert border-alert-line",
   quarantined_moderation: "bg-alert-soft text-alert border-alert-line",
+  quarantined_invalid_format: "bg-alert-soft text-alert border-alert-line",
   processing_failed: "bg-danger-soft text-danger border-danger-line",
   expired: "bg-secondary text-muted-foreground border-border",
   deleted: "bg-secondary text-muted-foreground border-border",

@@ -151,6 +151,145 @@ describe("LafkenUploadManager", () => {
     expect(client.confirmUpload).toHaveBeenCalledWith("pub-doc", undefined);
   });
 
+  it("forwards shared metadata to confirmUpload alongside dimensions", async () => {
+    const client = makeClientMock();
+    const manager = new LafkenUploadManager({
+      client: client as never,
+      namespaceSlug: "my-namespace",
+    });
+    manager.setSharedMetadata({
+      externalRefType: "work_order",
+      externalRefId: "WO-1",
+      tags: ["preflight"],
+    });
+
+    const file = new File(["data"], "shared.jpg", { type: "image/jpeg" });
+    manager.addFiles([file]);
+    const uppy = manager.getUppy();
+    const [uppyFile] = uppy.getFiles();
+    expect(uppyFile).toBeDefined();
+
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (manager as any).publicIdByFileId.set(uppyFile.id, "pub-shared");
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+
+    uppy.emit("complete", { successful: [uppyFile], failed: [] });
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+
+    expect(client.confirmUpload).toHaveBeenCalledWith("pub-shared", {
+      externalRefType: "work_order",
+      externalRefId: "WO-1",
+      tags: ["preflight"],
+      width: 256,
+      height: 128,
+    });
+  });
+
+  it("isolates pre-processor failures: bad file is dropped, others proceed", async () => {
+    const intentError = new Error("MimeTypeNotAllowedError: application/pdf is not allowed");
+    const client = {
+      createUploadIntent: vi
+        .fn()
+        // First call (PNG) succeeds; second call (PDF) is rejected by namespace policy.
+        .mockResolvedValueOnce({
+          publicId: "pub-png",
+          uploadUrl: "https://storage.example.com/upload/png",
+          uploadHeaders: {},
+          expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        })
+        .mockRejectedValueOnce(intentError),
+      confirmUpload: vi.fn(),
+    };
+
+    const manager = new LafkenUploadManager({
+      client: client as never,
+      namespaceSlug: "ns",
+    });
+
+    const failedEvents: IFileFailedEventDetail[] = [];
+    manager.addEventListener("file-failed", (evt) => {
+      failedEvents.push((evt as CustomEvent<IFileFailedEventDetail>).detail);
+    });
+
+    const png = new File(["a"], "ok.png", { type: "image/png" });
+    const pdf = new File(["b"], "bad.pdf", { type: "application/pdf" });
+    manager.addFiles([png, pdf]);
+
+    const uppy = manager.getUppy();
+    const [pngFile, pdfFile] = uppy.getFiles();
+    expect(pngFile).toBeDefined();
+    expect(pdfFile).toBeDefined();
+
+    // Invoke the pre-processor directly so we can verify side effects without
+    // running the full XHR upload phase.
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+    await (manager as any).runPreProcessing([pngFile.id, pdfFile.id]);
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+
+    // Bad file emitted file-failed and was removed from Uppy.
+    expect(failedEvents).toHaveLength(1);
+    expect(failedEvents[0]).toEqual({ fileId: pdfFile.id, error: intentError });
+    expect(uppy.getFile(pdfFile.id)).toBeUndefined();
+
+    // Good file is still in the queue with publicId mapped.
+    expect(uppy.getFile(pngFile.id)).toBeDefined();
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+    expect((manager as any).publicIdByFileId.get(pngFile.id)).toBe("pub-png");
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+  });
+
+  it("dispatches file-failed when confirmUpload returns a quarantined state", async () => {
+    // confirmUpload resolves successfully but with a quarantine state — the
+    // server accepted the bytes but flagged them for review. From the user's
+    // perspective this is a failure (the file isn't usable yet).
+    const client = {
+      createUploadIntent: vi.fn(),
+      confirmUpload: vi.fn().mockResolvedValue({
+        publicId: "pub-quar",
+        namespaceSlug: "ns",
+        state: "quarantined_invalid_format",
+        storageKey: "key",
+        declaredMimeType: "image/jpeg",
+        sizeBytes: 1024,
+        uploadedBy: null,
+        confirmedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      }),
+    };
+    const manager = new LafkenUploadManager({
+      client: client as never,
+      namespaceSlug: "ns",
+    });
+
+    const failedEvents: IFileFailedEventDetail[] = [];
+    const confirmedEvents: IFileConfirmedEventDetail[] = [];
+    manager.addEventListener("file-failed", (evt) => {
+      failedEvents.push((evt as CustomEvent<IFileFailedEventDetail>).detail);
+    });
+    manager.addEventListener("file-confirmed", (evt) => {
+      confirmedEvents.push((evt as CustomEvent<IFileConfirmedEventDetail>).detail);
+    });
+
+    const file = new File(["data"], "fake.jpg", { type: "image/jpeg" });
+    manager.addFiles([file]);
+    const uppy = manager.getUppy();
+    const [uppyFile] = uppy.getFiles();
+    expect(uppyFile).toBeDefined();
+
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+    (manager as any).publicIdByFileId.set(uppyFile.id, "pub-quar");
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+
+    uppy.emit("complete", { successful: [uppyFile], failed: [] });
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+
+    expect(client.confirmUpload).toHaveBeenCalledTimes(1);
+    expect(failedEvents).toHaveLength(1);
+    expect(failedEvents[0].error.message).toBe("quarantined: quarantined_invalid_format");
+    expect(confirmedEvents).toHaveLength(0);
+  });
+
   it("dispatches file-failed when confirmUpload throws", async () => {
     const confirmError = new Error("Confirm failed");
     const client = makeClientMock({ confirmUploadError: confirmError });

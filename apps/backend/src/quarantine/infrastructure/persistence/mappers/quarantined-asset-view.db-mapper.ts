@@ -26,6 +26,7 @@ export class QuarantinedAssetViewDbMapper {
       externalRefId: (row["external_ref_id"] as string | null) ?? null,
       customMetadata: (row["custom_metadata"] as Record<string, unknown>) ?? {},
       captureContext: (row["capture_context"] as Record<string, unknown> | null) ?? null,
+      tags: Array.isArray(row["tags"]) ? (row["tags"] as string[]) : [],
       legalHold: Boolean(row["legal_hold"]),
       confirmedAt: row["confirmed_at"] ? new Date(row["confirmed_at"] as string) : null,
       stateChangedAt: new Date(row["state_changed_at"] as string),

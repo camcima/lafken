@@ -18,6 +18,7 @@ export interface QuarantinedAssetViewProps {
   externalRefId: string | null;
   customMetadata: Record<string, unknown>;
   captureContext: Record<string, unknown> | null;
+  tags: string[];
   legalHold: boolean;
   confirmedAt: Date | null;
   stateChangedAt: Date;
