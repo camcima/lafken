@@ -56,6 +56,18 @@ const THUMB_DIMS: Record<ThumbSize, string> = {
 const THUMB_ICON_SM = 12;
 const THUMB_ICON_MD = 16;
 
+// Photoshop-style transparency checker. Translucent gray squares so the
+// underlying `bg-card` colour controls brightness in light vs dark mode and
+// the checker stays visible against either. 8px squares match the small
+// thumbnail footprint without dominating the cell.
+const CHECKER_STYLE: React.CSSProperties = {
+  backgroundImage:
+    "linear-gradient(45deg, rgba(128,128,128,0.18) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.18) 75%, rgba(128,128,128,0.18))," +
+    "linear-gradient(45deg, rgba(128,128,128,0.18) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.18) 75%, rgba(128,128,128,0.18))",
+  backgroundSize: "8px 8px",
+  backgroundPosition: "0 0, 4px 4px",
+};
+
 interface IThumbProps {
   asset: IAssetRow;
   size?: ThumbSize;
@@ -69,22 +81,20 @@ function Thumb({ asset, size = "md" }: IThumbProps): React.JSX.Element {
   const isRejected: boolean = asset.state === "rejected";
   const previewable: boolean =
     asset.state === "uploaded" || asset.state === "processing" || asset.state === "ready";
-  // Per-asset hue is purely a visual hash for previewable rows so the eye can
-  // tell similar uploads apart at a glance. Terminal / blocked states get a
-  // standard neutral chrome instead, so reviewers see "rejected" or
-  // "quarantined" rather than a kaleidoscope of unrelated colors.
+  // Terminal / blocked states get a standard neutral chrome so reviewers see
+  // "rejected" or "quarantined" at a glance. Previewable thumbnails get a
+  // transparency-checker pattern matching the asset detail hero, so PNGs with
+  // alpha read correctly without leaking a coloured background through the
+  // image.
   const useStandardChrome: boolean = isQuarantined || isRejected;
   const iconSize: number = size === "sm" ? THUMB_ICON_SM : THUMB_ICON_MD;
   return (
     <div
-      className={cn("border-border relative overflow-hidden rounded border", THUMB_DIMS[size])}
-      style={
-        useStandardChrome
-          ? undefined
-          : {
-              background: `linear-gradient(135deg, hsl(${asset.thumbHue} 50% 55%), hsl(${asset.thumbHue} 60% 35%))`,
-            }
-      }
+      className={cn(
+        "border-border bg-card relative grid place-items-center overflow-hidden rounded border",
+        THUMB_DIMS[size],
+      )}
+      style={useStandardChrome ? undefined : CHECKER_STYLE}
     >
       {useStandardChrome && <span className="bg-muted absolute inset-0" />}
       {previewable && (
@@ -92,7 +102,7 @@ function Thumb({ asset, size = "md" }: IThumbProps): React.JSX.Element {
           publicId={asset.publicId}
           preset="lafken:thumbnail"
           alt=""
-          className="absolute inset-0 h-full w-full bg-black object-contain"
+          className="border-border block max-h-full max-w-full border"
         />
       )}
       {/* Static processing scan stripe (no animation per React port spec) */}
@@ -224,7 +234,7 @@ function RowsView({
           )}
           <span />
           <span>{t("pages.assets.table.asset")}</span>
-          {!hideNamespace && <span>{t("pages.assets.table.namespaceWo")}</span>}
+          {!hideNamespace && <span>{t("pages.assets.table.namespace")}</span>}
           <span>{t("pages.assets.table.state")}</span>
           <span>{t("pages.assets.table.formatDimensions")}</span>
           <span>{t("pages.assets.table.uploadedBy")}</span>
@@ -277,11 +287,6 @@ function RowsView({
                 <div className="text-latam-indigo-deep truncate font-mono text-[11.5px]">
                   {asset.namespaceSlug}
                 </div>
-                {asset.wo !== "" && (
-                  <div className="text-muted-foreground truncate font-mono text-[10.5px]">
-                    {asset.wo}
-                  </div>
-                )}
               </div>
             )}
             <StatePill state={asset.state} />

@@ -93,11 +93,7 @@ export function AssetsListPage(): React.JSX.Element {
       if (namespaceFilter !== "all" && row.namespaceSlug !== namespaceFilter) return false;
       if (query) {
         const q = query.toLowerCase();
-        if (
-          !row.publicId.toLowerCase().includes(q) &&
-          !row.tail.toLowerCase().includes(q) &&
-          !row.wo.toLowerCase().includes(q)
-        )
+        if (!row.publicId.toLowerCase().includes(q) && !row.tail.toLowerCase().includes(q))
           return false;
       }
       return true;

@@ -84,7 +84,7 @@ describe("AssetsListPage", () => {
   it("default view (rows) renders column headers", () => {
     renderPage();
     expect(screen.getByText(/^Asset$/i)).toBeInTheDocument();
-    expect(screen.getByText(/namespace · wo/i)).toBeInTheDocument();
+    expect(screen.getByText(/^namespace$/i)).toBeInTheDocument();
     expect(screen.getByText(/format · dimensions/i)).toBeInTheDocument();
   });
 

@@ -17,18 +17,31 @@ export function VisualBlock({ asset }: IVisualBlockProps): React.JSX.Element {
   const sizeLabel: string = asset.sizeBytes !== undefined ? fmtBytes(asset.sizeBytes) : "—";
   const mimeLabel: string = asset.mimeType ?? "—";
 
+  // Photoshop-style transparency checker. Two offset diagonal gradients drawn
+  // with translucent gray, so the underlying `bg-card` colour controls the
+  // brightness in light vs dark mode and the checker stays visible against
+  // either. 20px squares are visible without dominating the small heroes used
+  // for icon-sized previews.
+  const checkerStyle: React.CSSProperties = {
+    backgroundImage:
+      "linear-gradient(45deg, rgba(128,128,128,0.18) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.18) 75%, rgba(128,128,128,0.18))," +
+      "linear-gradient(45deg, rgba(128,128,128,0.18) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.18) 75%, rgba(128,128,128,0.18))",
+    backgroundSize: "20px 20px",
+    backgroundPosition: "0 0, 10px 10px",
+  };
+
   return (
     <div className="border-border bg-card overflow-hidden rounded-md border">
       <div
-        className="relative aspect-[4/3] overflow-hidden"
-        style={{ background: "linear-gradient(to bottom, #1F1A3D, #0F0A2E)" }}
+        className="bg-card relative grid aspect-[4/3] place-items-center overflow-hidden"
+        style={checkerStyle}
       >
         {previewable && (
           <AssetImage
             publicId={asset.publicId}
             preset="lafken:detail-hero"
             alt=""
-            className="absolute inset-0 h-full w-full object-contain"
+            className="border-border block max-h-full max-w-full border"
           />
         )}
 
