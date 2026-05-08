@@ -9,6 +9,11 @@ import { PlaceLegalHoldPage } from "./PlaceLegalHoldPage";
 
 // ── Default mocks ──────────────────────────────────────────
 
+// AssetImage requires a LafkenProvider; stub it out in unit tests.
+vi.mock("@lafken/react", () => ({
+  AssetImage: () => null,
+}));
+
 vi.mock("@/lib/demo/demo-mode", () => ({ isDemoMode: false }));
 
 const placeSpy = vi.fn();
@@ -84,7 +89,7 @@ describe("PlaceLegalHoldPage", () => {
     await user.type(descInput, "Investigation per DGAC requirement.");
 
     // Pick an asset — click the first non-"already held" asset button
-    const assetButtons = screen.getAllByRole("button", { name: /search/i });
+    const assetButtons = screen.getAllByRole("button", { name: /^add$/i });
     await user.click(assetButtons[0]);
 
     // Check acknowledgement
@@ -125,7 +130,7 @@ describe("PlaceLegalHoldPage", () => {
     const descInput = screen.getByRole("textbox", { name: /reason \/ counsel note/i });
     await user.type(descInput, "Investigation per DGAC requirement.");
 
-    const assetButtons = screen.getAllByRole("button", { name: /search/i });
+    const assetButtons = screen.getAllByRole("button", { name: /^add$/i });
     await user.click(assetButtons[0]);
 
     const checkbox = screen.getByRole("checkbox");
@@ -162,7 +167,7 @@ describe("PlaceLegalHoldPage", () => {
     const user = userEvent.setup();
     renderPage();
 
-    const assetButtons = screen.getAllByRole("button", { name: /search/i });
+    const assetButtons = screen.getAllByRole("button", { name: /^add$/i });
     await user.click(assetButtons[0]);
 
     // The asset id appears at least once in the basket area

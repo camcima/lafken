@@ -91,7 +91,7 @@ export class LegalHoldsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @AuthenticatedEndpoint()
-  @EndpointRequiredRoles([ApplicationRole.LEGAL_HOLD_ADMIN])
+  @EndpointRequiredRoles([ApplicationRole.LEGAL_HOLD_ADMIN, ApplicationRole.PLATFORM_OPERATOR])
   @ApiOperation({
     summary: "Place a legal hold over a set of assets",
     description:
@@ -114,7 +114,7 @@ export class LegalHoldsController {
   @Post(":id/lift")
   @HttpCode(HttpStatus.OK)
   @AuthenticatedEndpoint()
-  @EndpointRequiredRoles([ApplicationRole.LEGAL_HOLD_ADMIN])
+  @EndpointRequiredRoles([ApplicationRole.LEGAL_HOLD_ADMIN, ApplicationRole.PLATFORM_OPERATOR])
   @ApiOperation({
     summary: "Lift a legal hold (terminal)",
     description:

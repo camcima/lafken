@@ -1481,11 +1481,13 @@
         "searchPlaceholder": "Buscar por id, ref, hash, etiqueta…"
       },
       "picker": {
+        "add": "Agregar",
         "addAllVisible": "Agregar todos los visibles",
         "alreadyHeld": "ya retenido",
         "basket": "Selección",
         "basketEmpty": "Aún no hay activos seleccionados — busca y haz clic en + agregar.",
         "clearAll": "Limpiar todo",
+        "noResults": "Ningún activo coincide con este filtro.",
         "remove": "Quitar de la selección"
       },
       "acknowledgement": "Entiendo que esta retención suspende la eliminación hasta que se levante.",

@@ -1482,11 +1482,13 @@
         "searchPlaceholder": "Search id, ref, hash, tag…"
       },
       "picker": {
+        "add": "Add",
         "addAllVisible": "Add all visible",
         "alreadyHeld": "already held",
         "basket": "Basket",
         "basketEmpty": "No assets picked yet — search and click + add.",
         "clearAll": "Clear all",
+        "noResults": "No assets match this filter.",
         "remove": "Remove from basket"
       },
       "acknowledgement": "I understand this hold suspends deletion until lifted.",

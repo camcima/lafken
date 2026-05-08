@@ -1,3 +1,4 @@
+import { AssetImage } from "@lafken/react";
 import type { AssetResponseDTO } from "@shared/backend-api";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Plus, Search, X } from "lucide-react";
@@ -8,11 +9,47 @@ import { toast } from "sonner";
 import { Badge } from "@/components/common/Badge";
 import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
+import { SELECT_CLASS } from "@/components/common/select-styles";
 import { useAssets } from "@/features/assets/hooks/useAssets";
 import { usePlaceLegalHold } from "@/features/legal-holds/hooks/useLegalHoldMutations";
 import { useNamespaces } from "@/features/namespaces/hooks/useNamespaces";
 import { isDemoMode } from "@/lib/demo/demo-mode";
 import { cn } from "@/lib/utils";
+
+// Photoshop-style transparency checker reused from the asset list / hero so
+// thumbnails on this picker stay consistent with the rest of the console.
+const CHECKER_STYLE: React.CSSProperties = {
+  backgroundImage:
+    "linear-gradient(45deg, rgba(128,128,128,0.18) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.18) 75%, rgba(128,128,128,0.18))," +
+    "linear-gradient(45deg, rgba(128,128,128,0.18) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.18) 75%, rgba(128,128,128,0.18))",
+  backgroundSize: "8px 8px",
+  backgroundPosition: "0 0, 4px 4px",
+};
+
+interface IPickerThumbProps {
+  asset: AssetResponseDTO;
+  size: "sm" | "md";
+}
+
+function PickerThumb({ asset, size }: IPickerThumbProps): React.JSX.Element {
+  const dims: string = size === "sm" ? "h-9 w-12" : "h-10 w-14";
+  return (
+    <div
+      className={cn(
+        "border-border bg-card relative flex-none overflow-hidden rounded border",
+        dims,
+      )}
+      style={CHECKER_STYLE}
+    >
+      <AssetImage
+        publicId={asset.publicId}
+        preset="lafken:thumbnail"
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover object-center"
+      />
+    </div>
+  );
+}
 
 // ── Constants ──────────────────────────────────────────────
 const CASE_REF_MIN = 3;
@@ -110,10 +147,13 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
   const [description, setDescription] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
 
-  // Picker state
+  // Picker state. Storing the full AssetResponseDTO per pick (not just the
+  // publicId) lets the basket render thumbnails even after the user changes
+  // the namespace/search filter and the picked asset is no longer in the
+  // currently-visible page.
   const [namespaceSlug, setNamespaceSlug] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [picked, setPicked] = useState(new Set<string>());
+  const [picked, setPicked] = useState(new Map<string, AssetResponseDTO>());
 
   const namespacesQuery = useNamespaces({ limit: NAMESPACE_LIMIT });
   const namespaces = namespacesQuery.data?.data ?? [];
@@ -127,30 +167,38 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
   const assets: AssetResponseDTO[] = assetsQuery.data?.data ?? [];
 
   // ── Basket helpers ─────────────────────────────────────────
-  function togglePicked(publicId: string): void {
+  function togglePicked(asset: AssetResponseDTO): void {
     setPicked((prev) => {
-      const next = new Set(prev);
-      if (next.has(publicId)) {
-        next.delete(publicId);
+      const next = new Map(prev);
+      if (next.has(asset.publicId)) {
+        next.delete(asset.publicId);
       } else {
-        next.add(publicId);
+        next.set(asset.publicId, asset);
       }
+      return next;
+    });
+  }
+
+  function removePicked(publicId: string): void {
+    setPicked((prev) => {
+      const next = new Map(prev);
+      next.delete(publicId);
       return next;
     });
   }
 
   function addAllVisible(): void {
     setPicked((prev) => {
-      const next = new Set(prev);
+      const next = new Map(prev);
       for (const asset of assets) {
-        next.add(asset.publicId);
+        next.set(asset.publicId, asset);
       }
       return next;
     });
   }
 
   function clearAll(): void {
-    setPicked(new Set());
+    setPicked(new Map());
   }
 
   // ── Submit gating ──────────────────────────────────────────
@@ -172,7 +220,7 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
     }
 
     placeMutation.mutate(
-      { caseReference, description, assetIds: [...picked] },
+      { caseReference, description, assetIds: [...picked.keys()] },
       {
         onSuccess: () => {
           toast.success(t("pages.placeLegalHold.toast.success", { caseReference }));
@@ -236,14 +284,16 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
           labelledBy="section-picker"
           title={t("pages.placeLegalHold.sections.picker")}
         >
-          {/* Namespace + search controls */}
+          {/* Namespace + search controls — match the filter-row styling used
+              on the assets / namespaces list pages so font / height stay
+              consistent with the rest of the app. */}
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={namespaceSlug}
               onChange={(e) => {
                 setNamespaceSlug(e.target.value);
               }}
-              className="border-input bg-background h-9 rounded-md border px-3 py-1 text-sm focus:outline-none"
+              className={SELECT_CLASS}
               aria-label={t("pages.placeLegalHold.fields.namespace")}
             >
               <option value="">{t("pages.placeLegalHold.fields.namespace")}</option>
@@ -266,7 +316,7 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
                   setSearchQuery(e.target.value);
                 }}
                 placeholder={t("pages.placeLegalHold.fields.searchPlaceholder")}
-                className="border-input bg-background h-9 w-full rounded-md border pr-3 pl-9 text-sm focus:outline-none"
+                className="border-input bg-card placeholder:text-muted-foreground focus:ring-ring h-9 w-full rounded-md border pr-3 pl-9 text-[12.5px] focus:ring-1 focus:outline-none"
                 aria-label={t("pages.placeLegalHold.fields.search")}
               />
             </div>
@@ -277,96 +327,103 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
             </Button>
           </div>
 
-          {/* Results table */}
-          <div className="border-border rounded-md border">
-            {assets.length === 0 ? (
-              <div className="text-muted-foreground px-4 py-6 text-center text-[12.5px]">
-                {t("pages.placeLegalHold.picker.basketEmpty")}
-              </div>
-            ) : (
-              <table className="w-full text-[12.5px]">
-                <tbody>
+          {/* Two-pane: results on the left, basket on the right. */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+            {/* Results list */}
+            <div className="border-border rounded-md border">
+              {assets.length === 0 ? (
+                <div className="text-muted-foreground px-4 py-6 text-center text-[12.5px]">
+                  {t("pages.placeLegalHold.picker.noResults")}
+                </div>
+              ) : (
+                <ul className="divide-border/50 divide-y">
                   {assets.map((asset) => {
-                    const isPicked = picked.has(asset.publicId);
+                    const isPicked: boolean = picked.has(asset.publicId);
                     return (
-                      <tr
+                      <li
                         key={asset.publicId}
-                        className="border-border/50 hover:bg-secondary/40 border-b last:border-0"
+                        className="hover:bg-secondary/40 flex items-center gap-3 px-3 py-2"
                       >
-                        <td className="px-4 py-2.5">
-                          <code className="text-foreground font-mono text-[11px]">
+                        <PickerThumb asset={asset} size="sm" />
+                        <div className="min-w-0 flex-1">
+                          <code className="text-foreground block truncate font-mono text-[11px]">
                             {asset.publicId}
                           </code>
                           {asset.legalHold ? (
-                            <Badge variant="warn" className="ml-2">
+                            <Badge variant="warn" className="mt-1">
                               {t("pages.placeLegalHold.picker.alreadyHeld")}
                             </Badge>
                           ) : null}
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <Button
-                            type="button"
-                            variant={isPicked ? "outline" : "indigo"}
-                            size="sm"
-                            onClick={() => {
-                              togglePicked(asset.publicId);
-                            }}
-                            aria-pressed={isPicked}
-                          >
-                            {isPicked ? (
-                              <>
-                                <X size={11} />
-                                {t("pages.placeLegalHold.picker.remove")}
-                              </>
-                            ) : (
-                              <>
-                                <Plus size={11} />
-                                {t("pages.placeLegalHold.fields.search")}
-                              </>
-                            )}
-                          </Button>
-                        </td>
-                      </tr>
+                        </div>
+                        <Button
+                          type="button"
+                          variant={isPicked ? "outline" : "indigo"}
+                          size="sm"
+                          onClick={() => {
+                            togglePicked(asset);
+                          }}
+                          aria-pressed={isPicked}
+                        >
+                          {isPicked ? (
+                            <>
+                              <X size={11} />
+                              {t("pages.placeLegalHold.picker.remove")}
+                            </>
+                          ) : (
+                            <>
+                              <Plus size={11} />
+                              {t("pages.placeLegalHold.picker.add")}
+                            </>
+                          )}
+                        </Button>
+                      </li>
                     );
                   })}
-                </tbody>
-              </table>
-            )}
-          </div>
+                </ul>
+              )}
+            </div>
 
-          {/* Basket */}
-          {picked.size > 0 ? (
-            <div className="border-border rounded-md border p-3">
-              <div className="mb-2 flex items-center justify-between">
+            {/* Basket */}
+            <div className="border-border rounded-md border">
+              <div className="border-border/60 bg-secondary/30 flex items-center justify-between border-b px-3 py-2">
                 <span className="text-foreground text-[12px] font-medium">
                   {t("pages.placeLegalHold.picker.basket")} ({picked.size})
                 </span>
-                <Button type="button" variant="ghost" size="sm" onClick={clearAll}>
-                  {t("pages.placeLegalHold.picker.clearAll")}
-                </Button>
+                {picked.size > 0 ? (
+                  <Button type="button" variant="ghost" size="sm" onClick={clearAll}>
+                    {t("pages.placeLegalHold.picker.clearAll")}
+                  </Button>
+                ) : null}
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {[...picked].map((id) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => {
-                      togglePicked(id);
-                    }}
-                    className="border-border bg-secondary hover:bg-secondary/70 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]"
-                    aria-label={`${t("pages.placeLegalHold.picker.remove")} ${id}`}
-                  >
-                    <code className="font-mono">{id}</code>
-                    <X size={10} />
-                  </button>
-                ))}
-              </div>
+              {picked.size === 0 ? (
+                <div className="text-muted-foreground px-3 py-6 text-center text-[12px]">
+                  {t("pages.placeLegalHold.picker.basketEmpty")}
+                </div>
+              ) : (
+                <ul className="divide-border/50 max-h-[420px] divide-y overflow-y-auto">
+                  {[...picked.values()].map((asset) => (
+                    <li key={asset.publicId} className="flex items-center gap-2 px-3 py-2">
+                      <PickerThumb asset={asset} size="sm" />
+                      <code className="text-foreground min-w-0 flex-1 truncate font-mono text-[11px]">
+                        {asset.publicId}
+                      </code>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => {
+                          removePicked(asset.publicId);
+                        }}
+                        aria-label={`${t("pages.placeLegalHold.picker.remove")} ${asset.publicId}`}
+                      >
+                        <X size={11} />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-          ) : (
-            <p className="text-muted-foreground text-[12px]">
-              {t("pages.placeLegalHold.picker.basketEmpty")}
-            </p>
-          )}
+          </div>
         </NumberedSection>
 
         {/* ── Section 3: Reason ────────────────────────── */}
