@@ -78,13 +78,13 @@ describe("ProcessClaimedAssetUseCase", () => {
     expect(result.kind).toBe("completed");
     expect(assetRepo.transitions.map((item) => item.toState)).toEqual(["processing", "ready"]);
     expect(assetRepo.analyses.map((item) => item.analyzer)).toEqual([
-      "image_inspection",
       "virus_scan",
+      "image_inspection",
     ]);
     expect(jobRepo.completed).toBe(true);
     expect(jobRepo.currentStepUpdates.map((item) => item.currentStep)).toEqual([
-      "image_inspection",
       "virus_scan",
+      "image_inspection",
     ]);
 
     const readyTransition = assetRepo.transitions.at(-1);
@@ -94,7 +94,7 @@ describe("ProcessClaimedAssetUseCase", () => {
     expect(metadata["total_duration_ms"] as number).toBeGreaterThanOrEqual(0);
     expect(Array.isArray(metadata["steps"])).toBe(true);
     const steps = metadata["steps"] as Array<{ step: string }>;
-    expect(steps.map((entry) => entry.step)).toEqual(["image_inspection", "virus_scan"]);
+    expect(steps.map((entry) => entry.step)).toEqual(["virus_scan", "image_inspection"]);
   });
 
   it("records current_step transitions in order when moderation is enabled", async () => {
@@ -108,8 +108,8 @@ describe("ProcessClaimedAssetUseCase", () => {
 
     expect(result.kind).toBe("completed");
     expect(jobRepo.currentStepUpdates.map((item) => item.currentStep)).toEqual([
-      "image_inspection",
       "virus_scan",
+      "image_inspection",
       "content_moderation",
     ]);
 
@@ -118,8 +118,8 @@ describe("ProcessClaimedAssetUseCase", () => {
     const metadata = readyTransition?.metadata ?? {};
     const steps = metadata["steps"] as Array<{ step: string }>;
     expect(steps.map((entry) => entry.step)).toEqual([
-      "image_inspection",
       "virus_scan",
+      "image_inspection",
       "content_moderation",
     ]);
   });
@@ -151,7 +151,7 @@ describe("ProcessClaimedAssetUseCase", () => {
     expect(assetRepo.transitions.at(-1)?.reason).toBe("invalid_image_format");
   });
 
-  it("quarantines infected virus scan results", async () => {
+  it("quarantines infected virus scan results without running image inspection", async () => {
     virusScan.result = {
       decision: "quarantine",
       reason: "virus_detected",
@@ -176,6 +176,9 @@ describe("ProcessClaimedAssetUseCase", () => {
         toKey: "_quarantined/uploads/test.png",
       }),
     ]);
+    // Virus scan is the first check; image inspection must not run.
+    expect(assetRepo.analyses.map((entry) => entry.analyzer)).toEqual(["virus_scan"]);
+    expect(jobRepo.currentStepUpdates.map((entry) => entry.currentStep)).toEqual(["virus_scan"]);
   });
 
   it("quarantines moderation results when policy config is present", async () => {

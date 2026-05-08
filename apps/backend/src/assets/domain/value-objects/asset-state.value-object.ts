@@ -32,3 +32,20 @@ export function fromQuarantinedStorageKey(quarantinedKey: string): string {
   if (!quarantinedKey.startsWith(QUARANTINE_KEY_PREFIX)) return quarantinedKey;
   return quarantinedKey.slice(QUARANTINE_KEY_PREFIX.length);
 }
+
+/**
+ * States where an asset's bytes can be safely surfaced through the public
+ * imgproxy preview path. Quarantined / rejected / deleted assets must not
+ * have preview URLs minted — the bytes have either been moved to
+ * `_quarantined/` (virus / moderation), are non-images (rejected /
+ * invalid_format), or shouldn't be served at all (deleted / expired).
+ */
+const PREVIEWABLE_ASSET_STATES: ReadonlySet<AssetState> = new Set([
+  "uploaded",
+  "processing",
+  "ready",
+]);
+
+export function isAssetPreviewable(state: AssetState): boolean {
+  return PREVIEWABLE_ASSET_STATES.has(state);
+}

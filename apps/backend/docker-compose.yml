@@ -102,7 +102,15 @@ services:
       # auth path imgproxy expects. The backend mints source URLs as
       # http://fake-gcs:4443/storage/v1/b/<bucket>/o/<key>?alt=media, which
       # works against either fake-gcs or real GCS public objects.
-      IMGPROXY_ALLOWED_SOURCES: "http://fake-gcs:4443/"
+      #
+      # The regex `~` prefix tells imgproxy to match against the source URL.
+      # We require the URL-encoded object key to start with an alphanumeric
+      # character so paths under `_quarantined/` (which begin with an
+      # underscore) are refused. Combined with the move-on-quarantine wiring
+      # in the worker, this guarantees imgproxy can never serve quarantined
+      # bytes regardless of how a URL is constructed. Go's regexp has no
+      # lookaheads, so we use a positive class instead of a negative one.
+      IMGPROXY_ALLOWED_SOURCES: "~^http://fake-gcs:4443/storage/v1/b/[^/]+/o/[a-zA-Z0-9]"
       IMGPROXY_DEVELOPMENT_ERRORS_MODE: "true"
     depends_on:
       fake-gcs:

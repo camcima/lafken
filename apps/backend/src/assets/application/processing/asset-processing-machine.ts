@@ -12,19 +12,19 @@ export type AssetProcessingMachineEvent =
 
 export const assetProcessingMachine = createMachine({
   id: "assetProcessing",
-  initial: "imageInspection",
+  initial: "virusScan",
   states: {
-    imageInspection: {
-      on: {
-        IMAGE_INVALID: "rejected",
-        IMAGE_VALID: "virusScan",
-        FAILED: "failed",
-      },
-    },
     virusScan: {
       on: {
         VIRUS_INFECTED: "quarantinedVirus",
-        VIRUS_CLEAN: "moderationDecision",
+        VIRUS_CLEAN: "imageInspection",
+        FAILED: "failed",
+      },
+    },
+    imageInspection: {
+      on: {
+        IMAGE_INVALID: "rejected",
+        IMAGE_VALID: "moderationDecision",
         FAILED: "failed",
       },
     },

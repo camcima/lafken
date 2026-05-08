@@ -58,6 +58,7 @@ import {
   type IPreviewSpec,
   PreviewUrlSignerPort,
 } from "@/assets/domain/services/preview-url-signer.port";
+import { isAssetPreviewable } from "@/assets/domain/value-objects/asset-state.value-object";
 import { SYSTEM_PRESETS } from "@/assets/infrastructure/services/system-presets";
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
@@ -225,6 +226,16 @@ export class AssetsController {
     }
     try {
       const result = await this.getAssetByPublicIdUseCase.execute({ publicId });
+      // Defense in depth: refuse to mint preview URLs for non-previewable
+      // states (quarantined / rejected / deleted / expired). Even though the
+      // bytes are physically moved out of imgproxy's reach on quarantine,
+      // refusing to sign new URLs here closes the future-issuance vector and
+      // shields the bytes from any caller that already knows the publicId.
+      if (!isAssetPreviewable(result.asset.props.state)) {
+        throw new NotFoundException(
+          `Asset "${publicId}" is not in a previewable state (current: "${result.asset.props.state}").`,
+        );
+      }
       const resolveSignCtx = this.buildSignContextResolver();
       const signCtx: IPreviewSignContext | null = await resolveSignCtx(result.asset);
       if (signCtx === null) {

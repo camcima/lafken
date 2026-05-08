@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { Injectable } from "@nestjs/common";
 import { createActor } from "xstate";
 
@@ -127,6 +129,74 @@ export class ProcessClaimedAssetUseCase {
         storageKey: asset.props.storageKey,
       }),
     );
+    // Pre-computed for virus_scan evidence so we don't have to wait for
+    // image_inspection (which runs after virus_scan and would otherwise be
+    // the only producer of contentHash). Same SHA-256 the inspection step
+    // would derive itself, so the two analyses agree on hash.
+    const contentHash: Buffer = createHash("sha256").update(bytes).digest();
+
+    await this.recordCurrentStep({
+      assetId: asset.props.id,
+      workerId: input.workerId,
+      currentStep: "virus_scan",
+    });
+    const scanStartedAt: Date = new Date();
+    const scan = await this.runStep("virus_scan", () =>
+      this.virusScan.scan({ bytes, contentHash }),
+    );
+    const scanFinishedAt: Date = new Date();
+    stepTimings.push(
+      makeStepTiming({
+        step: "virus_scan",
+        startedAt: scanStartedAt,
+        finishedAt: scanFinishedAt,
+        decision: scan.decision,
+      }),
+    );
+    this.logger.info(
+      {
+        assetId: asset.props.id,
+        step: "virus_scan",
+        decision: scan.decision,
+        durationMs: calculateDurationMs(scanStartedAt, scanFinishedAt),
+      },
+      "step completed",
+    );
+    await this.assetRepo.recordAnalysis({
+      assetId: asset.props.id,
+      analyzer: scan.analyzer,
+      analyzerVersion: scan.analyzerVersion,
+      decision: scan.decision,
+      findings: scan.findings,
+      occurredAt: new Date(),
+    });
+
+    if (scan.decision === "quarantine") {
+      machine.send({ type: "VIRUS_INFECTED" });
+      const reason: string = scan.reason ?? "virus_detected";
+      const newStorageKey: string | undefined = await this.moveBytesToQuarantine({
+        binding: { bucket: gcs.bucket, projectId: gcs.projectId },
+        storageKey: asset.props.storageKey,
+      });
+      this.logger.info(
+        { assetId: asset.props.id, toState: "quarantined_virus", reason },
+        "transitioning to terminal state",
+      );
+      await this.transitionToTerminal({
+        assetId: asset.props.id,
+        fromState: currentState,
+        toState: "quarantined_virus",
+        reason,
+        workerId: input.workerId,
+        attemptNumber: input.attemptNumber,
+        step: "virus_scan",
+        durationMs: this.durationFromFindings(scan.findings),
+        newStorageKey,
+      });
+      return { kind: "completed" };
+    }
+
+    machine.send({ type: "VIRUS_CLEAN" });
 
     await this.recordCurrentStep({
       assetId: asset.props.id,
@@ -199,68 +269,6 @@ export class ProcessClaimedAssetUseCase {
       captureContext: inspection.captureContext,
     });
 
-    await this.recordCurrentStep({
-      assetId: asset.props.id,
-      workerId: input.workerId,
-      currentStep: "virus_scan",
-    });
-    const scanStartedAt: Date = new Date();
-    const scan = await this.runStep("virus_scan", () =>
-      this.virusScan.scan({ bytes, contentHash: inspection.contentHash }),
-    );
-    const scanFinishedAt: Date = new Date();
-    stepTimings.push(
-      makeStepTiming({
-        step: "virus_scan",
-        startedAt: scanStartedAt,
-        finishedAt: scanFinishedAt,
-        decision: scan.decision,
-      }),
-    );
-    this.logger.info(
-      {
-        assetId: asset.props.id,
-        step: "virus_scan",
-        decision: scan.decision,
-        durationMs: calculateDurationMs(scanStartedAt, scanFinishedAt),
-      },
-      "step completed",
-    );
-    await this.assetRepo.recordAnalysis({
-      assetId: asset.props.id,
-      analyzer: scan.analyzer,
-      analyzerVersion: scan.analyzerVersion,
-      decision: scan.decision,
-      findings: scan.findings,
-      occurredAt: new Date(),
-    });
-
-    if (scan.decision === "quarantine") {
-      machine.send({ type: "VIRUS_INFECTED" });
-      const reason: string = scan.reason ?? "virus_detected";
-      const newStorageKey: string | undefined = await this.moveBytesToQuarantine({
-        binding: { bucket: gcs.bucket, projectId: gcs.projectId },
-        storageKey: asset.props.storageKey,
-      });
-      this.logger.info(
-        { assetId: asset.props.id, toState: "quarantined_virus", reason },
-        "transitioning to terminal state",
-      );
-      await this.transitionToTerminal({
-        assetId: asset.props.id,
-        fromState: currentState,
-        toState: "quarantined_virus",
-        reason,
-        workerId: input.workerId,
-        attemptNumber: input.attemptNumber,
-        step: "virus_scan",
-        durationMs: this.durationFromFindings(scan.findings),
-        newStorageKey,
-      });
-      return { kind: "completed" };
-    }
-
-    machine.send({ type: "VIRUS_CLEAN" });
     const moderationConfig = policy.props.contentModeration;
     if (moderationConfig) {
       machine.send({ type: "MODERATION_REQUIRED" });
