@@ -25,11 +25,6 @@ describe("AuditPage", () => {
     expect(screen.getByText(/audit log/i)).toBeInTheDocument();
   });
 
-  it("renders Export CSV button", () => {
-    renderPage();
-    expect(screen.getByRole("button", { name: /export csv/i })).toBeInTheDocument();
-  });
-
   it("renders demo audit rows — at least one event type is visible", () => {
     renderPage();
     const rows = screen.getAllByRole("button", { name: /ago/i });

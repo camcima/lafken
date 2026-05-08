@@ -1209,12 +1209,6 @@
         "ok": "ok",
         "fail": "falhou"
       },
-      "footer": {
-        "showing": "Exibindo {{shown}} de {{total}} eventos correspondentes. Use exportar para recuperar intervalos completos."
-      },
-      "actions": {
-        "exportCsv": "Exportar CSV"
-      },
       "drawer": {
         "close": "Fechar painel",
         "copyJson": "Copiar JSON",

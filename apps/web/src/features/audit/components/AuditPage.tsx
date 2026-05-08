@@ -309,21 +309,13 @@ export function AuditPage(): React.JSX.Element {
 
   return (
     <div className="space-y-4">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="m-0 text-[22px] font-bold tracking-tight">{t("pages.audit.title")}</h1>
-          <div className="text-muted-foreground mt-1 text-[12.5px]">
-            {t("pages.audit.subtitle", {
-              retention: AUDIT_RETENTION,
-              anchor: fmtMinAgo(anchorMinutesAgo),
-            })}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline">
-            <Download size={BTN_ICON_SIZE} />
-            {t("pages.audit.actions.exportCsv")}
-          </Button>
+      <div className="mb-4">
+        <h1 className="m-0 text-[22px] font-bold tracking-tight">{t("pages.audit.title")}</h1>
+        <div className="text-muted-foreground mt-1 text-[12.5px]">
+          {t("pages.audit.subtitle", {
+            retention: AUDIT_RETENTION,
+            anchor: fmtMinAgo(anchorMinutesAgo),
+          })}
         </div>
       </div>
 

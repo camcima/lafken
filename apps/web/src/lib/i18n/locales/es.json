@@ -1209,12 +1209,6 @@
         "ok": "ok",
         "fail": "falló"
       },
-      "footer": {
-        "showing": "Mostrando {{shown}} de {{total}} eventos coincidentes. Usa exportar para recuperar rangos completos."
-      },
-      "actions": {
-        "exportCsv": "Exportar CSV"
-      },
       "drawer": {
         "close": "Cerrar panel",
         "copyJson": "Copiar JSON",

@@ -1210,12 +1210,6 @@
         "ok": "ok",
         "fail": "fail"
       },
-      "footer": {
-        "showing": "Showing {{shown}} of {{total}} matching events. Use export to retrieve full ranges."
-      },
-      "actions": {
-        "exportCsv": "Export CSV"
-      },
       "drawer": {
         "close": "Close drawer",
         "copyJson": "Copy JSON",
