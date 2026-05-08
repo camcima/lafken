@@ -67,6 +67,24 @@ services:
       timeout: 2s
       retries: 10
 
+  clamav:
+    image: clamav/clamav:1.4
+    restart: unless-stopped
+    ports:
+      - "3310:3310"
+    volumes:
+      - clamav_db:/var/lib/clamav
+      # Custom signature catching the EICAR byte sequence anywhere inside an
+      # uploaded file (PNG tEXt chunks, EXIF, JPEG trailers, etc). clamd
+      # auto-loads *.ndb at startup; see test/fixtures/clamav/README.md.
+      - ./test/fixtures/clamav/lafken-test.ndb:/var/lib/clamav/lafken-test.ndb:ro
+    healthcheck:
+      test: ["CMD-SHELL", "echo PING | nc -w 2 127.0.0.1 3310 | grep -q PONG || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
   imgproxy:
     image: ghcr.io/imgproxy/imgproxy:latest
     restart: unless-stopped
@@ -100,3 +118,4 @@ services:
 volumes:
   postgres_data:
   dev_oidc_data:
+  clamav_db:

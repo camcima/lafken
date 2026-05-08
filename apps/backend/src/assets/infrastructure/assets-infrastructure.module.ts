@@ -18,6 +18,7 @@ import { AssetQueryRepository } from "./persistence/repositories/asset-query.rep
 import { AssetWriteRepository } from "./persistence/repositories/asset-write.repository";
 import { ProcessingJobRepository } from "./persistence/repositories/processing-job.repository";
 import { UploadIntentWriteRepository } from "./persistence/repositories/upload-intent-write.repository";
+import { ClamAvVirusScanAdapter } from "./services/clamav-virus-scan.adapter";
 import { GcsAssetStorageAdapter } from "./services/gcs-asset-storage.adapter";
 import { ImgproxyPreviewUrlSigner } from "./services/imgproxy-preview-url-signer.adapter";
 import { LocalContentModerationAdapter } from "./services/local-content-moderation.adapter";
@@ -50,11 +51,20 @@ import { SharpImageInspectionAdapter } from "./services/sharp-image-inspection.a
     { provide: ImageInspectionPort, useClass: SharpImageInspectionAdapter },
     {
       provide: VirusScanPort,
-      useFactory: (): VirusScanPort =>
-        new LocalVirusScanAdapter({
+      useFactory: (): VirusScanPort => {
+        if (environmentConfiguration.PROCESSING_VIRUS_SCAN_ADAPTER === "clamav") {
+          return new ClamAvVirusScanAdapter({
+            host: environmentConfiguration.CLAMAV_HOST,
+            port: environmentConfiguration.CLAMAV_PORT,
+            timeoutMs: environmentConfiguration.CLAMAV_TIMEOUT_MS,
+            chunkSizeBytes: environmentConfiguration.CLAMAV_CHUNK_SIZE_BYTES,
+          });
+        }
+        return new LocalVirusScanAdapter({
           infected: environmentConfiguration.PROCESSING_VIRUS_SCAN_FORCE_INFECTED,
           signature: environmentConfiguration.PROCESSING_VIRUS_SCAN_SIGNATURE,
-        }),
+        });
+      },
     },
     {
       provide: ContentModerationPort,

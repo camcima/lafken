@@ -31,3 +31,18 @@ services:
       interval: 5s
       timeout: 2s
       retries: 10
+
+  clamav:
+    image: clamav/clamav:1.4
+    restart: unless-stopped
+    ports:
+      # Different host port from dev compose so both stacks can run in parallel.
+      - "3311:3310"
+    volumes:
+      - ./test/fixtures/clamav/lafken-test.ndb:/var/lib/clamav/lafken-test.ndb:ro
+    healthcheck:
+      test: ["CMD-SHELL", "echo PING | nc -w 2 127.0.0.1 3310 | grep -q PONG || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
