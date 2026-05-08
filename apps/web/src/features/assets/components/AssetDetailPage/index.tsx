@@ -142,7 +142,11 @@ export function AssetDetailPage({ publicId }: IAssetDetailPageProps): React.JSX.
 
       <ActionBar asset={asset} onCopy={handleCopy} onToast={showToast} />
 
-      <StateHero state={asset.state} />
+      <StateHero
+        state={asset.state}
+        legalHold={asset.legalHold}
+        legalHoldReference={asset.legalHoldReference ?? null}
+      />
 
       <VisualBlock asset={asset} />
 

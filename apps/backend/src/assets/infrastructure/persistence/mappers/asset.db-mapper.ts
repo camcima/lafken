@@ -27,6 +27,7 @@ export class AssetDbMapper {
       customMetadata: (row["custom_metadata"] as Record<string, unknown>) ?? {},
       captureContext: (row["capture_context"] as Record<string, unknown> | null) ?? null,
       legalHold: Boolean(row["legal_hold"]),
+      legalHoldReference: (row["legal_hold_reference"] as string | null) ?? null,
       confirmedAt: row["confirmed_at"] ? new Date(row["confirmed_at"] as string) : null,
       stateChangedAt: new Date(row["state_changed_at"] as string),
       createdAt: new Date(row["created_at"] as string),

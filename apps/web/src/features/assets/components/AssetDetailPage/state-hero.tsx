@@ -1,9 +1,13 @@
+import { Link } from "@tanstack/react-router";
+import { Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
 
 interface IStateHeroProps {
   state: string;
+  legalHold: boolean;
+  legalHoldReference: string | null;
 }
 
 interface IHeroField {
@@ -18,6 +22,36 @@ const PROCESSING_TOTAL = 5;
 const PROCESSING_ELAPSED_S = 8;
 const MAX_FAILED_RETRIES = 3;
 const QUARANTINE_FLAG_SEC = 11;
+
+interface ILegalHoldBannerProps {
+  legalHoldReference: string | null;
+}
+
+function LegalHoldBanner({ legalHoldReference }: ILegalHoldBannerProps): React.JSX.Element {
+  const { t } = useTranslation();
+  return (
+    <div className="border-warn/40 bg-warn-soft/40 mb-3 flex items-start gap-3 rounded-md border px-4 py-3">
+      <Lock size={16} className="text-warn mt-0.5" />
+      <div className="flex-1">
+        <div className="text-[12.5px] font-semibold">
+          {t("pages.assetDetail.legalHoldBanner.title")}
+        </div>
+        {legalHoldReference !== null && legalHoldReference.length > 0 && (
+          <div className="text-muted-foreground font-mono text-[11.5px]">{legalHoldReference}</div>
+        )}
+      </div>
+      {legalHoldReference !== null && legalHoldReference.length > 0 && (
+        <Link
+          to="/legal-holds"
+          search={{ q: legalHoldReference }}
+          className="text-latam-indigo text-[11.5px] hover:underline"
+        >
+          {t("pages.assetDetail.legalHoldBanner.viewMatching")}
+        </Link>
+      )}
+    </div>
+  );
+}
 
 function HeroFields({ fields }: { fields: IHeroField[] }): React.JSX.Element {
   return (
@@ -41,7 +75,11 @@ function HeroFields({ fields }: { fields: IHeroField[] }): React.JSX.Element {
   );
 }
 
-export function StateHero({ state }: IStateHeroProps): React.JSX.Element {
+export function StateHero({
+  state,
+  legalHold,
+  legalHoldReference,
+}: IStateHeroProps): React.JSX.Element {
   const { t } = useTranslation();
 
   if (state === "processing") {
@@ -62,28 +100,31 @@ export function StateHero({ state }: IStateHeroProps): React.JSX.Element {
       },
     ];
     return (
-      <div className="border-border bg-card mb-5 flex flex-col items-stretch overflow-hidden rounded-md border md:flex-row">
-        <div className="border-info-line bg-info-soft relative flex min-w-[260px] items-center gap-3 border-b px-5 py-3.5 md:border-r md:border-b-0">
-          <span
-            className="bg-info size-2.5 rounded-full"
-            style={{ boxShadow: "0 0 0 4px rgba(21,85,121,0.2)" }}
-          />
-          <div>
-            <div className="text-info text-[14px] font-semibold">
-              {t("pages.assetDetail.stateHero.processing.title")}
-            </div>
-            <div className="text-info/85 text-[11.5px]">
-              {t("pages.assetDetail.stateHero.processing.subtitle", {
-                step: PROCESSING_STEP,
-                total: PROCESSING_TOTAL,
-                stage: "transform",
-                elapsed: PROCESSING_ELAPSED_S,
-              })}
+      <>
+        {legalHold && <LegalHoldBanner legalHoldReference={legalHoldReference} />}
+        <div className="border-border bg-card mb-5 flex flex-col items-stretch overflow-hidden rounded-md border md:flex-row">
+          <div className="border-info-line bg-info-soft relative flex min-w-[260px] items-center gap-3 border-b px-5 py-3.5 md:border-r md:border-b-0">
+            <span
+              className="bg-info size-2.5 rounded-full"
+              style={{ boxShadow: "0 0 0 4px rgba(21,85,121,0.2)" }}
+            />
+            <div>
+              <div className="text-info text-[14px] font-semibold">
+                {t("pages.assetDetail.stateHero.processing.title")}
+              </div>
+              <div className="text-info/85 text-[11.5px]">
+                {t("pages.assetDetail.stateHero.processing.subtitle", {
+                  step: PROCESSING_STEP,
+                  total: PROCESSING_TOTAL,
+                  stage: "transform",
+                  elapsed: PROCESSING_ELAPSED_S,
+                })}
+              </div>
             </div>
           </div>
+          <HeroFields fields={fields} />
         </div>
-        <HeroFields fields={fields} />
-      </div>
+      </>
     );
   }
 
@@ -107,26 +148,29 @@ export function StateHero({ state }: IStateHeroProps): React.JSX.Element {
       { fieldKey: t("pages.assetDetail.stateHero.fields.run"), fieldValue: "rn_01HXJ8K48S" },
     ];
     return (
-      <div className="border-border bg-card mb-5 flex flex-col items-stretch overflow-hidden rounded-md border md:flex-row">
-        <div className="border-alert-line bg-alert-soft flex min-w-[260px] items-center gap-3 border-b px-5 py-3.5 md:border-r md:border-b-0">
-          <span
-            className="bg-alert size-2.5 rounded-full"
-            style={{ boxShadow: "0 0 0 4px rgba(138,66,9,0.18)" }}
-          />
-          <div>
-            <div className="text-alert text-[14px] font-semibold">
-              {t("pages.assetDetail.stateHero.processingFailed.title")}
-            </div>
-            <div className="text-alert/85 text-[11.5px]">
-              {t("pages.assetDetail.stateHero.processingFailed.subtitle", {
-                stage: "transform",
-                retries: MAX_FAILED_RETRIES,
-              })}
+      <>
+        {legalHold && <LegalHoldBanner legalHoldReference={legalHoldReference} />}
+        <div className="border-border bg-card mb-5 flex flex-col items-stretch overflow-hidden rounded-md border md:flex-row">
+          <div className="border-alert-line bg-alert-soft flex min-w-[260px] items-center gap-3 border-b px-5 py-3.5 md:border-r md:border-b-0">
+            <span
+              className="bg-alert size-2.5 rounded-full"
+              style={{ boxShadow: "0 0 0 4px rgba(138,66,9,0.18)" }}
+            />
+            <div>
+              <div className="text-alert text-[14px] font-semibold">
+                {t("pages.assetDetail.stateHero.processingFailed.title")}
+              </div>
+              <div className="text-alert/85 text-[11.5px]">
+                {t("pages.assetDetail.stateHero.processingFailed.subtitle", {
+                  stage: "transform",
+                  retries: MAX_FAILED_RETRIES,
+                })}
+              </div>
             </div>
           </div>
+          <HeroFields fields={fields} />
         </div>
-        <HeroFields fields={fields} />
-      </div>
+      </>
     );
   }
 
@@ -147,25 +191,28 @@ export function StateHero({ state }: IStateHeroProps): React.JSX.Element {
       },
     ];
     return (
-      <div className="border-border bg-card mb-5 flex flex-col items-stretch overflow-hidden rounded-md border md:flex-row">
-        <div className="border-alert-line bg-alert-soft flex min-w-[280px] items-center gap-3 border-b px-5 py-3.5 md:border-r md:border-b-0">
-          <span
-            className="bg-alert size-2.5 rounded-full"
-            style={{ boxShadow: "0 0 0 4px rgba(138,66,9,0.2)" }}
-          />
-          <div>
-            <div className="text-alert text-[14px] font-semibold">
-              {t("pages.assetDetail.stateHero.quarantinedModeration.title")}
-            </div>
-            <div className="text-alert/85 text-[11.5px]">
-              {t("pages.assetDetail.stateHero.quarantinedModeration.subtitle", {
-                flagSec: QUARANTINE_FLAG_SEC,
-              })}
+      <>
+        {legalHold && <LegalHoldBanner legalHoldReference={legalHoldReference} />}
+        <div className="border-border bg-card mb-5 flex flex-col items-stretch overflow-hidden rounded-md border md:flex-row">
+          <div className="border-alert-line bg-alert-soft flex min-w-[280px] items-center gap-3 border-b px-5 py-3.5 md:border-r md:border-b-0">
+            <span
+              className="bg-alert size-2.5 rounded-full"
+              style={{ boxShadow: "0 0 0 4px rgba(138,66,9,0.2)" }}
+            />
+            <div>
+              <div className="text-alert text-[14px] font-semibold">
+                {t("pages.assetDetail.stateHero.quarantinedModeration.title")}
+              </div>
+              <div className="text-alert/85 text-[11.5px]">
+                {t("pages.assetDetail.stateHero.quarantinedModeration.subtitle", {
+                  flagSec: QUARANTINE_FLAG_SEC,
+                })}
+              </div>
             </div>
           </div>
+          <HeroFields fields={fields} />
         </div>
-        <HeroFields fields={fields} />
-      </div>
+      </>
     );
   }
 
@@ -193,22 +240,25 @@ export function StateHero({ state }: IStateHeroProps): React.JSX.Element {
     },
   ];
   return (
-    <div className="border-border bg-card mb-5 flex flex-col items-stretch overflow-hidden rounded-md border md:flex-row">
-      <div className="border-ok-line bg-ok-soft flex min-w-[240px] items-center gap-3 border-b px-5 py-3.5 md:border-r md:border-b-0">
-        <span
-          className="bg-ok size-2.5 rounded-full"
-          style={{ boxShadow: "0 0 0 4px rgba(26,107,70,0.22)" }}
-        />
-        <div>
-          <div className="text-ok text-[14px] font-semibold">
-            {t("pages.assetDetail.stateHero.ready.title")}
-          </div>
-          <div className="text-ok/85 text-[11.5px]">
-            {t("pages.assetDetail.stateHero.ready.subtitle", { since: "May 3, 08:14 UTC" })}
+    <>
+      {legalHold && <LegalHoldBanner legalHoldReference={legalHoldReference} />}
+      <div className="border-border bg-card mb-5 flex flex-col items-stretch overflow-hidden rounded-md border md:flex-row">
+        <div className="border-ok-line bg-ok-soft flex min-w-[240px] items-center gap-3 border-b px-5 py-3.5 md:border-r md:border-b-0">
+          <span
+            className="bg-ok size-2.5 rounded-full"
+            style={{ boxShadow: "0 0 0 4px rgba(26,107,70,0.22)" }}
+          />
+          <div>
+            <div className="text-ok text-[14px] font-semibold">
+              {t("pages.assetDetail.stateHero.ready.title")}
+            </div>
+            <div className="text-ok/85 text-[11.5px]">
+              {t("pages.assetDetail.stateHero.ready.subtitle", { since: "May 3, 08:14 UTC" })}
+            </div>
           </div>
         </div>
+        <HeroFields fields={fields} />
       </div>
-      <HeroFields fields={fields} />
-    </div>
+    </>
   );
 }

@@ -458,6 +458,10 @@
           "legalHoldNone": "Ninguno",
           "servingValue": "firmado · TTL {{ttl}}"
         }
+      },
+      "legalHoldBanner": {
+        "title": "Bajo retención legal",
+        "viewMatching": "Ver retenciones coincidentes"
       }
     },
     "namespaces": {

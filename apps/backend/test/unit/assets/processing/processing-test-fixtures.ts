@@ -38,6 +38,7 @@ export function makeAsset(overrides: Partial<IAssetProps> = {}): Asset {
     customMetadata: {},
     captureContext: null,
     legalHold: false,
+    legalHoldReference: null,
     confirmedAt: new Date("2026-05-06T11:59:00.000Z"),
     stateChangedAt: new Date("2026-05-06T11:59:00.000Z"),
     createdAt: new Date("2026-05-06T11:59:00.000Z"),

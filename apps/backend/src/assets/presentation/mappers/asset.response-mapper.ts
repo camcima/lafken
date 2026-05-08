@@ -37,6 +37,7 @@ export class AssetResponseMapper {
       customMetadata: asset.props.customMetadata,
       captureContext: asset.props.captureContext ?? undefined,
       legalHold: asset.props.legalHold,
+      legalHoldReference: asset.props.legalHoldReference,
       confirmedAt: asset.props.confirmedAt?.toISOString() ?? undefined,
       stateChangedAt: asset.props.stateChangedAt.toISOString(),
       createdAt: asset.props.createdAt.toISOString(),

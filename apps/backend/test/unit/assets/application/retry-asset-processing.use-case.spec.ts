@@ -43,6 +43,7 @@ function makeAsset(overrides: { state: AssetState }): Asset {
     customMetadata: {},
     captureContext: null,
     legalHold: false,
+    legalHoldReference: null,
     confirmedAt: now,
     stateChangedAt: now,
     createdAt: now,

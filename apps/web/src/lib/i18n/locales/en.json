@@ -458,6 +458,10 @@
           "legalHoldNone": "None",
           "servingValue": "signed · {{ttl}} TTL"
         }
+      },
+      "legalHoldBanner": {
+        "title": "On legal hold",
+        "viewMatching": "View matching holds"
       }
     },
     "namespaces": {

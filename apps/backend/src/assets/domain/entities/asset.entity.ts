@@ -21,6 +21,7 @@ export interface IAssetProps {
   customMetadata: Record<string, unknown>;
   captureContext: Record<string, unknown> | null;
   legalHold: boolean;
+  legalHoldReference: string | null;
   confirmedAt: Date | null;
   stateChangedAt: Date;
   createdAt: Date;
@@ -77,6 +78,7 @@ export class Asset {
       customMetadata: {},
       captureContext: null,
       legalHold: false,
+      legalHoldReference: null,
       confirmedAt: now,
       stateChangedAt: now,
       createdAt: now,

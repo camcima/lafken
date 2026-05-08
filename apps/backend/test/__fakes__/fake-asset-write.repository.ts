@@ -32,6 +32,7 @@ export class FakeAssetWriteRepository extends AssetWriteRepositoryPort {
       customMetadata: {},
       captureContext: null,
       legalHold: false,
+      legalHoldReference: null,
       confirmedAt: now,
       stateChangedAt: now,
       createdAt: now,

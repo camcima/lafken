@@ -28,6 +28,7 @@ vi.mock("@tanstack/react-router", () => ({
     to?: string;
     search?: Record<string, unknown>;
   }) => <a href={to ?? "#"}>{children}</a>,
+  useSearch: () => ({ q: undefined }),
 }));
 
 // ── Helper ─────────────────────────────────────────────────────────────────

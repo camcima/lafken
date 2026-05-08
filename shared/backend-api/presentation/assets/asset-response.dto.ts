@@ -67,6 +67,9 @@ export class AssetResponseDTO {
   @ApiProperty()
   legalHold!: boolean;
 
+  @ApiProperty({ required: false, type: String, nullable: true })
+  legalHoldReference?: string | null;
+
   @ApiProperty({ required: false, type: String })
   confirmedAt?: string;
 

@@ -1,5 +1,5 @@
 import type { LegalHoldResponseDTO } from "@shared/backend-api";
-import { Link } from "@tanstack/react-router";
+import { Link, useSearch } from "@tanstack/react-router";
 import {
   Check,
   ChevronRight,
@@ -271,7 +271,8 @@ function HoldDrawer({ hold, onClose, onLift }: IHoldDrawerProps): React.JSX.Elem
 
 export function LegalHoldsListPage(): React.JSX.Element {
   const { t } = useTranslation();
-  const [query, setQuery] = useState("");
+  const { q: initialQ } = useSearch({ from: "/_protected/legal-holds" });
+  const [query, setQuery] = useState(initialQ ?? "");
   const [statusFilter, setStatusFilter] = useState("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const [liftDialogOpen, setLiftDialogOpen] = useState(false);
