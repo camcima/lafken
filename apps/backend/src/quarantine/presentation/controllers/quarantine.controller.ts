@@ -77,7 +77,7 @@ export class QuarantineController {
   @Post(":publicId/release")
   @HttpCode(HttpStatus.OK)
   @AuthenticatedEndpoint()
-  @EndpointRequiredRoles([ApplicationRole.CONTENT_REVIEWER])
+  @EndpointRequiredRoles([ApplicationRole.CONTENT_REVIEWER, ApplicationRole.PLATFORM_OPERATOR])
   @ApiOperation({
     summary: "Release a quarantined asset back to ready",
     description:
@@ -107,7 +107,7 @@ export class QuarantineController {
   @Post(":publicId/reject")
   @HttpCode(HttpStatus.OK)
   @AuthenticatedEndpoint()
-  @EndpointRequiredRoles([ApplicationRole.CONTENT_REVIEWER])
+  @EndpointRequiredRoles([ApplicationRole.CONTENT_REVIEWER, ApplicationRole.PLATFORM_OPERATOR])
   @ApiOperation({
     summary: "Reject a quarantined asset",
     description:
