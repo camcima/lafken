@@ -18,6 +18,7 @@ interface IUpdateStorageBindingInput {
   name: string;
   config: unknown;
   occurredBy: string | null;
+  requestIp: string | null;
 }
 
 @Injectable()
@@ -63,6 +64,7 @@ export class UpdateStorageBindingUseCase {
       entityId: result.props.name,
       action: "update",
       occurredBy: input.occurredBy ?? AUDIT_FALLBACK_PRINCIPAL,
+      requestIp: input.requestIp,
       beforeState: { adapterType: existing.props.adapterType },
       afterState: { adapterType: result.props.adapterType },
     });

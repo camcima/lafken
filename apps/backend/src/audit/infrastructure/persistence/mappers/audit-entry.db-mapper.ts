@@ -11,6 +11,7 @@ export class AuditEntryDbMapper {
       beforeState: (row["before_state"] as Record<string, unknown> | null) ?? null,
       afterState: (row["after_state"] as Record<string, unknown> | null) ?? null,
       reason: (row["reason"] as string | null) ?? null,
+      requestIp: (row["request_ip"] as string | null) ?? null,
       occurredAt: new Date(row["occurred_at"] as string),
       createdAt: new Date(row["created_at"] as string),
       updatedAt: new Date(row["updated_at"] as string),

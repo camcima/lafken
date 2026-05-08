@@ -64,6 +64,7 @@ describe("UpdateNamespacePolicyUseCase", () => {
       slug: "aircraft-photos",
       policy: VALID_POLICY,
       createdBy: "ops@latam.com",
+      requestIp: null,
     });
 
     expect(result.newPolicyVersion).toBe(1);
@@ -72,7 +73,7 @@ describe("UpdateNamespacePolicyUseCase", () => {
 
   it("throws NamespaceNotFoundError when slug is not present", async () => {
     await expect(
-      useCase.execute({ slug: "ghost", policy: VALID_POLICY, createdBy: null }),
+      useCase.execute({ slug: "ghost", policy: VALID_POLICY, createdBy: null, requestIp: null }),
     ).rejects.toBeInstanceOf(NamespaceNotFoundError);
   });
 
@@ -82,7 +83,12 @@ describe("UpdateNamespacePolicyUseCase", () => {
     writeRepo.seed(ns);
 
     await expect(
-      useCase.execute({ slug: "aircraft-photos", policy: VALID_POLICY, createdBy: null }),
+      useCase.execute({
+        slug: "aircraft-photos",
+        policy: VALID_POLICY,
+        createdBy: null,
+        requestIp: null,
+      }),
     ).rejects.toBeInstanceOf(NamespaceArchivedError);
   });
 
@@ -96,6 +102,7 @@ describe("UpdateNamespacePolicyUseCase", () => {
       slug: "aircraft-photos",
       policy: VALID_POLICY,
       createdBy: null,
+      requestIp: null,
     });
 
     expect(result.newPolicyVersion).toBe(1);
@@ -109,7 +116,12 @@ describe("UpdateNamespacePolicyUseCase", () => {
     writeRepo.collisionsRemaining = 5;
 
     await expect(
-      useCase.execute({ slug: "aircraft-photos", policy: VALID_POLICY, createdBy: null }),
+      useCase.execute({
+        slug: "aircraft-photos",
+        policy: VALID_POLICY,
+        createdBy: null,
+        requestIp: null,
+      }),
     ).rejects.toBeInstanceOf(PolicyVersionConflictError);
   });
 });

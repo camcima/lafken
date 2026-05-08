@@ -60,6 +60,7 @@ describe("UpdateStorageBindingUseCase", () => {
       name: "default",
       config: newConfig,
       occurredBy: "ops@latam.com",
+      requestIp: null,
     });
 
     expect(result.props.name).toBe("default");
@@ -77,7 +78,7 @@ describe("UpdateStorageBindingUseCase", () => {
 
   it("rejects when the named binding does not exist", async () => {
     await expect(
-      useCase.execute({ name: "missing", config: newConfig, occurredBy: null }),
+      useCase.execute({ name: "missing", config: newConfig, occurredBy: null, requestIp: null }),
     ).rejects.toBeInstanceOf(StorageBindingNotFoundError);
   });
 
@@ -87,6 +88,7 @@ describe("UpdateStorageBindingUseCase", () => {
         name: "default",
         config: { bucket: "ab", projectId: "lafken-project" },
         occurredBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(InvalidStorageBindingConfigError);
     expect(writeRepository.size()).toBe(0);
@@ -98,6 +100,7 @@ describe("UpdateStorageBindingUseCase", () => {
         name: "default",
         config: { bucket: "vanished-bucket", projectId: "lafken-project" },
         occurredBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(BucketNotFoundError);
     expect(writeRepository.size()).toBe(0);

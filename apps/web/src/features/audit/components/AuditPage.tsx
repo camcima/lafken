@@ -52,7 +52,14 @@ interface IAuditRow {
   result: AuditResult;
   payload?: Pick<
     AuditEntryResponseDTO,
-    "beforeState" | "afterState" | "reason" | "occurredAt" | "entityType" | "entityId" | "action"
+    | "beforeState"
+    | "afterState"
+    | "reason"
+    | "requestIp"
+    | "occurredAt"
+    | "entityType"
+    | "entityId"
+    | "action"
   >;
 }
 
@@ -86,13 +93,14 @@ function apiToRow(entry: AuditEntryResponseDTO): IAuditRow {
     actor: entry.occurredBy,
     target: entry.entityId,
     namespace,
-    ip: "—",
+    ip: entry.requestIp ?? "—",
     minutesAgo,
     result: "ok",
     payload: {
       beforeState: entry.beforeState,
       afterState: entry.afterState,
       reason: entry.reason,
+      requestIp: entry.requestIp,
       occurredAt: entry.occurredAt,
       entityType: entry.entityType,
       entityId: entry.entityId,
@@ -149,6 +157,7 @@ function AuditDrawer({ entry, onClose }: IAuditDrawerProps): React.JSX.Element {
           action: entry.payload.action,
           occurred_at: entry.payload.occurredAt,
           occurred_by: entry.actor,
+          request_ip: entry.payload.requestIp ?? null,
           before_state: entry.payload.beforeState ?? null,
           after_state: entry.payload.afterState ?? null,
           reason: entry.payload.reason ?? null,

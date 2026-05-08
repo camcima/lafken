@@ -45,6 +45,7 @@ describe("CreateStorageBindingUseCase", () => {
       adapterType: "gcs",
       config: validConfig,
       occurredBy: "ops@latam.com",
+      requestIp: null,
     });
 
     expect(result.props.name).toBe("default");
@@ -80,6 +81,7 @@ describe("CreateStorageBindingUseCase", () => {
         adapterType: "gcs",
         config: validConfig,
         occurredBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(DuplicateStorageBindingNameError);
     expect(writeRepository.size()).toBe(0);
@@ -92,6 +94,7 @@ describe("CreateStorageBindingUseCase", () => {
         adapterType: "gcs",
         config: { bucket: "missing-bucket", projectId: "lafken-project" },
         occurredBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(BucketNotFoundError);
     expect(writeRepository.size()).toBe(0);
@@ -104,6 +107,7 @@ describe("CreateStorageBindingUseCase", () => {
         adapterType: "gcs",
         config: { bucket: "ab", projectId: "lafken-project" },
         occurredBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(InvalidStorageBindingConfigError);
     expect(writeRepository.size()).toBe(0);
@@ -116,6 +120,7 @@ describe("CreateStorageBindingUseCase", () => {
         adapterType: "gcs",
         config: validConfig,
         occurredBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(InvalidStorageBindingNameError);
     expect(writeRepository.size()).toBe(0);

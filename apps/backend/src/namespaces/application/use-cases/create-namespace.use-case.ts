@@ -12,6 +12,10 @@ import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
 const AUDIT_FALLBACK_PRINCIPAL = "system";
 
+export interface ICreateNamespaceUseCaseInput extends ICreateNamespaceInput {
+  requestIp: string | null;
+}
+
 @Injectable()
 export class CreateNamespaceUseCase {
   constructor(
@@ -20,7 +24,7 @@ export class CreateNamespaceUseCase {
     private readonly auditWriteRepo: AuditWriteRepositoryPort,
   ) {}
 
-  async execute(input: ICreateNamespaceInput): Promise<NamespaceWithMetadata> {
+  async execute(input: ICreateNamespaceUseCaseInput): Promise<NamespaceWithMetadata> {
     new Slug(input.slug);
 
     const existing = await this.queryRepository.findBySlug(input.slug);
@@ -40,6 +44,7 @@ export class CreateNamespaceUseCase {
       entityId: namespace.props.slug.value,
       action: "create",
       occurredBy: input.createdBy ?? AUDIT_FALLBACK_PRINCIPAL,
+      requestIp: input.requestIp,
       afterState: {
         slug: namespace.props.slug.value,
         displayName: namespace.props.displayName,

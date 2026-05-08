@@ -13,6 +13,7 @@ const AUDIT_FALLBACK_PRINCIPAL = "system";
 
 export interface IUpdateNamespaceMetadataInputWithActor extends IUpdateNamespaceMetadataInput {
   occurredBy: string | null;
+  requestIp: string | null;
 }
 
 @Injectable()
@@ -45,6 +46,7 @@ export class UpdateNamespaceMetadataUseCase {
       entityId: namespace.props.slug.value,
       action: "update",
       occurredBy: input.occurredBy ?? AUDIT_FALLBACK_PRINCIPAL,
+      requestIp: input.requestIp,
       beforeState: {
         displayName: existing.props.displayName,
         description: existing.props.description,

@@ -12,6 +12,7 @@ const AUDIT_FALLBACK_PRINCIPAL = "system";
 export interface IUnarchiveNamespaceInput {
   slug: string;
   occurredBy: string | null;
+  requestIp: string | null;
 }
 
 @Injectable()
@@ -44,6 +45,7 @@ export class UnarchiveNamespaceUseCase {
         entityId: namespace.props.slug.value,
         action: "unarchive",
         occurredBy: input.occurredBy ?? AUDIT_FALLBACK_PRINCIPAL,
+        requestIp: input.requestIp,
         beforeState: { archivedAt: existing.props.archivedAt?.toISOString() ?? null },
         afterState: { archivedAt: null },
       });

@@ -21,6 +21,7 @@ interface ICreateStorageBindingInput {
   adapterType: "gcs";
   config: unknown;
   occurredBy: string | null;
+  requestIp: string | null;
 }
 
 @Injectable()
@@ -72,6 +73,7 @@ export class CreateStorageBindingUseCase {
       entityId: inserted.props.name,
       action: "create",
       occurredBy: input.occurredBy ?? AUDIT_FALLBACK_PRINCIPAL,
+      requestIp: input.requestIp,
       afterState: {
         name: inserted.props.name,
         adapterType: inserted.props.adapterType,

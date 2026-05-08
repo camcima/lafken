@@ -25,6 +25,9 @@ export class AuditEntryResponseDTO {
   @ApiProperty({ required: false, type: String })
   reason?: string;
 
+  @ApiProperty({ required: false, type: String })
+  requestIp?: string;
+
   @ApiProperty()
   occurredAt!: string;
 }

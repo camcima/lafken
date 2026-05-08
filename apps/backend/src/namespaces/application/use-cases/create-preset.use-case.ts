@@ -18,6 +18,7 @@ export interface ICreatePresetInput {
   name: string;
   params: PresetParams;
   createdBy: string | null;
+  requestIp: string | null;
 }
 
 @Injectable()
@@ -61,6 +62,7 @@ export class CreatePresetUseCase {
         entityId: `${namespace.props.slug.value}/${preset.props.name}`,
         action: "create",
         occurredBy: input.createdBy ?? AUDIT_FALLBACK_PRINCIPAL,
+        requestIp: input.requestIp,
         afterState: {
           namespace: namespace.props.slug.value,
           name: preset.props.name,

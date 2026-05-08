@@ -35,6 +35,7 @@ export class AuditWriteRepository extends AuditWriteRepositoryPort {
           before_state: input.beforeState ?? null,
           after_state: input.afterState ?? null,
           reason: input.reason ?? null,
+          request_ip: input.requestIp ?? null,
         })
         .execute();
     } catch (err) {

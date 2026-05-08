@@ -80,6 +80,7 @@ describe("UpdatePresetVersionUseCase", () => {
       name: "thumbnail",
       params: VALID_PARAMS,
       createdBy: "ops@latam.com",
+      requestIp: null,
     });
 
     expect(v2.props.version).toBe(2);
@@ -98,6 +99,7 @@ describe("UpdatePresetVersionUseCase", () => {
       name: "thumbnail",
       params: VALID_PARAMS,
       createdBy: null,
+      requestIp: null,
     });
 
     expect(v2.props.active).toBe(false);
@@ -105,7 +107,13 @@ describe("UpdatePresetVersionUseCase", () => {
 
   it("throws NamespaceNotFoundError when slug missing", async () => {
     await expect(
-      useCase.execute({ slug: "ghost", name: "x", params: VALID_PARAMS, createdBy: null }),
+      useCase.execute({
+        slug: "ghost",
+        name: "x",
+        params: VALID_PARAMS,
+        createdBy: null,
+        requestIp: null,
+      }),
     ).rejects.toBeInstanceOf(NamespaceNotFoundError);
   });
 
@@ -117,6 +125,7 @@ describe("UpdatePresetVersionUseCase", () => {
         name: "thumbnail",
         params: VALID_PARAMS,
         createdBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(NamespaceArchivedError);
   });
@@ -129,6 +138,7 @@ describe("UpdatePresetVersionUseCase", () => {
         name: "lafken:thumbnail",
         params: VALID_PARAMS,
         createdBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(ReservedPresetNameError);
   });
@@ -140,6 +150,7 @@ describe("UpdatePresetVersionUseCase", () => {
         name: "Lafken:Thumbnail",
         params: VALID_PARAMS,
         createdBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(ReservedPresetNameError);
   });
@@ -152,6 +163,7 @@ describe("UpdatePresetVersionUseCase", () => {
         name: "ghost",
         params: VALID_PARAMS,
         createdBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(PresetNotFoundError);
   });
@@ -169,6 +181,7 @@ describe("UpdatePresetVersionUseCase", () => {
       name: "thumbnail",
       params: VALID_PARAMS,
       createdBy: null,
+      requestIp: null,
     });
     expect(v2.props.version).toBe(2);
     expect(writeRepo.collisionsRemaining).toBe(0);
@@ -188,6 +201,7 @@ describe("UpdatePresetVersionUseCase", () => {
         name: "thumbnail",
         params: VALID_PARAMS,
         createdBy: null,
+        requestIp: null,
       });
       expect.fail("should have thrown");
     } catch (err) {

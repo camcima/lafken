@@ -25,6 +25,7 @@ export interface IRecordAuditInput {
   beforeState?: Record<string, unknown> | null;
   afterState?: Record<string, unknown> | null;
   reason?: string | null;
+  requestIp?: string | null;
 }
 
 export abstract class AuditWriteRepositoryPort {

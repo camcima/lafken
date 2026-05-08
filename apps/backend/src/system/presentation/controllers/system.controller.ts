@@ -6,6 +6,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Ip,
   NotFoundException,
   Param,
   Patch,
@@ -100,6 +101,7 @@ export class SystemController {
   async createStorageBinding(
     @Body() body: CreateStorageBindingRequestDTO,
     @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+    @Ip() requestIp: string,
   ): Promise<StorageBindingResponseDTO> {
     try {
       const binding = await this.createStorageBindingUseCase.execute({
@@ -107,6 +109,7 @@ export class SystemController {
         adapterType: body.adapterType,
         config: body.config,
         occurredBy: user.emailAddress,
+        requestIp,
       });
       return StorageBindingResponseMapper.fromDomain(binding);
     } catch (err) {
@@ -128,12 +131,14 @@ export class SystemController {
     @Param("name") name: string,
     @Body() body: UpdateStorageBindingRequestDTO,
     @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+    @Ip() requestIp: string,
   ): Promise<StorageBindingResponseDTO> {
     try {
       const binding = await this.updateStorageBindingUseCase.execute({
         name,
         config: body.config,
         occurredBy: user.emailAddress,
+        requestIp,
       });
       return StorageBindingResponseMapper.fromDomain(binding);
     } catch (err) {
@@ -154,9 +159,14 @@ export class SystemController {
   async deleteStorageBinding(
     @Param("name") name: string,
     @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+    @Ip() requestIp: string,
   ): Promise<void> {
     try {
-      await this.deleteStorageBindingUseCase.execute({ name, occurredBy: user.emailAddress });
+      await this.deleteStorageBindingUseCase.execute({
+        name,
+        occurredBy: user.emailAddress,
+        requestIp,
+      });
     } catch (err) {
       if (err instanceof StorageBindingNotFoundError) {
         throw new NotFoundException(err.message, { cause: err });

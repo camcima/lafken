@@ -20,6 +20,7 @@ export interface IUpdatePresetVersionInput {
   name: string;
   params: PresetParams;
   createdBy: string | null;
+  requestIp: string | null;
 }
 
 @Injectable()
@@ -65,6 +66,7 @@ export class UpdatePresetVersionUseCase {
           entityId: `${namespace.props.slug.value}/${preset.props.name}`,
           action: "update",
           occurredBy: input.createdBy ?? AUDIT_FALLBACK_PRINCIPAL,
+          requestIp: input.requestIp,
           beforeState: { version: existing.props.version },
           afterState: { version: preset.props.version },
         });

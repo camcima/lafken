@@ -96,6 +96,7 @@ export interface ConfigurationAuditLog {
   occurred_at: Generated<Timestamp>;
   occurred_by: string;
   reason: string | null;
+  request_ip: string | null;
   updated_at: Generated<Timestamp>;
 }
 

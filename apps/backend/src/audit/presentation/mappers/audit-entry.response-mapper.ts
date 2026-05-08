@@ -13,6 +13,7 @@ export class AuditEntryResponseMapper {
       beforeState: entry.props.beforeState ?? undefined,
       afterState: entry.props.afterState ?? undefined,
       reason: entry.props.reason ?? undefined,
+      requestIp: entry.props.requestIp ?? undefined,
       occurredAt: entry.props.occurredAt.toISOString(),
     };
   }

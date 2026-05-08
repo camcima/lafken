@@ -20,6 +20,7 @@ describe("AuditEntryResponseMapper", () => {
         beforeState: null,
         afterState: { slug: "my-namespace", displayName: "My Namespace" },
         reason: "Initial setup",
+        requestIp: "10.0.0.42",
         occurredAt,
         createdAt,
         updatedAt,
@@ -35,6 +36,7 @@ describe("AuditEntryResponseMapper", () => {
       beforeState: undefined,
       afterState: { slug: "my-namespace", displayName: "My Namespace" },
       reason: "Initial setup",
+      requestIp: "10.0.0.42",
       occurredAt: occurredAt.toISOString(),
     });
   });
@@ -52,6 +54,7 @@ describe("AuditEntryResponseMapper", () => {
         beforeState: { state: "active" },
         afterState: null,
         reason: null,
+        requestIp: null,
         occurredAt,
         createdAt: occurredAt,
         updatedAt: occurredAt,
@@ -62,6 +65,7 @@ describe("AuditEntryResponseMapper", () => {
     expect(result.beforeState).toEqual({ state: "active" });
     expect(result.afterState).toBeUndefined();
     expect(result.reason).toBeUndefined();
+    expect(result.requestIp).toBeUndefined();
     expect(result.occurredAt).toBe(occurredAt.toISOString());
   });
 });

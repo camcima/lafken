@@ -59,6 +59,7 @@ describe("CreatePresetUseCase", () => {
       name: "thumbnail",
       params: VALID_PARAMS,
       createdBy: "ops@latam.com",
+      requestIp: null,
     });
 
     expect(preset.props.version).toBe(1);
@@ -73,6 +74,7 @@ describe("CreatePresetUseCase", () => {
         name: "x",
         params: VALID_PARAMS,
         createdBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(NamespaceNotFoundError);
   });
@@ -86,6 +88,7 @@ describe("CreatePresetUseCase", () => {
         name: "thumbnail",
         params: VALID_PARAMS,
         createdBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(NamespaceArchivedError);
   });
@@ -100,6 +103,7 @@ describe("CreatePresetUseCase", () => {
         name: "lafken:thumbnail",
         params: VALID_PARAMS,
         createdBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(ReservedPresetNameError);
   });
@@ -114,6 +118,7 @@ describe("CreatePresetUseCase", () => {
         name: "Lafken:Thumbnail",
         params: VALID_PARAMS,
         createdBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(ReservedPresetNameError);
   });
@@ -143,6 +148,7 @@ describe("CreatePresetUseCase", () => {
         name: "thumbnail",
         params: VALID_PARAMS,
         createdBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(PresetNameAlreadyExistsError);
   });

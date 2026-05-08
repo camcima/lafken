@@ -11,6 +11,7 @@ const AUDIT_FALLBACK_PRINCIPAL = "system";
 interface IDeleteStorageBindingInput {
   name: string;
   occurredBy: string | null;
+  requestIp: string | null;
 }
 
 @Injectable()
@@ -34,6 +35,7 @@ export class DeleteStorageBindingUseCase {
       entityId: existing.props.name,
       action: "delete",
       occurredBy: input.occurredBy ?? AUDIT_FALLBACK_PRINCIPAL,
+      requestIp: input.requestIp,
       beforeState: {
         name: existing.props.name,
         adapterType: existing.props.adapterType,

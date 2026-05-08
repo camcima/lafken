@@ -7,6 +7,7 @@ export interface IAuditEntryProps {
   beforeState: Record<string, unknown> | null;
   afterState: Record<string, unknown> | null;
   reason: string | null;
+  requestIp: string | null;
   occurredAt: Date;
   createdAt: Date;
   updatedAt: Date;

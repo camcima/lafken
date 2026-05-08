@@ -47,6 +47,7 @@ describe("UpdateNamespaceMetadataUseCase", () => {
       displayName: "New Name",
       description: "A fresh description",
       occurredBy: "ada@example.com",
+      requestIp: null,
     });
 
     expect(result.namespace.props.displayName).toBe("New Name");
@@ -70,6 +71,7 @@ describe("UpdateNamespaceMetadataUseCase", () => {
         displayName: "Whatever",
         description: null,
         occurredBy: null,
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(NamespaceNotFoundError);
     expect(writeRepo.size()).toBe(0);

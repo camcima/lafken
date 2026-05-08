@@ -33,6 +33,7 @@ const VALID_INPUT = {
     retryConfig: null,
   },
   createdBy: "ops@latam.com",
+  requestIp: null,
 };
 
 describe("CreateNamespaceUseCase", () => {

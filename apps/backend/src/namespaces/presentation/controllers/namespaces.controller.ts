@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Ip,
   NotFoundException,
   Param,
   Patch,
@@ -170,6 +171,7 @@ export class NamespacesController {
   async createNamespace(
     @Body() body: CreateNamespaceRequestDTO,
     @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+    @Ip() requestIp: string,
   ): Promise<NamespaceResponseDTO> {
     try {
       const result = await this.createNamespaceUseCase.execute({
@@ -178,6 +180,7 @@ export class NamespacesController {
         description: body.description,
         storageBindingId: body.storageBindingId,
         createdBy: user.emailAddress,
+        requestIp,
         policy: {
           retentionDays: body.policy.retentionDays,
           retentionMode: body.policy.retentionMode,
@@ -218,6 +221,7 @@ export class NamespacesController {
     @Param("slug") slug: string,
     @Body() body: UpdateNamespaceMetadataRequestDTO,
     @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+    @Ip() requestIp: string,
   ): Promise<NamespaceResponseDTO> {
     try {
       const result = await this.updateNamespaceMetadataUseCase.execute({
@@ -225,6 +229,7 @@ export class NamespacesController {
         displayName: body.displayName,
         description: body.description,
         occurredBy: user.emailAddress,
+        requestIp,
       });
       return NamespaceResponseMapper.fromDomain(
         result.namespace,
@@ -248,11 +253,13 @@ export class NamespacesController {
   async archiveNamespace(
     @Param("slug") slug: string,
     @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+    @Ip() requestIp: string,
   ): Promise<NamespaceResponseDTO> {
     try {
       const result = await this.archiveNamespaceUseCase.execute({
         slug,
         occurredBy: user.emailAddress,
+        requestIp,
       });
       return NamespaceResponseMapper.fromDomain(
         result.namespace,
@@ -276,11 +283,13 @@ export class NamespacesController {
   async unarchiveNamespace(
     @Param("slug") slug: string,
     @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+    @Ip() requestIp: string,
   ): Promise<NamespaceResponseDTO> {
     try {
       const result = await this.unarchiveNamespaceUseCase.execute({
         slug,
         occurredBy: user.emailAddress,
+        requestIp,
       });
       return NamespaceResponseMapper.fromDomain(
         result.namespace,
@@ -308,11 +317,13 @@ export class NamespacesController {
     @Param("slug") slug: string,
     @Body() body: CreatePolicyVersionRequestDTO,
     @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+    @Ip() requestIp: string,
   ): Promise<NamespaceResponseDTO> {
     try {
       await this.updateNamespacePolicyUseCase.execute({
         slug,
         createdBy: user.emailAddress,
+        requestIp,
         policy: {
           retentionDays: body.policy.retentionDays,
           retentionMode: body.policy.retentionMode,
@@ -359,6 +370,7 @@ export class NamespacesController {
     @Param("slug") slug: string,
     @Body() body: CreatePresetRequestDTO,
     @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+    @Ip() requestIp: string,
   ): Promise<NamespacePresetResponseDTO> {
     try {
       const params = PresetParams.fromUnknown(body.params);
@@ -367,6 +379,7 @@ export class NamespacesController {
         name: body.name,
         params,
         createdBy: user.emailAddress,
+        requestIp,
       });
       return NamespacePresetResponseMapper.fromDomain(preset);
     } catch (err) {
@@ -391,6 +404,7 @@ export class NamespacesController {
     @Param("name") name: string,
     @Body() body: UpdatePresetVersionRequestDTO,
     @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+    @Ip() requestIp: string,
   ): Promise<NamespacePresetResponseDTO> {
     try {
       const params = PresetParams.fromUnknown(body.params);
@@ -399,6 +413,7 @@ export class NamespacesController {
         name,
         params,
         createdBy: user.emailAddress,
+        requestIp,
       });
       return NamespacePresetResponseMapper.fromDomain(preset);
     } catch (err) {
@@ -424,12 +439,16 @@ export class NamespacesController {
     @Param("slug") slug: string,
     @Param("name") name: string,
     @Body() body: SetPresetActiveRequestDTO,
+    @AuthenticatedUser() user: CurrentAuthenticatedUserDTO,
+    @Ip() requestIp: string,
   ): Promise<NamespacePresetResponseDTO> {
     try {
       const preset = await this.setPresetActiveUseCase.execute({
         slug,
         name,
         active: body.active,
+        occurredBy: user.emailAddress,
+        requestIp,
       });
       return NamespacePresetResponseMapper.fromDomain(preset);
     } catch (err) {

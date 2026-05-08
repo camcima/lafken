@@ -12,6 +12,7 @@ const AUDIT_FALLBACK_PRINCIPAL = "system";
 export interface IArchiveNamespaceInput {
   slug: string;
   occurredBy: string | null;
+  requestIp: string | null;
 }
 
 @Injectable()
@@ -44,6 +45,7 @@ export class ArchiveNamespaceUseCase {
         entityId: namespace.props.slug.value,
         action: "archive",
         occurredBy: input.occurredBy ?? AUDIT_FALLBACK_PRINCIPAL,
+        requestIp: input.requestIp,
         beforeState: { archivedAt: null },
         afterState: { archivedAt: namespace.props.archivedAt?.toISOString() ?? null },
       });

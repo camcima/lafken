@@ -34,7 +34,7 @@ describe("DeleteStorageBindingUseCase", () => {
     queryRepository.seed([binding]);
     writeRepository.seed(binding);
 
-    await useCase.execute({ name: "default", occurredBy: "ops@latam.com" });
+    await useCase.execute({ name: "default", occurredBy: "ops@latam.com", requestIp: null });
 
     expect(writeRepository.has("default")).toBe(false);
     expect(auditRepo.records).toHaveLength(1);
@@ -47,9 +47,9 @@ describe("DeleteStorageBindingUseCase", () => {
   });
 
   it("rejects when the binding does not exist", async () => {
-    await expect(useCase.execute({ name: "missing", occurredBy: null })).rejects.toBeInstanceOf(
-      StorageBindingNotFoundError,
-    );
+    await expect(
+      useCase.execute({ name: "missing", occurredBy: null, requestIp: null }),
+    ).rejects.toBeInstanceOf(StorageBindingNotFoundError);
     expect(auditRepo.records).toHaveLength(0);
   });
 });

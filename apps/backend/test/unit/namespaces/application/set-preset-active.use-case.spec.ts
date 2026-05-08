@@ -9,6 +9,7 @@ import { PresetNotFoundError } from "@/namespaces/domain/errors/preset-not-found
 import { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
+import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 import { InMemoryNamespacePresetWriteRepository } from "../__fakes__/in-memory-namespace-preset-write.repository";
 import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
 
@@ -55,15 +56,17 @@ function preset(active: boolean): NamespacePreset {
 describe("SetPresetActiveUseCase", () => {
   let queryRepo: InMemoryNamespaceQueryRepository;
   let writeRepo: InMemoryNamespacePresetWriteRepository;
+  let auditRepo: InMemoryAuditWriteRepository;
   let useCase: SetPresetActiveUseCase;
 
   beforeEach(() => {
     queryRepo = new InMemoryNamespaceQueryRepository();
     writeRepo = new InMemoryNamespacePresetWriteRepository();
-    useCase = new SetPresetActiveUseCase(queryRepo, writeRepo);
+    auditRepo = new InMemoryAuditWriteRepository();
+    useCase = new SetPresetActiveUseCase(queryRepo, writeRepo, auditRepo);
   });
 
-  it("activates an inactive preset", async () => {
+  it("activates an inactive preset and writes an audit record", async () => {
     queryRepo.seed([ns({ slug: "aircraft-photos" })]);
     queryRepo.seedPresets([preset(false)]);
     writeRepo.seed(preset(false));
@@ -72,8 +75,19 @@ describe("SetPresetActiveUseCase", () => {
       slug: "aircraft-photos",
       name: "thumbnail",
       active: true,
+      occurredBy: "ops@latam.com",
+      requestIp: null,
     });
     expect(result.props.active).toBe(true);
+    expect(auditRepo.records).toHaveLength(1);
+    expect(auditRepo.records[0]).toMatchObject({
+      entityType: "namespace_preset",
+      entityId: "aircraft-photos/thumbnail",
+      action: "update",
+      occurredBy: "ops@latam.com",
+      beforeState: { active: false },
+      afterState: { active: true },
+    });
   });
 
   it("deactivates an active preset", async () => {
@@ -85,11 +99,14 @@ describe("SetPresetActiveUseCase", () => {
       slug: "aircraft-photos",
       name: "thumbnail",
       active: false,
+      occurredBy: null,
+      requestIp: null,
     });
     expect(result.props.active).toBe(false);
+    expect(auditRepo.records).toHaveLength(1);
   });
 
-  it("is idempotent when toggling to current state", async () => {
+  it("is idempotent and does not write audit when toggling to current state", async () => {
     queryRepo.seed([ns({ slug: "aircraft-photos" })]);
     queryRepo.seedPresets([preset(true)]);
     writeRepo.seed(preset(true));
@@ -98,27 +115,48 @@ describe("SetPresetActiveUseCase", () => {
       slug: "aircraft-photos",
       name: "thumbnail",
       active: true,
+      occurredBy: null,
+      requestIp: null,
     });
     expect(result.props.active).toBe(true);
+    expect(auditRepo.records).toHaveLength(0);
   });
 
   it("throws NamespaceNotFoundError when slug missing", async () => {
     await expect(
-      useCase.execute({ slug: "ghost", name: "x", active: true }),
+      useCase.execute({
+        slug: "ghost",
+        name: "x",
+        active: true,
+        occurredBy: null,
+        requestIp: null,
+      }),
     ).rejects.toBeInstanceOf(NamespaceNotFoundError);
   });
 
   it("throws NamespaceArchivedError when archived", async () => {
     queryRepo.seed([ns({ slug: "aircraft-photos", archived: true })]);
     await expect(
-      useCase.execute({ slug: "aircraft-photos", name: "thumbnail", active: true }),
+      useCase.execute({
+        slug: "aircraft-photos",
+        name: "thumbnail",
+        active: true,
+        occurredBy: null,
+        requestIp: null,
+      }),
     ).rejects.toBeInstanceOf(NamespaceArchivedError);
   });
 
   it("throws PresetNotFoundError when name unknown", async () => {
     queryRepo.seed([ns({ slug: "aircraft-photos" })]);
     await expect(
-      useCase.execute({ slug: "aircraft-photos", name: "ghost", active: true }),
+      useCase.execute({
+        slug: "aircraft-photos",
+        name: "ghost",
+        active: true,
+        occurredBy: null,
+        requestIp: null,
+      }),
     ).rejects.toBeInstanceOf(PresetNotFoundError);
   });
 });

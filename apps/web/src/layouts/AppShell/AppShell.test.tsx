@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -6,6 +7,17 @@ import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
 
 // Import after mocks are set up
 import { AppShell } from "./index";
+
+function renderShell() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <I18nProvider>
+      <QueryClientProvider client={client}>
+        <AppShell />
+      </QueryClientProvider>
+    </I18nProvider>,
+  );
+}
 
 // Sonner's Toaster calls window.matchMedia which is not available in jsdom
 vi.mock("@/components/feedback/Success/Sonner", () => ({
@@ -50,22 +62,14 @@ vi.mock("@/features/dashboard/hooks/useDashboardOverview", () => ({
 
 describe("AppShell", () => {
   it("renders LAFKEN branding and sidebar", () => {
-    render(
-      <I18nProvider>
-        <AppShell />
-      </I18nProvider>,
-    );
+    renderShell();
 
     expect(screen.getByTestId("app-sidebar")).toBeInTheDocument();
     expect(screen.getByText(/LAFKEN/)).toBeInTheDocument();
   });
 
   it("renders navigation links for a platform_operator", () => {
-    render(
-      <I18nProvider>
-        <AppShell />
-      </I18nProvider>,
-    );
+    renderShell();
 
     const sidebar = screen.getByTestId("app-sidebar");
 
@@ -85,11 +89,7 @@ describe("AppShell", () => {
   });
 
   it("renders the outlet placeholder inside main", () => {
-    render(
-      <I18nProvider>
-        <AppShell />
-      </I18nProvider>,
-    );
+    renderShell();
     expect(screen.getByTestId("outlet")).toBeInTheDocument();
   });
 });

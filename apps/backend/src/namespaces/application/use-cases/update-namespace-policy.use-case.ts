@@ -18,6 +18,7 @@ export interface IUpdateNamespacePolicyInput {
   slug: string;
   policy: ICreateNamespaceInitialPolicyInput;
   createdBy: string | null;
+  requestIp: string | null;
 }
 
 @Injectable()
@@ -54,6 +55,7 @@ export class UpdateNamespacePolicyUseCase {
           entityId: namespace.props.slug.value,
           action: "update",
           occurredBy: input.createdBy ?? AUDIT_FALLBACK_PRINCIPAL,
+          requestIp: input.requestIp,
           beforeState: beforeVersion === null ? null : { version: beforeVersion },
           // Policy field summary only — the full payload contains bigint
           // values that don't serialize directly to jsonb. The new version
