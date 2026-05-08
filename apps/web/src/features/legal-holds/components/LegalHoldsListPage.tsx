@@ -271,7 +271,7 @@ function HoldDrawer({ hold, onClose, onLift }: IHoldDrawerProps): React.JSX.Elem
 
 export function LegalHoldsListPage(): React.JSX.Element {
   const { t } = useTranslation();
-  const { q: initialQ } = useSearch({ from: "/_protected/legal-holds" });
+  const { q: initialQ } = useSearch({ from: "/_protected/legal-holds/" });
   const [query, setQuery] = useState(initialQ ?? "");
   const [statusFilter, setStatusFilter] = useState("all");
   const [openId, setOpenId] = useState<string | null>(null);
