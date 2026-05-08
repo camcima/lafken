@@ -91,7 +91,7 @@ function Thumb({ asset, size = "md" }: IThumbProps): React.JSX.Element {
   return (
     <div
       className={cn(
-        "border-border bg-card relative grid place-items-center overflow-hidden rounded border",
+        "border-border bg-card relative overflow-hidden rounded border",
         THUMB_DIMS[size],
       )}
       style={useStandardChrome ? undefined : CHECKER_STYLE}
@@ -102,7 +102,7 @@ function Thumb({ asset, size = "md" }: IThumbProps): React.JSX.Element {
           publicId={asset.publicId}
           preset="lafken:thumbnail"
           alt=""
-          className="border-border block max-h-full max-w-full border"
+          className="absolute inset-0 h-full w-full object-contain"
         />
       )}
       {/* Static processing scan stripe (no animation per React port spec) */}
