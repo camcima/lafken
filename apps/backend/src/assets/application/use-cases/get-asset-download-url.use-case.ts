@@ -13,6 +13,12 @@ export interface IGetAssetDownloadUrlInput {
 
 export interface IGetAssetDownloadUrlResult {
   url: string;
+  /**
+   * Resolved namespace slug for the asset's namespace, or `null` if the
+   * namespace row was deleted between the asset query and this lookup. Used by
+   * the controller as a metric attribute and is allowed-list bounded.
+   */
+  namespaceSlug: string | null;
 }
 
 @Injectable()
@@ -43,6 +49,10 @@ export class GetAssetDownloadUrlUseCase {
       ttlSeconds: DOWNLOAD_URL_TTL_SECONDS,
     });
 
-    return { url };
+    const namespaceSlug = await this.assetQueryRepository.findNamespaceSlug(
+      asset.props.namespaceId,
+    );
+
+    return { url, namespaceSlug };
   }
 }

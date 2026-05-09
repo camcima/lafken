@@ -37,7 +37,6 @@ import {
 
 import { ConfirmUploadUseCase } from "@/assets/application/use-cases/confirm-upload.use-case";
 import { CreateUploadIntentUseCase } from "@/assets/application/use-cases/create-upload-intent.use-case";
-import { RefreshUploadUrlUseCase } from "@/assets/application/use-cases/refresh-upload-url.use-case";
 import { GetAssetByIdUseCase } from "@/assets/application/use-cases/get-asset-by-id.use-case";
 import { GetAssetByPublicIdUseCase } from "@/assets/application/use-cases/get-asset-by-public-id.use-case";
 import { GetAssetDownloadUrlUseCase } from "@/assets/application/use-cases/get-asset-download-url.use-case";
@@ -45,6 +44,7 @@ import { GetAssetProcessingJobUseCase } from "@/assets/application/use-cases/get
 import { ListAssetAnalysesUseCase } from "@/assets/application/use-cases/list-asset-analyses.use-case";
 import { ListAssetStateTransitionsUseCase } from "@/assets/application/use-cases/list-asset-state-transitions.use-case";
 import { ListAssetsUseCase } from "@/assets/application/use-cases/list-assets.use-case";
+import { RefreshUploadUrlUseCase } from "@/assets/application/use-cases/refresh-upload-url.use-case";
 import { RetryAssetProcessingUseCase } from "@/assets/application/use-cases/retry-asset-processing.use-case";
 import type { Asset } from "@/assets/domain/entities/asset.entity";
 import { AssetNotFoundError } from "@/assets/domain/errors/asset-not-found.error";
@@ -68,6 +68,11 @@ import { SYSTEM_PRESETS } from "@/assets/infrastructure/services/system-presets"
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
+import {
+  downloadUrlIssuedCounter,
+  previewUrlDurationHistogram,
+  previewUrlIssuedCounter,
+} from "@/shared/infrastructure/telemetry/metrics";
 import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 import { AuthenticatedEndpoint } from "@/shared/presentation/auth/decorators/authenticated-endpoint.decorator";
 import {
@@ -230,6 +235,7 @@ export class AssetsController {
     if (!preset || preset.trim() === "") {
       throw new UnprocessableEntityException("preset query parameter is required");
     }
+    const startedAt: number = Date.now();
     try {
       const result = await this.getAssetByPublicIdUseCase.execute({ publicId });
       // Defense in depth: refuse to mint preview URLs for non-previewable
@@ -271,9 +277,16 @@ export class AssetsController {
           `No active preset matching "${preset}" was found for this asset's namespace.`,
         );
       }
-      const expiresAt = new Date(
-        Date.now() + PREVIEW_SOURCE_URL_TTL_SECONDS * 1000,
-      ).toISOString();
+      // eslint-disable-next-line no-magic-numbers -- TTL constant is in seconds; "* 1000" converts to milliseconds for the JS Date API.
+      const expiresAt = new Date(Date.now() + PREVIEW_SOURCE_URL_TTL_SECONDS * 1000).toISOString();
+      previewUrlIssuedCounter.add(1, {
+        namespace_slug: result.namespaceSlug,
+        preset_name: preset,
+      });
+      previewUrlDurationHistogram.record(Date.now() - startedAt, {
+        namespace_slug: result.namespaceSlug,
+        preset_name: preset,
+      });
       return { url, expiresAt };
     } catch (err) {
       if (err instanceof AssetNotFoundError) {
@@ -295,7 +308,11 @@ export class AssetsController {
   @ApiNotFoundResponse()
   async getDownloadUrl(@Param("publicId") publicId: string): Promise<AssetDownloadUrlResponseDTO> {
     try {
-      return await this.getAssetDownloadUrlUseCase.execute({ publicId });
+      const result = await this.getAssetDownloadUrlUseCase.execute({ publicId });
+      if (result.namespaceSlug !== null) {
+        downloadUrlIssuedCounter.add(1, { namespace_slug: result.namespaceSlug });
+      }
+      return { url: result.url };
     } catch (err) {
       if (err instanceof AssetNotFoundError) {
         throw new NotFoundException(err.message, { cause: err });
