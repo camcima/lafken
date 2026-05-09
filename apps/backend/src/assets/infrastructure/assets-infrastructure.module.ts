@@ -10,6 +10,7 @@ import { ContentModerationPort } from "@/assets/domain/services/content-moderati
 import { ImageInspectionPort } from "@/assets/domain/services/image-inspection.service.port";
 import { MimeSniffPort } from "@/assets/domain/services/mime-sniff.service.port";
 import { PreviewUrlSignerPort } from "@/assets/domain/services/preview-url-signer.port";
+import { UploadUrlIssuerPort } from "@/assets/domain/services/upload-url-issuer.service.port";
 import { VirusScanPort } from "@/assets/domain/services/virus-scan.service.port";
 import { environmentConfiguration } from "@/shared/infrastructure/environment.configuration";
 import { DatabaseModule } from "@/shared/infrastructure/persistence/database.module";
@@ -20,13 +21,16 @@ import { AssetWriteRepository } from "./persistence/repositories/asset-write.rep
 import { ProcessingJobRepository } from "./persistence/repositories/processing-job.repository";
 import { UploadIntentWriteRepository } from "./persistence/repositories/upload-intent-write.repository";
 import { ClamAvVirusScanAdapter } from "./services/clamav-virus-scan.adapter";
+import { CompositeUploadUrlIssuer } from "./services/composite-upload-url-issuer";
 import { FileTypeMimeSniffAdapter } from "./services/file-type-mime-sniff.adapter";
 import { GcsAssetStorageAdapter } from "./services/gcs-asset-storage.adapter";
+import { GcsSignedUploadUrlIssuer } from "./services/gcs-signed-upload-url-issuer.adapter";
 import { ImgproxyPreviewUrlSigner } from "./services/imgproxy-preview-url-signer.adapter";
 import { LocalContentModerationAdapter } from "./services/local-content-moderation.adapter";
 import { LocalVirusScanAdapter } from "./services/local-virus-scan.adapter";
 import { NoopPreviewUrlSigner } from "./services/noop-preview-url-signer.adapter";
 import { SharpImageInspectionAdapter } from "./services/sharp-image-inspection.adapter";
+import { TusdUploadUrlIssuer } from "./services/tusd-upload-url-issuer.adapter";
 
 @Module({
   imports: [DatabaseModule],
@@ -49,6 +53,17 @@ import { SharpImageInspectionAdapter } from "./services/sharp-image-inspection.a
           previewSourceEndpoint: environmentConfiguration.STORAGE_GCS_PREVIEW_SOURCE_ENDPOINT,
           credentialsJson: environmentConfiguration.GCS_SERVICE_ACCOUNT_JSON,
         }),
+    },
+    {
+      provide: UploadUrlIssuerPort,
+      useFactory: (storage: AssetStoragePort): UploadUrlIssuerPort => {
+        const gcs = new GcsSignedUploadUrlIssuer(storage);
+        const tusd = environmentConfiguration.TUSD_ENDPOINT_URL
+          ? new TusdUploadUrlIssuer({ endpointUrl: environmentConfiguration.TUSD_ENDPOINT_URL })
+          : null;
+        return new CompositeUploadUrlIssuer({ gcs, tusd });
+      },
+      inject: [AssetStoragePort],
     },
     { provide: ImageInspectionPort, useClass: SharpImageInspectionAdapter },
     FileTypeMimeSniffAdapter,
@@ -102,6 +117,7 @@ import { SharpImageInspectionAdapter } from "./services/sharp-image-inspection.a
     ProcessingJobRepositoryPort,
     UploadIntentWriteRepositoryPort,
     AssetStoragePort,
+    UploadUrlIssuerPort,
     ImageInspectionPort,
     MimeSniffPort,
     VirusScanPort,
