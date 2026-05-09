@@ -873,27 +873,6 @@
           "quarantine": "Cuarentena",
           "holds": "Retenciones"
         }
-      },
-      "assets": {
-        "title": "Activos",
-        "upload": {
-          "cta": "Subir activos",
-          "dialogTitle": "Subir activos",
-          "dropzonePrompt": "Arrastra archivos de imagen aquí o haz clic para elegir",
-          "startButton": "Iniciar carga",
-          "cancelButton": "Cancelar",
-          "fileStateIdle": "Listo",
-          "fileStateUploading": "Subiendo…",
-          "fileStateUploaded": "Subido",
-          "fileStateError": "Falló"
-        },
-        "empty": {
-          "title": "Aún no hay activos",
-          "body": "Sube tu primer activo para comenzar."
-        },
-        "list": {
-          "columnFile": "Cargas recientes"
-        }
       }
     },
     "namespaceDetail": {
@@ -908,8 +887,7 @@
       "tabs": {
         "overview": "Resumen",
         "policy": "Política",
-        "presets": "Presets",
-        "assets": "Activos"
+        "presets": "Presets"
       },
       "overview": {
         "stats": {

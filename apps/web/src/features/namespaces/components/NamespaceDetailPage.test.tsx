@@ -57,7 +57,7 @@ vi.mock("@tanstack/react-router", async () => {
 
 function renderPage(props: {
   slug: string;
-  tab?: "overview" | "policy" | "presets" | "assets";
+  tab?: "overview" | "policy" | "presets";
   onTabChange?: () => void;
 }) {
   const queryClient = new QueryClient({
@@ -110,15 +110,20 @@ describe("NamespaceDetailPage — valid slug", () => {
     expect(screen.getByText("aircraft-photos")).toBeInTheDocument();
   });
 
-  it("renders 4 tab triggers (overview, policy, presets, assets)", () => {
+  it("renders 3 tab triggers (overview, policy, presets)", () => {
     renderPage({ slug: "aircraft-photos" });
     const tabList = screen.getByRole("tablist");
     const tabs = tabList.querySelectorAll("[role='tab']");
-    expect(tabs).toHaveLength(4);
+    expect(tabs).toHaveLength(3);
     expect(screen.getByRole("tab", { name: /overview/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /policy/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /presets/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /assets/i })).toBeInTheDocument();
+  });
+
+  it("renders a View assets link in the header", () => {
+    renderPage({ slug: "aircraft-photos" });
+    const viewAssetsEl = screen.getByText(/^view assets$/i);
+    expect(viewAssetsEl.tagName.toLowerCase()).toBe("a");
   });
 
   it("does not render Webhooks or Quotas tabs", () => {

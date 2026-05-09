@@ -1,6 +1,6 @@
 import type { AssetState, NamespaceResponseDTO } from "@shared/backend-api";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useSearch } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { Download, Filter, Lock, Plus, Search, Tag, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -47,11 +47,12 @@ interface INamespaceOption {
 
 export function AssetsListPage(): React.JSX.Element {
   const { t } = useTranslation();
-  const { legalHoldId } = useSearch({ from: "/_protected/assets/" });
+  const { legalHoldId, namespaceSlug } = useSearch({ from: "/_protected/assets/" });
+  const navigate = useNavigate();
 
   const [view, setView] = useState<ViewMode>("rows");
   const [stateFilter, setStateFilter] = useState("all");
-  const [namespaceFilter, setNamespaceFilter] = useState("all");
+  const namespaceFilter: string = namespaceSlug ?? "all";
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(() => new Set<string>());
   const [page, setPage] = useState(0);
@@ -141,7 +142,10 @@ export function AssetsListPage(): React.JSX.Element {
   }
 
   function handleNamespaceFilter(value: string): void {
-    setNamespaceFilter(value);
+    void navigate({
+      to: "/assets",
+      search: (prev) => ({ ...prev, namespaceSlug: value === "all" ? undefined : value }),
+    });
     setPage(0);
     setSelected(new Set());
   }
@@ -154,7 +158,10 @@ export function AssetsListPage(): React.JSX.Element {
 
   function handleClearFilters(): void {
     setStateFilter("all");
-    setNamespaceFilter("all");
+    void navigate({
+      to: "/assets",
+      search: (prev) => ({ ...prev, namespaceSlug: undefined }),
+    });
     setQuery("");
     setPage(0);
     setSelected(new Set());

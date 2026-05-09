@@ -873,27 +873,6 @@
           "quarantine": "Quarentena",
           "holds": "Retenções"
         }
-      },
-      "assets": {
-        "title": "Ativos",
-        "upload": {
-          "cta": "Enviar ativos",
-          "dialogTitle": "Enviar ativos",
-          "dropzonePrompt": "Solte arquivos de imagem aqui ou clique para escolher",
-          "startButton": "Iniciar envio",
-          "cancelButton": "Cancelar",
-          "fileStateIdle": "Pronto",
-          "fileStateUploading": "Enviando…",
-          "fileStateUploaded": "Enviado",
-          "fileStateError": "Falhou"
-        },
-        "empty": {
-          "title": "Ainda não há ativos",
-          "body": "Envie seu primeiro ativo para começar."
-        },
-        "list": {
-          "columnFile": "Envios recentes"
-        }
       }
     },
     "namespaceDetail": {
@@ -908,8 +887,7 @@
       "tabs": {
         "overview": "Visão geral",
         "policy": "Política",
-        "presets": "Predefinições",
-        "assets": "Ativos"
+        "presets": "Predefinições"
       },
       "overview": {
         "stats": {

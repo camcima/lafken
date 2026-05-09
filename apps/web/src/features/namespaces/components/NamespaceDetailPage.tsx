@@ -21,7 +21,6 @@ import {
 } from "@/features/namespaces/hooks/useNamespaces";
 
 import { ArchiveNamespaceDialog } from "./ArchiveNamespaceDialog";
-import { NamespaceAssetsTab } from "./NamespaceAssetsTab";
 import { NamespaceMetadataDrawer } from "./NamespaceMetadataDrawer";
 import { PastVersionsPanel } from "./PastVersionsPanel";
 import { RealPresetsTab } from "./RealPresetsTab";
@@ -29,7 +28,7 @@ import { RealPresetsTab } from "./RealPresetsTab";
 const BACK_ICON_SIZE = 14;
 const ISO_DATE_LENGTH = 10;
 
-const TABS = ["overview", "policy", "presets", "assets"] as const;
+const TABS = ["overview", "policy", "presets"] as const;
 type INamespaceTab = (typeof TABS)[number];
 
 interface INamespaceDetailPageProps {
@@ -415,6 +414,11 @@ export function NamespaceDetailPage({
             ) : null}
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <Button asChild variant="outline">
+              <Link to="/assets" search={{ namespaceSlug: namespace.slug }}>
+                {t("pages.namespaces.actions.viewAssets")}
+              </Link>
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -476,7 +480,6 @@ export function NamespaceDetailPage({
         />
       )}
       {activeTab === "presets" && <RealPresetsTab namespace={namespace} />}
-      {activeTab === "assets" && <NamespaceAssetsTab namespace={namespace} />}
 
       {/* Metadata drawer */}
       <NamespaceMetadataDrawer

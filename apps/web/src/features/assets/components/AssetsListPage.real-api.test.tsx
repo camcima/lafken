@@ -49,7 +49,8 @@ vi.mock("@tanstack/react-router", () => ({
     to?: string;
     params?: Record<string, string>;
   }) => <a href={props.to ?? "#"}>{children}</a>,
-  useSearch: () => ({ legalHoldId: undefined }),
+  useSearch: () => ({ legalHoldId: undefined, namespaceSlug: undefined }),
+  useNavigate: () => () => {},
 }));
 
 function renderPage(): ReturnType<typeof render> {

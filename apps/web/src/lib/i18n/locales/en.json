@@ -874,27 +874,6 @@
           "quarantine": "Quarantine",
           "holds": "Holds"
         }
-      },
-      "assets": {
-        "title": "Assets",
-        "upload": {
-          "cta": "Upload assets",
-          "dialogTitle": "Upload assets",
-          "dropzonePrompt": "Drop image files here or click to choose",
-          "startButton": "Start upload",
-          "cancelButton": "Cancel",
-          "fileStateIdle": "Ready",
-          "fileStateUploading": "Uploading…",
-          "fileStateUploaded": "Uploaded",
-          "fileStateError": "Failed"
-        },
-        "empty": {
-          "title": "No assets yet",
-          "body": "Upload your first asset to get started."
-        },
-        "list": {
-          "columnFile": "Recent uploads"
-        }
       }
     },
     "namespaceDetail": {
@@ -909,8 +888,7 @@
       "tabs": {
         "overview": "Overview",
         "policy": "Policy",
-        "presets": "Presets",
-        "assets": "Assets"
+        "presets": "Presets"
       },
       "overview": {
         "stats": {

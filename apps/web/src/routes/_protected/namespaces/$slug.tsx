@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { NamespaceDetailPage } from "@/features/namespaces/components/NamespaceDetailPage";
 
-const NAMESPACE_TABS = ["overview", "policy", "presets", "assets"] as const;
+const NAMESPACE_TABS = ["overview", "policy", "presets"] as const;
 
 const searchSchema = z.object({
   tab: z.enum(NAMESPACE_TABS).optional().default("overview"),
