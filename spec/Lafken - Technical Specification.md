@@ -446,7 +446,7 @@ Re-encoding gives the storage layer a clean, predictable file with no embedded m
 
 ### **Step 6 — Finalize**
 
-Compute the SHA-256 content hash. Update the asset record with all derived metadata. Transition state from 'processing' to 'ready' using a database update with a state precondition for idempotency. Mark the processing\_jobs row as 'completed'.
+Compute the SHA-256 content hash. Update the asset record with all derived metadata. Transition state from 'processing' to 'ready' using a database update with a state precondition for idempotency. Mark the processing\_jobs row as 'completed'. Emit an asset.ready event via the EventPublisherPort (Google Pub/Sub by default).
 
 ## **6.4 Failure taxonomy**
 
