@@ -1,6 +1,8 @@
 import { createMachine } from "xstate";
 
 export type AssetProcessingMachineEvent =
+  | { type: "MIME_INVALID" }
+  | { type: "MIME_VALID" }
   | { type: "IMAGE_INVALID" }
   | { type: "IMAGE_VALID" }
   | { type: "VIRUS_INFECTED" }
@@ -17,7 +19,14 @@ export const assetProcessingMachine = createMachine({
     virusScan: {
       on: {
         VIRUS_INFECTED: "quarantinedVirus",
-        VIRUS_CLEAN: "imageInspection",
+        VIRUS_CLEAN: "magicByteDetection",
+        FAILED: "failed",
+      },
+    },
+    magicByteDetection: {
+      on: {
+        MIME_INVALID: "rejected",
+        MIME_VALID: "imageInspection",
         FAILED: "failed",
       },
     },

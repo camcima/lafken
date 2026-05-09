@@ -3,7 +3,11 @@ import { calculateDurationMs } from "@/shared/kernel/domain/duration";
 
 export { calculateDurationMs };
 
-export type ProcessingStepName = "image_inspection" | "virus_scan" | "content_moderation";
+export type ProcessingStepName =
+  | "virus_scan"
+  | "magic_byte_detection"
+  | "image_inspection"
+  | "content_moderation";
 
 export interface IMakeStepTimingInput {
   step: ProcessingStepName;
