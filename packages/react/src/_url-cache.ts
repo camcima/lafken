@@ -20,7 +20,9 @@ export function _getCachedPresetUrl(
   const key: string = `${publicId}|${preset}`;
   const existing: Promise<string> | undefined = cache.get(key);
   if (existing !== undefined) return existing;
-  const fresh: Promise<string> = client.getPreviewUrl({ publicId, preset });
+  const fresh: Promise<string> = client.assets
+    .getPreviewUrl({ publicId, preset })
+    .then((dto) => dto.url);
   cache.set(key, fresh);
   fresh.catch(() => {
     cache.delete(key);

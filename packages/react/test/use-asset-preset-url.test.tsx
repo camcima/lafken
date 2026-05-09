@@ -5,10 +5,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { _resetPresetUrlCache, LafkenProvider, useAssetPresetUrl } from "../src/index";
 
+function makePreviewUrlDto(url: string): { url: string; expiresAt: string } {
+  return { url, expiresAt: new Date(Date.now() + 3_600_000).toISOString() };
+}
+
 function makeStubClient(impl: {
-  getPreviewUrl: (i: { publicId: string; preset: string }) => Promise<string>;
+  getPreviewUrl: (i: { publicId: string; preset: string }) => Promise<{ url: string; expiresAt: string }>;
 }): LafkenClient {
-  return impl as unknown as LafkenClient;
+  return {
+    assets: impl,
+  } as unknown as LafkenClient;
 }
 
 afterEach(() => {
@@ -18,7 +24,7 @@ afterEach(() => {
 describe("useAssetPresetUrl", () => {
   it("returns the resolved URL after the fetch settles", async () => {
     const client = makeStubClient({
-      getPreviewUrl: vi.fn().mockResolvedValue("https://cdn/x.webp"),
+      getPreviewUrl: vi.fn().mockResolvedValue(makePreviewUrlDto("https://cdn/x.webp")),
     });
     const wrapper = ({ children }: { children: React.ReactNode }) => (
       <LafkenProvider client={client}>{children}</LafkenProvider>
@@ -54,7 +60,7 @@ describe("useAssetPresetUrl", () => {
   });
 
   it("dedupes concurrent fetches for the same (publicId, preset) pair", async () => {
-    const fn = vi.fn().mockResolvedValue("https://cdn/x.webp");
+    const fn = vi.fn().mockResolvedValue(makePreviewUrlDto("https://cdn/x.webp"));
     const client = makeStubClient({ getPreviewUrl: fn });
     const wrapper = ({ children }: { children: React.ReactNode }) => (
       <LafkenProvider client={client}>{children}</LafkenProvider>
@@ -70,7 +76,7 @@ describe("useAssetPresetUrl", () => {
 
   it("accepts a client option override (no provider)", async () => {
     const client = makeStubClient({
-      getPreviewUrl: vi.fn().mockResolvedValue("https://cdn/y.webp"),
+      getPreviewUrl: vi.fn().mockResolvedValue(makePreviewUrlDto("https://cdn/y.webp")),
     });
     const { result } = renderHook(() => useAssetPresetUrl("abc", "lafken:thumbnail", { client }));
 

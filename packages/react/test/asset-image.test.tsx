@@ -4,10 +4,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { _resetAssetImageCache, AssetImage, LafkenProvider } from "../src/index";
 
+function makePreviewUrlDto(url: string): { url: string; expiresAt: string } {
+  return { url, expiresAt: new Date(Date.now() + 3_600_000).toISOString() };
+}
+
 function makeStubClient(impl: {
-  getPreviewUrl: (i: { publicId: string; preset: string }) => Promise<string>;
+  getPreviewUrl: (i: { publicId: string; preset: string }) => Promise<{ url: string; expiresAt: string }>;
 }) {
-  return impl as unknown as Parameters<typeof LafkenProvider>[0]["client"];
+  return {
+    assets: impl,
+  } as unknown as Parameters<typeof LafkenProvider>[0]["client"];
 }
 
 afterEach(() => {
@@ -17,7 +23,7 @@ afterEach(() => {
 describe("<AssetImage>", () => {
   it("renders an <img> with the resolved URL", async () => {
     const client = makeStubClient({
-      getPreviewUrl: vi.fn().mockResolvedValue("https://cdn/x.webp"),
+      getPreviewUrl: vi.fn().mockResolvedValue(makePreviewUrlDto("https://cdn/x.webp")),
     });
     const { container } = render(
       <LafkenProvider client={client}>
@@ -61,7 +67,7 @@ describe("<AssetImage>", () => {
   });
 
   it("dedupes concurrent fetches across multiple mounts of the same key", async () => {
-    const fn = vi.fn().mockResolvedValue("https://cdn/x.webp");
+    const fn = vi.fn().mockResolvedValue(makePreviewUrlDto("https://cdn/x.webp"));
     const client = makeStubClient({ getPreviewUrl: fn });
     render(
       <LafkenProvider client={client}>
@@ -77,7 +83,7 @@ describe("<AssetImage>", () => {
 
   it("accepts a client prop override (no provider)", async () => {
     const client = makeStubClient({
-      getPreviewUrl: vi.fn().mockResolvedValue("https://cdn/y.webp"),
+      getPreviewUrl: vi.fn().mockResolvedValue(makePreviewUrlDto("https://cdn/y.webp")),
     });
     const { container } = render(
       <AssetImage
@@ -106,7 +112,7 @@ describe("<AssetImage>", () => {
 
   it("forwards arbitrary <img> attributes", async () => {
     const client = makeStubClient({
-      getPreviewUrl: vi.fn().mockResolvedValue("https://cdn/x.webp"),
+      getPreviewUrl: vi.fn().mockResolvedValue(makePreviewUrlDto("https://cdn/x.webp")),
     });
     const { container } = render(
       <LafkenProvider client={client}>
