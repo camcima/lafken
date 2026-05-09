@@ -16,6 +16,11 @@ import {
   toQuarantinedStorageKey,
 } from "@/assets/domain/value-objects/asset-state.value-object";
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
+import {
+  processingStepDurationHistogram,
+  processingStepOutcomeCounter,
+  processingTerminalStateCounter,
+} from "@/shared/infrastructure/telemetry/metrics";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 import { assetProcessingMachine } from "./asset-processing-machine";
@@ -164,6 +169,11 @@ export class ProcessClaimedAssetUseCase {
       },
       "step completed",
     );
+    this.recordStepMetric({
+      step: "virus_scan",
+      decision: scan.decision,
+      durationMs: calculateDurationMs(scanStartedAt, scanFinishedAt),
+    });
     await this.assetRepo.recordAnalysis({
       assetId: asset.props.id,
       analyzer: scan.analyzer,
@@ -210,14 +220,20 @@ export class ProcessClaimedAssetUseCase {
       this.mimeSniff.sniff(bytes),
     );
     const sniffFinishedAt: Date = new Date();
+    const sniffDecision: "pass" | "error" = sniffedMimeType === null ? "error" : "pass";
     stepTimings.push(
       makeStepTiming({
         step: "magic_byte_detection",
         startedAt: sniffStartedAt,
         finishedAt: sniffFinishedAt,
-        decision: sniffedMimeType === null ? "error" : "pass",
+        decision: sniffDecision,
       }),
     );
+    this.recordStepMetric({
+      step: "magic_byte_detection",
+      decision: sniffDecision,
+      durationMs: calculateDurationMs(sniffStartedAt, sniffFinishedAt),
+    });
 
     if (sniffedMimeType === null) {
       machine.send({ type: "MIME_INVALID" });
@@ -291,6 +307,11 @@ export class ProcessClaimedAssetUseCase {
       },
       "step completed",
     );
+    this.recordStepMetric({
+      step: "image_inspection",
+      decision: inspection.decision,
+      durationMs: calculateDurationMs(inspectionStartedAt, inspectionFinishedAt),
+    });
     await this.assetRepo.recordAnalysis({
       assetId: asset.props.id,
       analyzer: inspection.analyzer,
@@ -364,6 +385,11 @@ export class ProcessClaimedAssetUseCase {
         },
         "step completed",
       );
+      this.recordStepMetric({
+        step: "content_moderation",
+        decision: moderation.decision,
+        durationMs: calculateDurationMs(moderationStartedAt, moderationFinishedAt),
+      });
       await this.assetRepo.recordAnalysis({
         assetId: asset.props.id,
         analyzer: moderation.analyzer,
@@ -443,6 +469,7 @@ export class ProcessClaimedAssetUseCase {
       now: new Date(),
       newStorageKey: input.newStorageKey,
     });
+    processingTerminalStateCounter.add(1, { state: input.toState });
     await this.jobRepo.markCompleted({
       assetId: input.assetId,
       workerId: input.workerId,
@@ -510,6 +537,7 @@ export class ProcessClaimedAssetUseCase {
       occurredBy: this.workerActor(input.workerId),
       now: finishedAt,
     });
+    processingTerminalStateCounter.add(1, { state: "ready" });
     await this.jobRepo.markCompleted({
       assetId: input.assetId,
       workerId: input.workerId,
@@ -568,5 +596,19 @@ export class ProcessClaimedAssetUseCase {
     } catch (err) {
       throw new TransientProcessingError(step, err);
     }
+  }
+
+  /**
+   * Single emission point for `lafken.processing.step.duration` (histogram) and
+   * `lafken.processing.step.outcome` (counter). Keeps attribute keys on the
+   * §5.2 allow-list — `step` and `decision` are both bounded.
+   */
+  private recordStepMetric(input: {
+    step: ProcessingStepName;
+    decision: string;
+    durationMs: number;
+  }): void {
+    processingStepDurationHistogram.record(input.durationMs, { step: input.step });
+    processingStepOutcomeCounter.add(1, { step: input.step, decision: input.decision });
   }
 }

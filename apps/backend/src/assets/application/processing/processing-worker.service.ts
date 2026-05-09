@@ -7,6 +7,13 @@ import { AssetProcessingRepositoryPort } from "@/assets/domain/repositories/asse
 import { ProcessingJobRepositoryPort } from "@/assets/domain/repositories/processing-job.repository.port";
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
 import { environmentConfiguration } from "@/shared/infrastructure/environment.configuration";
+import {
+  processingJobClaimedCounter,
+  processingJobReleasedCounter,
+  processingRetryCounter,
+  processingTerminalStateCounter,
+  processingWorkflowTimeoutCounter,
+} from "@/shared/infrastructure/telemetry/metrics";
 
 import { OrphanUploadIntentSweeperUseCase } from "./orphan-upload-intent-sweeper.use-case";
 import { ProcessClaimedAssetUseCase } from "./process-claimed-asset.use-case";
@@ -109,6 +116,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
     this.logger.debug({ claimed: jobs.length, inFlight: this.inFlight.size }, "tick claimed jobs");
 
     for (const job of jobs) {
+      processingJobClaimedCounter.add(1);
       const promise: Promise<void> = this.process(job.props.assetId, job.props.attemptNumber);
       this.inFlight.set(job.props.assetId, { promise, attemptNumber: job.props.attemptNumber });
       promise
@@ -205,7 +213,9 @@ export class ProcessingWorkerService implements OnModuleDestroy {
             lastError: "worker_shutdown",
             now,
           });
-          if (!released) {
+          if (released) {
+            processingJobReleasedCounter.add(1, { reason: "worker_shutdown" });
+          } else {
             this.logger.warn(
               { assetId },
               "shutdown release lost race; another worker may already own this job",
@@ -242,6 +252,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
           { assetId, attemptNumber, timeoutMs: this.workflowTimeoutMs },
           "workflow timeout reached; marking processing_failed",
         );
+        processingWorkflowTimeoutCounter.add(1);
         await this.markFailed(assetId, attemptNumber, "workflow_timeout", "workflow_timeout");
         return;
       }
@@ -256,10 +267,12 @@ export class ProcessingWorkerService implements OnModuleDestroy {
           { assetId, attemptNumber, err: lastError },
           "permanent processing error; marking failed without retry",
         );
+        processingRetryCounter.add(1, { error_class: "permanent" });
         await this.markFailed(assetId, attemptNumber, "permanent_error", lastError);
         return;
       }
 
+      processingRetryCounter.add(1, { error_class: "transient" });
       const decision: RetryDecision = this.retryPolicy.nextRetry({ attemptNumber });
       if (decision.kind === "exhausted") {
         this.logger.error(
@@ -279,7 +292,9 @@ export class ProcessingWorkerService implements OnModuleDestroy {
         lastError,
         now: new Date(),
       });
-      if (!released) {
+      if (released) {
+        processingJobReleasedCounter.add(1, { reason: "transient_error" });
+      } else {
         this.logger.warn(
           { assetId, attemptNumber },
           "releaseForRetry lost race; another worker may own this job",
@@ -312,7 +327,9 @@ export class ProcessingWorkerService implements OnModuleDestroy {
       occurredBy: `worker:${this.workerId}`,
       now,
     });
-    if (!transitioned) {
+    if (transitioned) {
+      processingTerminalStateCounter.add(1, { state: "processing_failed" });
+    } else {
       this.logger.warn(
         { assetId, attemptNumber, reason },
         "asset was not in 'processing' when marking failed; another actor moved it",

@@ -5,6 +5,10 @@ import { AssetProcessingRepositoryPort } from "@/assets/domain/repositories/asse
 import { ProcessingJobRepositoryPort } from "@/assets/domain/repositories/processing-job.repository.port";
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
 import { environmentConfiguration } from "@/shared/infrastructure/environment.configuration";
+import {
+  processingStaleClaimReclaimedCounter,
+  processingTerminalStateCounter,
+} from "@/shared/infrastructure/telemetry/metrics";
 
 import { isTerminalAssetState, makeTransitionMetadata } from "./processing-evidence";
 
@@ -96,7 +100,9 @@ export class ReclaimStaleProcessingJobsUseCase {
           occurredBy: `worker:${STALE_SWEEPER_WORKER_ID}`,
           now,
         });
-        if (!transitioned) {
+        if (transitioned) {
+          processingTerminalStateCounter.add(1, { state: "processing_failed" });
+        } else {
           this.logger.warn(
             { assetId: job.props.assetId, currentState: loaded.asset.props.state },
             "reclaim transition lost race; skipping markFailed",
@@ -132,7 +138,9 @@ export class ReclaimStaleProcessingJobsUseCase {
       nextAttemptNumber,
       now,
     });
-    if (!released) {
+    if (released) {
+      processingStaleClaimReclaimedCounter.add(1);
+    } else {
       this.logger.warn(
         { assetId: job.props.assetId },
         "releaseStaleClaim lost race; another reclaimer beat us",
