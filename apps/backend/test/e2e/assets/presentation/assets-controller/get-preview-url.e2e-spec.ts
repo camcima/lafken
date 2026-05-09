@@ -156,6 +156,9 @@ describe.skipIf(!GATE)("[E2E] GET /v1/assets/:publicId/preview-url", () => {
     expect(typeof response.body.url).toBe("string");
     expect(response.body.url.length).toBeGreaterThan(0);
     expect(response.headers["cache-control"]).toContain("max-age=300");
+    expect(response.body).toMatchObject({ url: expect.any(String), expiresAt: expect.any(String) });
+    expect(new Date(response.body.expiresAt).toString()).not.toBe("Invalid Date");
+    expect(new Date(response.body.expiresAt).getTime()).toBeGreaterThan(Date.now());
   });
 
   it("returns 200 with a signed URL when requesting an active namespace preset", async () => {
@@ -185,6 +188,9 @@ describe.skipIf(!GATE)("[E2E] GET /v1/assets/:publicId/preview-url", () => {
     expect(response.status).toBe(200);
     expect(typeof response.body.url).toBe("string");
     expect(response.body.url.length).toBeGreaterThan(0);
+    expect(response.body).toMatchObject({ url: expect.any(String), expiresAt: expect.any(String) });
+    expect(new Date(response.body.expiresAt).toString()).not.toBe("Invalid Date");
+    expect(new Date(response.body.expiresAt).getTime()).toBeGreaterThan(Date.now());
   });
 
   it("returns RFC 9457 404 when the public ID does not match any asset", async () => {
