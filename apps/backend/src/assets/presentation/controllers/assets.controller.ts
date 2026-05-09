@@ -50,6 +50,7 @@ import { AssetNotInProcessingFailedStateError } from "@/assets/domain/errors/ass
 import { FileSizeExceedsPolicyError } from "@/assets/domain/errors/file-size-exceeds-policy.error";
 import { MimeTypeNotAllowedError } from "@/assets/domain/errors/mime-type-not-allowed.error";
 import { ProcessingJobNotFoundError } from "@/assets/domain/errors/processing-job-not-found.error";
+import { TusNotConfiguredError } from "@/assets/domain/errors/tus-not-configured.error";
 import { UploadIntentExpiredError } from "@/assets/domain/errors/upload-intent-expired.error";
 import { UploadIntentNotFoundError } from "@/assets/domain/errors/upload-intent-not-found.error";
 import { UploadedObjectMissingError } from "@/assets/domain/errors/uploaded-object-missing.error";
@@ -367,9 +368,11 @@ export class AssetsController {
         declaredMimeType: body.declaredMimeType,
         declaredSizeBytes: BigInt(body.declaredSizeBytes),
         createdBy: user.emailAddress,
+        protocol: body.protocol,
       });
       return {
         publicId: result.publicId,
+        protocol: result.protocol,
         uploadUrl: result.uploadUrl,
         uploadHeaders: result.uploadHeaders,
         expiresAt: result.expiresAt.toISOString(),
@@ -381,7 +384,8 @@ export class AssetsController {
       if (
         err instanceof NamespaceArchivedError ||
         err instanceof MimeTypeNotAllowedError ||
-        err instanceof FileSizeExceedsPolicyError
+        err instanceof FileSizeExceedsPolicyError ||
+        err instanceof TusNotConfiguredError
       ) {
         throw new UnprocessableEntityException(err.message, { cause: err });
       }

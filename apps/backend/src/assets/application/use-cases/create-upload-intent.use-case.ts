@@ -5,7 +5,10 @@ import { Injectable } from "@nestjs/common";
 import { FileSizeExceedsPolicyError } from "@/assets/domain/errors/file-size-exceeds-policy.error";
 import { MimeTypeNotAllowedError } from "@/assets/domain/errors/mime-type-not-allowed.error";
 import { UploadIntentWriteRepositoryPort } from "@/assets/domain/repositories/upload-intent-write.repository.port";
-import { AssetStoragePort } from "@/assets/domain/services/asset-storage.service.port";
+import {
+  UploadUrlIssuerPort,
+  type UploadProtocol,
+} from "@/assets/domain/services/upload-url-issuer.service.port";
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
@@ -18,10 +21,12 @@ export interface ICreateUploadIntentInput {
   declaredMimeType: string;
   declaredSizeBytes: bigint;
   createdBy: string | null;
+  protocol?: UploadProtocol;
 }
 
 export interface ICreateUploadIntentResult {
   publicId: string;
+  protocol: UploadProtocol;
   uploadUrl: string;
   uploadHeaders: Record<string, string>;
   expiresAt: Date;
@@ -33,7 +38,7 @@ export class CreateUploadIntentUseCase {
     private readonly namespaceQueryRepository: NamespaceQueryRepositoryPort,
     private readonly storageBindingQueryRepository: StorageBindingQueryRepositoryPort,
     private readonly uploadIntentWriteRepository: UploadIntentWriteRepositoryPort,
-    private readonly assetStorage: AssetStoragePort,
+    private readonly uploadUrlIssuer: UploadUrlIssuerPort,
   ) {}
 
   async execute(input: ICreateUploadIntentInput): Promise<ICreateUploadIntentResult> {
@@ -79,7 +84,9 @@ export class CreateUploadIntentUseCase {
     const gcsConfig = binding.getGcsConfig();
     const publicId = randomUUID();
     const storageKey = `${input.namespaceSlug}/assets/${publicId}/source`;
-    const signed = await this.assetStorage.issueSignedUploadUrl({
+    const protocol: UploadProtocol = input.protocol ?? "simple";
+    const issued = await this.uploadUrlIssuer.issue({
+      protocol,
       binding: { bucket: gcsConfig.bucket, projectId: gcsConfig.projectId },
       storageKey,
       contentType: input.declaredMimeType,
@@ -95,16 +102,17 @@ export class CreateUploadIntentUseCase {
       storageKey,
       declaredMimeType: input.declaredMimeType,
       declaredSizeBytes: input.declaredSizeBytes,
-      uploadUrl: signed.url,
-      uploadUrlExpiresAt: signed.expiresAt,
+      uploadUrl: issued.uploadUrl,
+      uploadUrlExpiresAt: issued.expiresAt,
       createdBy: input.createdBy,
     });
 
     return {
       publicId,
-      uploadUrl: signed.url,
-      uploadHeaders: signed.headers,
-      expiresAt: signed.expiresAt,
+      protocol: issued.protocol,
+      uploadUrl: issued.uploadUrl,
+      uploadHeaders: issued.uploadHeaders,
+      expiresAt: issued.expiresAt,
     };
   }
 }

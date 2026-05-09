@@ -10,11 +10,11 @@ import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 
-import { FakeAssetStorage } from "../../../__fakes__/fake-asset-storage";
 import { FakeUploadIntentWriteRepository } from "../../../__fakes__/fake-upload-intent-write.repository";
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryNamespaceQueryRepository } from "../../namespaces/__fakes__/in-memory-namespace-query.repository";
 import { InMemoryStorageBindingQueryRepository } from "../../system/__fakes__/in-memory-storage-binding-query.repository";
+import { buildIssuerStub } from "./helpers/create-upload-intent-stubs";
 
 function makeNamespace(opts: { slug: string; archived?: boolean }): Namespace {
   return Namespace.fromProps({
@@ -70,19 +70,17 @@ describe("CreateUploadIntentUseCase", () => {
   let namespaceQueryRepo: InMemoryNamespaceQueryRepository;
   let storageBindingQueryRepo: InMemoryStorageBindingQueryRepository;
   let intentWriteRepo: FakeUploadIntentWriteRepository;
-  let assetStorage: FakeAssetStorage;
   let useCase: CreateUploadIntentUseCase;
 
   beforeEach(() => {
     namespaceQueryRepo = new InMemoryNamespaceQueryRepository();
     storageBindingQueryRepo = new InMemoryStorageBindingQueryRepository();
     intentWriteRepo = new FakeUploadIntentWriteRepository();
-    assetStorage = new FakeAssetStorage();
     useCase = new CreateUploadIntentUseCase(
       namespaceQueryRepo,
       storageBindingQueryRepo,
       intentWriteRepo,
-      assetStorage,
+      buildIssuerStub({ simpleUrl: "https://fake-gcs.local/upload/stub" }),
     );
   });
 
@@ -104,15 +102,15 @@ describe("CreateUploadIntentUseCase", () => {
     expect(result.publicId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
     );
+    expect(result.protocol).toBe("simple");
     expect(result.uploadUrl).toContain("fake-gcs.local");
     expect(result.uploadHeaders["Content-Type"]).toBe("image/jpeg");
     expect(result.expiresAt).toBeInstanceOf(Date);
     expect(intentWriteRepo.inserted).toHaveLength(1);
     expect(intentWriteRepo.inserted[0]?.props.declaredMimeType).toBe("image/jpeg");
     expect(intentWriteRepo.inserted[0]?.props.namespaceId).toBe(TEST_UUIDS.namespace1);
-    expect(assetStorage.issued).toHaveLength(1);
-    const issuedCall = assetStorage.issued[0];
-    expect(issuedCall?.storageKey).toBe(`aircraft-photos/assets/${result.publicId}/source`);
+    const storageKey = intentWriteRepo.inserted[0]?.props.storageKey;
+    expect(storageKey).toBe(`aircraft-photos/assets/${result.publicId}/source`);
   });
 
   it("throws NamespaceNotFoundError when the slug does not match any namespace", async () => {
