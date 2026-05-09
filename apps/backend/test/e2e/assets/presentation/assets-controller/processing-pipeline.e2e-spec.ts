@@ -94,7 +94,7 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
     storageBindingId = (bindingRow as { id: string }).id;
   });
 
-  it("processes a confirmed image into ready with metadata and evidence", async () => {
+  it("processes a confirmed image into ready with metadata and evidence, recording steps in pipeline order", async () => {
     await insertNamespace("aircraft-photos");
     const pngBytes = await sharp({
       create: {
@@ -174,10 +174,24 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
       .get(`/v1/assets/${assetRow.id}/state-transitions`)
       .set(AUTH_HEADERS)
       .expect(200);
-    const transitionBody = transitions.body as Array<{ toState: string }>;
+    const transitionBody = transitions.body as Array<{
+      toState: string;
+      metadata?: Record<string, unknown>;
+    }>;
 
-    expect(transitionBody.map((item: { toState: string }) => item.toState)).toContain("processing");
-    expect(transitionBody.map((item: { toState: string }) => item.toState)).toContain("ready");
+    expect(transitionBody.map((item) => item.toState)).toContain("processing");
+    expect(transitionBody.map((item) => item.toState)).toContain("ready");
+
+    // Assert pipeline step order in the processing_completed transition metadata
+    const readyTransition = transitionBody.find((item) => item.toState === "ready");
+    expect(readyTransition).toBeDefined();
+    const steps = (readyTransition!.metadata?.steps ?? []) as Array<{ step: string }>;
+    expect(steps.map((s) => s.step)).toEqual([
+      "virus_scan",
+      "magic_byte_detection",
+      "image_inspection",
+      // content_moderation absent: policy.contentModeration is null
+    ]);
 
     const analyses = await request(app.getHttpServer())
       .get(`/v1/assets/${assetRow.id}/analyses`)
@@ -191,7 +205,94 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
     expect(analysisBody.map((item: { analyzer: string }) => item.analyzer)).toContain("virus_scan");
   });
 
+  it("rejects an asset when magic-byte mime type is not in the policy allow-list", async () => {
+    // Policy allows only image/jpeg; we upload real PNG bytes but declare image/jpeg.
+    // Magic-byte detection sniffs image/png → not in allow-list → mime_type_not_allowed.
+    await insertNamespaceWithPolicy("jpeg-only-namespace", {
+      ...VALID_DB_POLICY_VALUES,
+      allowed_mime_types: ["image/jpeg"],
+    });
+
+    const pngBytes = await sharp({
+      create: {
+        width: PNG_WIDTH,
+        height: PNG_HEIGHT,
+        channels: 3,
+        background: { r: 50, g: 100, b: 150 },
+      },
+    })
+      .png()
+      .toBuffer();
+
+    const uploadIntent = await request(app.getHttpServer())
+      .post("/v1/assets/upload-intents")
+      .set(AUTH_HEADERS)
+      .send({
+        namespaceSlug: "jpeg-only-namespace",
+        declaredMimeType: "image/jpeg",
+        declaredSizeBytes: pngBytes.length,
+      })
+      .expect(201);
+
+    const putResponse = await fetch(uploadIntent.body.uploadUrl, {
+      method: "PUT",
+      body: new Uint8Array(pngBytes),
+      headers: { ...uploadIntent.body.uploadHeaders, "Content-Type": "image/jpeg" },
+    });
+    expect(putResponse.ok).toBe(true);
+
+    await request(app.getHttpServer())
+      .post(`/v1/assets/${uploadIntent.body.publicId}/confirm`)
+      .set(AUTH_HEADERS)
+      .send({})
+      .expect(200);
+
+    const assetRow = await db.connection
+      .selectFrom("assets")
+      .select("id")
+      .where("public_id", "=", uploadIntent.body.publicId)
+      .executeTakeFirstOrThrow();
+
+    const job = await db.connection
+      .selectFrom("processing_jobs")
+      .selectAll()
+      .where("asset_id", "=", assetRow.id)
+      .executeTakeFirstOrThrow();
+
+    await db.connection
+      .updateTable("processing_jobs")
+      .set({
+        state: "claimed",
+        worker_id: "e2e-worker",
+        claimed_at: new Date("2026-05-06T12:00:00.000Z"),
+        heartbeat_at: new Date("2026-05-06T12:00:00.000Z"),
+      })
+      .where("asset_id", "=", job.asset_id)
+      .execute();
+
+    await processClaimedAssetUseCase.execute({
+      assetId: job.asset_id,
+      workerId: "e2e-worker",
+      attemptNumber: job.attempt_number,
+    });
+
+    const asset = await request(app.getHttpServer())
+      .get(`/v1/assets/${assetRow.id}`)
+      .set(AUTH_HEADERS)
+      .expect(200);
+
+    expect(asset.body.state).toBe("rejected");
+    expect(asset.body.stateReason).toBe("mime_type_not_allowed");
+  });
+
   async function insertNamespace(slug: string): Promise<string> {
+    return insertNamespaceWithPolicy(slug, VALID_DB_POLICY_VALUES);
+  }
+
+  async function insertNamespaceWithPolicy(
+    slug: string,
+    policyValues: typeof VALID_DB_POLICY_VALUES,
+  ): Promise<string> {
     return db.connection.transaction().execute(async (tx) => {
       const [nsRow] = await tx
         .insertInto("namespaces")
@@ -211,7 +312,7 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
         .values({
           namespace_id: namespaceId,
           version: 1,
-          ...VALID_DB_POLICY_VALUES,
+          ...policyValues,
         })
         .returningAll()
         .execute();
