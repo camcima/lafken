@@ -1,4 +1,6 @@
 export { LafkenClient } from "./lafken-client";
+export { Transport } from "./transport";
+export { AssetsClient } from "./sub-clients/assets-client";
 export {
   LafkenApiError,
   type IAsset,

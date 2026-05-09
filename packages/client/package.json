@@ -20,6 +20,9 @@
     "format": "prettier --write \"./**/*.ts\" --ignore-path ../../.prettierignore",
     "format-check": "prettier --check \"./**/*.ts\" --ignore-path ../../.prettierignore"
   },
+  "dependencies": {
+    "@shared/backend-api": "workspace:*"
+  },
   "devDependencies": {
     "@shared/typescript-config": "workspace:*",
     "vitest": "^4.1.2"
