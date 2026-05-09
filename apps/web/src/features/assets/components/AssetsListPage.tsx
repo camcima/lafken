@@ -1,5 +1,4 @@
 import type { AssetState, NamespaceResponseDTO } from "@shared/backend-api";
-import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { Download, Filter, Lock, Plus, Search, Tag, X } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -16,11 +15,11 @@ import {
   type ViewMode,
   ViewToggle,
 } from "@/features/assets/components/assets-list-view";
-import { assetsKeys } from "@/features/assets/keys";
+import { useAssets } from "@/features/assets/hooks/useAssets";
+import { useNamespaces } from "@/features/namespaces/hooks/useNamespaces";
 import { isDemoMode } from "@/lib/demo/demo-mode";
 import { DEMO_ASSET_LIST, DEMO_NAMESPACES } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
-import { assetsService, namespacesService } from "@/services";
 
 // Page-size options for the rows-per-page selector
 /* eslint-disable no-magic-numbers */
@@ -69,16 +68,11 @@ export function AssetsListPage(): React.JSX.Element {
     states: stateFilter !== "all" ? [stateFilter as AssetState] : undefined,
     legalHoldId,
   };
-  const { data: realAssetsPage, isLoading: realAssetsLoading } = useQuery({
-    queryKey: assetsKeys.list(listQuery),
-    queryFn: () => assetsService.list(listQuery),
-    enabled: !isDemoMode,
-  });
+  const { data: realAssetsPage, isLoading: realAssetsLoading } = useAssets(listQuery);
 
-  const { data: realNamespacesPage } = useQuery({
-    queryKey: ["namespaces", "all-for-filter"] as const,
-    queryFn: () => namespacesService.list({ page: 1, limit: NAMESPACE_FILTER_LIMIT }),
-    enabled: !isDemoMode,
+  const { data: realNamespacesPage } = useNamespaces({
+    page: 1,
+    limit: NAMESPACE_FILTER_LIMIT,
   });
 
   // ── Data sourcing ───────────────────────────────────────────────────────

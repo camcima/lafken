@@ -523,6 +523,9 @@ importers:
       '@lafken/upload':
         specifier: workspace:*
         version: link:../upload
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.96.2(react@19.2.4)
     devDependencies:
       '@shared/typescript-config':
         specifier: workspace:*
