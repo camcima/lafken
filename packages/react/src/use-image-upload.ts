@@ -44,6 +44,13 @@ export interface IUseImageUploadOptions {
    * Updates take effect for files added after the change.
    */
   restrictions?: IUploadRestrictions;
+  /** Upload protocol to use. Default: "simple" (XHR PUT). */
+  protocol?: "simple" | "tus";
+  /**
+   * Ms before `expiresAt` at which to pre-flight a URL refresh. Default 30000.
+   * Only relevant when the user adds files well before clicking upload.
+   */
+  refreshSafetyMarginMs?: number;
 }
 
 export interface IUploadRejection {
@@ -70,12 +77,16 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
   // `opts.client` / `opts.namespaceSlug` — re-creating the manager mid-flight
   // would orphan in-flight uploads. Consumers must remount to switch namespaces.
   const initialRestrictions = opts.restrictions;
+  const initialProtocol = opts.protocol;
+  const initialRefreshSafetyMarginMs = opts.refreshSafetyMarginMs;
   const [manager] = useState<LafkenUploadManager>(
     () =>
       new LafkenUploadManager({
         client: opts.client,
         namespaceSlug: opts.namespaceSlug,
         restrictions: initialRestrictions,
+        protocol: initialProtocol,
+        refreshSafetyMarginMs: initialRefreshSafetyMarginMs,
       }),
   );
   const [files, setFiles] = useState<IUploadFile[]>([]);

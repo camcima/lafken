@@ -40,6 +40,12 @@ export interface IUploadDropzoneProps {
    * upload queue.
    */
   restrictions?: IUploadRestrictions;
+  /** Upload protocol to use. Default: "simple" (XHR PUT). */
+  protocol?: "simple" | "tus";
+  /**
+   * Ms before `expiresAt` at which to pre-flight a URL refresh. Default 30000.
+   */
+  refreshSafetyMarginMs?: number;
   render: (props: IUploadDropzoneRenderProps) => React.ReactNode;
 }
 
@@ -50,6 +56,8 @@ export function UploadDropzone(props: IUploadDropzoneProps): React.JSX.Element {
       namespaceSlug: props.namespaceSlug,
       sharedMetadata: props.sharedMetadata,
       restrictions: props.restrictions,
+      protocol: props.protocol,
+      refreshSafetyMarginMs: props.refreshSafetyMarginMs,
     });
   const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
