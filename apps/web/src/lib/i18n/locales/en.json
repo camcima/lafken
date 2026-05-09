@@ -438,7 +438,6 @@
       "actions": {
         "reProcess": "Re-process",
         "placeLegalHold": "Place legal hold",
-        "evidentiaryExport": "Evidentiary export",
         "more": "More",
         "menu": {
           "copyPublicId": "Copy public ID",

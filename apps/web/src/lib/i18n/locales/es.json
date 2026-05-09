@@ -438,7 +438,6 @@
       "actions": {
         "reProcess": "Reprocesar",
         "placeLegalHold": "Aplicar retención legal",
-        "evidentiaryExport": "Exportación probatoria",
         "more": "Más",
         "menu": {
           "copyPublicId": "Copiar ID público",
