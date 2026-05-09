@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProcessingRetryPolicy } from "@/assets/application/processing/processing-retry-policy";
-import { TransientProcessingError } from "@/assets/application/processing/transient-processing.error";
 import { ProcessingWorkerService } from "@/assets/application/processing/processing-worker.service";
+import { TransientProcessingError } from "@/assets/application/processing/transient-processing.error";
 import type { Asset } from "@/assets/domain/entities/asset.entity";
 import type { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
 import {
@@ -252,7 +252,7 @@ class FakeProcessClaimedAssetUseCase {
   readonly calls: Array<{ assetId: string; workerId: string; attemptNumber: number }> = [];
   failures = 0;
   neverResolve = false;
-  errorFactory: (() => Error) = () => new Error("processor failure");
+  errorFactory: () => Error = () => new Error("processor failure");
 
   execute(input: { assetId: string; workerId: string; attemptNumber: number }): Promise<unknown> {
     this.calls.push(input);

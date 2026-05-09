@@ -53,8 +53,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
   ) {
     this.logger.setContext(ProcessingWorkerService.name);
     this.workflowTimeoutMs =
-      options?.workflowTimeoutMs ??
-      environmentConfiguration.PROCESSING_WORKER_WORKFLOW_TIMEOUT_MS;
+      options?.workflowTimeoutMs ?? environmentConfiguration.PROCESSING_WORKER_WORKFLOW_TIMEOUT_MS;
   }
 
   start(): void {
