@@ -1,7 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ProcessingWorkerService } from "@/assets/application/processing/processing-worker.service";
-
 import { buildOrphanSweeperSpy, buildWorkerHarness } from "./helpers/worker-harness";
 
 describe("ProcessingWorkerService.orphan sweep loop", () => {

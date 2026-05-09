@@ -28,7 +28,7 @@ export class TusdUploadUrlIssuer extends UploadUrlIssuerPort {
     this.now = options.now ?? ((): Date => new Date());
   }
 
-  async issue(input: IIssueUploadUrlInput): Promise<IIssueUploadUrlResult> {
+  issue(input: IIssueUploadUrlInput): Promise<IIssueUploadUrlResult> {
     const uploadId: string = randomUUID();
     const uploadUrl: string = `${this.endpointUrl}${uploadId}`;
     const expiresAt: Date = new Date(this.now().getTime() + input.ttlSeconds * MS_PER_SECOND);
@@ -38,7 +38,7 @@ export class TusdUploadUrlIssuer extends UploadUrlIssuerPort {
       bucket: input.binding.bucket,
       projectId: input.binding.projectId,
     });
-    return {
+    return Promise.resolve({
       protocol: "tus",
       uploadUrl,
       uploadHeaders: {
@@ -47,7 +47,7 @@ export class TusdUploadUrlIssuer extends UploadUrlIssuerPort {
         "Upload-Metadata": metadata,
       },
       expiresAt,
-    };
+    });
   }
 }
 

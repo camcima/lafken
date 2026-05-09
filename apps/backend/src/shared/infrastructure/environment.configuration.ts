@@ -178,13 +178,13 @@ const environmentSchema = z
     /** Browser-facing tusd endpoint (e.g. http://localhost:1080/files/). When
      *  unset, requests with `protocol: "tus"` fail with TusNotConfiguredError. */
     TUSD_ENDPOINT_URL: z.preprocess(
-      (v) => (v === "" ? undefined : v),
+      (val) => (val === "" ? undefined : val),
       z.string().url().optional(),
     ),
     /** Backend-side tusd URL for hooks. Reserved for future use; not consumed
      *  in v1.0 but accepted to keep deploys forward-compatible. */
     TUSD_INTERNAL_URL: z.preprocess(
-      (v) => (v === "" ? undefined : v),
+      (val) => (val === "" ? undefined : val),
       z.string().url().optional(),
     ),
     /** Frequency of the orphan-intent sweep loop on the worker. */

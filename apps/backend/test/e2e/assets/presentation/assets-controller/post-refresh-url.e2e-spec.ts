@@ -142,26 +142,23 @@ describe("[E2E] POST /v1/assets/upload-intents/:publicId/refresh-url", () => {
       .execute();
   }
 
-  it.skipIf(!GATE)(
-    "returns a fresh upload URL and audits url_refreshed",
-    async () => {
-      const intent = await createIntent();
-      const res = await request(app.getHttpServer())
-        .post(`/v1/assets/upload-intents/${intent.publicId}/refresh-url`)
-        .set("Authorization", "Bearer test-token")
-        .expect(200);
-      expect(res.body.uploadUrl).toBeTruthy();
-      expect(res.body.uploadHeaders["Content-Type"]).toBe("image/jpeg");
-      const audit = await db.connection
-        .selectFrom("configuration_audit_log")
-        .selectAll()
-        .where("entity_type", "=", "upload_intent")
-        .where("entity_id", "=", intent.publicId)
-        .where("action", "=", "url_refreshed")
-        .execute();
-      expect(audit).toHaveLength(1);
-    },
-  );
+  it.skipIf(!GATE)("returns a fresh upload URL and audits url_refreshed", async () => {
+    const intent = await createIntent();
+    const res = await request(app.getHttpServer())
+      .post(`/v1/assets/upload-intents/${intent.publicId}/refresh-url`)
+      .set("Authorization", "Bearer test-token")
+      .expect(200);
+    expect(res.body.uploadUrl).toBeTruthy();
+    expect(res.body.uploadHeaders["Content-Type"]).toBe("image/jpeg");
+    const audit = await db.connection
+      .selectFrom("configuration_audit_log")
+      .selectAll()
+      .where("entity_type", "=", "upload_intent")
+      .where("entity_id", "=", intent.publicId)
+      .where("action", "=", "url_refreshed")
+      .execute();
+    expect(audit).toHaveLength(1);
+  });
 
   it("returns 404 for unknown intent", async () => {
     await request(app.getHttpServer())

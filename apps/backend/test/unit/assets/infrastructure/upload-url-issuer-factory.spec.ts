@@ -8,25 +8,25 @@ describe("CompositeUploadUrlIssuer", () => {
     const calls: string[] = [];
     const issuer = new CompositeUploadUrlIssuer({
       gcs: {
-        issue: async () => {
+        issue: () => {
           calls.push("gcs");
-          return {
+          return Promise.resolve({
             protocol: "simple",
             uploadUrl: "u",
             uploadHeaders: {},
             expiresAt: new Date(),
-          };
+          });
         },
       },
       tusd: {
-        issue: async () => {
+        issue: () => {
           calls.push("tusd");
-          return {
+          return Promise.resolve({
             protocol: "tus",
             uploadUrl: "t",
             uploadHeaders: {},
             expiresAt: new Date(),
-          };
+          });
         },
       },
     });
@@ -52,12 +52,13 @@ describe("CompositeUploadUrlIssuer", () => {
   it("throws TusNotConfiguredError when tusd issuer is null", async () => {
     const issuer = new CompositeUploadUrlIssuer({
       gcs: {
-        issue: async () => ({
-          protocol: "simple",
-          uploadUrl: "u",
-          uploadHeaders: {},
-          expiresAt: new Date(),
-        }),
+        issue: () =>
+          Promise.resolve({
+            protocol: "simple" as const,
+            uploadUrl: "u",
+            uploadHeaders: {},
+            expiresAt: new Date(),
+          }),
       },
       tusd: null,
     });

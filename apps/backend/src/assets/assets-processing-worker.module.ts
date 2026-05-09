@@ -13,7 +13,12 @@ import { ReclaimStaleProcessingJobsUseCase } from "./application/processing/recl
 import { AssetsInfrastructureModule } from "./infrastructure/assets-infrastructure.module";
 
 @Module({
-  imports: [LoggerModule, AssetsInfrastructureModule, SystemInfrastructureModule, AuditInfrastructureModule],
+  imports: [
+    LoggerModule,
+    AssetsInfrastructureModule,
+    SystemInfrastructureModule,
+    AuditInfrastructureModule,
+  ],
   providers: [
     ProcessClaimedAssetUseCase,
     ProcessingWorkerService,

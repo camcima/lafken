@@ -3,8 +3,7 @@ import { DomainError } from "@/shared/kernel/domain/errors/domain-error.interfac
 export class TusNotConfiguredError extends DomainError {
   constructor() {
     super({
-      message:
-        'Cannot honor protocol "tus": TUSD_ENDPOINT_URL is not configured on this backend.',
+      message: 'Cannot honor protocol "tus": TUSD_ENDPOINT_URL is not configured on this backend.',
     });
   }
 }

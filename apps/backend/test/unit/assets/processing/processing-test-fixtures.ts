@@ -107,8 +107,8 @@ export class FakeMimeSniff extends MimeSniffPort {
   result: string | null = "image/png";
   calls: Buffer[] = [];
 
-  async sniff(bytes: Buffer): Promise<string | null> {
+  sniff(bytes: Buffer): Promise<string | null> {
     this.calls.push(bytes);
-    return this.result;
+    return Promise.resolve(this.result);
   }
 }

@@ -1,25 +1,26 @@
-import { NamespacePolicy } from "@/namespaces/domain/entities/namespace-policy.entity";
-import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
-import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
-import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
-import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
-import { UploadIntentWriteRepositoryPort } from "@/assets/domain/repositories/upload-intent-write.repository.port";
 import { TusNotConfiguredError } from "@/assets/domain/errors/tus-not-configured.error";
+import { UploadIntentWriteRepositoryPort } from "@/assets/domain/repositories/upload-intent-write.repository.port";
 import {
-  UploadUrlIssuerPort,
   type IIssueUploadUrlInput,
   type IIssueUploadUrlResult,
   type UploadProtocol,
+  UploadUrlIssuerPort,
 } from "@/assets/domain/services/upload-url-issuer.service.port";
+import { NamespacePolicy } from "@/namespaces/domain/entities/namespace-policy.entity";
+import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
+import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
+import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
+import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
+import { FakeUploadIntentWriteRepository } from "../../../../__fakes__/fake-upload-intent-write.repository";
 import { InMemoryNamespaceQueryRepository } from "../../../namespaces/__fakes__/in-memory-namespace-query.repository";
 import { InMemoryStorageBindingQueryRepository } from "../../../system/__fakes__/in-memory-storage-binding-query.repository";
-import { FakeUploadIntentWriteRepository } from "../../../../__fakes__/fake-upload-intent-write.repository";
 
 const NS_ID = "01900000-0000-7000-8000-000000000010";
 const POLICY_ID = "01900000-0000-7000-8000-000000000020";
 const BINDING_ID = "01900000-0000-7000-8000-000000000001";
+const STUB_TTL_MS = 900_000;
 
 function makeNamespace(): Namespace {
   return Namespace.fromProps({
@@ -116,14 +117,12 @@ export function buildIssuerStub(opts: IIssuerStubOptions = {}): IIssuerStubResul
             ? (opts.tusUrl ?? "http://tusd:1080/files/stub")
             : (opts.simpleUrl ?? "https://fake-gcs.local/upload/stub");
         const uploadHeaders: Record<string, string> =
-          protocol === "tus"
-            ? { "Tus-Resumable": "1.0.0" }
-            : { "Content-Type": input.contentType };
+          protocol === "tus" ? { "Tus-Resumable": "1.0.0" } : { "Content-Type": input.contentType };
         return Promise.resolve({
           protocol,
           uploadUrl,
           uploadHeaders,
-          expiresAt: new Date(Date.now() + 900_000),
+          expiresAt: new Date(Date.now() + STUB_TTL_MS),
         });
       },
     },

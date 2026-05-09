@@ -17,7 +17,6 @@
  * that it does not block the standard CI/CD E2E run (which does not start a
  * tusd container).
  */
-
 import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -154,7 +153,11 @@ describe.skipIf(!GATE)("[E2E] tus upload end-to-end (real stack gate)", () => {
 
     expect(intentResponse.status).toBe(201);
 
-    const { publicId, uploadUrl, uploadHeaders } = intentResponse.body;
+    const { publicId, uploadUrl, uploadHeaders } = intentResponse.body as {
+      publicId: string;
+      uploadUrl: string;
+      uploadHeaders: Record<string, string>;
+    };
 
     expect(publicId).toBeDefined();
     expect(uploadUrl).toMatch(/^http:\/\/localhost:1080\/files\//);
@@ -191,9 +194,7 @@ describe.skipIf(!GATE)("[E2E] tus upload end-to-end (real stack gate)", () => {
     });
 
     expect(patchResponse.status).toBe(204);
-    expect(patchResponse.headers.get("Upload-Offset")).toBe(
-      String(TINY_JPEG_BYTES.byteLength),
-    );
+    expect(patchResponse.headers.get("Upload-Offset")).toBe(String(TINY_JPEG_BYTES.byteLength));
 
     // Step 4: Confirm the upload via the backend
     const confirmResponse = await request(app.getHttpServer())

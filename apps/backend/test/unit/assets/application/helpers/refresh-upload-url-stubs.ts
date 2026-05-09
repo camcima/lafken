@@ -9,11 +9,15 @@ import {
   UploadProtocol,
   UploadUrlIssuerPort,
 } from "@/assets/domain/services/upload-url-issuer.service.port";
-import { AuditWriteRepositoryPort, IRecordAuditInput } from "@/audit/domain/repositories/audit-write.repository.port";
+import {
+  AuditWriteRepositoryPort,
+  IRecordAuditInput,
+} from "@/audit/domain/repositories/audit-write.repository.port";
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 const BINDING_ID = "01900000-0000-7000-8000-000000000001";
+const STUB_TTL_MS = 900_000;
 
 // ─────────────────────────────────────────────
 // Intent repo stub
@@ -55,7 +59,7 @@ export function buildIntentRepoStub(opts: IIntentStubOptions = {}): IIntentRepoS
           declaredMimeType: "image/jpeg",
           declaredSizeBytes: 1_048_576n,
           uploadUrl,
-          uploadUrlExpiresAt: new Date(Date.now() + 900_000),
+          uploadUrlExpiresAt: new Date(Date.now() + STUB_TTL_MS),
           createdBy: "ops@latam.com",
           consumedAt: opts.consumedAt ?? null,
           expiredAt: opts.expiredAt ?? null,
@@ -156,14 +160,12 @@ export function buildIssuerStub(opts: IIssuerStubOptions = {}): UploadUrlIssuerP
             ? (opts.tusUrl ?? "http://tusd:1080/files/stub")
             : (opts.simpleUrl ?? "https://fake-gcs.local/upload/stub");
         const uploadHeaders: Record<string, string> =
-          protocol === "tus"
-            ? { "Tus-Resumable": "1.0.0" }
-            : { "Content-Type": input.contentType };
+          protocol === "tus" ? { "Tus-Resumable": "1.0.0" } : { "Content-Type": input.contentType };
         return Promise.resolve({
           protocol,
           uploadUrl,
           uploadHeaders,
-          expiresAt: new Date(Date.now() + 900_000),
+          expiresAt: new Date(Date.now() + STUB_TTL_MS),
         });
       },
     },

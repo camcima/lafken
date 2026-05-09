@@ -13,9 +13,14 @@ import {
   type IReadObjectBytesInput,
   type ISignReadUrlInput,
 } from "@/assets/domain/services/asset-storage.service.port";
-import { AuditWriteRepositoryPort, IRecordAuditInput } from "@/audit/domain/repositories/audit-write.repository.port";
+import {
+  AuditWriteRepositoryPort,
+  IRecordAuditInput,
+} from "@/audit/domain/repositories/audit-write.repository.port";
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
+
+const PAST_OFFSET_MS = 1_000_000;
 
 // ─────────────────────────────────────────────
 // Intent repo stub
@@ -48,7 +53,7 @@ function makeOrphanIntent(desc: IOrphanDescriptor): UploadIntent {
     declaredMimeType: "image/jpeg",
     declaredSizeBytes: 1_048_576n,
     uploadUrl: "https://fake-gcs.local/upload/stub",
-    uploadUrlExpiresAt: new Date(Date.now() - 1_000_000),
+    uploadUrlExpiresAt: new Date(Date.now() - PAST_OFFSET_MS),
     createdBy: "ops@latam.com",
     consumedAt: null,
     expiredAt: null,
@@ -161,7 +166,9 @@ export function buildStorageStub(opts: IStorageStubOptions = {}): IStorageStub {
         return Promise.resolve();
       },
 
-      issueSignedUploadUrl(_input: IIssueSignedUploadUrlInput): Promise<IIssueSignedUploadUrlResult> {
+      issueSignedUploadUrl(
+        _input: IIssueSignedUploadUrlInput,
+      ): Promise<IIssueSignedUploadUrlResult> {
         throw new Error("not implemented in storage stub");
       },
 

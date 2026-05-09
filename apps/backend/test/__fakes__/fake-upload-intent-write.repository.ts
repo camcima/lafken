@@ -71,9 +71,7 @@ export class FakeUploadIntentWriteRepository extends UploadIntentWriteRepository
   markExpired(publicId: string, now: Date): Promise<boolean> {
     const intent = this.intents.find(
       (i) =>
-        i.props.publicId === publicId &&
-        i.props.consumedAt === null &&
-        i.props.expiredAt === null,
+        i.props.publicId === publicId && i.props.consumedAt === null && i.props.expiredAt === null,
     );
     if (!intent) return Promise.resolve(false);
     const idx = this.intents.indexOf(intent);
