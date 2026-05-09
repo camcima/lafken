@@ -844,23 +844,21 @@ Scope of the first stable release:
 
 * Core service with full hexagonal architecture
 
-* Adapters: GCS, S3, local filesystem (storage); allow-all, file-based RBAC, OIDC-claims, HTTP webhook (authorization); ClamAV, no-op (virus); no-op, Cloud Vision, Rekognition, webhook (content moderation); imgproxy (transformer); in-process, webhook, Google Pub/Sub, AWS SNS (events); GCP Secret Manager, environment variables (secrets)
+* Adapters: GCS (storage); allow-all (authorization); ClamAV plus a local stub (virus); a deterministic local stub (content moderation); imgproxy (transformer). One adapter per port for v1.0.
 
 * XState \+ Postgres claim-table workflow with full retry, backoff, jitter, and worker death recovery
 
-* Three serving modes: public, signed, proxied
+* Signed serving mode (the only mode shipped for v1.0; `public` and `proxied` are deferred)
 
 * Namespace management with versioned policies and presets
 
-* Async pipeline: magic-byte detection, format validation, virus scan, content moderation, optional re-encoding, finalize
+* Async pipeline: virus scan, magic-byte detection, image inspection, content moderation, finalize (sequential, no re-encoding step)
 
-* @lafken/client (HTTP wrapper)
+* @lafken/client (HTTP wrapper), @lafken/upload (Uppy-based upload manager), @lafken/react (hooks + headless components). The web admin console dogfoods all three.
 
 * Admin console with non-negotiable views: asset search/detail, namespace CRUD, quarantine review, audit log search, integration debugging, processing job inspection
 
 * Reference Docker Compose deployment
-
-* Helm charts for Kubernetes deployment, with example values for GKE
 
 * Documentation set
 
@@ -868,17 +866,7 @@ Scope of the first stable release:
 
 Within a few months of v1.0:
 
-* @lafken/upload and @lafken/react SDK packages
-
-* Webhook subscription management UI
-
-* Configuration export/import API
-
-* Pre-generation of derivatives for hot-path presets
-
 * Per-namespace usage and cost reporting in the console
-
-* Quotas and rate limiting
 
 ## **14.3 v2 and beyond — deliberate deferrals**
 
