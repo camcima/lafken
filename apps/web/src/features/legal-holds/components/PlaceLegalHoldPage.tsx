@@ -13,7 +13,6 @@ import { SELECT_CLASS } from "@/components/common/select-styles";
 import { useAssets } from "@/features/assets/hooks/useAssets";
 import { usePlaceLegalHold } from "@/features/legal-holds/hooks/useLegalHoldMutations";
 import { useNamespaces } from "@/features/namespaces/hooks/useNamespaces";
-import { isDemoMode } from "@/lib/demo/demo-mode";
 import { cn } from "@/lib/utils";
 
 // Photoshop-style transparency checker reused from the asset list / hero so
@@ -213,11 +212,6 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
 
   function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>): void {
     e.preventDefault();
-
-    if (isDemoMode) {
-      toast.info(t("pages.placeLegalHold.toast.demo"));
-      return;
-    }
 
     placeMutation.mutate(
       { caseReference, description, assetIds: [...picked.keys()] },

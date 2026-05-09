@@ -123,17 +123,11 @@ function Thumb({ asset, size = "md" }: IThumbProps): React.JSX.Element {
           <Ban size={iconSize} />
         </span>
       )}
-      {/* Tail chip — only when present (demo data) */}
-      {size !== "sm" && asset.tail !== "" && (
-        <span className="absolute bottom-1 left-1 rounded-sm bg-black/45 px-1 font-mono text-[9.5px] tracking-wider text-white uppercase">
-          {asset.tail}
-        </span>
-      )}
     </div>
   );
 }
 
-// ── fmtMinAgo (local copy so the view is independent of demo helpers) ─────
+// ── fmtMinAgo ─────────────────────────────────────────────────────────────
 const MIN_PER_HOUR = 60;
 const HOURS_PER_DAY = 24;
 

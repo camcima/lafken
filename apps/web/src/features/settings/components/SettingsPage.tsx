@@ -1,5 +1,5 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { AlertTriangle, Check, MoreHorizontal, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/common/Badge";
@@ -7,17 +7,11 @@ import { Button } from "@/components/common/Button";
 import { Card, CardHeader, CardMeta, CardTitle } from "@/components/common/Card";
 import { Tabs } from "@/components/common/Tabs";
 import type { ITab } from "@/components/common/Tabs";
-import { DEMO_API_KEYS, DEMO_MEMBERS } from "@/lib/demo/lafken-demo-data";
 
-// Slice 0: BE returns empty arrays; rendering against typed demo data
+// Tables render against empty arrays until the BE slices land.
 
 // Icon sizes
-const BADGE_ICON_SIZE = 10;
 const BTN_ICON_SIZE = 12;
-const MORE_ICON_SIZE = 14;
-
-// Avatar initials: take first 2 characters
-const INITIALS_LENGTH = 2;
 
 type ISettingsTab = "workspace" | "members" | "api" | "policies" | "danger";
 
@@ -140,55 +134,9 @@ function MembersTab(): React.JSX.Element {
           <span>{t("pages.settings.members.table.lastActive")}</span>
           <span />
         </div>
-        {DEMO_MEMBERS.map((member) => {
-          const initials = member.name
-            .split(" ")
-            .map((word) => word[0])
-            .join("")
-            .slice(0, INITIALS_LENGTH);
-          return (
-            <div
-              key={member.email}
-              className="border-border/40 grid grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,1.6fr)_120px_110px_60px] items-center gap-3 border-b px-5 py-2.5 last:border-b-0"
-            >
-              <div className="flex min-w-0 items-center gap-2.5">
-                <div className="bg-latam-indigo grid size-7 flex-none place-items-center rounded-full text-[10.5px] font-bold text-white">
-                  {initials}
-                </div>
-                <div className="min-w-0">
-                  <div className="truncate text-[12.5px]">{member.name}</div>
-                  <div className="text-muted-foreground truncate font-mono text-[10.5px]">
-                    {member.email}
-                  </div>
-                </div>
-              </div>
-              <div className="text-[12px]">{member.role}</div>
-              <div className="text-muted-foreground truncate font-mono text-[11px]">
-                {member.scope}
-              </div>
-              <div>
-                {member.mfa ? (
-                  <Badge variant="ok">
-                    <Check size={BADGE_ICON_SIZE} />
-                    {t("pages.settings.members.mfa.on")}
-                  </Badge>
-                ) : (
-                  <Badge variant="warn">
-                    <AlertTriangle size={BADGE_ICON_SIZE} />
-                    {t("pages.settings.members.mfa.off")}
-                  </Badge>
-                )}
-              </div>
-              <div className="text-muted-foreground font-mono text-[11px]">{member.lastActive}</div>
-              <button
-                type="button"
-                className="text-muted-foreground hover:bg-secondary hover:text-foreground ml-auto rounded p-1.5"
-              >
-                <MoreHorizontal size={MORE_ICON_SIZE} />
-              </button>
-            </div>
-          );
-        })}
+        <div className="text-muted-foreground px-5 py-8 text-center text-[12.5px]">
+          {t("pages.settings.members.empty")}
+        </div>
       </div>
     </Card>
   );
@@ -218,41 +166,9 @@ function ApiKeysTab(): React.JSX.Element {
           <span>{t("pages.settings.api.table.status")}</span>
           <span />
         </div>
-        {DEMO_API_KEYS.map((apiKey) => (
-          <div
-            key={apiKey.id}
-            className="border-border/40 grid grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_110px_110px_120px_90px_60px] items-center gap-3 border-b px-5 py-2.5 last:border-b-0"
-          >
-            <div className="min-w-0">
-              <div className="truncate text-[12.5px]">{apiKey.label}</div>
-              <div className="text-muted-foreground truncate font-mono text-[10.5px]">
-                {apiKey.id}…
-              </div>
-            </div>
-            <div className="text-muted-foreground truncate font-mono text-[11px]">
-              {apiKey.scopes}
-            </div>
-            <div className="text-muted-foreground font-mono text-[11px]">{apiKey.lastUsed}</div>
-            <div className="text-muted-foreground font-mono text-[11px]">{apiKey.rotates}</div>
-            <div className="text-muted-foreground truncate font-mono text-[11px]">
-              {apiKey.createdBy}
-            </div>
-            <div>
-              {apiKey.status === "active" ? (
-                <Badge variant="ok">{t("pages.settings.api.status.active")}</Badge>
-              ) : (
-                <Badge variant="muted">{t("pages.settings.api.status.revoked")}</Badge>
-              )}
-            </div>
-            <button
-              type="button"
-              disabled={apiKey.status !== "active"}
-              className="text-muted-foreground hover:bg-secondary hover:text-foreground ml-auto rounded p-1.5 disabled:pointer-events-none disabled:opacity-40"
-            >
-              <MoreHorizontal size={MORE_ICON_SIZE} />
-            </button>
-          </div>
-        ))}
+        <div className="text-muted-foreground px-5 py-8 text-center text-[12.5px]">
+          {t("pages.settings.api.empty")}
+        </div>
       </div>
     </Card>
   );
@@ -401,8 +317,8 @@ export function SettingsPage(): React.JSX.Element {
 
   const tabs: ITab<ISettingsTab>[] = [
     { id: "workspace", label: t("pages.settings.tabs.workspace") },
-    { id: "members", label: t("pages.settings.tabs.members"), count: DEMO_MEMBERS.length },
-    { id: "api", label: t("pages.settings.tabs.api"), count: DEMO_API_KEYS.length },
+    { id: "members", label: t("pages.settings.tabs.members") },
+    { id: "api", label: t("pages.settings.tabs.api") },
     { id: "policies", label: t("pages.settings.tabs.policies") },
     { id: "danger", label: t("pages.settings.tabs.danger") },
   ];

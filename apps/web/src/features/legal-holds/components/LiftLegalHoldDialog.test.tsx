@@ -10,8 +10,6 @@ import { LiftLegalHoldDialog } from "./LiftLegalHoldDialog";
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
-vi.mock("@/lib/demo/demo-mode", () => ({ isDemoMode: false }));
-
 const mutateSpy = vi.fn();
 
 vi.mock("@/features/legal-holds/hooks/useLegalHoldMutations", () => ({

@@ -8,7 +8,7 @@ import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
 import { Paginator } from "@/components/common/Paginator";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
-import { assetResponseToRow, demoAssetToRow, type IAssetRow } from "@/features/assets/asset-row";
+import { assetResponseToRow, type IAssetRow } from "@/features/assets/asset-row";
 import {
   AssetsListView,
   getAutoPageSize,
@@ -17,8 +17,6 @@ import {
 } from "@/features/assets/components/assets-list-view";
 import { useAssets } from "@/features/assets/hooks/useAssets";
 import { useNamespaces } from "@/features/namespaces/hooks/useNamespaces";
-import { isDemoMode } from "@/lib/demo/demo-mode";
-import { DEMO_ASSET_LIST, DEMO_NAMESPACES } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
 
 // Page-size options for the rows-per-page selector
@@ -60,7 +58,7 @@ export function AssetsListPage(): React.JSX.Element {
   const autoPageSize = getAutoPageSize(view);
   const PAGE_SIZE = pageSize || autoPageSize;
 
-  // ── Real-API queries (skipped when in demo mode) ────────────────────────
+  // ── Real-API queries ────────────────────────────────────────────────────
   const listQuery = {
     page: page + 1,
     limit: PAGE_SIZE,
@@ -75,26 +73,8 @@ export function AssetsListPage(): React.JSX.Element {
     limit: NAMESPACE_FILTER_LIMIT,
   });
 
-  // ── Data sourcing ───────────────────────────────────────────────────────
-  const demoRows: IAssetRow[] = useMemo(() => DEMO_ASSET_LIST.map(demoAssetToRow), []);
-
-  // In demo mode the page applies state/namespace/query filters client-side
-  // and slices for pagination locally. In real-API mode the BE handles
-  // state/namespace/page/limit; only the free-text search is applied
-  // client-side over the loaded page (matches the full publicId).
-  const demoFiltered: IAssetRow[] = useMemo(() => {
-    return demoRows.filter((row) => {
-      if (stateFilter !== "all" && row.state !== stateFilter) return false;
-      if (namespaceFilter !== "all" && row.namespaceSlug !== namespaceFilter) return false;
-      if (query) {
-        const q = query.toLowerCase();
-        if (!row.publicId.toLowerCase().includes(q) && !row.tail.toLowerCase().includes(q))
-          return false;
-      }
-      return true;
-    });
-  }, [demoRows, stateFilter, namespaceFilter, query]);
-
+  // The BE handles state/namespace/page/limit; only the free-text search is
+  // applied client-side over the loaded page (matches the full publicId).
   const realRows: IAssetRow[] = useMemo(
     () => (realAssetsPage?.data ?? []).map(assetResponseToRow),
     [realAssetsPage],
@@ -106,25 +86,17 @@ export function AssetsListPage(): React.JSX.Element {
     return realRows.filter((row) => row.publicId.toLowerCase().includes(q));
   }, [realRows, query]);
 
-  // Visible page rows + total counts vary by mode.
-  const pageRows: IAssetRow[] = isDemoMode
-    ? demoFiltered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
-    : realFiltered;
+  const pageRows: IAssetRow[] = realFiltered;
 
-  const totalItems: number = isDemoMode ? demoFiltered.length : (realAssetsPage?.total ?? 0);
-  const totalPages: number = isDemoMode
-    ? Math.max(1, Math.ceil(demoFiltered.length / PAGE_SIZE))
-    : Math.max(1, realAssetsPage?.lastPage ?? 1);
+  const totalItems: number = realAssetsPage?.total ?? 0;
+  const totalPages: number = Math.max(1, realAssetsPage?.lastPage ?? 1);
 
   const namespaceOptions: INamespaceOption[] = useMemo(() => {
-    if (isDemoMode) {
-      return DEMO_NAMESPACES.map((ns) => ({ slug: ns.slug, label: ns.slug }));
-    }
     const real: NamespaceResponseDTO[] = realNamespacesPage?.data ?? [];
     return real.map((ns) => ({ slug: ns.slug, label: ns.slug }));
   }, [realNamespacesPage]);
 
-  const isLoading = !isDemoMode && realAssetsLoading;
+  const isLoading = realAssetsLoading;
   const isEmpty = !isLoading && pageRows.length === 0;
 
   const hasActiveFilters = stateFilter !== "all" || namespaceFilter !== "all" || query !== "";
@@ -194,20 +166,12 @@ export function AssetsListPage(): React.JSX.Element {
   }
 
   // Range display values (1-indexed)
-  const rangeFrom: number = isDemoMode
-    ? demoFiltered.length === 0
-      ? 0
-      : page * PAGE_SIZE + 1
-    : totalItems === 0
-      ? 0
-      : page * PAGE_SIZE + 1;
-  const rangeTo: number = isDemoMode
-    ? Math.min((page + 1) * PAGE_SIZE, demoFiltered.length)
-    : Math.min((page + 1) * PAGE_SIZE, totalItems);
+  const rangeFrom: number = totalItems === 0 ? 0 : page * PAGE_SIZE + 1;
+  const rangeTo: number = Math.min((page + 1) * PAGE_SIZE, totalItems);
 
   // Header subtitle counters
-  const headerTotal: number = isDemoMode ? DEMO_ASSET_LIST.length : totalItems;
-  const headerNsCount: number = isDemoMode ? DEMO_NAMESPACES.length : namespaceOptions.length;
+  const headerTotal: number = totalItems;
+  const headerNsCount: number = namespaceOptions.length;
 
   return (
     <div className="space-y-4">
@@ -376,7 +340,7 @@ export function AssetsListPage(): React.JSX.Element {
       )}
 
       {/* ── Legal hold filter banner ────────────────────────── */}
-      {legalHoldId !== undefined && !isDemoMode && (
+      {legalHoldId !== undefined && (
         <div className="border-warn/40 bg-warn-soft/40 mb-3 flex items-center justify-between rounded-md border px-4 py-2 text-sm">
           <span>{t("pages.assets.legalHoldFilter.banner", { holdId: legalHoldId })}</span>
           <Link to="/assets" search={{}}>

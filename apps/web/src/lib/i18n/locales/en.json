@@ -1336,6 +1336,7 @@
       "members": {
         "title": "Members",
         "inviteMember": "Invite member",
+        "empty": "No members yet.",
         "table": {
           "person": "Person",
           "role": "Role",
@@ -1351,6 +1352,7 @@
       "api": {
         "title": "API keys",
         "createKey": "Create key",
+        "empty": "No API keys yet.",
         "table": {
           "label": "Label",
           "scopes": "Scopes",

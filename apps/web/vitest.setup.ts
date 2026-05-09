@@ -1,7 +1,4 @@
 import "@testing-library/jest-dom";
-import { vi } from "vitest";
-
-vi.stubEnv("VITE_DEMO_DATA", "true");
 
 // Initialize __APP_CONFIG__ with required config values for tests.
 // This ensures getRuntimeValue() works without mocking in test files.

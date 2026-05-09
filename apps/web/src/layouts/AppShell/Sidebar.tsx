@@ -4,13 +4,6 @@ import { useTranslation } from "react-i18next";
 
 import { useDashboardOverview } from "@/features/dashboard/hooks/useDashboardOverview";
 import { useAuth } from "@/hooks/useAuth";
-import { isDemoMode } from "@/lib/demo/demo-mode";
-import {
-  DEMO_LEGAL_HOLDS,
-  DEMO_NAMESPACES,
-  DEMO_QUARANTINE,
-  DEMO_TOTAL_ASSETS,
-} from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
 
 import type { INavGroup, INavLink } from "./nav-config";
@@ -169,14 +162,10 @@ export function Sidebar(): React.ReactElement {
   )?.counts;
 
   const getCount = (key: string): number | undefined => {
-    if (key === "quarantine")
-      return counts?.quarantine ?? (isDemoMode ? DEMO_QUARANTINE.length : undefined);
-    if (key === "legalHolds")
-      return counts?.legalHolds ?? (isDemoMode ? DEMO_LEGAL_HOLDS.length : undefined);
-    if (key === "assets")
-      return counts?.totalAssets ?? (isDemoMode ? DEMO_TOTAL_ASSETS : undefined);
-    if (key === "namespaces")
-      return counts?.namespaces ?? (isDemoMode ? DEMO_NAMESPACES.length : undefined);
+    if (key === "quarantine") return counts?.quarantine;
+    if (key === "legalHolds") return counts?.legalHolds;
+    if (key === "assets") return counts?.totalAssets;
+    if (key === "namespaces") return counts?.namespaces;
     return undefined;
   };
 

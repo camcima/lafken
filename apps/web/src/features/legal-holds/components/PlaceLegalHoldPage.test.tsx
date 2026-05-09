@@ -14,8 +14,6 @@ vi.mock("@lafken/react", () => ({
   AssetImage: () => null,
 }));
 
-vi.mock("@/lib/demo/demo-mode", () => ({ isDemoMode: false }));
-
 const placeSpy = vi.fn();
 
 vi.mock("@/features/legal-holds/hooks/useLegalHoldMutations", () => ({
@@ -111,43 +109,6 @@ describe("PlaceLegalHoldPage", () => {
       }),
       expect.any(Object),
     );
-  });
-
-  it("demo mode no-ops with a toast and does not call mutate", async () => {
-    vi.doMock("@/lib/demo/demo-mode", () => ({ isDemoMode: true }));
-
-    // Re-import after mock override — for simplicity re-render with mocked toast
-    const { toast } = await import("sonner");
-    const toastInfoSpy = vi.spyOn(toast, "info").mockImplementation(() => "toast-id");
-
-    const user = userEvent.setup();
-    renderPage();
-
-    // Fill all fields to hit the submit path
-    const caseInput = screen.getByRole("textbox", { name: /case reference/i });
-    await user.type(caseInput, "CHL-AVN-2026-014");
-
-    const descInput = screen.getByRole("textbox", { name: /reason \/ counsel note/i });
-    await user.type(descInput, "Investigation per DGAC requirement.");
-
-    const assetButtons = screen.getAllByRole("button", { name: /^add$/i });
-    await user.click(assetButtons[0]);
-
-    const checkbox = screen.getByRole("checkbox");
-    await user.click(checkbox);
-
-    const submitBtn = screen.getByRole("button", { name: /place hold/i });
-    await user.click(submitBtn);
-
-    // mutate should NOT have been called — demo mode short-circuits before calling mutate
-    // Note: isDemoMode is read at module level so this test documents the toast path
-    // The mock is applied via doMock and will not affect the already-imported module.
-    // Instead, verify the toast was called with demo message when isDemoMode is set.
-    // Since the component uses the statically-imported isDemoMode constant, we verify
-    // that when the page is in live mode (default mock = false), mutate IS called.
-    expect(toastInfoSpy).not.toHaveBeenCalled(); // isDemoMode was false in this render
-    // placeSpy was already called once from this test
-    toastInfoSpy.mockRestore();
   });
 
   it("renders all four section headings", () => {

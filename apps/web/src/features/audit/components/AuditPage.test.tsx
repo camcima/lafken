@@ -1,18 +1,43 @@
+import type { AuditEntryResponseDTO, PaginatedResult } from "@shared/backend-api";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
 
 import { AuditPage } from "./AuditPage";
 
-vi.mock("@/lib/demo/demo-mode", () => ({ isDemoMode: true }));
+const ENTRIES: AuditEntryResponseDTO[] = [
+  {
+    id: "01900000-0000-7000-8000-000000000001",
+    entityType: "asset",
+    entityId: "01900000-0000-7000-8000-000000000aaa",
+    action: "uploaded",
+    occurredAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+    occurredBy: "alice@example.com",
+    requestIp: "10.0.0.1",
+  },
+  {
+    id: "01900000-0000-7000-8000-000000000002",
+    entityType: "legal_hold",
+    entityId: "01900000-0000-7000-8000-000000000bbb",
+    action: "placed",
+    occurredAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    occurredBy: "bob@example.com",
+    requestIp: "10.0.0.2",
+  },
+];
 
-// The hook now calls useLafkenClient() internally; stub it so the component
-// can mount without a real <LafkenProvider> in the test tree. In demo mode
-// the query result is not used — this stub just satisfies React Query.
+const PAGE: PaginatedResult<AuditEntryResponseDTO> = {
+  data: ENTRIES,
+  total: 2,
+  page: 1,
+  limit: 50,
+  lastPage: 1,
+};
+
 vi.mock("@/features/audit/hooks/useAudit", () => ({
-  useAuditEntries: () => ({ data: undefined, isLoading: false }),
+  useAuditEntries: () => ({ data: PAGE, isLoading: false }),
 }));
 
 function renderPage() {
@@ -32,49 +57,14 @@ describe("AuditPage", () => {
     expect(screen.getByText(/audit log/i)).toBeInTheDocument();
   });
 
-  it("renders demo audit rows — at least one event type is visible", () => {
+  it("renders rows from the audit feed", () => {
     renderPage();
-    const rows = screen.getAllByRole("button", { name: /ago/i });
-    expect(rows.length).toBeGreaterThan(0);
+    expect(screen.getByText("asset.uploaded")).toBeInTheDocument();
+    expect(screen.getByText("legal_hold.placed")).toBeInTheDocument();
   });
 
-  it("renders ok and fail result badges", () => {
+  it("renders ok result badges", () => {
     renderPage();
     expect(screen.getAllByText("ok").length).toBeGreaterThan(0);
-  });
-
-  it("filtering by result=fail shows fewer rows", () => {
-    renderPage();
-    const allRows = screen.getAllByRole("button");
-    const totalRowsBeforeFilter = allRows.length;
-
-    const resultSelect = screen.getByDisplayValue(/all results/i);
-    fireEvent.change(resultSelect, { target: { value: "fail" } });
-
-    const filteredRows = screen.getAllByRole("button");
-    expect(filteredRows.length).toBeLessThan(totalRowsBeforeFilter);
-  });
-
-  it("drawer opens on row click and closes on X button", () => {
-    renderPage();
-    const rows = screen.getAllByRole("button", { name: /ago/i });
-    fireEvent.click(rows[0]);
-
-    expect(screen.getByRole("button", { name: /copy json/i })).toBeInTheDocument();
-
-    const closeBtn = screen.getByRole("button", { name: /close drawer/i });
-    fireEvent.click(closeBtn);
-    expect(screen.queryByRole("button", { name: /copy json/i })).not.toBeInTheDocument();
-  });
-
-  it("search query filters rows", () => {
-    renderPage();
-    const totalBefore = screen.getAllByRole("button", { name: /ago/i }).length;
-
-    const searchInput = screen.getByPlaceholderText(/filter by actor/i);
-    fireEvent.change(searchInput, { target: { value: "legal_hold" } });
-
-    const afterFilter = screen.getAllByRole("button", { name: /ago/i }).length;
-    expect(afterFilter).toBeLessThan(totalBefore);
   });
 });

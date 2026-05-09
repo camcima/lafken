@@ -1335,6 +1335,7 @@
       "members": {
         "title": "Miembros",
         "inviteMember": "Invitar miembro",
+        "empty": "Aún no hay miembros.",
         "table": {
           "person": "Persona",
           "role": "Rol",
@@ -1350,6 +1351,7 @@
       "api": {
         "title": "Claves de API",
         "createKey": "Crear clave",
+        "empty": "Aún no hay claves de API.",
         "table": {
           "label": "Etiqueta",
           "scopes": "Alcances",

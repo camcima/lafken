@@ -1335,6 +1335,7 @@
       "members": {
         "title": "Membros",
         "inviteMember": "Convidar membro",
+        "empty": "Nenhum membro ainda.",
         "table": {
           "person": "Pessoa",
           "role": "Função",
@@ -1350,6 +1351,7 @@
       "api": {
         "title": "Chaves de API",
         "createKey": "Criar chave",
+        "empty": "Nenhuma chave de API ainda.",
         "table": {
           "label": "Rótulo",
           "scopes": "Escopos",

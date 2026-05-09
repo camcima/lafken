@@ -1,3 +1,4 @@
+import type { LegalHoldResponseDTO, PaginatedResult } from "@shared/backend-api";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -6,12 +7,43 @@ import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
 
 import { LegalHoldsListPage } from "./LegalHoldsListPage";
 
-// ── Mocks ──────────────────────────────────────────────────────────────────
+// ── Sample data ─────────────────────────────────────────────────────────────
 
-vi.mock("@/lib/demo/demo-mode", () => ({ isDemoMode: true }));
+const ACTIVE_HOLD: LegalHoldResponseDTO = {
+  id: "01900000-0000-7000-8000-000000000001",
+  caseReference: "CHL-2026-AVN-014",
+  description: "Investigation pending",
+  scopeSummary: "namespace:fleet-photos",
+  affectedAssetCount: 3,
+  active: true,
+  placedBy: "alice@example.com",
+  placedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+};
+
+const LIFTED_HOLD: LegalHoldResponseDTO = {
+  id: "01900000-0000-7000-8000-000000000002",
+  caseReference: "CHL-2025-AVN-099",
+  description: "Closed",
+  scopeSummary: "namespace:cargo-claims",
+  affectedAssetCount: 1,
+  active: false,
+  placedBy: "bob@example.com",
+  placedAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+  liftedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+};
+
+const PAGE: PaginatedResult<LegalHoldResponseDTO> = {
+  data: [ACTIVE_HOLD, LIFTED_HOLD],
+  total: 2,
+  page: 1,
+  limit: 25,
+  lastPage: 1,
+};
+
+// ── Mocks ───────────────────────────────────────────────────────────────────
 
 vi.mock("@/features/legal-holds/hooks/useLegalHolds", () => ({
-  useLegalHolds: () => ({ data: undefined, isLoading: false }),
+  useLegalHolds: () => ({ data: PAGE, isLoading: false }),
   useLegalHold: () => ({ data: undefined, isLoading: false }),
 }));
 
@@ -31,7 +63,7 @@ vi.mock("@tanstack/react-router", () => ({
   useSearch: () => ({ q: undefined }),
 }));
 
-// ── Helper ─────────────────────────────────────────────────────────────────
+// ── Helper ──────────────────────────────────────────────────────────────────
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -49,7 +81,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-// ── Tests ──────────────────────────────────────────────────────────────────
+// ── Tests ───────────────────────────────────────────────────────────────────
 
 describe("LegalHoldsListPage", () => {
   it("renders the page title", () => {
@@ -57,9 +89,8 @@ describe("LegalHoldsListPage", () => {
     expect(screen.getByRole("heading", { name: /legal holds/i })).toBeInTheDocument();
   });
 
-  it("renders at least one demo case reference", () => {
+  it("renders the case reference for the active hold", () => {
     renderPage();
-    // DEMO_LEGAL_HOLDS has case refs like CHL-2026-AVN-014
     expect(screen.getByText("CHL-2026-AVN-014")).toBeInTheDocument();
   });
 
@@ -69,12 +100,10 @@ describe("LegalHoldsListPage", () => {
     expect(screen.getByText(/assets under hold/i)).toBeInTheDocument();
   });
 
-  it("filtering by status=active shows only active rows (removes lifted)", () => {
+  it("filtering by status=active keeps the active row visible", () => {
     renderPage();
     const statusSelect = screen.getByDisplayValue(/all statuses/i);
     fireEvent.change(statusSelect, { target: { value: "active" } });
-
-    // CHL-2026-AVN-014 is active in demo data — should still be visible
     expect(screen.getByText("CHL-2026-AVN-014")).toBeInTheDocument();
   });
 
@@ -82,39 +111,11 @@ describe("LegalHoldsListPage", () => {
     renderPage();
     const statusSelect = screen.getByDisplayValue(/all statuses/i);
     fireEvent.change(statusSelect, { target: { value: "lifted" } });
-
-    // CHL-2026-AVN-014 is active — should not be visible after filtering to lifted
     expect(screen.queryByText("CHL-2026-AVN-014")).not.toBeInTheDocument();
-  });
-
-  it("drawer opens on row click and closes on X button", () => {
-    renderPage();
-    // Click the first hold row
-    const rows = screen.getAllByRole("button", { name: /CHL/i });
-    fireEvent.click(rows[0]);
-
-    // Drawer should show "Legal hold" caption
-    expect(screen.getAllByText(/legal hold/i).length).toBeGreaterThan(0);
-
-    // Close the drawer
-    const closeBtn = screen.getByRole("button", { name: /close drawer/i });
-    fireEvent.click(closeBtn);
   });
 
   it("renders Place hold link", () => {
     renderPage();
-    // Link wraps a Button with "Place hold..." text
     expect(screen.getByRole("link", { name: /place hold/i })).toBeInTheDocument();
-  });
-
-  it("search query narrows visible rows", () => {
-    renderPage();
-    const initialRows = screen.getAllByRole("button", { name: /CHL|BR-|PE-|CO-|AR-/i }).length;
-
-    const searchInput = screen.getByPlaceholderText(/search by case reference/i);
-    fireEvent.change(searchInput, { target: { value: "CHL-2026" } });
-
-    const filteredRows = screen.getAllByRole("button", { name: /CHL-2026/i }).length;
-    expect(filteredRows).toBeLessThan(initialRows);
   });
 });

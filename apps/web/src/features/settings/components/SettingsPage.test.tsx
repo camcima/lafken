@@ -50,11 +50,10 @@ describe("SettingsPage", () => {
     expect(mockNavigate).toHaveBeenCalledWith({ search: { tab: "members" } });
   });
 
-  it("members tab shows member rows when tab=members", () => {
+  it("members tab shows the empty state when tab=members", () => {
     mockTab = "members";
     renderPage();
-    // Paula Estrada is in DEMO_MEMBERS
-    expect(screen.getByText("Paula Estrada")).toBeInTheDocument();
+    expect(screen.getByText(/no members yet/i)).toBeInTheDocument();
   });
 
   it("clicking API keys tab calls navigate with api tab", () => {
@@ -64,11 +63,10 @@ describe("SettingsPage", () => {
     expect(mockNavigate).toHaveBeenCalledWith({ search: { tab: "api" } });
   });
 
-  it("api tab shows API key rows when tab=api", () => {
+  it("api tab shows the empty state when tab=api", () => {
     mockTab = "api";
     renderPage();
-    // wo-app-prod-ios is in DEMO_API_KEYS
-    expect(screen.getByText("wo-app-prod-ios")).toBeInTheDocument();
+    expect(screen.getByText(/no api keys yet/i)).toBeInTheDocument();
   });
 
   it("policies tab shows policy settings when tab=policies", () => {
@@ -99,6 +97,6 @@ describe("SettingsPage", () => {
       </I18nProvider>,
     );
     expect(screen.queryByText("LATAM Lafken (prod)")).not.toBeInTheDocument();
-    expect(screen.getByText("Paula Estrada")).toBeInTheDocument();
+    expect(screen.getByText(/no members yet/i)).toBeInTheDocument();
   });
 });

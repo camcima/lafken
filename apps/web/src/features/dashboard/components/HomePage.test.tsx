@@ -111,26 +111,7 @@ describe("HomePage", () => {
     expect(screen.queryByText("47")).not.toBeInTheDocument();
   });
 
-  it("renders queue rows from demo data", () => {
-    render(
-      <I18nProvider>
-        <HomePage />
-      </I18nProvider>,
-    );
-    expect(screen.getByText("validate")).toBeInTheDocument();
-    expect(screen.getByText("transform")).toBeInTheDocument();
-  });
-
-  it("renders namespace rows from demo data", () => {
-    render(
-      <I18nProvider>
-        <HomePage />
-      </I18nProvider>,
-    );
-    expect(screen.getByText("aircraft-photos")).toBeInTheDocument();
-  });
-
-  it("renders live events from demo data", () => {
+  it("renders the live audit log link", () => {
     render(
       <I18nProvider>
         <HomePage />
@@ -139,14 +120,12 @@ describe("HomePage", () => {
     expect(screen.getByText("View full audit log →")).toBeInTheDocument();
   });
 
-  it("shows the attention banner with alert tone when transform queue is degraded", () => {
+  it("shows the attention banner with the ok tone when there are no degraded queues", () => {
     render(
       <I18nProvider>
         <HomePage />
       </I18nProvider>,
     );
-    expect(
-      screen.getByText("1 pipeline stage degraded · transform queue is backing up"),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/all systems nominal/i)).toBeInTheDocument();
   });
 });

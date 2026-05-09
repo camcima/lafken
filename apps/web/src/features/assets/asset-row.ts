@@ -1,7 +1,5 @@
 import type { AssetResponseDTO } from "@shared/backend-api";
 
-import type { DemoAsset } from "@/lib/demo/lafken-demo-data";
-
 export interface IAssetRow {
   /** Stable React key + selection key. */
   rowKey: string;
@@ -27,9 +25,6 @@ export interface IAssetRow {
   /** 0-360 hue for the thumbnail gradient (deterministic). */
   thumbHue: number;
   legalHold: boolean;
-  /** Demo-only fields; empty string when not available. */
-  tail: string;
-  wo: string;
 }
 
 const HUE_DEGREES = 360;
@@ -85,29 +80,5 @@ export function assetResponseToRow(dto: AssetResponseDTO): IAssetRow {
     dimensions: formatDimensions(dto.width, dto.height),
     thumbHue: hashHue(dto.publicId),
     legalHold: dto.legalHold,
-    tail: "",
-    wo: "",
-  };
-}
-
-export function demoAssetToRow(demo: DemoAsset): IAssetRow {
-  return {
-    rowKey: demo.id,
-    id: demo.id,
-    publicId: demo.publicId,
-    shortId: demo.id,
-    state: demo.state,
-    namespaceSlug: demo.namespace,
-    uploadedAt: "",
-    minutesAgo: demo.minutesAgo,
-    uploadedBy: demo.uploadedBy,
-    uploadedDisplay: demo.uploadedDisplay,
-    sizeBytes: demo.sizeBytes,
-    format: demo.format,
-    dimensions: demo.dimensions,
-    thumbHue: demo.thumbHue,
-    legalHold: demo.hasLegalHold,
-    tail: demo.tail,
-    wo: demo.wo,
   };
 }

@@ -23,10 +23,20 @@ import { Paginator } from "@/components/common/Paginator";
 import { RightDrawer } from "@/components/common/RightDrawer";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
 import { useAuditEntries } from "@/features/audit/hooks/useAudit";
-import { isDemoMode } from "@/lib/demo/demo-mode";
-import { DEMO_AUDIT, fmtMinAgo } from "@/lib/demo/lafken-demo-data";
-import type { AuditResult, DemoAuditEntry } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
+
+type AuditResult = "ok" | "fail";
+
+const MIN_PER_HOUR = 60;
+const HOURS_PER_DAY = 24;
+
+function fmtMinAgo(minutes: number): string {
+  if (minutes < MIN_PER_HOUR) return `${minutes}m`;
+  const hours = Math.floor(minutes / MIN_PER_HOUR);
+  if (hours < HOURS_PER_DAY) return `${hours}h`;
+  const days = Math.floor(hours / HOURS_PER_DAY);
+  return `${days}d`;
+}
 
 const AUDIT_RETENTION = "10y";
 
@@ -61,19 +71,6 @@ interface IAuditRow {
     | "entityId"
     | "action"
   >;
-}
-
-function demoToRow(entry: DemoAuditEntry): IAuditRow {
-  return {
-    id: entry.id,
-    type: entry.type,
-    actor: entry.actor,
-    target: entry.target,
-    namespace: entry.namespace,
-    ip: entry.ip,
-    minutesAgo: entry.minutesAgo,
-    result: entry.result,
-  };
 }
 
 function apiToRow(entry: AuditEntryResponseDTO): IAuditRow {
@@ -137,12 +134,6 @@ function TypeIcon({ type, size = TYPE_ICON_DEFAULT_SIZE }: ITypeIconProps): Reac
   return <Info size={size} className={cn(cls, "text-muted-foreground")} />;
 }
 
-const DEMO_HOUR_BASE = 8;
-const MINUTES_PER_HOUR = 60;
-const ID_SLICE_REQ_START = 4;
-const ID_SLICE_REQ_END = 18;
-const ID_SLICE_TRACE_END = 32;
-
 interface IAuditDrawerProps {
   entry: IAuditRow;
   onClose: () => void;
@@ -151,47 +142,23 @@ interface IAuditDrawerProps {
 function AuditDrawer({ entry, onClose }: IAuditDrawerProps): React.JSX.Element {
   const { t } = useTranslation();
 
-  const jsonText: string = entry.payload
-    ? JSON.stringify(
-        {
-          event_id: entry.id,
-          type: entry.type,
-          entity_type: entry.payload.entityType,
-          entity_id: entry.payload.entityId,
-          action: entry.payload.action,
-          occurred_at: entry.payload.occurredAt,
-          occurred_by: entry.actor,
-          request_ip: entry.payload.requestIp ?? null,
-          before_state: entry.payload.beforeState ?? null,
-          after_state: entry.payload.afterState ?? null,
-          reason: entry.payload.reason ?? null,
-        },
-        null,
-        2,
-      )
-    : (() => {
-        const hourStr = String(
-          Math.max(0, DEMO_HOUR_BASE - Math.floor(entry.minutesAgo / MINUTES_PER_HOUR)),
-        ).padStart(2, "0");
-        return `{
-  "event_id":   "${entry.id}",
-  "type":       "${entry.type}",
-  "result":     "${entry.result}",
-  "occurred_at": "2026-05-03T${hourStr}:14:22Z",
-  "actor": {
-    "principal": "${entry.actor}",
-    "ip":        "${entry.ip}",
-    "user_agent": "Lafken Console/2.4.1"
-  },
-  "target": {
-    "kind":       "${entry.type.split(".")[0]}",
-    "id":         "${entry.target}",
-    "namespace":  "${entry.namespace}"
-  },
-  "request_id": "rq_${entry.id.slice(ID_SLICE_REQ_START, ID_SLICE_REQ_END)}",
-  "trace_id":   "tr_${entry.id.slice(ID_SLICE_REQ_START, ID_SLICE_TRACE_END)}"
-}`;
-      })();
+  const jsonText: string = JSON.stringify(
+    {
+      event_id: entry.id,
+      type: entry.type,
+      entity_type: entry.payload?.entityType ?? null,
+      entity_id: entry.payload?.entityId ?? null,
+      action: entry.payload?.action ?? null,
+      occurred_at: entry.payload?.occurredAt ?? null,
+      occurred_by: entry.actor,
+      request_ip: entry.payload?.requestIp ?? null,
+      before_state: entry.payload?.beforeState ?? null,
+      after_state: entry.payload?.afterState ?? null,
+      reason: entry.payload?.reason ?? null,
+    },
+    null,
+    2,
+  );
 
   return (
     <RightDrawer
@@ -243,7 +210,6 @@ export function AuditPage(): React.JSX.Element {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [resultFilter, setResultFilter] = useState("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -260,57 +226,26 @@ export function AuditPage(): React.JSX.Element {
     };
   }, [query]);
 
-  const realQuery = useAuditEntries(
-    isDemoMode
-      ? {}
-      : {
-          page: page + 1,
-          limit: pageSize,
-          ...(beEntityType ? { entityType: beEntityType } : {}),
-          ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
-        },
-  );
-
-  const allRows: IAuditRow[] = isDemoMode
-    ? DEMO_AUDIT.map(demoToRow)
-    : (realQuery.data?.data ?? []).map(apiToRow);
-
-  const filtered: IAuditRow[] = allRows.filter((entry) => {
-    if (!isDemoMode) return true;
-    if (resultFilter !== "all" && entry.result !== resultFilter) return false;
-    if (typeFilter !== "all" && !entry.type.startsWith(typeFilter)) return false;
-    if (query) {
-      const lq = query.toLowerCase();
-      if (
-        !entry.actor.toLowerCase().includes(lq) &&
-        !entry.target.toLowerCase().includes(lq) &&
-        !entry.type.includes(lq) &&
-        !entry.namespace.includes(lq)
-      )
-        return false;
-    }
-    return true;
+  const realQuery = useAuditEntries({
+    page: page + 1,
+    limit: pageSize,
+    ...(beEntityType ? { entityType: beEntityType } : {}),
+    ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
   });
 
+  const allRows: IAuditRow[] = (realQuery.data?.data ?? []).map(apiToRow);
+
   const realTotal: number = realQuery.data?.total ?? 0;
-  const totalPages: number = isDemoMode
-    ? Math.max(1, Math.ceil(filtered.length / pageSize))
-    : Math.max(1, Math.ceil(realTotal / pageSize));
-  const pageRows: IAuditRow[] = isDemoMode
-    ? filtered.slice(page * pageSize, (page + 1) * pageSize)
-    : filtered;
+  const totalPages: number = Math.max(1, Math.ceil(realTotal / pageSize));
+  const pageRows: IAuditRow[] = allRows;
 
   const openEntry: IAuditRow | undefined = allRows.find((entry) => entry.id === openId);
 
-  const visibleTotal: number = isDemoMode ? filtered.length : realTotal;
+  const visibleTotal: number = realTotal;
   const rangeFrom = visibleTotal === 0 ? 0 : page * pageSize + 1;
-  const rangeTo = isDemoMode
-    ? Math.min((page + 1) * pageSize, filtered.length)
-    : Math.min((page + 1) * pageSize, realTotal);
+  const rangeTo = Math.min((page + 1) * pageSize, realTotal);
 
-  const anchorMinutesAgo: number = isDemoMode
-    ? (DEMO_AUDIT[0]?.minutesAgo ?? 2)
-    : (allRows[0]?.minutesAgo ?? 0);
+  const anchorMinutesAgo: number = allRows[0]?.minutesAgo ?? 0;
 
   return (
     <div className="space-y-4">
@@ -351,42 +286,13 @@ export function AuditPage(): React.JSX.Element {
             className={SELECT_CLASS}
           >
             <option value="all">{t("pages.audit.filters.allTypes")}</option>
-            {isDemoMode ? (
-              <>
-                <option value="asset">asset.*</option>
-                <option value="legal_hold">legal_hold.*</option>
-                <option value="policy">policy.*</option>
-                <option value="namespace">namespace.*</option>
-                <option value="api_key">api_key.*</option>
-                <option value="user">user.*</option>
-                <option value="review">review.*</option>
-                <option value="export">export.*</option>
-              </>
-            ) : (
-              <>
-                <option value="asset">asset.*</option>
-                <option value="namespace">namespace.*</option>
-                <option value="namespace_policy">namespace_policy.*</option>
-                <option value="namespace_preset">namespace_preset.*</option>
-                <option value="storage_binding">storage_binding.*</option>
-                <option value="legal_hold">legal_hold.*</option>
-              </>
-            )}
+            <option value="asset">asset.*</option>
+            <option value="namespace">namespace.*</option>
+            <option value="namespace_policy">namespace_policy.*</option>
+            <option value="namespace_preset">namespace_preset.*</option>
+            <option value="storage_binding">storage_binding.*</option>
+            <option value="legal_hold">legal_hold.*</option>
           </select>
-          {isDemoMode && (
-            <select
-              value={resultFilter}
-              onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
-                setResultFilter(ev.target.value);
-                setPage(0);
-              }}
-              className={SELECT_CLASS}
-            >
-              <option value="all">{t("pages.audit.filters.allResults")}</option>
-              <option value="ok">{t("pages.audit.filters.results.ok")}</option>
-              <option value="fail">{t("pages.audit.filters.results.fail")}</option>
-            </select>
-          )}
         </div>
       </Card>
 

@@ -25,8 +25,6 @@ import { RightDrawer } from "@/components/common/RightDrawer";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
 import { LiftLegalHoldDialog } from "@/features/legal-holds/components/LiftLegalHoldDialog";
 import { useLegalHolds } from "@/features/legal-holds/hooks/useLegalHolds";
-import { isDemoMode } from "@/lib/demo/demo-mode";
-import { DEMO_LEGAL_HOLDS } from "@/lib/demo/lafken-demo-data";
 import { cn } from "@/lib/utils";
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -68,21 +66,6 @@ interface IHoldRow {
   lastReviewed: string;
   reason: string;
   active: boolean;
-}
-
-function demoToRow(hold: (typeof DEMO_LEGAL_HOLDS)[number]): IHoldRow {
-  return {
-    id: hold.id,
-    caseRef: hold.caseRef,
-    scope: hold.scope,
-    scopeLabel: hold.scopeLabel,
-    assets: hold.assets,
-    placedBy: hold.placedBy,
-    placedAt: hold.placedAt,
-    lastReviewed: hold.lastReviewed,
-    reason: hold.reason,
-    active: hold.status === "active" || hold.status === "pending_release",
-  };
 }
 
 function apiToRow(hold: LegalHoldResponseDTO): IHoldRow {
@@ -279,13 +262,9 @@ export function LegalHoldsListPage(): React.JSX.Element {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  // Real-API query (skipped in demo mode)
   const realQuery = useLegalHolds({ page: page + 1, limit: pageSize });
 
-  // Normalise both sources to IHoldRow[]
-  const allRows: IHoldRow[] = isDemoMode
-    ? DEMO_LEGAL_HOLDS.map(demoToRow)
-    : (realQuery.data?.data ?? []).map(apiToRow);
+  const allRows: IHoldRow[] = (realQuery.data?.data ?? []).map(apiToRow);
 
   const filtered: IHoldRow[] = allRows.filter((row) => {
     if (statusFilter === "active" && !row.active) return false;
@@ -303,7 +282,7 @@ export function LegalHoldsListPage(): React.JSX.Element {
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const pageRows = isDemoMode ? filtered.slice(page * pageSize, (page + 1) * pageSize) : filtered;
+  const pageRows = filtered;
 
   const totalAssets: number = filtered.reduce((sum, row) => sum + row.assets, 0);
   const openHold: IHoldRow | undefined = allRows.find((row) => row.id === openId);

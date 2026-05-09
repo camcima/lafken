@@ -4,7 +4,6 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/common/Button";
 import { useLiftLegalHold } from "@/features/legal-holds/hooks/useLegalHoldMutations";
-import { isDemoMode } from "@/lib/demo/demo-mode";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -98,12 +97,6 @@ export function LiftLegalHoldDialog({
   const isSubmitDisabled = !isValid || liftMutation.isPending;
 
   function handleSubmit(): void {
-    if (isDemoMode) {
-      toast.info(t("pages.legalHolds.lift.toast.demo"));
-      handleClose();
-      return;
-    }
-
     liftMutation.mutate(
       { id: holdId, liftReason },
       {
