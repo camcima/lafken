@@ -48,6 +48,8 @@ describe("ProcessingWorkerService", () => {
       retryPolicy,
       assetRepo,
       new FakeAppLogger(),
+      undefined,
+      { workflowTimeoutMs: 100 },
     );
   });
 
@@ -122,6 +124,27 @@ describe("ProcessingWorkerService", () => {
     expect(jobRepo.failedCalls).toHaveLength(1);
     expect(assetRepo.transitions.at(-1)?.toState).toBe("processing_failed");
     expect(assetRepo.transitions.at(-1)?.reason).toBe("permanent_error");
+  });
+
+  it("transitions the asset to processing_failed with state_reason 'workflow_timeout' when the workflow exceeds the budget", async () => {
+    vi.useFakeTimers();
+    try {
+      jobRepo.claimedJobs = [makeJob(TEST_UUIDS.asset1)];
+      processor.neverResolve = true; // simulate a hung workflow
+
+      const tickPromise: Promise<void> = service.tick();
+      // Drive the timer past the configured 100 ms test timeout.
+      await vi.advanceTimersByTimeAsync(150);
+      await tickPromise;
+
+      const lastTransition = assetRepo.transitions.at(-1);
+      expect(lastTransition?.toState).toBe("processing_failed");
+      expect(lastTransition?.reason).toBe("workflow_timeout");
+      expect(jobRepo.failedCalls).toHaveLength(1);
+      expect(jobRepo.failedCalls[0]?.lastError).toBe("workflow_timeout");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   describe("shutdown release", () => {
@@ -228,10 +251,14 @@ class FakeAssetProcessingRepository extends AssetProcessingRepositoryPort {
 class FakeProcessClaimedAssetUseCase {
   readonly calls: Array<{ assetId: string; workerId: string; attemptNumber: number }> = [];
   failures = 0;
+  neverResolve = false;
   errorFactory: (() => Error) = () => new Error("processor failure");
 
   execute(input: { assetId: string; workerId: string; attemptNumber: number }): Promise<unknown> {
     this.calls.push(input);
+    if (this.neverResolve) {
+      return new Promise<unknown>((): void => {});
+    }
     if (this.failures > 0) {
       this.failures -= 1;
       return Promise.reject(this.errorFactory());

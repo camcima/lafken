@@ -20,6 +20,10 @@ export interface IProcessClaimedAssetProcessor {
   execute(input: { assetId: string; workerId: string; attemptNumber: number }): Promise<unknown>;
 }
 
+export interface IProcessingWorkerOptions {
+  workflowTimeoutMs?: number;
+}
+
 interface IInFlightEntry {
   promise: Promise<void>;
   attemptNumber: number;
@@ -33,6 +37,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
   private pollTimer: NodeJS.Timeout | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private sweeperTimer: NodeJS.Timeout | null = null;
+  private readonly workflowTimeoutMs: number;
 
   constructor(
     private readonly jobs: ProcessingJobRepositoryPort,
@@ -43,8 +48,12 @@ export class ProcessingWorkerService implements OnModuleDestroy {
     private readonly logger: AppLoggerPort,
     @Optional()
     private readonly reclaimer?: ReclaimStaleProcessingJobsUseCase,
+    options?: IProcessingWorkerOptions,
   ) {
     this.logger.setContext(ProcessingWorkerService.name);
+    this.workflowTimeoutMs =
+      options?.workflowTimeoutMs ??
+      environmentConfiguration.PROCESSING_WORKER_WORKFLOW_TIMEOUT_MS;
   }
 
   start(): void {
@@ -190,9 +199,38 @@ export class ProcessingWorkerService implements OnModuleDestroy {
   }
 
   private async process(assetId: string, attemptNumber: number): Promise<void> {
+    let timeoutHandle: NodeJS.Timeout | null = null;
+    let timedOut = false;
+    const timeoutPromise: Promise<"timeout"> = new Promise((resolve): void => {
+      timeoutHandle = setTimeout((): void => {
+        timedOut = true;
+        resolve("timeout");
+      }, this.workflowTimeoutMs);
+    });
+
     try {
-      await this.processor.execute({ assetId, workerId: this.workerId, attemptNumber });
+      const winner: "completed" | "timeout" = await Promise.race([
+        this.processor
+          .execute({ assetId, workerId: this.workerId, attemptNumber })
+          .then((): "completed" => "completed"),
+        timeoutPromise,
+      ]).catch((err: unknown): never => {
+        // Re-throw; caught below to drive retry classification.
+        throw err;
+      });
+
+      if (winner === "timeout") {
+        this.logger.error(
+          { assetId, attemptNumber, timeoutMs: this.workflowTimeoutMs },
+          "workflow timeout reached; marking processing_failed",
+        );
+        await this.markFailed(assetId, attemptNumber, "workflow_timeout", "workflow_timeout");
+        return;
+      }
     } catch (err) {
+      if (timedOut) {
+        return; // already handled above
+      }
       const lastError: string = err instanceof Error ? err.message : String(err);
 
       if (!(err instanceof TransientProcessingError)) {
@@ -228,6 +266,10 @@ export class ProcessingWorkerService implements OnModuleDestroy {
           { assetId, attemptNumber },
           "releaseForRetry lost race; another worker may own this job",
         );
+      }
+    } finally {
+      if (timeoutHandle !== null) {
+        clearTimeout(timeoutHandle);
       }
     }
   }
