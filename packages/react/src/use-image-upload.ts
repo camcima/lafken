@@ -2,6 +2,10 @@ import type { LafkenClient } from "@lafken/client";
 import {
   type IFileConfirmedEventDetail,
   type IFileFailedEventDetail,
+  type IFileProcessingEventDetail,
+  type IFileQuarantinedEventDetail,
+  type IFileReadyEventDetail,
+  type IFileRejectedTerminalEventDetail,
   type IFileRestrictionRejectedEventDetail,
   type ISharedUploadMetadata,
   type IUploadRestrictions,
@@ -9,7 +13,22 @@ import {
 } from "@lafken/upload";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export type UploadFileState = "idle" | "uploading" | "uploaded" | "error";
+export type UploadFileState =
+  | "idle"
+  | "preview"
+  | "uploading"
+  | "processing"
+  | "ready"
+  | "rejected"
+  | "quarantined"
+  | "failed"
+  | "error";
+
+export interface IUploadFileError {
+  message: string;
+  /** Set for quarantined files to indicate the kind of quarantine (e.g. "virus"). */
+  kind?: string;
+}
 
 export interface IUploadFile {
   id: string;
@@ -18,7 +37,13 @@ export interface IUploadFile {
   type: string;
   state: UploadFileState;
   publicId: string | null;
-  error: string | null;
+  /**
+   * Structured error. Set when state is `error`, `failed`, `quarantined`, or
+   * `rejected`. For `error` state the `message` is the raw error message. For
+   * `quarantined` files the `kind` field indicates the quarantine reason.
+   * @deprecated Use `error` instead of the old `error: string | null` shape.
+   */
+  error: IUploadFileError | null;
   /**
    * Object URL for browser-side previews of the source bytes. `null` when the
    * file has no preview (e.g. non-image MIME types, or once a removed file's
@@ -26,6 +51,11 @@ export interface IUploadFile {
    * not call `URL.revokeObjectURL` on it.
    */
   previewUrl: string | null;
+  /**
+   * The terminal asset DTO returned by the backend once the file has reached a
+   * terminal lifecycle state (`ready`, `quarantined`, `rejected`).
+   */
+  terminalAsset?: { state: string; publicId: string } | null;
 }
 
 export interface IUseImageUploadOptions {
@@ -51,6 +81,12 @@ export interface IUseImageUploadOptions {
    * Only relevant when the user adds files well before clicking upload.
    */
   refreshSafetyMarginMs?: number;
+  /** Initial polling interval in ms when waiting for asset processing. Default 1000. */
+  pollingIntervalMs?: number;
+  /** Maximum polling interval (cap for backoff). Default 10_000. */
+  pollingMaxIntervalMs?: number;
+  /** Total polling timeout in ms before emitting file-failed("polling-timeout"). Default 600_000. */
+  pollingTimeoutMs?: number;
 }
 
 export interface IUploadRejection {
@@ -79,6 +115,9 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
   const initialRestrictions = opts.restrictions;
   const initialProtocol = opts.protocol;
   const initialRefreshSafetyMarginMs = opts.refreshSafetyMarginMs;
+  const initialPollingIntervalMs = opts.pollingIntervalMs;
+  const initialPollingMaxIntervalMs = opts.pollingMaxIntervalMs;
+  const initialPollingTimeoutMs = opts.pollingTimeoutMs;
   const [manager] = useState<LafkenUploadManager>(
     () =>
       new LafkenUploadManager({
@@ -87,6 +126,9 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
         restrictions: initialRestrictions,
         protocol: initialProtocol,
         refreshSafetyMarginMs: initialRefreshSafetyMarginMs,
+        pollingIntervalMs: initialPollingIntervalMs,
+        pollingMaxIntervalMs: initialPollingMaxIntervalMs,
+        pollingTimeoutMs: initialPollingTimeoutMs,
       }),
   );
   const [files, setFiles] = useState<IUploadFile[]>([]);
@@ -133,6 +175,7 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
             state: previous?.state ?? "idle",
             publicId: previous?.publicId ?? null,
             error: previous?.error ?? null,
+            terminalAsset: previous?.terminalAsset ?? null,
             previewUrl,
           };
         });
@@ -143,15 +186,87 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
       const detail = (ev as CustomEvent<IFileConfirmedEventDetail>).detail;
       setFiles((prev) =>
         prev.map((f) =>
-          f.id === detail.fileId ? { ...f, state: "uploaded", publicId: detail.publicId } : f,
+          f.id === detail.fileId ? { ...f, state: "uploading", publicId: detail.publicId } : f,
+        ),
+      );
+    }
+    function onProcessing(ev: Event): void {
+      const detail = (ev as CustomEvent<IFileProcessingEventDetail>).detail;
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === detail.fileId ? { ...f, state: "processing", publicId: detail.publicId } : f,
+        ),
+      );
+    }
+    function onReady(ev: Event): void {
+      const detail = (ev as CustomEvent<IFileReadyEventDetail>).detail;
+      const previewUrls = previewUrlsRef.current;
+      // Revoke object URL when file reaches ready state
+      const previewUrl = previewUrls.get(detail.fileId);
+      if (previewUrl !== undefined) {
+        URL.revokeObjectURL(previewUrl);
+        previewUrls.delete(detail.fileId);
+      }
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === detail.fileId
+            ? {
+                ...f,
+                state: "ready",
+                publicId: detail.publicId,
+                previewUrl: null,
+                terminalAsset: detail.asset,
+              }
+            : f,
+        ),
+      );
+    }
+    function onQuarantined(ev: Event): void {
+      const detail = (ev as CustomEvent<IFileQuarantinedEventDetail>).detail;
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === detail.fileId
+            ? {
+                ...f,
+                state: "quarantined",
+                publicId: detail.publicId,
+                error: { message: `quarantined: ${detail.kind}`, kind: detail.kind },
+                terminalAsset: null,
+              }
+            : f,
+        ),
+      );
+    }
+    function onRejectedTerminal(ev: Event): void {
+      const detail = (ev as CustomEvent<IFileRejectedTerminalEventDetail>).detail;
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === detail.fileId
+            ? {
+                ...f,
+                state: "rejected",
+                publicId: detail.publicId,
+                terminalAsset: null,
+              }
+            : f,
         ),
       );
     }
     function onFail(ev: Event): void {
       const detail = (ev as CustomEvent<IFileFailedEventDetail>).detail;
+      const message = detail.error.message;
+      // "polling-timeout" and other polling failures get state="failed";
+      // other errors (intent creation, etc.) get state="error".
+      const isPollingFailure = message === "polling-timeout" || message === "processing_failed";
       setFiles((prev) =>
         prev.map((f) =>
-          f.id === detail.fileId ? { ...f, state: "error", error: detail.error.message } : f,
+          f.id === detail.fileId
+            ? {
+                ...f,
+                state: isPollingFailure ? "failed" : "error",
+                error: { message },
+              }
+            : f,
         ),
       );
     }
@@ -185,6 +300,10 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
     uppy.on("complete", onComplete);
     uppy.on("error", onError);
     manager.addEventListener("file-confirmed", onConfirm);
+    manager.addEventListener("file-processing", onProcessing);
+    manager.addEventListener("file-ready", onReady);
+    manager.addEventListener("file-quarantined", onQuarantined);
+    manager.addEventListener("file-rejected-terminal", onRejectedTerminal);
     manager.addEventListener("file-failed", onFail);
     manager.addEventListener("file-restriction-rejected", onReject);
 
@@ -195,6 +314,10 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
       uppy.off("complete", onComplete);
       uppy.off("error", onError);
       manager.removeEventListener("file-confirmed", onConfirm);
+      manager.removeEventListener("file-processing", onProcessing);
+      manager.removeEventListener("file-ready", onReady);
+      manager.removeEventListener("file-quarantined", onQuarantined);
+      manager.removeEventListener("file-rejected-terminal", onRejectedTerminal);
       manager.removeEventListener("file-failed", onFail);
       manager.removeEventListener("file-restriction-rejected", onReject);
       for (const url of previewUrls.values()) {
