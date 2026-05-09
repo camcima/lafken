@@ -271,7 +271,10 @@ export class AssetsController {
           `No active preset matching "${preset}" was found for this asset's namespace.`,
         );
       }
-      return { url };
+      const expiresAt = new Date(
+        Date.now() + PREVIEW_SOURCE_URL_TTL_SECONDS * 1000,
+      ).toISOString();
+      return { url, expiresAt };
     } catch (err) {
       if (err instanceof AssetNotFoundError) {
         throw new NotFoundException(err.message, { cause: err });
