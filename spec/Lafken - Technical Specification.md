@@ -428,7 +428,7 @@ Download the full object (or stream it through processing). Pass it to sharp's m
 
 Cross-check sharp's detected format against the file-type result. Disagreement is suspicious: transition to 'rejected' with reason 'format\_inconsistency'.
 
-If the namespace policy declares requireExifExtraction, run exifr to parse EXIF data. Populate capture\_context.location, capture\_context.captured\_at, capture\_context.device — making them queryable structured data while removing them from the image bytes (the latter happens in Step 5 if re-encoding is enabled, or via a dedicated EXIF strip step otherwise).
+If the namespace policy declares requireExifExtraction, run exifr to parse EXIF data. Populate capture\_context.location, capture\_context.captured\_at, capture\_context.device — making them queryable structured data. EXIF stays on the original; imgproxy is configured with `IMGPROXY_STRIP_METADATA=true` so served URLs do not leak EXIF.
 
 ### **Step 3 — Virus scan (parallel)**
 
@@ -438,15 +438,9 @@ Stream the object through the configured VirusScanPort. Clean → step succeeds.
 
 If the namespace policy enables content moderation, send the asset to the configured provider (Cloud Vision SafeSearch by default; Rekognition or webhook adapters available). Findings are recorded in asset\_analyses regardless of decision. The decision rule (per policy) determines whether to quarantine, mark-and-allow, or reject.
 
-### **Step 5 — Optional re-encoding (parallel, conditional)**
-
-If the namespace policy declares reEncodeOnUpload, run the asset through sharp with: rotate to honor EXIF orientation, strip all metadata, encode to the canonical format declared by policy (JPEG with mozjpeg quality 90 by default; AVIF, WebP, etc., per policy).
-
-Re-encoding gives the storage layer a clean, predictable file with no embedded metadata leaks. The original may be retained in a parallel storage path if policy.preserveOriginal is true, otherwise the canonical version replaces it.
-
 ### **Step 6 — Finalize**
 
-Compute the SHA-256 content hash. Update the asset record with all derived metadata. Transition state from 'processing' to 'ready' using a database update with a state precondition for idempotency. Mark the processing\_jobs row as 'completed'. Emit an asset.ready event via the EventPublisherPort (Google Pub/Sub by default).
+Compute the SHA-256 content hash. Update the asset record with all derived metadata. Transition state from 'processing' to 'ready' using a database update with a state precondition for idempotency. Mark the processing\_jobs row as 'completed'. No event is emitted; consuming applications poll `GET /assets/{id}` until v2 introduces an outbox.
 
 ## **6.4 Failure taxonomy**
 
@@ -562,7 +556,7 @@ Beyond per-step timeouts, a whole-workflow timeout guards against pathological c
 
 From the consuming application's perspective, the asset stays in 'processing' state across all retries. Only when retries are fully exhausted does it transition to 'processing\_failed'. This is honest — the system hasn't given up yet, the asset isn't done yet — and avoids exposing internal mechanics that applications don't need to know about.
 
-Calling applications can poll GET /assets/{id} or subscribe to webhook events for terminal state transitions. The state\_reason field on the asset record provides specific cause: 'virus\_detected', 'content\_flagged\_adult', 'moderation\_provider\_unavailable', 'format\_inconsistency', etc. The calling application can render appropriate user-facing messages based on these reasons.
+Calling applications poll GET /assets/{id} for terminal state transitions; webhook subscriptions are not part of v1.0. The state\_reason field on the asset record provides specific cause: 'virus\_detected', 'content\_flagged\_adult', 'moderation\_provider\_unavailable', 'format\_inconsistency', etc. The calling application can render appropriate user-facing messages based on these reasons.
 
 ## **6.11 Recovery from processing\_failed**
 
@@ -582,29 +576,13 @@ The architecture provides operational resilience for the kind of failures that a
 
 ## **7.1 Serving modes**
 
-Each namespace declares one of three serving modes:
+v1.0 ships only the **signed serving mode**. URLs are signed with HMAC and have a TTL; each retrieval request to the asset service triggers an authorization check, and only authorized requests receive a fresh URL.
 
-### **Public mode**
-
-URLs are predictable and constructable by the client without contacting the service:
-
-https://images.example.com/\<asset\_public\_id\>/\<preset\_name\>
-
-No per-request authorization, no signing, no TTL. Cloud CDN caches indefinitely with the URL as the key. Possession of the URL implies authorization. This is appropriate for the majority of content where the application performs view authorization at its own layer and the asset service simply serves bytes to anyone with the link.
-
-Most namespaces should use public mode. It produces the best CDN cache behavior, the simplest client experience, and the lowest service load.
-
-### **Signed mode**
-
-URLs are signed with HMAC and have a TTL. Each retrieval request to the asset service triggers an authorization check; only authorized requests receive a fresh URL.
+The `serving_mode` column on `namespace_policies` is retained for forward compatibility, but the runtime treats every namespace as `signed` regardless of the column value.
 
 Critical implementation detail: expiration timestamps are bucketed (default 15-minute granularity) rather than using exact now()+ttl. Without bucketing, every issued URL has a unique signature, which destroys CDN cache hit ratio. With bucketing, all URLs issued within a bucket share a cache key. The actual validity window ranges from ttl to ttl+bucket\_size; the bucket size should be a small fraction of the TTL (typically ttl/4).
 
-Use signed mode for namespaces where view-time authorization actually matters: accident investigation evidence, HR-related content, content under legal hold.
-
-### **Proxied mode**
-
-Every image request goes through the Lafken service, which performs real-time authorization and forwards to the transformer. Highest cost (image bytes traverse the service), highest authorization fidelity (revocation is immediate). Reserved for content where neither public nor signed mode provides sufficient guarantee — e.g., active investigations where access can change minute-to-minute.
+The `public` and `proxied` modes described in v0.3 are deferred to a future major version.
 
 ## **7.2 Presets**
 
@@ -616,8 +594,6 @@ Why presets rather than free-form transformation parameters in URLs:
 
 * Predictable CDN cache. With M assets and N presets, there are M×N possible cache entries — bounded and analyzable. Free-form parameters produce effectively infinite cache fragmentation.
 
-* Pre-generation viability. Known preset configurations can be pre-generated at upload time and stored as derivatives in GCS, eliminating cold-cache latency for hot paths.
-
 * Governance. The set of how images can be served is reviewable, auditable, and versionable.
 
 * Better debugging. "This list view is slow" maps to "the list\_view preset has too-aggressive parameters" rather than "some app is requesting a weird transformation."
@@ -626,17 +602,11 @@ Why presets rather than free-form transformation parameters in URLs:
 
 The default and recommended transformer is imgproxy. The asset service does not modify imgproxy or fork it; imgproxy receives a fully-resolved URL with all parameters baked in and a valid HMAC signature. Imgproxy is unaware of presets, namespaces, or any Lafken concept.
 
-The service translates preset name into imgproxy URL parameters at URL-issue time (signed mode) or at request-handling time (proxied mode). Imgproxy fetches source bytes from GCS and returns the transformed image, which Cloud CDN caches.
+The service translates preset name into imgproxy URL parameters at URL-issue time. Imgproxy fetches source bytes from GCS and returns the transformed image, which Cloud CDN caches.
 
 ## **7.4 Preset versioning**
 
 Presets are versioned. Changing a preset's parameters creates a new version. URLs constructed with the new version reach imgproxy with the new parameters; URLs already cached at the CDN under the old version remain valid until cache expiration. This is a soft transition — appropriate for most preset changes (quality adjustments, format additions). For changes that require immediate effect, operators can issue Cloud CDN purges, but this should be rare.
-
-## **7.5 Pre-generation**
-
-Presets marked pre\_generate: true cause the async pipeline to additionally generate derivatives at upload time, storing them at deterministic paths in GCS. Subsequent requests for those presets hit pre-generated derivatives instead of going through imgproxy on-demand.
-
-This is appropriate for hot paths (the thumbnail used in every list view; the standard detail-view size). It costs storage but eliminates imgproxy compute on read paths and improves first-request latency. Operators can monitor preset hit rates and adjust pre-generation accordingly.
 
 # **8\. Authorization and Identity**
 
@@ -724,7 +694,7 @@ The web administration console is the primary interface for operators to configu
 
 ## **10.2 Audiences and views**
 
-The console serves three distinct audiences. Permission-scoped views surface the right capabilities to each:
+The console serves two audiences for v1.0 (the application-developer view is deferred to a future major version). Permission-scoped views surface the right capabilities to each:
 
 ### **Platform operators**
 
@@ -742,8 +712,6 @@ The console serves three distinct audiences. Permission-scoped views surface the
 
 * Bulk operations: re-process, restore from quarantine, force expire (audit-logged, behind elevated permissions)
 
-* Webhook delivery log: per-namespace event subscriptions and delivery status
-
 ### **Content reviewers**
 
 * Quarantine queue: assets flagged by virus scan, content moderation, or policy violation; review with full context; approve/reject/escalate with notes
@@ -751,18 +719,6 @@ The console serves three distinct audiences. Permission-scoped views surface the
 * Legal hold management: place, lift, query holds; case reference tracking; bulk operations by owning record
 
 * Audit log search: query by principal, asset, action, date; export to CSV
-
-* Evidentiary export: generate signed export bundles (manifest \+ originals \+ event history) for handing to investigators
-
-### **Application developers**
-
-* Namespace explorer (scoped to namespaces they have access to)
-
-* Their assets: same search interface as operators, scoped
-
-* Integration debugging: "why was this rejected?" walks through the validation pipeline showing exactly what happened at each step
-
-* Webhook delivery log scoped to their namespaces
 
 ## **10.3 First-run experience**
 
@@ -778,17 +734,13 @@ The service emits structured logs (JSON) and metrics in OpenTelemetry format, wi
 
 Logs are written for: every API request (with principal, action, result), every state transition, every authorization decision (configurable verbosity), every adapter call (configurable). Log retention and routing are operator concerns; the service writes structured logs to stdout and the deployment ships them where appropriate.
 
-## **11.2 Quotas and rate limiting**
-
-Per-namespace quotas (storage bytes, monthly upload count, transformation rate) are enforceable. Soft quotas alert; hard quotas reject. This prevents one application's bug from filling a bucket or exhausting a transformation budget.
-
-## **11.3 Backup and disaster recovery**
+## **11.2 Backup and disaster recovery**
 
 Lafken's PostgreSQL database holds all configuration (namespaces, policies, presets, storage bindings) and all asset metadata. Loss of the database means loss of the ability to resolve asset\_id to storage key, even if the bytes themselves remain in GCS. Backup discipline is operator responsibility but the service supports point-in-time recovery via standard Cloud SQL automated backups and PostgreSQL tooling.
 
-Configuration export/import endpoints serialize the full configuration as JSON, useful for migrating between environments and for disaster recovery.
+Configuration export/import endpoints are deferred to a future major version.
 
-## **11.4 Cost reporting**
+## **11.3 Cost reporting**
 
 Per-namespace usage reports cover storage bytes, request counts, transformation invocations, moderation API calls, virus scan calls. Where chargeback is desired, the report provides the inputs. Where it isn't, the report supports capacity planning.
 
