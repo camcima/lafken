@@ -96,19 +96,19 @@ Lafken provides:
 
 **Resumable uploads for unreliable connections.** Support for tus protocol and GCS resumable uploads, enabling reliable upload from mobile devices and field environments with intermittent connectivity (the canonical case being aircraft mechanics uploading photos from tarmac WiFi).
 
-**Namespaces with versioned policies.** Each consuming application or use case is represented as a namespace with explicit, versioned policy covering retention, allowed formats, file size limits, EXIF handling, virus scanning, content moderation, transformation rules, and serving mode. Policies are immutable; changes create new versions, with existing assets remaining governed by the policy version under which they were uploaded.
+**Namespaces with versioned policies.** Each consuming application or use case is represented as a namespace with explicit, versioned policy covering retention, allowed formats, file size limits, virus scanning, content moderation, and transformation rules. Policies are immutable; changes create new versions, with existing assets remaining governed by the policy version under which they were uploaded.
 
-**Asynchronous validation and processing pipeline.** Every upload triggers a workflow: magic-byte detection, format validation, virus scanning, optional content moderation, optional EXIF extraction and stripping, optional re-encoding to canonical format, metadata extraction, content hashing. The workflow uses XState for in-process step orchestration with PostgreSQL-backed job claiming for durability across worker restarts.
+**Asynchronous validation and processing pipeline.** Every upload triggers a workflow: virus scanning, magic-byte detection, image inspection (format validation + dimensions + capture-context extraction), optional content moderation, content hashing, finalize. The workflow uses XState for in-process step orchestration with PostgreSQL-backed job claiming for durability across worker restarts.
 
 **Per-namespace presets for serving.** Rather than allowing arbitrary transformation parameters at retrieval time, each namespace defines named presets (e.g., thumbnail, list\_view, detail\_main). Clients reference presets by name. This bounds the transformation space, makes CDN caching predictable, and enables governance review of how images are served.
 
-**Three serving modes per namespace.** Public (predictable URLs, CDN-cacheable indefinitely, no per-request authorization), Signed (time-limited signed URLs with bucketed expiration for CDN cache compatibility), and Proxied (every request goes through the service for real-time authorization). Operators choose the mode that matches the sensitivity of each namespace.
+**Signed serving with bucketed expiration.** v1.0 ships only signed serving mode: time-limited HMAC-signed URLs with bucketed expiration (default 15-minute granularity) for CDN cache friendliness, with per-request authorization on URL issuance. Public and proxied modes are deferred to a future major version.
 
-**Pluggable adapters for storage, authorization, virus scanning, content moderation, identity, secrets, and event publishing.** The service core is hexagonal: domain logic does not depend on infrastructure. Operators select adapters that fit their environment without modifying the service.
+**Pluggable adapters for storage, authorization, virus scanning, content moderation, identity, and image transformation.** The service core is hexagonal: domain logic does not depend on infrastructure. Operators select adapters that fit their environment without modifying the service.
 
 **First-class client SDK.** Layered TypeScript SDK with a pure HTTP client at the base, a framework-agnostic upload manager built on Uppy in the middle, and a React layer with hooks and unstyled components on top. Supports non-React consumers, server-side integrations, and (eventually) other framework wrappers.
 
-**Web administration console.** Operator UI for namespace management, asset search and inspection, quarantine review, audit log search, integration debugging, and webhook delivery monitoring. Acts as the primary configuration interface.
+**Web administration console.** Operator UI for namespace management, asset search and inspection, quarantine review, audit log search, and integration debugging. Acts as the primary configuration interface.
 
 **Comprehensive audit and chain of custody.** Every state transition, access decision, configuration change, and administrative action is recorded to an append-only log. Designed for SOX-defensibility and aviation regulatory contexts. Supports legal hold workflows and evidentiary export.
 
@@ -194,7 +194,7 @@ The async processing pipeline is implemented using XState for in-process state m
 
 * Step-level timeouts are in seconds (10s for magic-byte detection, 30s for sharp metadata, 60s for virus scan).
 
-* The structure is simple: sequential validation, then parallel scan/moderation/re-encoding, then finalize.
+* The structure is simple: sequential virus scan, magic-byte detection, image inspection, optional content moderation, finalize.
 
 * The durability requirement is straightforward: don't lose track of an asset that's mid-processing if a worker dies.
 
@@ -376,7 +376,7 @@ Image bytes never traverse the Lafken service. Clients upload directly to GCS (o
 
 27. XState machine runs validation, scanning, moderation, and finalization (see Section 6). State transitions through processing → ready (or terminal failure state).
 
-28. Client polls GET /assets/{public\_id} or receives a webhook (per namespace configuration) when the asset reaches a terminal state.
+28. Client polls GET /assets/{public\_id} until the asset reaches a terminal state. Webhook delivery is not part of v1.0.
 
 ## **5.3 Resumable upload**
 
@@ -406,13 +406,15 @@ This split keeps each tool doing what it does well. XState handles the seconds-l
 
 The XState machine implements the high-level shape:
 
-29. Magic-byte detection (sequential, fast-fail)
+29. Virus scan (sequential, fast-fail on infected)
 
-30. Format validation and metadata extraction (sequential)
+30. Magic-byte detection (sequential, fast-fail on disallowed format)
 
-31. Parallel: virus scan, content moderation, optional re-encoding
+31. Image inspection: format validation, metadata extraction, capture-context extraction (sequential)
 
-32. Finalize: hash, update asset record, transition to 'ready', emit Pub/Sub event
+32. Optional content moderation (sequential, conditional on policy)
+
+33. Finalize: hash, persist, transition to ready
 
 Within each step, sub-states handle invocation, success, and retry-on-error. The XState machine is declarative — the full shape, including parallel coordination, is expressed in the state machine definition rather than scattered across imperative code.
 
@@ -436,7 +438,7 @@ Stream the object through the configured VirusScanPort. Clean → step succeeds.
 
 ### **Step 4 — Content moderation (parallel, conditional)**
 
-If the namespace policy enables content moderation, send the asset to the configured provider (Cloud Vision SafeSearch by default; Rekognition or webhook adapters available). Findings are recorded in asset\_analyses regardless of decision. The decision rule (per policy) determines whether to quarantine, mark-and-allow, or reject.
+If the namespace policy enables content moderation, send the asset to the configured provider (a deterministic local stub for v1.0). Findings are recorded in asset\_analyses regardless of decision. The decision rule (per policy) determines whether to quarantine, mark-and-allow, or reject.
 
 ### **Step 6 — Finalize**
 
@@ -628,11 +630,7 @@ Default adapters shipped:
 
 * **allow-all** — for development. Refuses to run in production.
 
-* **file-based RBAC** — a YAML/JSON file mapping principals to roles and roles to permissions. Sufficient for small deployments.
-
-* **OIDC-claims-based** — derives permissions from claims in the OIDC token (group memberships, scopes, custom claims).
-
-* **HTTP webhook** — defers each authorization decision to an external service. Covers OPA, OpenFGA, Cedar, Condor, and any custom authorization system.
+Additional adapters (file-based RBAC, OIDC-claims-based, HTTP webhook) are deferred to a future major version.
 
 ## **8.3 Action vocabulary**
 
