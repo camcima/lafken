@@ -14,7 +14,6 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { namespacesKeys } from "@/features/namespaces/keys";
-import { namespacesService } from "@/services";
 
 import {
   useArchiveNamespace,
@@ -26,6 +25,25 @@ import {
   useUpdateNamespacePolicy,
   useUpdatePresetVersion,
 } from "./useNamespaces";
+
+const mockNamespaces = {
+  create: vi.fn(),
+  updateMetadata: vi.fn(),
+  archive: vi.fn(),
+  unarchive: vi.fn(),
+  createPolicyVersion: vi.fn(),
+  createPreset: vi.fn(),
+  updatePresetVersion: vi.fn(),
+  setPresetActive: vi.fn(),
+  list: vi.fn(),
+  get: vi.fn(),
+  listPolicies: vi.fn(),
+  listPresets: vi.fn(),
+};
+
+vi.mock("@lafken/react", () => ({
+  useLafkenClient: () => ({ namespaces: mockNamespaces }),
+}));
 
 function createWrapper(client: QueryClient) {
   return ({ children }: { children: ReactNode }) => (
@@ -60,10 +78,10 @@ describe("useCreateNamespace", () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  it("calls NamespacesService.createNamespace and invalidates the namespaces list on success", async () => {
+  it("calls namespaces.create and invalidates the namespaces list on success", async () => {
     const input: CreateNamespaceRequestDTO = {
       slug: "aircraft-photos",
       displayName: "Aircraft Photos",
@@ -84,9 +102,7 @@ describe("useCreateNamespace", () => {
         retryConfig: null,
       },
     };
-    const createSpy = vi
-      .spyOn(namespacesService, "createNamespace")
-      .mockResolvedValue(sampleNamespace);
+    mockNamespaces.create.mockResolvedValue(sampleNamespace);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useCreateNamespace(), {
@@ -97,11 +113,11 @@ describe("useCreateNamespace", () => {
       await result.current.mutateAsync(input);
     });
 
-    expect(createSpy).toHaveBeenCalledWith(input);
+    expect(mockNamespaces.create).toHaveBeenCalledWith(input);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.lists() });
   });
 
-  it("surfaces the error and does not invalidate the cache when the service throws", async () => {
+  it("surfaces the error and does not invalidate the cache when the client throws", async () => {
     const input: CreateNamespaceRequestDTO = {
       slug: "aircraft-photos",
       displayName: "Aircraft Photos",
@@ -123,7 +139,7 @@ describe("useCreateNamespace", () => {
       },
     };
     const failure = new Error("boom");
-    vi.spyOn(namespacesService, "createNamespace").mockRejectedValueOnce(failure);
+    mockNamespaces.create.mockRejectedValueOnce(failure);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useCreateNamespace(), {
@@ -151,18 +167,16 @@ describe("useUpdateNamespaceMetadata", () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  it("calls NamespacesService.updateNamespaceMetadata and invalidates the matching detail and list on success", async () => {
+  it("calls namespaces.updateMetadata and invalidates the matching detail and list on success", async () => {
     const slug = "aircraft-photos";
     const input: UpdateNamespaceMetadataRequestDTO = {
       displayName: "Aircraft Photos Updated",
       description: "Updated description",
     };
-    const updateSpy = vi
-      .spyOn(namespacesService, "updateNamespaceMetadata")
-      .mockResolvedValue(sampleNamespace);
+    mockNamespaces.updateMetadata.mockResolvedValue(sampleNamespace);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useUpdateNamespaceMetadata(), {
@@ -173,7 +187,7 @@ describe("useUpdateNamespaceMetadata", () => {
       await result.current.mutateAsync({ slug, input });
     });
 
-    expect(updateSpy).toHaveBeenCalledWith(slug, input);
+    expect(mockNamespaces.updateMetadata).toHaveBeenCalledWith(slug, input);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.detail(slug) });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.lists() });
   });
@@ -187,10 +201,10 @@ describe("useArchiveNamespace", () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  it("calls NamespacesService.archiveNamespace and invalidates the matching detail and list on success", async () => {
+  it("calls namespaces.archive and invalidates the matching detail and list on success", async () => {
     const slug = "aircraft-photos";
     const archivedNamespace: NamespaceResponseDTO = {
       slug: sampleNamespace.slug,
@@ -202,9 +216,7 @@ describe("useArchiveNamespace", () => {
       createdAt: sampleNamespace.createdAt,
       updatedAt: sampleNamespace.updatedAt,
     };
-    const archiveSpy = vi
-      .spyOn(namespacesService, "archiveNamespace")
-      .mockResolvedValue(archivedNamespace);
+    mockNamespaces.archive.mockResolvedValue(archivedNamespace);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useArchiveNamespace(), {
@@ -215,7 +227,7 @@ describe("useArchiveNamespace", () => {
       await result.current.mutateAsync(slug);
     });
 
-    expect(archiveSpy).toHaveBeenCalledWith(slug);
+    expect(mockNamespaces.archive).toHaveBeenCalledWith(slug);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.detail(slug) });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.lists() });
   });
@@ -229,14 +241,12 @@ describe("useUnarchiveNamespace", () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  it("calls NamespacesService.unarchiveNamespace and invalidates the matching detail and list on success", async () => {
+  it("calls namespaces.unarchive and invalidates the matching detail and list on success", async () => {
     const slug = "aircraft-photos";
-    const unarchiveSpy = vi
-      .spyOn(namespacesService, "unarchiveNamespace")
-      .mockResolvedValue(sampleNamespace);
+    mockNamespaces.unarchive.mockResolvedValue(sampleNamespace);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useUnarchiveNamespace(), {
@@ -247,7 +257,7 @@ describe("useUnarchiveNamespace", () => {
       await result.current.mutateAsync(slug);
     });
 
-    expect(unarchiveSpy).toHaveBeenCalledWith(slug);
+    expect(mockNamespaces.unarchive).toHaveBeenCalledWith(slug);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.detail(slug) });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.lists() });
   });
@@ -278,14 +288,12 @@ describe("useUpdateNamespacePolicy", () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  it("calls NamespacesService.updatePolicy and invalidates the matching detail and policies on success", async () => {
+  it("calls namespaces.createPolicyVersion and invalidates the matching detail and policies on success", async () => {
     const slug = "aircraft-photos";
-    const updatePolicySpy = vi
-      .spyOn(namespacesService, "updatePolicy")
-      .mockResolvedValue(sampleNamespace);
+    mockNamespaces.createPolicyVersion.mockResolvedValue(sampleNamespace);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useUpdateNamespacePolicy(), {
@@ -296,15 +304,15 @@ describe("useUpdateNamespacePolicy", () => {
       await result.current.mutateAsync({ slug, input: VALID_POLICY });
     });
 
-    expect(updatePolicySpy).toHaveBeenCalledWith(slug, VALID_POLICY);
+    expect(mockNamespaces.createPolicyVersion).toHaveBeenCalledWith(slug, VALID_POLICY);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.detail(slug) });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.policies(slug) });
   });
 
-  it("surfaces the error and does not invalidate the cache when the service throws", async () => {
+  it("surfaces the error and does not invalidate the cache when the client throws", async () => {
     const slug = "aircraft-photos";
     const failure = new Error("policy update failed");
-    vi.spyOn(namespacesService, "updatePolicy").mockRejectedValueOnce(failure);
+    mockNamespaces.createPolicyVersion.mockRejectedValueOnce(failure);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useUpdateNamespacePolicy(), {
@@ -353,14 +361,12 @@ describe("useCreatePreset", () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  it("calls NamespacesService.createPreset and invalidates the presets key on success", async () => {
+  it("calls namespaces.createPreset and invalidates the presets key on success", async () => {
     const slug = "aircraft-photos";
-    const createPresetSpy = vi
-      .spyOn(namespacesService, "createPreset")
-      .mockResolvedValue(samplePreset);
+    mockNamespaces.createPreset.mockResolvedValue(samplePreset);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useCreatePreset(), {
@@ -371,14 +377,14 @@ describe("useCreatePreset", () => {
       await result.current.mutateAsync({ slug, input: VALID_PRESET_PARAMS });
     });
 
-    expect(createPresetSpy).toHaveBeenCalledWith(slug, VALID_PRESET_PARAMS);
+    expect(mockNamespaces.createPreset).toHaveBeenCalledWith(slug, VALID_PRESET_PARAMS);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.presets(slug) });
   });
 
-  it("surfaces the error and does not invalidate the cache when the service throws", async () => {
+  it("surfaces the error and does not invalidate the cache when the client throws", async () => {
     const slug = "aircraft-photos";
     const failure = new Error("create preset failed");
-    vi.spyOn(namespacesService, "createPreset").mockRejectedValueOnce(failure);
+    mockNamespaces.createPreset.mockRejectedValueOnce(failure);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useCreatePreset(), {
@@ -418,15 +424,13 @@ describe("useUpdatePresetVersion", () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  it("calls NamespacesService.updatePresetVersion and invalidates the presets key on success", async () => {
+  it("calls namespaces.updatePresetVersion and invalidates the presets key on success", async () => {
     const slug = "aircraft-photos";
     const name = "thumbnail";
-    const updateVersionSpy = vi
-      .spyOn(namespacesService, "updatePresetVersion")
-      .mockResolvedValue(samplePreset);
+    mockNamespaces.updatePresetVersion.mockResolvedValue(samplePreset);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useUpdatePresetVersion(), {
@@ -437,15 +441,15 @@ describe("useUpdatePresetVersion", () => {
       await result.current.mutateAsync({ slug, name, input: VALID_PRESET_VERSION });
     });
 
-    expect(updateVersionSpy).toHaveBeenCalledWith(slug, name, VALID_PRESET_VERSION);
+    expect(mockNamespaces.updatePresetVersion).toHaveBeenCalledWith(slug, name, VALID_PRESET_VERSION);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.presets(slug) });
   });
 
-  it("surfaces the error and does not invalidate the cache when the service throws", async () => {
+  it("surfaces the error and does not invalidate the cache when the client throws", async () => {
     const slug = "aircraft-photos";
     const name = "thumbnail";
     const failure = new Error("update preset version failed");
-    vi.spyOn(namespacesService, "updatePresetVersion").mockRejectedValueOnce(failure);
+    mockNamespaces.updatePresetVersion.mockRejectedValueOnce(failure);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useUpdatePresetVersion(), {
@@ -479,15 +483,13 @@ describe("useSetPresetActive", () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  it("calls NamespacesService.setPresetActive and invalidates the presets key on success", async () => {
+  it("calls namespaces.setPresetActive and invalidates the presets key on success", async () => {
     const slug = "aircraft-photos";
     const name = "thumbnail";
-    const setActiveSpy = vi
-      .spyOn(namespacesService, "setPresetActive")
-      .mockResolvedValue(samplePreset);
+    mockNamespaces.setPresetActive.mockResolvedValue(samplePreset);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useSetPresetActive(), {
@@ -498,15 +500,15 @@ describe("useSetPresetActive", () => {
       await result.current.mutateAsync({ slug, name, input: VALID_SET_ACTIVE });
     });
 
-    expect(setActiveSpy).toHaveBeenCalledWith(slug, name, VALID_SET_ACTIVE);
+    expect(mockNamespaces.setPresetActive).toHaveBeenCalledWith(slug, name, VALID_SET_ACTIVE);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.presets(slug) });
   });
 
-  it("surfaces the error and does not invalidate the cache when the service throws", async () => {
+  it("surfaces the error and does not invalidate the cache when the client throws", async () => {
     const slug = "aircraft-photos";
     const name = "thumbnail";
     const failure = new Error("set preset active failed");
-    vi.spyOn(namespacesService, "setPresetActive").mockRejectedValueOnce(failure);
+    mockNamespaces.setPresetActive.mockRejectedValueOnce(failure);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useSetPresetActive(), {
