@@ -1,7 +1,7 @@
 const env = process.env['ENV'];
 
 const projectKey = "emx-tmpl";
-const projectName = "template-emantto-project";
+const projectName = "lafken";
 
 if (!env) {
   throw new Error('ENV environment variable is not set. It should be: "dev", "intg" or "prod"');

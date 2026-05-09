@@ -62,7 +62,6 @@ async function seedNamespace(
         retentionMode: "none",
         maxFileSizeBytes: 1_048_576,
         allowedMimeTypes: ["image/jpeg", "image/png"],
-        exifHandling: "strip",
         virusScanRequired: false,
         contentModeration: null,
         requiredMetadataSchema: null,
@@ -125,25 +124,26 @@ test.describe("Asset upload happy path @requires-fake-gcs", () => {
         buffer: SAMPLE_JPEG_BUFFER,
       });
 
-      // The file row should appear in the dialog with state "Ready"
+      // The file row should appear in the dialog with the chosen filename
       await expect(page.getByText(/sample\.jpg/i)).toBeVisible();
 
       // Trigger the upload + confirm flow
       await page.getByRole("button", { name: /start upload/i }).click();
 
-      // Wait for the file row's state to change to "Uploaded".
-      // (Locator scoped inside the dialog to disambiguate from any
-      // other "uploaded" text that may appear elsewhere on the page.)
+      // The SDK lifecycle drives the tile through:
+      //   uploading… → processing… → ready
+      // (Asserting the terminal state is enough; intermediate frames may
+      // be too quick on a local stack to reliably observe.)
       const dialog = page.getByRole("dialog");
-      await expect(dialog.getByText(/^Uploaded$/i)).toBeVisible({ timeout: 30_000 });
+      await expect(dialog.getByText(/^ready$/i)).toBeVisible({ timeout: 30_000 });
 
       // The dialog does not auto-close on success; close it manually.
       await page.getByRole("button", { name: /cancel/i }).click();
       await expect(page.getByRole("dialog")).toBeHidden();
 
       // The new asset row should appear in the namespace's Assets tab list
-      // with the "uploaded" state badge.
-      await expect(page.getByText(/uploaded/i).first()).toBeVisible({ timeout: 10_000 });
+      // with the "Ready" state badge.
+      await expect(page.getByText(/^ready$/i).first()).toBeVisible({ timeout: 10_000 });
     } finally {
       await archiveNamespace(request, namespaceSlug);
       await deleteStorageBinding(request, bindingName);
