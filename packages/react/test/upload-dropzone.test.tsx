@@ -54,6 +54,27 @@ describe("UploadDropzone", () => {
     expect(calls[0]).toMatchObject({ protocol: "tus", refreshSafetyMarginMs: 45_000 });
   });
 
+  it("forwards pollingIntervalMs, pollingMaxIntervalMs, pollingTimeoutMs to the manager", () => {
+    const before = managerCtorArgs.length;
+    render(
+      <UploadDropzone
+        client={stubClient as unknown as Parameters<typeof UploadDropzone>[0]["client"]}
+        namespaceSlug="n"
+        pollingIntervalMs={500}
+        pollingMaxIntervalMs={5_000}
+        pollingTimeoutMs={60_000}
+        render={() => null}
+      />,
+    );
+    const calls = managerCtorArgs.slice(before);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({
+      pollingIntervalMs: 500,
+      pollingMaxIntervalMs: 5_000,
+      pollingTimeoutMs: 60_000,
+    });
+  });
+
   it("dropping a file calls addFiles internally (state idle)", () => {
     render(
       <UploadDropzone

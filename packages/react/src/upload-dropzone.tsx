@@ -46,6 +46,12 @@ export interface IUploadDropzoneProps {
    * Ms before `expiresAt` at which to pre-flight a URL refresh. Default 30000.
    */
   refreshSafetyMarginMs?: number;
+  /** Initial polling interval in ms when waiting for asset processing. Default 1000. */
+  pollingIntervalMs?: number;
+  /** Maximum polling interval (cap for backoff). Default 10_000. */
+  pollingMaxIntervalMs?: number;
+  /** Total polling timeout in ms before emitting file-failed("polling-timeout"). Default 600_000. */
+  pollingTimeoutMs?: number;
   render: (props: IUploadDropzoneRenderProps) => React.ReactNode;
 }
 
@@ -58,6 +64,9 @@ export function UploadDropzone(props: IUploadDropzoneProps): React.JSX.Element {
       restrictions: props.restrictions,
       protocol: props.protocol,
       refreshSafetyMarginMs: props.refreshSafetyMarginMs,
+      pollingIntervalMs: props.pollingIntervalMs,
+      pollingMaxIntervalMs: props.pollingMaxIntervalMs,
+      pollingTimeoutMs: props.pollingTimeoutMs,
     });
   const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
