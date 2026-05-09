@@ -2,7 +2,7 @@
   "name": "template-emantto-project",
   "private": true,
   "description": "",
-  "license": "PROPRIETARY",
+  "license": "MIT",
   "version": "0.0.0",
   "author": "eMantto",
   "engines": {
