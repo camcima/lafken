@@ -7,7 +7,8 @@ export type AuditEntityType =
   | "namespace_preset"
   | "storage_binding"
   | "legal_hold"
-  | "asset";
+  | "asset"
+  | "upload_intent";
 
 export type AuditAction =
   | "create"
@@ -16,7 +17,9 @@ export type AuditAction =
   | "unarchive"
   | "delete"
   | "place"
-  | "lift";
+  | "lift"
+  | "expired"
+  | "url_refreshed";
 
 export interface IRecordAuditInput {
   entityType: AuditEntityType;
