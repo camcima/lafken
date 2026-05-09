@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { AuditInfrastructureModule } from "@/audit/infrastructure/audit-infrastructure.module";
 import { NamespacesInfrastructureModule } from "@/namespaces/infrastructure/namespaces-infrastructure.module";
 import { SystemInfrastructureModule } from "@/system/infrastructure/system-infrastructure.module";
 
@@ -17,7 +18,12 @@ import { AssetsInfrastructureModule } from "./infrastructure/assets-infrastructu
 import { AssetsController } from "./presentation/controllers/assets.controller";
 
 @Module({
-  imports: [AssetsInfrastructureModule, NamespacesInfrastructureModule, SystemInfrastructureModule],
+  imports: [
+    AssetsInfrastructureModule,
+    NamespacesInfrastructureModule,
+    SystemInfrastructureModule,
+    AuditInfrastructureModule,
+  ],
   controllers: [AssetsController],
   providers: [
     ListAssetsUseCase,

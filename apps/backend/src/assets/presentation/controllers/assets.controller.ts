@@ -5,6 +5,7 @@ import {
   Header,
   HttpCode,
   HttpStatus,
+  Ip,
   NotFoundException,
   Param,
   Post,
@@ -399,6 +400,7 @@ export class AssetsController {
     @Param("publicId") publicId: string,
     @Body() body: ConfirmUploadRequestDTO,
     @AuthenticatedUser() user: AuthenticatedUserType,
+    @Ip() requestIp: string,
   ): Promise<AssetResponseDTO> {
     try {
       const asset = await this.confirmUploadUseCase.execute({
@@ -406,6 +408,7 @@ export class AssetsController {
         uploadedBy: user.emailAddress,
         width: body.width,
         height: body.height,
+        requestIp,
       });
       const namespaceSlug =
         (await this.assetQueryRepository.findNamespaceSlug(asset.props.namespaceId)) ?? "unknown";

@@ -14,6 +14,7 @@ import { FakeAssetWriteRepository } from "../../../__fakes__/fake-asset-write.re
 import { FakeUploadIntentWriteRepository } from "../../../__fakes__/fake-upload-intent-write.repository";
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryAssetQueryRepository } from "../../assets/__fakes__/in-memory-asset-query.repository";
+import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 import { InMemoryNamespaceQueryRepository } from "../../namespaces/__fakes__/in-memory-namespace-query.repository";
 import { InMemoryStorageBindingQueryRepository } from "../../system/__fakes__/in-memory-storage-binding-query.repository";
 
@@ -120,6 +121,7 @@ describe("ConfirmUploadUseCase", () => {
   let namespaceQueryRepo: InMemoryNamespaceQueryRepository;
   let storageBindingQueryRepo: InMemoryStorageBindingQueryRepository;
   let assetQueryRepo: InMemoryAssetQueryRepository;
+  let auditRepo: InMemoryAuditWriteRepository;
   let useCase: ConfirmUploadUseCase;
 
   beforeEach(() => {
@@ -129,6 +131,7 @@ describe("ConfirmUploadUseCase", () => {
     namespaceQueryRepo = new InMemoryNamespaceQueryRepository();
     storageBindingQueryRepo = new InMemoryStorageBindingQueryRepository();
     assetQueryRepo = new InMemoryAssetQueryRepository();
+    auditRepo = new InMemoryAuditWriteRepository();
     useCase = new ConfirmUploadUseCase(
       intentRepo,
       assetWriteRepo,
@@ -136,6 +139,7 @@ describe("ConfirmUploadUseCase", () => {
       namespaceQueryRepo,
       storageBindingQueryRepo,
       assetQueryRepo,
+      auditRepo,
     );
   });
 
@@ -148,17 +152,25 @@ describe("ConfirmUploadUseCase", () => {
     const asset = await useCase.execute({
       publicId: TEST_UUIDS.asset1,
       uploadedBy: "user@example.com",
+      requestIp: null,
     });
 
     expect(asset.props.publicId).toBe(TEST_UUIDS.asset1);
     expect(asset.props.state).toBe("uploaded");
     expect(assetWriteRepo.createdAssets).toHaveLength(1);
     expect(assetStorage.existsCalls).toHaveLength(1);
+    expect(auditRepo.records).toHaveLength(1);
+    expect(auditRepo.records[0]).toMatchObject({
+      entityType: "asset",
+      entityId: TEST_UUIDS.asset1,
+      action: "create",
+      occurredBy: "user@example.com",
+    });
   });
 
   it("throws UploadIntentNotFoundError when no intent exists for the publicId", async () => {
     await expect(
-      useCase.execute({ publicId: "nonexistent-id", uploadedBy: null }),
+      useCase.execute({ publicId: "nonexistent-id", uploadedBy: null, requestIp: null }),
     ).rejects.toBeInstanceOf(UploadIntentNotFoundError);
   });
 
@@ -169,7 +181,7 @@ describe("ConfirmUploadUseCase", () => {
     intentRepo.seed([consumedIntent]);
     assetQueryRepo.seed([existingAsset]);
 
-    const result = await useCase.execute({ publicId, uploadedBy: null });
+    const result = await useCase.execute({ publicId, uploadedBy: null, requestIp: null });
 
     expect(result.props.publicId).toBe(publicId);
     expect(assetWriteRepo.createdAssets).toHaveLength(0);
@@ -181,7 +193,7 @@ describe("ConfirmUploadUseCase", () => {
     storageBindingQueryRepo.seed([makeBinding()]);
 
     await expect(
-      useCase.execute({ publicId: TEST_UUIDS.asset1, uploadedBy: null }),
+      useCase.execute({ publicId: TEST_UUIDS.asset1, uploadedBy: null, requestIp: null }),
     ).rejects.toBeInstanceOf(UploadIntentExpiredError);
   });
 
@@ -196,6 +208,7 @@ describe("ConfirmUploadUseCase", () => {
       uploadedBy: "user@example.com",
       width: 256,
       height: 128,
+      requestIp: null,
     });
 
     expect(asset.props.width).toBe(256);
@@ -212,7 +225,7 @@ describe("ConfirmUploadUseCase", () => {
     assetStorage.existsResult = false;
 
     await expect(
-      useCase.execute({ publicId: TEST_UUIDS.asset1, uploadedBy: null }),
+      useCase.execute({ publicId: TEST_UUIDS.asset1, uploadedBy: null, requestIp: null }),
     ).rejects.toBeInstanceOf(UploadedObjectMissingError);
   });
 });

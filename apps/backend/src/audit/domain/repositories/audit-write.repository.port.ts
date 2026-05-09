@@ -1,10 +1,13 @@
-// Asset state changes live on `asset_state_transitions`; this log covers everything else.
+// Per-asset state changes still live on `asset_state_transitions`; the audit log
+// captures the human-driven events around assets (upload confirmation) plus all
+// the config-mutation entities.
 export type AuditEntityType =
   | "namespace"
   | "namespace_policy"
   | "namespace_preset"
   | "storage_binding"
-  | "legal_hold";
+  | "legal_hold"
+  | "asset";
 
 export type AuditAction =
   | "create"

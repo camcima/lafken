@@ -81,12 +81,16 @@ function apiToRow(entry: AuditEntryResponseDTO): IAuditRow {
   const minutesAgo = Number.isFinite(occurredAtMs)
     ? Math.max(0, Math.floor((Date.now() - occurredAtMs) / MS_PER_MINUTE))
     : 0;
+  const afterStateNamespace =
+    typeof entry.afterState?.namespace === "string" ? entry.afterState.namespace : "";
   const namespace =
     entry.entityType === "namespace_preset" && entry.entityId.includes("/")
       ? (entry.entityId.split("/")[0] ?? "")
       : entry.entityType === "namespace" || entry.entityType === "namespace_policy"
         ? entry.entityId
-        : "";
+        : entry.entityType === "asset"
+          ? afterStateNamespace
+          : "";
   return {
     id: entry.id,
     type: `${entry.entityType}.${entry.action}`,
@@ -230,6 +234,7 @@ const TYPE_FILTER_TO_ENTITY_TYPE: Record<string, string | undefined> = {
   namespace_preset: "namespace_preset",
   storage_binding: "storage_binding",
   legal_hold: "legal_hold",
+  asset: "asset",
 };
 
 const SEARCH_DEBOUNCE_MS = 250;
@@ -359,6 +364,7 @@ export function AuditPage(): React.JSX.Element {
               </>
             ) : (
               <>
+                <option value="asset">asset.*</option>
                 <option value="namespace">namespace.*</option>
                 <option value="namespace_policy">namespace_policy.*</option>
                 <option value="namespace_preset">namespace_preset.*</option>

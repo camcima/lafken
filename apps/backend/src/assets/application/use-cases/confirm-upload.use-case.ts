@@ -8,16 +8,19 @@ import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-que
 import { AssetWriteRepositoryPort } from "@/assets/domain/repositories/asset-write.repository.port";
 import { UploadIntentWriteRepositoryPort } from "@/assets/domain/repositories/upload-intent-write.repository.port";
 import { AssetStoragePort } from "@/assets/domain/services/asset-storage.service.port";
+import { AuditWriteRepositoryPort } from "@/audit/domain/repositories/audit-write.repository.port";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 3600;
+const AUDIT_FALLBACK_PRINCIPAL = "system";
 
 export interface IConfirmUploadInput {
   publicId: string;
   uploadedBy: string | null;
   width?: number;
   height?: number;
+  requestIp: string | null;
 }
 
 @Injectable()
@@ -29,6 +32,7 @@ export class ConfirmUploadUseCase {
     private readonly namespaceQueryRepo: NamespaceQueryRepositoryPort,
     private readonly storageBindingQueryRepo: StorageBindingQueryRepositoryPort,
     private readonly assetQueryRepo: AssetQueryRepositoryPort,
+    private readonly auditWriteRepo: AuditWriteRepositoryPort,
   ) {}
 
   async execute(input: IConfirmUploadInput): Promise<Asset> {
@@ -81,7 +85,7 @@ export class ConfirmUploadUseCase {
       );
     }
 
-    return this.assetWriteRepo.createUploadedAsset({
+    const asset: Asset = await this.assetWriteRepo.createUploadedAsset({
       publicId: intent.props.publicId,
       namespaceId: intent.props.namespaceId,
       policyVersionId: intent.props.policyVersionId,
@@ -96,5 +100,24 @@ export class ConfirmUploadUseCase {
       width: input.width ?? null,
       height: input.height ?? null,
     });
+
+    const namespaceSlug =
+      (await this.assetQueryRepo.findNamespaceSlug(asset.props.namespaceId)) ?? null;
+
+    await this.auditWriteRepo.record({
+      entityType: "asset",
+      entityId: asset.props.publicId,
+      action: "create",
+      occurredBy: input.uploadedBy ?? AUDIT_FALLBACK_PRINCIPAL,
+      requestIp: input.requestIp,
+      afterState: {
+        namespace: namespaceSlug,
+        storageKey: asset.props.storageKey,
+        declaredMimeType: asset.props.declaredMimeType,
+        sizeBytes: asset.props.sizeBytes !== null ? String(asset.props.sizeBytes) : null,
+      },
+    });
+
+    return asset;
   }
 }
