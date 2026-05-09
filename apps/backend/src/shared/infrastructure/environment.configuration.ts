@@ -70,6 +70,21 @@ const environmentSchema = z
     OTEL_SERVICE_NAME: z.string().optional(),
     OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional(),
     OTEL_RESOURCE_ATTRIBUTES: z.string().optional(),
+    /**
+     * Enables OpenTelemetry metrics export. Off by default in `development`
+     * and `test` so local runs don't push noise to a collector that may not
+     * exist; on by default in `staging` and `production`.
+     */
+    OTEL_METRICS_ENABLED: z
+      .enum(["true", "false"])
+      .optional()
+      .transform((val) => (val === undefined ? undefined : val === "true"))
+      .overwrite((val) => {
+        if (val !== undefined) return val;
+        const env: string | undefined = process.env.NODE_ENV;
+        return env !== "test" && env !== "development";
+      })
+      .default(true),
 
     /** Whether to generate a Cloud Endpoints-flavoured OpenAPI spec */
     CLOUD_ENDPOINT_DEFINITION: z

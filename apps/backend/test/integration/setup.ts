@@ -25,6 +25,7 @@ vitest.mock(
       OTEL_SERVICE_NAME: "",
       OTEL_RESOURCE_ATTRIBUTES: "",
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317",
+      OTEL_METRICS_ENABLED: false,
       AUTH_PROVIDER: "mock",
       OIDC_ISSUER: undefined,
       OIDC_AUDIENCE: undefined,
