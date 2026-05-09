@@ -12,7 +12,6 @@ const VALID_POLICY = {
   retentionMode: "none",
   maxFileSizeBytes: 52_428_800,
   allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
-  exifHandling: "strip",
   virusScanRequired: true,
   contentModeration: null,
   requiredMetadataSchema: null,

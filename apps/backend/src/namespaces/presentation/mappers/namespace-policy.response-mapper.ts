@@ -10,7 +10,6 @@ export class NamespacePolicyResponseMapper {
       retentionMode: policy.props.retentionMode,
       maxFileSizeBytes: Number(policy.props.maxFileSizeBytes),
       allowedMimeTypes: policy.props.allowedMimeTypes,
-      exifHandling: policy.props.exifHandling,
       virusScanRequired: policy.props.virusScanRequired,
       contentModeration: policy.props.contentModeration ?? undefined,
       requiredMetadataSchema: policy.props.requiredMetadataSchema ?? undefined,

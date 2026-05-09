@@ -16,9 +16,6 @@ export class NamespacePolicyResponseDTO {
   @ApiProperty({ type: [String] })
   allowedMimeTypes!: string[];
 
-  @ApiProperty({ enum: ["strip", "preserve", "extract_then_strip"] })
-  exifHandling!: "strip" | "preserve" | "extract_then_strip";
-
   @ApiProperty()
   virusScanRequired!: boolean;
 

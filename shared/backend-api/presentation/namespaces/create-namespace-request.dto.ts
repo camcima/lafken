@@ -47,10 +47,6 @@ export class CreateNamespacePolicyDTO {
   @ApiProperty({ type: [String], example: ["image/jpeg", "image/png", "image/webp"] })
   allowedMimeTypes!: string[];
 
-  @IsIn(["strip", "preserve", "extract_then_strip"])
-  @ApiProperty({ enum: ["strip", "preserve", "extract_then_strip"] })
-  exifHandling!: "strip" | "preserve" | "extract_then_strip";
-
   @IsBoolean()
   @ApiProperty({ type: Boolean })
   virusScanRequired!: boolean;
