@@ -3,44 +3,48 @@ import type {
   UpdateStorageBindingRequestDTO,
 } from "@shared/backend-api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLafkenClient } from "@lafken/react";
 
 import { systemKeys } from "@/features/system/keys";
-import { systemService } from "@/services";
 
 export function useStorageBindings() {
+  const c = useLafkenClient();
   return useQuery({
     queryKey: systemKeys.storageBindings(),
-    queryFn: () => systemService.listStorageBindings(),
+    queryFn: () => c.system.listStorageBindings(),
   });
 }
 
 export function useStorageBinding(name: string) {
+  const c = useLafkenClient();
   return useQuery({
     queryKey: systemKeys.storageBinding(name),
-    queryFn: () => systemService.getStorageBindingByName(name),
+    queryFn: () => c.system.getStorageBinding(name),
     enabled: Boolean(name),
   });
 }
 
 export function useIntegrations() {
+  const c = useLafkenClient();
   return useQuery({
     queryKey: systemKeys.integrations(),
-    queryFn: () => systemService.listIntegrations(),
+    queryFn: () => c.system.listIntegrations(),
   });
 }
 
 export function useSystemHealth() {
+  const c = useLafkenClient();
   return useQuery({
     queryKey: systemKeys.health(),
-    queryFn: () => systemService.getHealth(),
+    queryFn: () => c.system.getHealth(),
   });
 }
 
 export function useCreateStorageBinding() {
+  const c = useLafkenClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: CreateStorageBindingRequestDTO) =>
-      systemService.createStorageBinding(input),
+    mutationFn: (input: CreateStorageBindingRequestDTO) => c.system.createStorageBinding(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: systemKeys.storageBindings() });
     },
@@ -48,10 +52,11 @@ export function useCreateStorageBinding() {
 }
 
 export function useUpdateStorageBinding() {
+  const c = useLafkenClient();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (variables: { name: string; input: UpdateStorageBindingRequestDTO }) =>
-      systemService.updateStorageBinding(variables.name, variables.input),
+      c.system.updateStorageBinding(variables.name, variables.input),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({
         queryKey: systemKeys.storageBinding(variables.name),
@@ -62,9 +67,10 @@ export function useUpdateStorageBinding() {
 }
 
 export function useDeleteStorageBinding() {
+  const c = useLafkenClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => systemService.deleteStorageBinding(name),
+    mutationFn: (name: string) => c.system.deleteStorageBinding(name),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: systemKeys.storageBindings() });
     },

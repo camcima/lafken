@@ -9,13 +9,26 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { systemKeys } from "@/features/system/keys";
-import { systemService } from "@/services";
 
 import {
   useCreateStorageBinding,
   useDeleteStorageBinding,
   useUpdateStorageBinding,
 } from "./useSystem";
+
+const mockSystem = {
+  createStorageBinding: vi.fn(),
+  updateStorageBinding: vi.fn(),
+  deleteStorageBinding: vi.fn(),
+  listStorageBindings: vi.fn(),
+  getStorageBinding: vi.fn(),
+  listIntegrations: vi.fn(),
+  getHealth: vi.fn(),
+};
+
+vi.mock("@lafken/react", () => ({
+  useLafkenClient: () => ({ system: mockSystem }),
+}));
 
 function createWrapper(client: QueryClient) {
   return ({ children }: { children: ReactNode }) => (
@@ -48,18 +61,16 @@ describe("useCreateStorageBinding", () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  it("calls SystemService.createStorageBinding and invalidates the bindings list on success", async () => {
+  it("calls system.createStorageBinding and invalidates the bindings list on success", async () => {
     const input: CreateStorageBindingRequestDTO = {
       name: "lafken-prod",
       adapterType: "gcs",
       config: { bucket: "lafken-dev", projectId: "lafken-prod-1" },
     };
-    const createSpy = vi
-      .spyOn(systemService, "createStorageBinding")
-      .mockResolvedValue(sampleBinding);
+    mockSystem.createStorageBinding.mockResolvedValue(sampleBinding);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useCreateStorageBinding(), {
@@ -70,18 +81,18 @@ describe("useCreateStorageBinding", () => {
       await result.current.mutateAsync(input);
     });
 
-    expect(createSpy).toHaveBeenCalledWith(input);
+    expect(mockSystem.createStorageBinding).toHaveBeenCalledWith(input);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: systemKeys.storageBindings() });
   });
 
-  it("surfaces the error and does not invalidate the cache when the service throws", async () => {
+  it("surfaces the error and does not invalidate the cache when the client throws", async () => {
     const input: CreateStorageBindingRequestDTO = {
       name: "lafken-prod",
       adapterType: "gcs",
       config: { bucket: "lafken-dev", projectId: "lafken-prod-1" },
     };
     const failure = new Error("boom");
-    vi.spyOn(systemService, "createStorageBinding").mockRejectedValue(failure);
+    mockSystem.createStorageBinding.mockRejectedValue(failure);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useCreateStorageBinding(), {
@@ -109,16 +120,14 @@ describe("useUpdateStorageBinding", () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  it("calls SystemService.updateStorageBinding and invalidates the matching binding plus list on success", async () => {
+  it("calls system.updateStorageBinding and invalidates the matching binding plus list on success", async () => {
     const input: UpdateStorageBindingRequestDTO = {
       config: { bucket: "lafken-staging", projectId: "lafken-prod-1" },
     };
-    const updateSpy = vi
-      .spyOn(systemService, "updateStorageBinding")
-      .mockResolvedValue(sampleBinding);
+    mockSystem.updateStorageBinding.mockResolvedValue(sampleBinding);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useUpdateStorageBinding(), {
@@ -129,7 +138,7 @@ describe("useUpdateStorageBinding", () => {
       await result.current.mutateAsync({ name: "lafken-prod", input });
     });
 
-    expect(updateSpy).toHaveBeenCalledWith("lafken-prod", input);
+    expect(mockSystem.updateStorageBinding).toHaveBeenCalledWith("lafken-prod", input);
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: systemKeys.storageBinding("lafken-prod"),
     });
@@ -145,11 +154,11 @@ describe("useDeleteStorageBinding", () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  it("calls SystemService.deleteStorageBinding and invalidates the bindings list on success", async () => {
-    const deleteSpy = vi.spyOn(systemService, "deleteStorageBinding").mockResolvedValue(undefined);
+  it("calls system.deleteStorageBinding and invalidates the bindings list on success", async () => {
+    mockSystem.deleteStorageBinding.mockResolvedValue(undefined);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useDeleteStorageBinding(), {
@@ -160,7 +169,7 @@ describe("useDeleteStorageBinding", () => {
       await result.current.mutateAsync("lafken-prod");
     });
 
-    expect(deleteSpy).toHaveBeenCalledWith("lafken-prod");
+    expect(mockSystem.deleteStorageBinding).toHaveBeenCalledWith("lafken-prod");
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: systemKeys.storageBindings() });
   });
 });
