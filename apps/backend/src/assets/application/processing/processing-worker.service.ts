@@ -48,6 +48,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
     private readonly logger: AppLoggerPort,
     @Optional()
     private readonly reclaimer?: ReclaimStaleProcessingJobsUseCase,
+    @Optional()
     options?: IProcessingWorkerOptions,
   ) {
     this.logger.setContext(ProcessingWorkerService.name);
