@@ -172,23 +172,19 @@ This separation makes the service genuinely portable across environments and ens
 
 ## **3.2 Ports defined by the core**
 
-**StoragePort.** Upload URL generation (resumable and simple), object existence checks, object metadata, object reading, object deletion. Primary implementation: GCS. Additional adapters: S3 (covers AWS, MinIO, Cloudflare R2, Backblaze B2), local filesystem.
+**StoragePort.** Upload URL generation (resumable and simple), object existence checks, object metadata, object reading, object deletion. Implementation: GCS (the only adapter shipped for v1.0). Additional adapters (S3, local filesystem) are deferred to a future major version.
 
 **MetadataRepositoryPort.** Persistence and querying of asset records, namespaces, policies, presets, upload intents, processing jobs, state transitions, configuration audit log. Implementation: PostgreSQL 18+.
 
-**AuthorizationPort.** Boolean check: can principal X perform action Y on resource Z? Implementations: allow-all (development), file-based RBAC (small deployments), OIDC-claims-based, HTTP webhook (defers to external service such as OPA or OpenFGA).
+**AuthorizationPort.** Boolean check: can principal X perform action Y on resource Z? Implementations: allow-all (the only adapter shipped for v1.0). Additional adapters (file-based RBAC, OIDC-claims-based, HTTP webhook) are deferred to a future major version.
 
 **IdentityPort / OIDC integration.** Authentication of API requests via configurable OIDC issuer. Provider-agnostic; works with Microsoft Entra, Google Identity, Keycloak, Authentik, Auth0, Okta, etc.
 
-**VirusScanPort.** Scan an object, return clean/infected/error. Implementations: ClamAV (universal default), no-op (for namespaces where scanning is disabled), webhook (for external scanners).
+**VirusScanPort.** Scan an object, return clean/infected/error. Implementations: ClamAV in production; a deterministic local stub for development and tests. Additional adapters (no-op, external webhook) are deferred to a future major version.
 
-**ContentAnalysisPort.** Generalized analyzer chain producing structured findings (initially used for content moderation, generalizable to face detection, perceptual hashing, etc.). Primary implementation: Cloud Vision SafeSearch. Additional adapters: Rekognition, generic webhook, no-op.
+**ContentAnalysisPort.** Generalized analyzer chain producing structured findings (initially used for content moderation, generalizable to face detection, perceptual hashing, etc.). Implementation: a deterministic local stub for v1.0. Additional adapters (Cloud Vision SafeSearch, Rekognition, generic webhook) are deferred to a future major version.
 
-**TransformerPort.** Given source location and transformation parameters, produce a signed serving URL. Implementations: imgproxy (default and recommended), imagor.
-
-**EventPublisherPort.** Emit lifecycle events (uploaded, processed, ready, quarantined, deleted, etc.). Primary implementation: Google Pub/Sub. Additional adapters: in-process (default for small deployments and development), HTTP webhook fanout, Redis pub/sub, AWS SNS.
-
-**SecretsPort.** Resolution of configuration secrets at runtime. Primary implementation: GCP Secret Manager. Additional adapters: environment variables (default), HashiCorp Vault, AWS Secrets Manager, Kubernetes secrets.
+**TransformerPort.** Given source location and transformation parameters, produce a signed serving URL. Implementation: imgproxy (the only adapter shipped for v1.0). The `imagor` adapter is deferred to a future major version.
 
 ## **3.3 Workflow architecture**
 
@@ -203,8 +199,6 @@ The async processing pipeline is implemented using XState for in-process state m
 * The durability requirement is straightforward: don't lose track of an asset that's mid-processing if a worker dies.
 
 XState handles the in-process logic — step orchestration, parallel state coordination, timeouts, transient retry with exponential backoff, error classification. PostgreSQL holds a processing\_jobs table where workers claim work with heartbeat-based lease semantics; a sweeper reclaims jobs whose workers have died. This combination provides the right durability for the workflow shape without the overhead of a dedicated workflow engine.
-
-A WorkflowPort interface is defined so that operators with existing workflow infrastructure (Temporal, or comparable engines) can plug in alternative implementations. The default XState \+ PostgreSQL adapter is the recommended choice for v1 deployments.
 
 ## **3.4 Reference deployment topology on GCP**
 
@@ -452,7 +446,7 @@ Re-encoding gives the storage layer a clean, predictable file with no embedded m
 
 ### **Step 6 — Finalize**
 
-Compute the SHA-256 content hash. Update the asset record with all derived metadata. Transition state from 'processing' to 'ready' using a database update with a state precondition for idempotency. Mark the processing\_jobs row as 'completed'. Emit an asset.ready event via the EventPublisherPort (Google Pub/Sub by default).
+Compute the SHA-256 content hash. Update the asset record with all derived metadata. Transition state from 'processing' to 'ready' using a database update with a state precondition for idempotency. Mark the processing\_jobs row as 'completed'.
 
 ## **6.4 Failure taxonomy**
 
@@ -957,8 +951,6 @@ Features deliberately deferred until the v1 surface is proven:
 * Built-in BI dashboards beyond what raw metrics export supports
 
 * Additional transformer adapters (imagor)
-
-* Additional workflow adapters (Temporal, Duraflows) via the WorkflowPort interface
 
 * Non-React SDK wrappers (Vue, Svelte, native mobile)
 
