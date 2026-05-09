@@ -860,6 +860,43 @@ paths:
       summary: Issue a signed URL for a new asset upload
       tags:
         - Assets
+  /v1/assets/upload-intents/{publicId}/refresh-url:
+    post:
+      operationId: AssetsController_refreshUploadUrl_v1
+      parameters:
+        - name: publicId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshUploadUrlResponseDTO'
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+        '422':
+          description: ''
+      security:
+        - bearer: []
+      summary: Reissue an upload URL for an unconsumed upload intent
+      tags:
+        - Assets
   /v1/assets/{publicId}/confirm:
     post:
       operationId: AssetsController_confirmUpload_v1
@@ -1749,12 +1786,6 @@ components:
           type: array
           items:
             type: string
-        exifHandling:
-          type: string
-          enum:
-            - strip
-            - preserve
-            - extract_then_strip
         virusScanRequired:
           type: boolean
         contentModeration:
@@ -1784,7 +1815,6 @@ components:
         - retentionMode
         - maxFileSizeBytes
         - allowedMimeTypes
-        - exifHandling
         - virusScanRequired
         - immutable
         - servingMode
@@ -1802,8 +1832,6 @@ components:
           type: number
         signedUrlTtl:
           type: number
-        preGenerate:
-          type: boolean
         requiredPermission:
           type: string
         description:
@@ -1816,7 +1844,6 @@ components:
         - name
         - version
         - params
-        - preGenerate
         - active
         - createdAt
     ForbiddenErrorResponseDTO:
@@ -1865,12 +1892,6 @@ components:
           type: array
           items:
             type: string
-        exifHandling:
-          type: string
-          enum:
-            - strip
-            - preserve
-            - extract_then_strip
         virusScanRequired:
           type: boolean
         contentModeration:
@@ -1900,7 +1921,6 @@ components:
         - retentionMode
         - maxFileSizeBytes
         - allowedMimeTypes
-        - exifHandling
         - virusScanRequired
         - immutable
         - servingMode
@@ -2130,8 +2150,15 @@ components:
         url:
           type: string
           description: Fully-signed imgproxy URL the browser can fetch directly.
+        expiresAt:
+          type: string
+          description: >-
+            ISO timestamp at which the URL stops being valid (matches the
+            underlying source-url TTL).
+          format: date-time
       required:
         - url
+        - expiresAt
     AssetDownloadUrlResponseDTO:
       type: object
       properties:
@@ -2251,6 +2278,12 @@ components:
           type: number
           example: 102400
           minimum: 1
+        protocol:
+          type: string
+          enum:
+            - simple
+            - tus
+          description: Upload protocol. Defaults to 'simple' (one-shot signed PUT).
       required:
         - namespaceSlug
         - declaredMimeType
@@ -2260,6 +2293,12 @@ components:
       properties:
         publicId:
           type: string
+        protocol:
+          type: string
+          enum:
+            - simple
+            - tus
+          description: Protocol the URL is for
         uploadUrl:
           type: string
         uploadHeaders:
@@ -2271,6 +2310,23 @@ components:
           description: ISO-8601 timestamp when the URL expires
       required:
         - publicId
+        - protocol
+        - uploadUrl
+        - uploadHeaders
+        - expiresAt
+    RefreshUploadUrlResponseDTO:
+      type: object
+      properties:
+        uploadUrl:
+          type: string
+        uploadHeaders:
+          type: object
+          additionalProperties:
+            type: string
+        expiresAt:
+          type: string
+          description: ISO-8601 timestamp when the new URL expires
+      required:
         - uploadUrl
         - uploadHeaders
         - expiresAt
