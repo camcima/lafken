@@ -1,9 +1,11 @@
 import { Module } from "@nestjs/common";
 
+import { AuditInfrastructureModule } from "@/audit/infrastructure/audit-infrastructure.module";
 import { environmentConfiguration } from "@/shared/infrastructure/environment.configuration";
 import { LoggerModule } from "@/shared/infrastructure/logger/logger.module";
 import { SystemInfrastructureModule } from "@/system/infrastructure/system-infrastructure.module";
 
+import { OrphanUploadIntentSweeperUseCase } from "./application/processing/orphan-upload-intent-sweeper.use-case";
 import { ProcessClaimedAssetUseCase } from "./application/processing/process-claimed-asset.use-case";
 import { ProcessingRetryPolicy } from "./application/processing/processing-retry-policy";
 import { ProcessingWorkerService } from "./application/processing/processing-worker.service";
@@ -11,11 +13,12 @@ import { ReclaimStaleProcessingJobsUseCase } from "./application/processing/recl
 import { AssetsInfrastructureModule } from "./infrastructure/assets-infrastructure.module";
 
 @Module({
-  imports: [LoggerModule, AssetsInfrastructureModule, SystemInfrastructureModule],
+  imports: [LoggerModule, AssetsInfrastructureModule, SystemInfrastructureModule, AuditInfrastructureModule],
   providers: [
     ProcessClaimedAssetUseCase,
     ProcessingWorkerService,
     ReclaimStaleProcessingJobsUseCase,
+    OrphanUploadIntentSweeperUseCase,
     {
       provide: ProcessingRetryPolicy,
       useFactory: (): ProcessingRetryPolicy =>

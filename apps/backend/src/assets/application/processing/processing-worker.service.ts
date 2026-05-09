@@ -8,6 +8,7 @@ import { ProcessingJobRepositoryPort } from "@/assets/domain/repositories/proces
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
 import { environmentConfiguration } from "@/shared/infrastructure/environment.configuration";
 
+import { OrphanUploadIntentSweeperUseCase } from "./orphan-upload-intent-sweeper.use-case";
 import { ProcessClaimedAssetUseCase } from "./process-claimed-asset.use-case";
 import { makeTransitionMetadata } from "./processing-evidence";
 import { ProcessingRetryPolicy, type RetryDecision } from "./processing-retry-policy";
@@ -37,6 +38,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
   private pollTimer: NodeJS.Timeout | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private sweeperTimer: NodeJS.Timeout | null = null;
+  private orphanSweepTimer: NodeJS.Timeout | null = null;
   private readonly workflowTimeoutMs: number;
 
   constructor(
@@ -50,6 +52,8 @@ export class ProcessingWorkerService implements OnModuleDestroy {
     private readonly reclaimer?: ReclaimStaleProcessingJobsUseCase,
     @Optional()
     options?: IProcessingWorkerOptions,
+    @Optional()
+    private readonly orphanSweeper?: OrphanUploadIntentSweeperUseCase,
   ) {
     this.logger.setContext(ProcessingWorkerService.name);
     this.workflowTimeoutMs =
@@ -69,6 +73,17 @@ export class ProcessingWorkerService implements OnModuleDestroy {
       this.sweeperTimer = setInterval(
         (): void => void this.reclaimer?.execute({ now: new Date() }),
         environmentConfiguration.PROCESSING_WORKER_STALE_CLAIM_MS,
+      );
+    }
+    if (this.orphanSweeper) {
+      this.orphanSweepTimer = setInterval(
+        (): void =>
+          void this.orphanSweeper?.execute({
+            now: new Date(),
+            graceMs: environmentConfiguration.ORPHAN_INTENT_GRACE_MS,
+            batchSize: 100,
+          }),
+        environmentConfiguration.ORPHAN_INTENT_SWEEP_INTERVAL_MS,
       );
     }
     void this.tick();
@@ -138,6 +153,9 @@ export class ProcessingWorkerService implements OnModuleDestroy {
     }
     if (this.sweeperTimer) {
       clearInterval(this.sweeperTimer);
+    }
+    if (this.orphanSweepTimer) {
+      clearInterval(this.orphanSweepTimer);
     }
   }
 
