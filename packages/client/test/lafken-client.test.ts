@@ -340,7 +340,7 @@ describe("LafkenClient", () => {
       );
 
       const client = new LafkenClient({ baseUrl: "https://api.example.com" });
-      await client.retryAssetProcessing({ publicId: "asset-123" });
+      await client.retryAssetProcessing({ id: "asset-123" });
 
       expect(fetchSpy).toHaveBeenCalledOnce();
       const [calledUrl, calledInit] = fetchSpy.mock.calls[0];
@@ -355,7 +355,7 @@ describe("LafkenClient", () => {
       );
 
       const client = new LafkenClient({ baseUrl: "https://api.example.com" });
-      await client.retryAssetProcessing({ publicId: "abc%def" });
+      await client.retryAssetProcessing({ id: "abc%def" });
 
       const [calledUrl] = fetchSpy.mock.calls[0];
       expect(calledUrl).toBe("https://api.example.com/v1/assets/abc%25def/retry-processing");
@@ -380,7 +380,7 @@ describe("LafkenClient", () => {
 
       let thrownError: LafkenApiError | undefined;
       try {
-        await client.retryAssetProcessing({ publicId: "asset-123" });
+        await client.retryAssetProcessing({ id: "asset-123" });
       } catch (err) {
         thrownError = err as LafkenApiError;
       }

@@ -7,4 +7,6 @@ export {
   type ICreateUploadIntentResult,
   type ILafkenClientOptions,
   type IProblemDetails,
+  type IRefreshUploadUrlResult,
+  type UploadProtocol,
 } from "./types";

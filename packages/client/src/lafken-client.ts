@@ -5,6 +5,7 @@ import {
   type ICreateUploadIntentResult,
   type ILafkenClientOptions,
   type IProblemDetails,
+  type IRefreshUploadUrlResult,
   LafkenApiError,
 } from "./types";
 
@@ -14,6 +15,15 @@ export class LafkenClient {
   async createUploadIntent(input: ICreateUploadIntentInput): Promise<ICreateUploadIntentResult> {
     const response = await this.request("POST", "/v1/assets/upload-intents", input);
     return response as ICreateUploadIntentResult;
+  }
+
+  async refreshUploadUrl(publicId: string): Promise<IRefreshUploadUrlResult> {
+    const response = await this.request(
+      "POST",
+      `/v1/assets/upload-intents/${encodeURIComponent(publicId)}/refresh-url`,
+      {},
+    );
+    return response as IRefreshUploadUrlResult;
   }
 
   async confirmUpload(publicId: string, options?: IConfirmUploadOptions): Promise<IAsset> {

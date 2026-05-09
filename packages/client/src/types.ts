@@ -1,11 +1,21 @@
+export type UploadProtocol = "simple" | "tus";
+
 export interface ICreateUploadIntentInput {
   namespaceSlug: string;
   declaredMimeType: string;
   declaredSizeBytes: number;
+  protocol?: UploadProtocol;
 }
 
 export interface ICreateUploadIntentResult {
   publicId: string;
+  protocol: UploadProtocol;
+  uploadUrl: string;
+  uploadHeaders: Record<string, string>;
+  expiresAt: string;
+}
+
+export interface IRefreshUploadUrlResult {
   uploadUrl: string;
   uploadHeaders: Record<string, string>;
   expiresAt: string;
