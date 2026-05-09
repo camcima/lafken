@@ -4,12 +4,6 @@ import { resolve } from "node:path";
 import type { Plugin, ResolvedConfig } from "vite";
 
 /**
- * Keys that are build-time only (accessed via `import.meta.env`) and should
- * NOT be included in the runtime `__APP_CONFIG__` object.
- */
-const BUILD_TIME_ONLY_KEYS = new Set(["VITE_DEMO_DATA", "VITE_MOCKED_API"]);
-
-/**
  * Minimal `.env` parser — handles `KEY=value`, `# comments`, blank lines, and
  * surrounding `'`/`"` quotes. Does not support multiline values, variable
  * expansion (`${FOO}`), or escape sequences. Sufficient for this project's
@@ -72,7 +66,7 @@ export function devRuntimeConfigPlugin(): Plugin {
       const runtimeConfig: Record<string, string> = {};
 
       for (const [key, value] of Object.entries(merged)) {
-        if (key.startsWith("VITE_") && !BUILD_TIME_ONLY_KEYS.has(key)) {
+        if (key.startsWith("VITE_")) {
           runtimeConfig[key.slice("VITE_".length)] = value;
         }
       }

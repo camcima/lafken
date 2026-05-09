@@ -27,11 +27,6 @@ At container startup, `entrypoint.sh` runs `envsubst` on `public/config.js.templ
 
 ### Environment Variables
 
-**Build-time** (Vite, `import.meta.env`):
-
-- `VITE_MOCKED_API` — Enables MSW mock API (`"true"` to enable)
-- `VITE_DEMO_DATA` — Enables typed demo-data fallbacks (`"true"` to enable)
-
 **Runtime** (`__APP_CONFIG__` via `.env.local` in dev, environment in prod):
 
 | Variable                         | Required  | Description                |

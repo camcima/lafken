@@ -32,7 +32,6 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "// ============================== other ============================== //": "",
-    "init:msw": "pnpm exec msw init public --config",
     "check-outdated": "pnpm outdated",
     "type-check": "tsc --noEmit"
   },
@@ -117,8 +116,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "msw": {
-    "workerDirectory": "./public"
   }
 }

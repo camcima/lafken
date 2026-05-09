@@ -33,21 +33,11 @@ const rootElement = document.getElementById("app");
 if (rootElement && !rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
 
-  const renderApp = () => {
-    root.render(
-      <StrictMode>
-        <TanStackQueryProvider.Provider {...TanStackQueryProviderContext}>
-          <RouterProvider router={router} />
-        </TanStackQueryProvider.Provider>
-      </StrictMode>,
-    );
-  };
-
-  if (import.meta.env.DEV) {
-    void import("./mocks/browser").then(({ enableMocking }) => {
-      void enableMocking().then(renderApp);
-    });
-  } else {
-    renderApp();
-  }
+  root.render(
+    <StrictMode>
+      <TanStackQueryProvider.Provider {...TanStackQueryProviderContext}>
+        <RouterProvider router={router} />
+      </TanStackQueryProvider.Provider>
+    </StrictMode>,
+  );
 }
