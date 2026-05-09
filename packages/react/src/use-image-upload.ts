@@ -41,7 +41,6 @@ export interface IUploadFile {
    * Structured error. Set when state is `error`, `failed`, `quarantined`, or
    * `rejected`. For `error` state the `message` is the raw error message. For
    * `quarantined` files the `kind` field indicates the quarantine reason.
-   * @deprecated Use `error` instead of the old `error: string | null` shape.
    */
   error: IUploadFileError | null;
   /**

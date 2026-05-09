@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LafkenUploadManager } from "../src/lafken-upload-manager";
-
 import { fakeClientFor } from "./helpers/fake-client";
 
 describe("LafkenUploadManager protocol selection", () => {

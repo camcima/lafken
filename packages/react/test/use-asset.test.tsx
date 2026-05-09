@@ -15,7 +15,7 @@ function makeAsset(publicId: string): Record<string, unknown> {
     namespaceSlug: "default",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  } as unknown as AssetResponseDTO;
+  };
 }
 
 function makeWrapper(

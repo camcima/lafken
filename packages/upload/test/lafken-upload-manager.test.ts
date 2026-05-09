@@ -108,7 +108,10 @@ describe("LafkenUploadManager", () => {
     // Wait for async confirmCompletedFiles to finish
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
-    expect(client.assets.confirmUpload).toHaveBeenCalledWith("pub-123", { width: 256, height: 128 });
+    expect(client.assets.confirmUpload).toHaveBeenCalledWith("pub-123", {
+      width: 256,
+      height: 128,
+    });
     expect(confirmedEvents).toHaveLength(1);
     expect(confirmedEvents[0]).toEqual({ fileId: uppyFile.id, publicId: "pub-123" });
   });
@@ -135,7 +138,10 @@ describe("LafkenUploadManager", () => {
 
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
-    expect(client.assets.confirmUpload).toHaveBeenCalledWith("pub-789", { width: 256, height: 128 });
+    expect(client.assets.confirmUpload).toHaveBeenCalledWith("pub-789", {
+      width: 256,
+      height: 128,
+    });
   });
 
   it("calls confirmUpload without dimensions for non-image files", async () => {
@@ -345,7 +351,10 @@ describe("LafkenUploadManager", () => {
 
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
-    expect(client.assets.confirmUpload).toHaveBeenCalledWith("pub-456", { width: 256, height: 128 });
+    expect(client.assets.confirmUpload).toHaveBeenCalledWith("pub-456", {
+      width: 256,
+      height: 128,
+    });
     expect(failedEvents).toHaveLength(1);
     expect(failedEvents[0].fileId).toBe(uppyFile.id);
     expect(failedEvents[0].error).toBe(confirmError);

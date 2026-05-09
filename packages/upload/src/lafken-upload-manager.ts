@@ -64,7 +64,7 @@ export interface IFileReadyEventDetail {
   asset: { state: string; publicId: string };
 }
 
-export type QuarantineKind = "virus" | "moderation" | "invalid_format" | string;
+export type QuarantineKind = "virus" | "moderation" | "invalid_format" | (string & {});
 
 export interface IFileQuarantinedEventDetail {
   fileId: string;
@@ -195,8 +195,7 @@ export class LafkenUploadManager extends EventTarget {
   constructor(private readonly opts: ILafkenUploadManagerOptions) {
     super();
     this.protocol = opts.protocol ?? "simple";
-    this.refreshSafetyMarginMs =
-      opts.refreshSafetyMarginMs ?? DEFAULT_REFRESH_SAFETY_MARGIN_MS;
+    this.refreshSafetyMarginMs = opts.refreshSafetyMarginMs ?? DEFAULT_REFRESH_SAFETY_MARGIN_MS;
     this.pollingIntervalMs = opts.pollingIntervalMs ?? DEFAULT_POLLING_INTERVAL_MS;
     this.pollingMaxIntervalMs = opts.pollingMaxIntervalMs ?? DEFAULT_POLLING_MAX_INTERVAL_MS;
     this.pollingTimeoutMs = opts.pollingTimeoutMs ?? DEFAULT_POLLING_TIMEOUT_MS;

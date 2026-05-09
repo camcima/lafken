@@ -1,5 +1,3 @@
-import type { ILafkenClientOptions } from "./types";
-import { Transport } from "./transport";
 import { AssetsClient } from "./sub-clients/assets-client";
 import { AuditClient } from "./sub-clients/audit-client";
 import { DashboardClient } from "./sub-clients/dashboard-client";
@@ -7,6 +5,8 @@ import { LegalHoldsClient } from "./sub-clients/legal-holds-client";
 import { NamespacesClient } from "./sub-clients/namespaces-client";
 import { QuarantineClient } from "./sub-clients/quarantine-client";
 import { SystemClient } from "./sub-clients/system-client";
+import { Transport } from "./transport";
+import type { ILafkenClientOptions } from "./types";
 
 export class LafkenClient {
   readonly assets: AssetsClient;

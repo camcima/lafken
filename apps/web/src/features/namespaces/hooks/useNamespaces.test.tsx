@@ -441,7 +441,11 @@ describe("useUpdatePresetVersion", () => {
       await result.current.mutateAsync({ slug, name, input: VALID_PRESET_VERSION });
     });
 
-    expect(mockNamespaces.updatePresetVersion).toHaveBeenCalledWith(slug, name, VALID_PRESET_VERSION);
+    expect(mockNamespaces.updatePresetVersion).toHaveBeenCalledWith(
+      slug,
+      name,
+      VALID_PRESET_VERSION,
+    );
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.presets(slug) });
   });
 

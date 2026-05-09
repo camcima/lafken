@@ -1,8 +1,4 @@
-import {
-  type IUploadDropzoneRenderProps,
-  type IUploadFile,
-  UploadDropzone,
-} from "@lafken/react";
+import { type IUploadDropzoneRenderProps, type IUploadFile, UploadDropzone } from "@lafken/react";
 import type { NamespacePolicyResponseDTO, NamespaceResponseDTO } from "@shared/backend-api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -832,11 +828,7 @@ function humanizeFileError(
   return error.message;
 }
 
-function FileStateOverlay({
-  state,
-}: {
-  state: IUploadFile["state"];
-}): React.JSX.Element | null {
+function FileStateOverlay({ state }: { state: IUploadFile["state"] }): React.JSX.Element | null {
   const { t } = useTranslation();
   // No overlay before the user starts the upload — `idle` and `preview` look
   // identical to the dropzone preview (just the thumbnail).

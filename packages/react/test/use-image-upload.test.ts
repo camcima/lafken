@@ -23,7 +23,7 @@ vi.mock("@lafken/upload", async (importOriginal) => {
   class SpiedManager extends OriginalManager {
     constructor(opts: ConstructorParameters<typeof OriginalManager>[0]) {
       managerCtorArgs.push(opts);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
       super(opts as any);
       capturedManagers.push(this);
     }

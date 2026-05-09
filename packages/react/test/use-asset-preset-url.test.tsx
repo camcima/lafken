@@ -10,7 +10,10 @@ function makePreviewUrlDto(url: string): { url: string; expiresAt: string } {
 }
 
 function makeStubClient(impl: {
-  getPreviewUrl: (i: { publicId: string; preset: string }) => Promise<{ url: string; expiresAt: string }>;
+  getPreviewUrl: (i: {
+    publicId: string;
+    preset: string;
+  }) => Promise<{ url: string; expiresAt: string }>;
 }): LafkenClient {
   return {
     assets: impl,

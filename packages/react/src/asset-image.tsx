@@ -1,7 +1,12 @@
 import type { LafkenClient } from "@lafken/client";
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 
-import { _evictPresetUrl, _getCachedPresetUrl, _resetPresetUrlCache, cacheUpdateBus } from "./_url-cache";
+import {
+  _evictPresetUrl,
+  _getCachedPresetUrl,
+  _resetPresetUrlCache,
+  cacheUpdateBus,
+} from "./_url-cache";
 import { _LafkenClientContext } from "./lafken-provider";
 
 /**
@@ -60,7 +65,9 @@ export function AssetImage(props: IAssetImageProps): React.JSX.Element | null {
   // clientRef lets the cache-update effect read the latest client without
   // being in its dependency array (the effect should only run once per key).
   const clientRef = useRef<LafkenClient>(client);
-  clientRef.current = client;
+  useEffect(() => {
+    clientRef.current = client;
+  }, [client]);
 
   useEffect(() => {
     let cancelled = false;

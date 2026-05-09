@@ -1,7 +1,4 @@
-import type {
-  IUploadDropzoneRenderProps,
-  IUploadFile,
-} from "@lafken/react";
+import type { IUploadDropzoneRenderProps, IUploadFile } from "@lafken/react";
 import type { NamespaceResponseDTO, PaginatedResult } from "@shared/backend-api";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render } from "@testing-library/react";
@@ -9,6 +6,8 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
+
+import { UploadAssetsPage } from "./UploadAssetsPage";
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -67,15 +66,11 @@ vi.mock("@lafken/react", () => ({
       isUploading: false,
       startUpload: () => Promise.resolve(),
       removeFile: () => {},
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-return
       getInputProps: () => ({ ref: () => {} }) as any,
       getRootProps: () => ({}),
     }),
 }));
-
-// Import after mocks so the component picks up the mocked module graph.
-// eslint-disable-next-line import/order
-import { UploadAssetsPage } from "./UploadAssetsPage";
 
 function makeFile(state: IUploadFile["state"], overrides: Partial<IUploadFile> = {}): IUploadFile {
   return {

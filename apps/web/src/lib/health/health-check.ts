@@ -7,9 +7,12 @@ import { getRuntimeValue } from "@/config/app-config";
  */
 export async function isBackendHealthy(signal?: AbortSignal): Promise<boolean> {
   try {
-    const r = await fetch(`${getRuntimeValue("API_URL")}/health`, { method: "HEAD", signal });
+    const response = await fetch(`${getRuntimeValue("API_URL")}/health`, {
+      method: "HEAD",
+      signal,
+    });
     // eslint-disable-next-line no-magic-numbers
-    return r.status === 200;
+    return response.status === 200;
   } catch {
     return false;
   }

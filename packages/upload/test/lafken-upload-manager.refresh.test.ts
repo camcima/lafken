@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LafkenUploadManager } from "../src/lafken-upload-manager";
-
 import { fakeClientFor, fakeImageFile } from "./helpers/fake-client";
 
 describe("LafkenUploadManager refresh-before-upload", () => {
@@ -41,9 +40,7 @@ describe("LafkenUploadManager refresh-before-upload", () => {
     });
     const manager = new LafkenUploadManager({ client: client as never, namespaceSlug: "n" });
     const failures: unknown[] = [];
-    manager.addEventListener("file-failed", (e) =>
-      failures.push((e as CustomEvent).detail),
-    );
+    manager.addEventListener("file-failed", (e) => failures.push((e as CustomEvent).detail));
     manager.addFiles([fakeImageFile("a.jpg")]);
     const uppy = manager.getUppy();
     const [file] = uppy.getFiles();

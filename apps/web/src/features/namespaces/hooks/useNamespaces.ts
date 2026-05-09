@@ -1,3 +1,4 @@
+import { useLafkenClient } from "@lafken/react";
 import type {
   CreateNamespaceRequestDTO,
   CreatePolicyVersionRequestDTO,
@@ -7,51 +8,50 @@ import type {
   UpdatePresetVersionRequestDTO,
 } from "@shared/backend-api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLafkenClient } from "@lafken/react";
 
 import { namespacesKeys } from "@/features/namespaces/keys";
 import type { IListNamespacesQuery } from "@/features/namespaces/keys";
 
 export function useNamespaces(q: IListNamespacesQuery = {}) {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   return useQuery({
     queryKey: namespacesKeys.list(q),
-    queryFn: () => c.namespaces.list(q),
+    queryFn: () => client.namespaces.list(q),
   });
 }
 
 export function useNamespace(slug: string) {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   return useQuery({
     queryKey: namespacesKeys.detail(slug),
-    queryFn: () => c.namespaces.get(slug),
+    queryFn: () => client.namespaces.get(slug),
     enabled: Boolean(slug),
   });
 }
 
 export function useNamespacePolicies(slug: string) {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   return useQuery({
     queryKey: namespacesKeys.policies(slug),
-    queryFn: () => c.namespaces.listPolicies(slug),
+    queryFn: () => client.namespaces.listPolicies(slug),
     enabled: Boolean(slug),
   });
 }
 
 export function useNamespacePresets(slug: string) {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   return useQuery({
     queryKey: namespacesKeys.presets(slug),
-    queryFn: () => c.namespaces.listPresets(slug),
+    queryFn: () => client.namespaces.listPresets(slug),
     enabled: Boolean(slug),
   });
 }
 
 export function useCreateNamespace() {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: CreateNamespaceRequestDTO) => c.namespaces.create(input),
+    mutationFn: (input: CreateNamespaceRequestDTO) => client.namespaces.create(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.lists() });
     },
@@ -59,11 +59,11 @@ export function useCreateNamespace() {
 }
 
 export function useUpdateNamespaceMetadata() {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (variables: { slug: string; input: UpdateNamespaceMetadataRequestDTO }) =>
-      c.namespaces.updateMetadata(variables.slug, variables.input),
+      client.namespaces.updateMetadata(variables.slug, variables.input),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.detail(variables.slug) });
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.lists() });
@@ -72,10 +72,10 @@ export function useUpdateNamespaceMetadata() {
 }
 
 export function useArchiveNamespace() {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (slug: string) => c.namespaces.archive(slug),
+    mutationFn: (slug: string) => client.namespaces.archive(slug),
     onSuccess: (_data, slug) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.detail(slug) });
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.lists() });
@@ -84,10 +84,10 @@ export function useArchiveNamespace() {
 }
 
 export function useUnarchiveNamespace() {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (slug: string) => c.namespaces.unarchive(slug),
+    mutationFn: (slug: string) => client.namespaces.unarchive(slug),
     onSuccess: (_data, slug) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.detail(slug) });
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.lists() });
@@ -96,11 +96,11 @@ export function useUnarchiveNamespace() {
 }
 
 export function useUpdateNamespacePolicy() {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ slug, input }: { slug: string; input: CreatePolicyVersionRequestDTO }) =>
-      c.namespaces.createPolicyVersion(slug, input),
+      client.namespaces.createPolicyVersion(slug, input),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.detail(variables.slug) });
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.policies(variables.slug) });
@@ -109,11 +109,11 @@ export function useUpdateNamespacePolicy() {
 }
 
 export function useCreatePreset() {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ slug, input }: { slug: string; input: CreatePresetRequestDTO }) =>
-      c.namespaces.createPreset(slug, input),
+      client.namespaces.createPreset(slug, input),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.presets(variables.slug) });
     },
@@ -121,7 +121,7 @@ export function useCreatePreset() {
 }
 
 export function useUpdatePresetVersion() {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -132,7 +132,7 @@ export function useUpdatePresetVersion() {
       slug: string;
       name: string;
       input: UpdatePresetVersionRequestDTO;
-    }) => c.namespaces.updatePresetVersion(slug, name, input),
+    }) => client.namespaces.updatePresetVersion(slug, name, input),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.presets(variables.slug) });
     },
@@ -140,7 +140,7 @@ export function useUpdatePresetVersion() {
 }
 
 export function useSetPresetActive() {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -151,7 +151,7 @@ export function useSetPresetActive() {
       slug: string;
       name: string;
       input: SetPresetActiveRequestDTO;
-    }) => c.namespaces.setPresetActive(slug, name, input),
+    }) => client.namespaces.setPresetActive(slug, name, input),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.presets(variables.slug) });
     },

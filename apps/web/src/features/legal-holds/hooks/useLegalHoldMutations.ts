@@ -1,6 +1,6 @@
+import { useLafkenClient } from "@lafken/react";
 import type { LegalHoldResponseDTO } from "@shared/backend-api";
 import { type QueryClient, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLafkenClient } from "@lafken/react";
 
 import { assetsKeys } from "@/features/assets/keys";
 import { dashboardKeys } from "@/features/dashboard/keys";
@@ -43,10 +43,10 @@ function invalidateAfterLift(queryClient: QueryClient, holdId: string): void {
 }
 
 export function usePlaceLegalHold() {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   const queryClient = useQueryClient();
   return useMutation<LegalHoldResponseDTO, Error, IPlaceInput>({
-    mutationFn: (input) => c.legalHolds.place(input),
+    mutationFn: (input) => client.legalHolds.place(input),
     onSuccess: (_data, input) => {
       invalidateAfterPlace(queryClient, input.assetIds);
     },
@@ -54,10 +54,10 @@ export function usePlaceLegalHold() {
 }
 
 export function useLiftLegalHold() {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   const queryClient = useQueryClient();
   return useMutation<LegalHoldResponseDTO, Error, ILiftInput>({
-    mutationFn: ({ id, liftReason }) => c.legalHolds.lift(id, { liftReason }),
+    mutationFn: ({ id, liftReason }) => client.legalHolds.lift(id, { liftReason }),
     onSuccess: (_data, { id }) => {
       invalidateAfterLift(queryClient, id);
     },

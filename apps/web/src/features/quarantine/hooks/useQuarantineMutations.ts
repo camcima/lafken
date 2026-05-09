@@ -1,6 +1,6 @@
+import { useLafkenClient } from "@lafken/react";
 import type { AssetResponseDTO } from "@shared/backend-api";
 import { type QueryClient, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLafkenClient } from "@lafken/react";
 
 import { assetsKeys } from "@/features/assets/keys";
 import { dashboardKeys } from "@/features/dashboard/keys";
@@ -32,10 +32,10 @@ function invalidateAfterReview(queryClient: QueryClient, publicId: string): void
  * Releases a quarantined asset back to the `ready` state.
  */
 export function useReleaseQuarantinedAsset() {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   const queryClient = useQueryClient();
   return useMutation<AssetResponseDTO, Error, IReleaseInput>({
-    mutationFn: ({ publicId, note }) => c.quarantine.release(publicId, { note }),
+    mutationFn: ({ publicId, note }) => client.quarantine.release(publicId, { note }),
     onSuccess: (_data, { publicId }) => {
       invalidateAfterReview(queryClient, publicId);
     },
@@ -47,10 +47,10 @@ export function useReleaseQuarantinedAsset() {
  * collecting the reviewer note (the BE requires a minimum of 12 characters).
  */
 export function useRejectQuarantinedAsset() {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   const queryClient = useQueryClient();
   return useMutation<AssetResponseDTO, Error, IRejectInput>({
-    mutationFn: ({ publicId, note }) => c.quarantine.reject(publicId, { note }),
+    mutationFn: ({ publicId, note }) => client.quarantine.reject(publicId, { note }),
     onSuccess: (_data, { publicId }) => {
       invalidateAfterReview(queryClient, publicId);
     },

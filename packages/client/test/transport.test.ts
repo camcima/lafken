@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MockInstance } from "vitest";
 
-import { LafkenApiError } from "../src/types";
 import { Transport } from "../src/transport";
+import { LafkenApiError } from "../src/types";
 
 describe("Transport", () => {
   let fetchSpy: MockInstance<typeof fetch>;

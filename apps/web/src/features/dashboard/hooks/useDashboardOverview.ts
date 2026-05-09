@@ -1,12 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
 import { useLafkenClient } from "@lafken/react";
+import { useQuery } from "@tanstack/react-query";
 
 import { dashboardKeys } from "@/features/dashboard/keys";
 
 export function useDashboardOverview() {
-  const c = useLafkenClient();
+  const client = useLafkenClient();
   return useQuery({
     queryKey: dashboardKeys.overview(),
-    queryFn: () => c.dashboard.getOverview(),
+    queryFn: () => client.dashboard.getOverview(),
   });
 }

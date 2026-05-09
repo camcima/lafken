@@ -46,15 +46,13 @@ function doFetch(
   preset: string,
   key: string,
 ): Promise<string> {
-  const promise: Promise<string> = client.assets
-    .getPreviewUrl({ publicId, preset })
-    .then((dto) => {
-      const expiresAt = Date.parse(dto.expiresAt);
-      // Write the resolved entry (clearing the refreshPromise)
-      cache.set(key, { url: dto.url, expiresAt });
-      cacheUpdateBus.dispatchEvent(new CustomEvent("cache-updated", { detail: { key } }));
-      return dto.url;
-    });
+  const promise: Promise<string> = client.assets.getPreviewUrl({ publicId, preset }).then((dto) => {
+    const expiresAt = Date.parse(dto.expiresAt);
+    // Write the resolved entry (clearing the refreshPromise)
+    cache.set(key, { url: dto.url, expiresAt });
+    cacheUpdateBus.dispatchEvent(new CustomEvent("cache-updated", { detail: { key } }));
+    return dto.url;
+  });
   return promise;
 }
 

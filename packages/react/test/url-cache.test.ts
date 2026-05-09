@@ -3,7 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { _evictPresetUrl, _getCachedPresetUrl, _resetPresetUrlCache } from "../src/_url-cache";
 
 function makeClient(impl: {
-  getPreviewUrl: (i: { publicId: string; preset: string }) => Promise<{ url: string; expiresAt: string }>;
+  getPreviewUrl: (i: {
+    publicId: string;
+    preset: string;
+  }) => Promise<{ url: string; expiresAt: string }>;
 }): Parameters<typeof _getCachedPresetUrl>[0] {
   return { assets: impl } as unknown as Parameters<typeof _getCachedPresetUrl>[0];
 }
@@ -49,7 +52,9 @@ describe("_getCachedPresetUrl TTL cache", () => {
     let callCount = 0;
     const getPreviewUrl = vi.fn().mockImplementation(() => {
       callCount++;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       if (callCount === 1) return firstGetPreviewUrl();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return secondGetPreviewUrl();
     });
 
@@ -114,9 +119,16 @@ describe("_getCachedPresetUrl TTL cache", () => {
   });
 
   it("_evictPresetUrl clears the cache entry", async () => {
-    const getPreviewUrl = vi.fn()
-      .mockResolvedValueOnce({ url: "https://cdn/v1.webp", expiresAt: new Date(Date.now() + 3_600_000).toISOString() })
-      .mockResolvedValueOnce({ url: "https://cdn/v2.webp", expiresAt: new Date(Date.now() + 3_600_000).toISOString() });
+    const getPreviewUrl = vi
+      .fn()
+      .mockResolvedValueOnce({
+        url: "https://cdn/v1.webp",
+        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+      })
+      .mockResolvedValueOnce({
+        url: "https://cdn/v2.webp",
+        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+      });
 
     const client = makeClient({ getPreviewUrl });
 

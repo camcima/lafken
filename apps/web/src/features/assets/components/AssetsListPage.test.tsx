@@ -112,9 +112,7 @@ describe("AssetsListPage", () => {
 
   it("renders the search input", () => {
     renderPage();
-    expect(
-      screen.getByRole("searchbox", { name: /search by public id/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: /search by public id/i })).toBeInTheDocument();
   });
 
   it("renders the state filter and namespace filter selects", () => {

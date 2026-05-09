@@ -3,14 +3,16 @@ import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { _resetAssetImageCache, AssetImage, LafkenProvider } from "../src/index";
-import { cacheUpdateBus } from "../src/_url-cache";
 
 function makePreviewUrlDto(url: string): { url: string; expiresAt: string } {
   return { url, expiresAt: new Date(Date.now() + 3_600_000).toISOString() };
 }
 
 function makeStubClient(impl: {
-  getPreviewUrl: (i: { publicId: string; preset: string }) => Promise<{ url: string; expiresAt: string }>;
+  getPreviewUrl: (i: {
+    publicId: string;
+    preset: string;
+  }) => Promise<{ url: string; expiresAt: string }>;
 }) {
   return {
     assets: impl,
@@ -147,7 +149,8 @@ describe("<AssetImage>", () => {
     let callCount = 0;
     const fn = vi.fn().mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return Promise.resolve({ url: "https://cdn/v1.webp", expiresAt: nearExpiry });
+      if (callCount === 1)
+        return Promise.resolve({ url: "https://cdn/v1.webp", expiresAt: nearExpiry });
       return Promise.resolve({ url: "https://cdn/v2.webp", expiresAt: farFuture });
     });
 
@@ -192,7 +195,10 @@ describe("<AssetImage>", () => {
   it("evicts cache and retries once on img onError; renders nothing if retry also fails", async () => {
     const fn = vi
       .fn()
-      .mockResolvedValueOnce({ url: "https://cdn/v1.webp", expiresAt: new Date(Date.now() + 3_600_000).toISOString() })
+      .mockResolvedValueOnce({
+        url: "https://cdn/v1.webp",
+        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+      })
       .mockRejectedValue(new Error("retry-also-failed"));
 
     const client = makeStubClient({ getPreviewUrl: fn });
