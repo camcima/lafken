@@ -8,12 +8,11 @@ import { AuditPage } from "./AuditPage";
 
 vi.mock("@/lib/demo/demo-mode", () => ({ isDemoMode: true }));
 
-// The hooks now call useLafkenClient(); provide a no-op stub so the component
-// can mount without a real <LafkenProvider> in the test tree.
-vi.mock("@lafken/react", () => ({
-  useLafkenClient: () => ({
-    audit: { list: vi.fn().mockResolvedValue({ data: [], total: 0, page: 1, limit: 20, lastPage: 1 }) },
-  }),
+// The hook now calls useLafkenClient() internally; stub it so the component
+// can mount without a real <LafkenProvider> in the test tree. In demo mode
+// the query result is not used — this stub just satisfies React Query.
+vi.mock("@/features/audit/hooks/useAudit", () => ({
+  useAuditEntries: () => ({ data: undefined, isLoading: false }),
 }));
 
 function renderPage() {
