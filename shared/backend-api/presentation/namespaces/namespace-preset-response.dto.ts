@@ -16,9 +16,6 @@ export class NamespacePresetResponseDTO {
   @ApiProperty({ required: false, type: Number })
   signedUrlTtl?: number;
 
-  @ApiProperty()
-  preGenerate!: boolean;
-
   @ApiProperty({ required: false, type: String })
   requiredPermission?: string;
 
