@@ -6,4 +6,5 @@ export {
   type ILafkenUploadManagerOptions,
   type ISharedUploadMetadata,
   type IUploadRestrictions,
+  type UploadProtocol,
 } from "./lafken-upload-manager";

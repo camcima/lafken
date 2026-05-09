@@ -1,6 +1,9 @@
 import type { LafkenClient } from "@lafken/client";
 import Uppy, { type UppyFile } from "@uppy/core";
+import Tus from "@uppy/tus";
 import XHRUpload from "@uppy/xhr-upload";
+
+export type UploadProtocol = "simple" | "tus";
 
 export interface ISharedUploadMetadata {
   externalRefType?: string;
@@ -33,6 +36,10 @@ export interface ILafkenUploadManagerOptions {
   namespaceSlug: string;
   /** Initial restrictions; can be updated later via `setRestrictions`. */
   restrictions?: IUploadRestrictions;
+  /** Upload protocol to use. Default: "simple" (XHR PUT). */
+  protocol?: UploadProtocol;
+  /** ms before `expiresAt` at which to pre-flight a URL refresh. Default 30000. */
+  refreshSafetyMarginMs?: number;
 }
 
 export interface IFileConfirmedEventDetail {
@@ -100,14 +107,23 @@ async function probeImageDimensions(file: File): Promise<IImageDimensions> {
   });
 }
 
+const DEFAULT_REFRESH_SAFETY_MARGIN_MS = 30_000;
+
 export class LafkenUploadManager extends EventTarget {
   private readonly uppy: Uppy<AnyMeta, AnyBody>;
   private readonly publicIdByFileId = new Map<string, string>();
   private readonly dimProbesByFileId = new Map<string, Promise<IImageDimensions | null>>();
+  private readonly expiresAtByFileId = new Map<string, Date>();
   private sharedMetadata: ISharedUploadMetadata = {};
+  private readonly protocol: UploadProtocol;
+  private readonly refreshSafetyMarginMs: number;
 
   constructor(private readonly opts: ILafkenUploadManagerOptions) {
     super();
+    this.protocol = opts.protocol ?? "simple";
+    this.refreshSafetyMarginMs =
+      opts.refreshSafetyMarginMs ?? DEFAULT_REFRESH_SAFETY_MARGIN_MS;
+
     this.uppy = new Uppy<AnyMeta, AnyBody>({
       autoProceed: false,
       allowMultipleUploadBatches: true,
@@ -133,16 +149,20 @@ export class LafkenUploadManager extends EventTarget {
       );
     });
 
-    this.uppy.use(XHRUpload, {
-      endpoint: "placeholder",
-      method: "PUT",
-      formData: false,
-    });
+    if (this.protocol === "tus") {
+      this.uppy.use(Tus, { endpoint: "placeholder" });
+    } else {
+      this.uppy.use(XHRUpload, {
+        endpoint: "placeholder",
+        method: "PUT",
+        formData: false,
+      });
+    }
 
     // Pre-processor: call createUploadIntent per file and store the upload URL/headers
-    // as per-file xhrUpload overrides before the upload starts. Each file is
-    // handled independently — a failure for one file (e.g. the namespace
-    // policy rejects the MIME type) must not abort the rest of the batch.
+    // as per-file overrides before the upload starts. Each file is handled
+    // independently — a failure for one file (e.g. the namespace policy rejects
+    // the MIME type) must not abort the rest of the batch.
     this.uppy.addPreProcessor((fileIds: string[]) => this.runPreProcessing(fileIds));
 
     this.uppy.on("complete", (result) => {
@@ -177,6 +197,7 @@ export class LafkenUploadManager extends EventTarget {
     }
     this.publicIdByFileId.delete(fileId);
     this.dimProbesByFileId.delete(fileId);
+    this.expiresAtByFileId.delete(fileId);
   }
 
   async start(): Promise<void> {
@@ -206,6 +227,7 @@ export class LafkenUploadManager extends EventTarget {
     this.uppy.cancelAll();
     this.publicIdByFileId.clear();
     this.dimProbesByFileId.clear();
+    this.expiresAtByFileId.clear();
   }
 
   getUppy(): Uppy<AnyMeta, AnyBody> {
@@ -224,18 +246,52 @@ export class LafkenUploadManager extends EventTarget {
             namespaceSlug: this.opts.namespaceSlug,
             declaredMimeType: (file.type as string | undefined) ?? "application/octet-stream",
             declaredSizeBytes: (file.size as number | undefined) ?? 0,
+            protocol: this.protocol,
           });
+
+          let uploadUrl: string = result.uploadUrl;
+          let uploadHeaders: Record<string, string> = result.uploadHeaders;
+          const expiresAt = new Date(result.expiresAt);
+
+          // Pre-flight URL refresh when the signed URL is within the safety
+          // margin of expiry. This guards against long idle time between
+          // addFiles() and start().
+          if (expiresAt.getTime() - Date.now() < this.refreshSafetyMarginMs) {
+            try {
+              const refreshed = await this.opts.client.refreshUploadUrl(result.publicId);
+              uploadUrl = refreshed.uploadUrl;
+              uploadHeaders = refreshed.uploadHeaders;
+              this.expiresAtByFileId.set(fileId, new Date(refreshed.expiresAt));
+            } catch (err) {
+              const error = err instanceof Error ? err : new Error(String(err));
+              this.dispatchEvent(
+                new CustomEvent<IFileFailedEventDetail>("file-failed", {
+                  detail: { fileId, error },
+                }),
+              );
+              failedIds.push(fileId);
+              return;
+            }
+          } else {
+            this.expiresAtByFileId.set(fileId, expiresAt);
+          }
 
           this.publicIdByFileId.set(fileId, result.publicId);
 
-          this.uppy.setFileState(fileId, {
-            xhrUpload: {
-              endpoint: result.uploadUrl,
-              method: "PUT",
-              formData: false,
-              headers: result.uploadHeaders,
-            },
-          });
+          if (this.protocol === "tus") {
+            this.uppy.setFileState(fileId, {
+              tus: { endpoint: uploadUrl, headers: uploadHeaders },
+            });
+          } else {
+            this.uppy.setFileState(fileId, {
+              xhrUpload: {
+                endpoint: uploadUrl,
+                method: "PUT",
+                formData: false,
+                headers: uploadHeaders,
+              },
+            });
+          }
         } catch (err) {
           const error = err instanceof Error ? err : new Error(String(err));
           this.dispatchEvent(
