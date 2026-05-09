@@ -1,12 +1,13 @@
 import type { ListAuditQueryDTO } from "@shared/backend-api";
 import { useQuery } from "@tanstack/react-query";
+import { useLafkenClient } from "@lafken/react";
 
 import { auditKeys } from "@/features/audit/keys";
-import { auditService } from "@/services";
 
 export function useAuditEntries(q: Partial<ListAuditQueryDTO> = {}) {
+  const c = useLafkenClient();
   return useQuery({
     queryKey: auditKeys.list(q),
-    queryFn: () => auditService.list(q),
+    queryFn: () => c.audit.list(q),
   });
 }
