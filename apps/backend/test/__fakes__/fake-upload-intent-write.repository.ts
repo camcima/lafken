@@ -1,6 +1,8 @@
 import { UploadIntent } from "@/assets/domain/entities/upload-intent.entity";
 import {
+  IFindOrphanedForSweepInput,
   IInsertUploadIntentInput,
+  IRefreshUploadUrlInput,
   UploadIntentWriteRepositoryPort,
 } from "@/assets/domain/repositories/upload-intent-write.repository.port";
 
@@ -50,5 +52,49 @@ export class FakeUploadIntentWriteRepository extends UploadIntentWriteRepository
       });
     }
     return Promise.resolve();
+  }
+
+  findOrphanedForSweep(input: IFindOrphanedForSweepInput): Promise<UploadIntent[]> {
+    const cutoff = new Date(input.now.getTime() - input.graceMs);
+    const results = this.intents
+      .filter(
+        (i) =>
+          i.props.consumedAt === null &&
+          i.props.expiredAt === null &&
+          i.props.uploadUrlExpiresAt < cutoff,
+      )
+      .sort((a, b) => a.props.uploadUrlExpiresAt.getTime() - b.props.uploadUrlExpiresAt.getTime())
+      .slice(0, input.limit);
+    return Promise.resolve(results);
+  }
+
+  markExpired(publicId: string, now: Date): Promise<boolean> {
+    const intent = this.intents.find(
+      (i) =>
+        i.props.publicId === publicId &&
+        i.props.consumedAt === null &&
+        i.props.expiredAt === null,
+    );
+    if (!intent) return Promise.resolve(false);
+    const idx = this.intents.indexOf(intent);
+    this.intents[idx] = UploadIntent.fromProps({ ...intent.props, expiredAt: now });
+    return Promise.resolve(true);
+  }
+
+  refreshUploadUrl(input: IRefreshUploadUrlInput): Promise<boolean> {
+    const intent = this.intents.find(
+      (i) =>
+        i.props.publicId === input.publicId &&
+        i.props.consumedAt === null &&
+        i.props.expiredAt === null,
+    );
+    if (!intent) return Promise.resolve(false);
+    const idx = this.intents.indexOf(intent);
+    this.intents[idx] = UploadIntent.fromProps({
+      ...intent.props,
+      uploadUrl: input.uploadUrl,
+      uploadUrlExpiresAt: input.uploadUrlExpiresAt,
+    });
+    return Promise.resolve(true);
   }
 }

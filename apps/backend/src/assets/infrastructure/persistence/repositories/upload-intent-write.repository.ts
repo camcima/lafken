@@ -2,7 +2,9 @@ import { Injectable } from "@nestjs/common";
 
 import { UploadIntent } from "@/assets/domain/entities/upload-intent.entity";
 import {
+  type IFindOrphanedForSweepInput,
   type IInsertUploadIntentInput,
+  type IRefreshUploadUrlInput,
   UploadIntentWriteRepositoryPort,
 } from "@/assets/domain/repositories/upload-intent-write.repository.port";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
@@ -54,5 +56,44 @@ export class UploadIntentWriteRepository implements UploadIntentWriteRepositoryP
       .where("public_id", "=", publicId)
       .where("consumed_at", "is", null)
       .execute();
+  }
+
+  async findOrphanedForSweep(input: IFindOrphanedForSweepInput): Promise<UploadIntent[]> {
+    const cutoff = new Date(input.now.getTime() - input.graceMs);
+    const rows = await this.db.connection
+      .selectFrom("upload_intents")
+      .selectAll()
+      .where("consumed_at", "is", null)
+      .where("expired_at", "is", null)
+      .where("upload_url_expires_at", "<", cutoff)
+      .orderBy("upload_url_expires_at", "asc")
+      .limit(input.limit)
+      .execute();
+    return rows.map((row) => UploadIntentDbMapper.toDomain(row as Record<string, any>));
+  }
+
+  async markExpired(publicId: string, now: Date): Promise<boolean> {
+    const result = await this.db.connection
+      .updateTable("upload_intents")
+      .set({ expired_at: now })
+      .where("public_id", "=", publicId)
+      .where("consumed_at", "is", null)
+      .where("expired_at", "is", null)
+      .executeTakeFirst();
+    return Number(result.numUpdatedRows) > 0;
+  }
+
+  async refreshUploadUrl(input: IRefreshUploadUrlInput): Promise<boolean> {
+    const result = await this.db.connection
+      .updateTable("upload_intents")
+      .set({
+        upload_url: input.uploadUrl,
+        upload_url_expires_at: input.uploadUrlExpiresAt,
+      })
+      .where("public_id", "=", input.publicId)
+      .where("consumed_at", "is", null)
+      .where("expired_at", "is", null)
+      .executeTakeFirst();
+    return Number(result.numUpdatedRows) > 0;
   }
 }
