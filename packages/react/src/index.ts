@@ -22,5 +22,5 @@ export {
   type IUseAssetPresetUrlOptions,
   type IUseAssetPresetUrlResult,
 } from "./use-asset-preset-url";
-export { _resetPresetUrlCache } from "./_url-cache";
+export { _evictPresetUrl, _resetPresetUrlCache } from "./_url-cache";
 export { useAsset } from "./use-asset";
