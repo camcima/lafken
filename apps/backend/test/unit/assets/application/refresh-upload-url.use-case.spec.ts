@@ -5,6 +5,7 @@ import { UploadIntentAlreadyConsumedError } from "@/assets/domain/errors/upload-
 import { UploadIntentExpiredError } from "@/assets/domain/errors/upload-intent-expired.error";
 import { UploadIntentNotFoundError } from "@/assets/domain/errors/upload-intent-not-found.error";
 
+import { InMemoryAssetQueryRepository } from "../__fakes__/in-memory-asset-query.repository";
 import {
   buildAuditWriteRepoStub,
   buildBindingRepoStub,
@@ -21,7 +22,13 @@ describe("RefreshUploadUrlUseCase", () => {
     });
     const issuer = buildIssuerStub({ simpleUrl: "https://gcs/new" });
     const audit = buildAuditWriteRepoStub();
-    const useCase = new RefreshUploadUrlUseCase(intentRepo, buildBindingRepoStub(), issuer, audit);
+    const useCase = new RefreshUploadUrlUseCase(
+      intentRepo,
+      buildBindingRepoStub(),
+      issuer,
+      audit,
+      new InMemoryAssetQueryRepository(),
+    );
 
     const result = await useCase.execute({
       publicId: "pid-1",
@@ -46,10 +53,11 @@ describe("RefreshUploadUrlUseCase", () => {
       buildBindingRepoStub(),
       buildIssuerStub(),
       buildAuditWriteRepoStub(),
+      new InMemoryAssetQueryRepository(),
     );
-    await expect(
-      useCase.execute({ publicId: "missing", requestedBy: "u" }),
-    ).rejects.toBeInstanceOf(UploadIntentNotFoundError);
+    await expect(useCase.execute({ publicId: "missing", requestedBy: "u" })).rejects.toBeInstanceOf(
+      UploadIntentNotFoundError,
+    );
   });
 
   it("throws UploadIntentAlreadyConsumedError when consumed", async () => {
@@ -58,10 +66,11 @@ describe("RefreshUploadUrlUseCase", () => {
       buildBindingRepoStub(),
       buildIssuerStub(),
       buildAuditWriteRepoStub(),
+      new InMemoryAssetQueryRepository(),
     );
-    await expect(
-      useCase.execute({ publicId: "pid-1", requestedBy: "u" }),
-    ).rejects.toBeInstanceOf(UploadIntentAlreadyConsumedError);
+    await expect(useCase.execute({ publicId: "pid-1", requestedBy: "u" })).rejects.toBeInstanceOf(
+      UploadIntentAlreadyConsumedError,
+    );
   });
 
   it("throws UploadIntentExpiredError when swept", async () => {
@@ -70,9 +79,10 @@ describe("RefreshUploadUrlUseCase", () => {
       buildBindingRepoStub(),
       buildIssuerStub(),
       buildAuditWriteRepoStub(),
+      new InMemoryAssetQueryRepository(),
     );
-    await expect(
-      useCase.execute({ publicId: "pid-1", requestedBy: "u" }),
-    ).rejects.toBeInstanceOf(UploadIntentExpiredError);
+    await expect(useCase.execute({ publicId: "pid-1", requestedBy: "u" })).rejects.toBeInstanceOf(
+      UploadIntentExpiredError,
+    );
   });
 });

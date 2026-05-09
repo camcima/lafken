@@ -1,4 +1,13 @@
 import type { environmentConfiguration } from "../../src/shared/infrastructure/environment.configuration";
+import { installInMemoryMetricReader } from "../__mocks__/in-memory-metric-reader";
+
+// Install the in-memory metric reader once, before any module that touches the
+// global Meter (i.e. metrics.ts) is imported. The instruments cached at module
+// load time are bound to whichever provider is active at that moment, so the
+// install must happen before metrics.ts is evaluated. Tests that want to assert
+// on emitted metrics call `installInMemoryMetricReader()` again — it is
+// idempotent and returns the same handle.
+installInMemoryMetricReader();
 
 vitest.mock(
   "../../src/shared/infrastructure/environment.configuration",

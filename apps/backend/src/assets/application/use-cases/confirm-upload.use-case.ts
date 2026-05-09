@@ -8,8 +8,10 @@ import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-que
 import { AssetWriteRepositoryPort } from "@/assets/domain/repositories/asset-write.repository.port";
 import { UploadIntentWriteRepositoryPort } from "@/assets/domain/repositories/upload-intent-write.repository.port";
 import { AssetStoragePort } from "@/assets/domain/services/asset-storage.service.port";
+import type { UploadProtocol } from "@/assets/domain/services/upload-url-issuer.service.port";
 import { AuditWriteRepositoryPort } from "@/audit/domain/repositories/audit-write.repository.port";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
+import { uploadConfirmedCounter } from "@/shared/infrastructure/telemetry/metrics";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 3600;
@@ -118,6 +120,22 @@ export class ConfirmUploadUseCase {
       },
     });
 
+    if (namespaceSlug !== null) {
+      uploadConfirmedCounter.add(1, {
+        namespace_slug: namespaceSlug,
+        protocol: deriveIntentProtocol(intent.props.uploadUrl),
+      });
+    }
+
     return asset;
   }
+}
+
+/**
+ * Derives the upload protocol from the persisted intent URL. Mirrors the
+ * heuristic in `RefreshUploadUrlUseCase` — GCS V4-signed URLs always include
+ * "X-Goog-Signature"; tusd resource URLs do not.
+ */
+function deriveIntentProtocol(uploadUrl: string): UploadProtocol {
+  return uploadUrl.includes("X-Goog-Signature") ? "simple" : "tus";
 }

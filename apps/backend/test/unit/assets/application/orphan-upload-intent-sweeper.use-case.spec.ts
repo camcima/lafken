@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { OrphanUploadIntentSweeperUseCase } from "@/assets/application/processing/orphan-upload-intent-sweeper.use-case";
 
+import { InMemoryAssetQueryRepository } from "../__fakes__/in-memory-asset-query.repository";
 import {
   buildAuditWriteRepoStub,
   buildBindingRepoStub,
@@ -24,6 +25,7 @@ describe("OrphanUploadIntentSweeperUseCase", () => {
       buildBindingRepoStub(),
       storage,
       audit,
+      new InMemoryAssetQueryRepository(),
     );
 
     await useCase.execute({ now: new Date(), graceMs: 300_000, batchSize: 50 });
@@ -45,6 +47,7 @@ describe("OrphanUploadIntentSweeperUseCase", () => {
       buildBindingRepoStub(),
       storage,
       audit,
+      new InMemoryAssetQueryRepository(),
     );
     await expect(
       useCase.execute({ now: new Date(), graceMs: 300_000, batchSize: 50 }),
@@ -64,6 +67,7 @@ describe("OrphanUploadIntentSweeperUseCase", () => {
       buildBindingRepoStub(),
       storage,
       audit,
+      new InMemoryAssetQueryRepository(),
     );
     await useCase.execute({ now: new Date(), graceMs: 300_000, batchSize: 50 });
     expect(storage.deleteCalls).toHaveLength(0);

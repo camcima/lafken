@@ -1,9 +1,11 @@
 import { Injectable, Optional } from "@nestjs/common";
 
+import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-query.repository.port";
 import { UploadIntentWriteRepositoryPort } from "@/assets/domain/repositories/upload-intent-write.repository.port";
 import { AssetStoragePort } from "@/assets/domain/services/asset-storage.service.port";
 import { AuditWriteRepositoryPort } from "@/audit/domain/repositories/audit-write.repository.port";
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
+import { uploadIntentExpiredSweptCounter } from "@/shared/infrastructure/telemetry/metrics";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 export interface IOrphanSweepInput {
@@ -19,6 +21,7 @@ export class OrphanUploadIntentSweeperUseCase {
     private readonly bindings: StorageBindingQueryRepositoryPort,
     private readonly storage: AssetStoragePort,
     private readonly auditWriteRepo: AuditWriteRepositoryPort,
+    private readonly assetQueryRepo: AssetQueryRepositoryPort,
     @Optional()
     private readonly logger?: AppLoggerPort,
   ) {
@@ -31,6 +34,9 @@ export class OrphanUploadIntentSweeperUseCase {
       graceMs: input.graceMs,
       limit: input.batchSize,
     });
+    // Cache slug lookups across the batch — neighbouring intents typically share
+    // a namespace and we don't want N queries per sweep tick.
+    const slugByNamespaceId: Map<string, string | null> = new Map();
     for (const intent of orphans) {
       const transitioned = await this.intents.markExpired(intent.props.publicId, input.now);
       if (!transitioned) {
@@ -64,6 +70,15 @@ export class OrphanUploadIntentSweeperUseCase {
         action: "expired",
         occurredBy: "system:orphan-sweeper",
       });
+
+      let slug: string | null | undefined = slugByNamespaceId.get(intent.props.namespaceId);
+      if (slug === undefined) {
+        slug = await this.assetQueryRepo.findNamespaceSlug(intent.props.namespaceId);
+        slugByNamespaceId.set(intent.props.namespaceId, slug);
+      }
+      if (slug !== null) {
+        uploadIntentExpiredSweptCounter.add(1, { namespace_slug: slug });
+      }
     }
   }
 }

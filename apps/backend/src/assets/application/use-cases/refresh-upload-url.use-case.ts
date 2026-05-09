@@ -3,12 +3,14 @@ import { Injectable } from "@nestjs/common";
 import { UploadIntentAlreadyConsumedError } from "@/assets/domain/errors/upload-intent-already-consumed.error";
 import { UploadIntentExpiredError } from "@/assets/domain/errors/upload-intent-expired.error";
 import { UploadIntentNotFoundError } from "@/assets/domain/errors/upload-intent-not-found.error";
+import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-query.repository.port";
 import { UploadIntentWriteRepositoryPort } from "@/assets/domain/repositories/upload-intent-write.repository.port";
 import {
   type UploadProtocol,
   UploadUrlIssuerPort,
 } from "@/assets/domain/services/upload-url-issuer.service.port";
 import { AuditWriteRepositoryPort } from "@/audit/domain/repositories/audit-write.repository.port";
+import { uploadIntentRefreshedCounter } from "@/shared/infrastructure/telemetry/metrics";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 const REFRESH_URL_TTL_SECONDS = 900;
@@ -35,6 +37,7 @@ export class RefreshUploadUrlUseCase {
     private readonly bindings: StorageBindingQueryRepositoryPort,
     private readonly issuer: UploadUrlIssuerPort,
     private readonly auditWriteRepo: AuditWriteRepositoryPort,
+    private readonly assetQueryRepo: AssetQueryRepositoryPort,
   ) {}
 
   async execute(input: IRefreshUploadUrlInput): Promise<IRefreshUploadUrlResult> {
@@ -107,6 +110,16 @@ export class RefreshUploadUrlUseCase {
         expiresAt: issued.expiresAt.toISOString(),
       },
     });
+
+    const namespaceSlug: string | null = await this.assetQueryRepo.findNamespaceSlug(
+      intent.props.namespaceId,
+    );
+    if (namespaceSlug !== null) {
+      uploadIntentRefreshedCounter.add(1, {
+        namespace_slug: namespaceSlug,
+        protocol,
+      });
+    }
 
     return {
       uploadUrl: issued.uploadUrl,

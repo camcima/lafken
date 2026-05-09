@@ -6,12 +6,13 @@ import { FileSizeExceedsPolicyError } from "@/assets/domain/errors/file-size-exc
 import { MimeTypeNotAllowedError } from "@/assets/domain/errors/mime-type-not-allowed.error";
 import { UploadIntentWriteRepositoryPort } from "@/assets/domain/repositories/upload-intent-write.repository.port";
 import {
-  UploadUrlIssuerPort,
   type UploadProtocol,
+  UploadUrlIssuerPort,
 } from "@/assets/domain/services/upload-url-issuer.service.port";
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
+import { uploadIntentCreatedCounter } from "@/shared/infrastructure/telemetry/metrics";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 const UPLOAD_URL_TTL_SECONDS = 900;
@@ -105,6 +106,11 @@ export class CreateUploadIntentUseCase {
       uploadUrl: issued.uploadUrl,
       uploadUrlExpiresAt: issued.expiresAt,
       createdBy: input.createdBy,
+    });
+
+    uploadIntentCreatedCounter.add(1, {
+      namespace_slug: input.namespaceSlug,
+      protocol: issued.protocol,
     });
 
     return {
