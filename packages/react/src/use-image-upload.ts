@@ -2,7 +2,7 @@ import type { LafkenClient } from "@lafken/client";
 import {
   type IFileConfirmedEventDetail,
   type IFileFailedEventDetail,
-  type IFileRejectedEventDetail,
+  type IFileRestrictionRejectedEventDetail,
   type ISharedUploadMetadata,
   type IUploadRestrictions,
   LafkenUploadManager,
@@ -156,7 +156,7 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
       );
     }
     function onReject(ev: Event): void {
-      const detail = (ev as CustomEvent<IFileRejectedEventDetail>).detail;
+      const detail = (ev as CustomEvent<IFileRestrictionRejectedEventDetail>).detail;
       setRejections((prev) => [
         ...prev,
         {
@@ -186,7 +186,7 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
     uppy.on("error", onError);
     manager.addEventListener("file-confirmed", onConfirm);
     manager.addEventListener("file-failed", onFail);
-    manager.addEventListener("file-rejected", onReject);
+    manager.addEventListener("file-restriction-rejected", onReject);
 
     return (): void => {
       uppy.off("file-added", syncFromUppy);
@@ -196,7 +196,7 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
       uppy.off("error", onError);
       manager.removeEventListener("file-confirmed", onConfirm);
       manager.removeEventListener("file-failed", onFail);
-      manager.removeEventListener("file-rejected", onReject);
+      manager.removeEventListener("file-restriction-rejected", onReject);
       for (const url of previewUrls.values()) {
         URL.revokeObjectURL(url);
       }

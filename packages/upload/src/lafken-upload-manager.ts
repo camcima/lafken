@@ -15,7 +15,7 @@ export interface ISharedUploadMetadata {
 /**
  * Subset of Uppy's `restrictions` exposed on the public SDK surface. Consumers
  * pass these to enforce policy *before* a file enters the upload queue —
- * disallowed files trigger a `file-rejected` event instead of being added.
+ * disallowed files trigger a `file-restriction-rejected` event instead of being added.
  *
  * Server-side enforcement is still the authority; restrictions are a UX
  * accelerator so users see immediate feedback on drop.
@@ -40,9 +40,39 @@ export interface ILafkenUploadManagerOptions {
   protocol?: UploadProtocol;
   /** ms before `expiresAt` at which to pre-flight a URL refresh. Default 30000. */
   refreshSafetyMarginMs?: number;
+  /** Initial polling interval in ms when waiting for asset processing. Default 1000. */
+  pollingIntervalMs?: number;
+  /** Maximum polling interval (cap for backoff). Default 10_000. */
+  pollingMaxIntervalMs?: number;
+  /** Total polling timeout in ms before emitting file-failed("polling-timeout"). Default 600_000. */
+  pollingTimeoutMs?: number;
 }
 
 export interface IFileConfirmedEventDetail {
+  fileId: string;
+  publicId: string;
+}
+
+export interface IFileProcessingEventDetail {
+  fileId: string;
+  publicId: string;
+}
+
+export interface IFileReadyEventDetail {
+  fileId: string;
+  publicId: string;
+  asset: { state: string; publicId: string };
+}
+
+export type QuarantineKind = "virus" | "moderation" | "invalid_format" | string;
+
+export interface IFileQuarantinedEventDetail {
+  fileId: string;
+  publicId: string;
+  kind: QuarantineKind;
+}
+
+export interface IFileRejectedTerminalEventDetail {
   fileId: string;
   publicId: string;
 }
@@ -52,7 +82,12 @@ export interface IFileFailedEventDetail {
   error: Error;
 }
 
-export interface IFileRejectedEventDetail {
+/**
+ * Emitted when a file is rejected by client-side Uppy restrictions before it
+ * enters the upload queue (wrong MIME type, too large, etc.). This is distinct
+ * from server-side terminal rejection (`file-rejected-terminal`).
+ */
+export interface IFileRestrictionRejectedEventDetail {
   /** Stable id for the rejection (the file never enters the Uppy queue). */
   rejectionId: string;
   fileName: string;
@@ -60,6 +95,12 @@ export interface IFileRejectedEventDetail {
   size: number;
   error: Error;
 }
+
+/**
+ * @deprecated Use `IFileRestrictionRejectedEventDetail` instead.
+ * The event name has been renamed from `file-rejected` to `file-restriction-rejected`.
+ */
+export type IFileRejectedEventDetail = IFileRestrictionRejectedEventDetail;
 
 type AnyMeta = Record<string, unknown>;
 type AnyBody = Record<string, never>;
@@ -107,7 +148,34 @@ async function probeImageDimensions(file: File): Promise<IImageDimensions> {
   });
 }
 
+/**
+ * Derive a quarantine kind string from the asset state.
+ * `quarantined_virus` → `"virus"`, `quarantined_moderation` → `"moderation"`, etc.
+ */
+function quarantineKindFromState(state: string): QuarantineKind {
+  const prefix = "quarantined_";
+  if (state.startsWith(prefix)) {
+    return state.slice(prefix.length);
+  }
+  return state;
+}
+
 const DEFAULT_REFRESH_SAFETY_MARGIN_MS = 30_000;
+const DEFAULT_POLLING_INTERVAL_MS = 1_000;
+const DEFAULT_POLLING_MAX_INTERVAL_MS = 10_000;
+const DEFAULT_POLLING_TIMEOUT_MS = 600_000;
+
+/** Terminal states: polling stops immediately on these. */
+const TERMINAL_STATES = new Set([
+  "ready",
+  "rejected",
+  "quarantined_virus",
+  "quarantined_moderation",
+  "quarantined_invalid_format",
+  "processing_failed",
+  "expired",
+  "deleted",
+]);
 
 export class LafkenUploadManager extends EventTarget {
   private readonly uppy: Uppy<AnyMeta, AnyBody>;
@@ -117,12 +185,21 @@ export class LafkenUploadManager extends EventTarget {
   private sharedMetadata: ISharedUploadMetadata = {};
   private readonly protocol: UploadProtocol;
   private readonly refreshSafetyMarginMs: number;
+  private readonly pollingIntervalMs: number;
+  private readonly pollingMaxIntervalMs: number;
+  private readonly pollingTimeoutMs: number;
+  /** Active polling timeouts keyed by fileId, cleared on cancelAll(). */
+  private readonly activePollingTimers = new Set<ReturnType<typeof setTimeout>>();
+  private cancelled = false;
 
   constructor(private readonly opts: ILafkenUploadManagerOptions) {
     super();
     this.protocol = opts.protocol ?? "simple";
     this.refreshSafetyMarginMs =
       opts.refreshSafetyMarginMs ?? DEFAULT_REFRESH_SAFETY_MARGIN_MS;
+    this.pollingIntervalMs = opts.pollingIntervalMs ?? DEFAULT_POLLING_INTERVAL_MS;
+    this.pollingMaxIntervalMs = opts.pollingMaxIntervalMs ?? DEFAULT_POLLING_MAX_INTERVAL_MS;
+    this.pollingTimeoutMs = opts.pollingTimeoutMs ?? DEFAULT_POLLING_TIMEOUT_MS;
 
     this.uppy = new Uppy<AnyMeta, AnyBody>({
       autoProceed: false,
@@ -130,14 +207,14 @@ export class LafkenUploadManager extends EventTarget {
       restrictions: opts.restrictions ? toUppyRestrictions(opts.restrictions) : undefined,
     });
 
-    // Surface Uppy's restriction violations as a `file-rejected` event so the
+    // Surface Uppy's restriction violations as a `file-restriction-rejected` event so the
     // React layer can show toasts / inline errors. The file never makes it into
     // Uppy's queue, so it never gets a tile — the consumer treats it as
     // out-of-band feedback.
     this.uppy.on("restriction-failed", (file, err) => {
       const error = err instanceof Error ? err : new Error(String(err));
       this.dispatchEvent(
-        new CustomEvent<IFileRejectedEventDetail>("file-rejected", {
+        new CustomEvent<IFileRestrictionRejectedEventDetail>("file-restriction-rejected", {
           detail: {
             rejectionId: `rej-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
             fileName: file?.name ?? "(unnamed)",
@@ -201,6 +278,7 @@ export class LafkenUploadManager extends EventTarget {
   }
 
   async start(): Promise<void> {
+    this.cancelled = false;
     await this.uppy.upload();
   }
 
@@ -224,6 +302,12 @@ export class LafkenUploadManager extends EventTarget {
   }
 
   cancelAll(): void {
+    this.cancelled = true;
+    // Clear all active polling timers.
+    for (const timer of this.activePollingTimers) {
+      clearTimeout(timer);
+    }
+    this.activePollingTimers.clear();
     this.uppy.cancelAll();
     this.publicIdByFileId.clear();
     this.dimProbesByFileId.clear();
@@ -325,26 +409,8 @@ export class LafkenUploadManager extends EventTarget {
         };
         const options = Object.keys(merged).length > 0 ? merged : undefined;
         const confirmed = await this.opts.client.assets.confirmUpload(publicId, options);
-        // The server may accept the upload but transition the asset directly
-        // into a quarantine state (e.g. magic-byte sniff disagreed with the
-        // declared MIME). Surface that as a failed file so the UI can show
-        // the verdict instead of a misleading "Uploaded" badge.
-        if (typeof confirmed.state === "string" && confirmed.state.startsWith("quarantined_")) {
-          this.dispatchEvent(
-            new CustomEvent<IFileFailedEventDetail>("file-failed", {
-              detail: {
-                fileId: file.id,
-                error: new Error(`quarantined: ${confirmed.state}`),
-              },
-            }),
-          );
-          continue;
-        }
-        this.dispatchEvent(
-          new CustomEvent<IFileConfirmedEventDetail>("file-confirmed", {
-            detail: { fileId: file.id, publicId },
-          }),
-        );
+
+        await this.handleConfirmedAsset(file.id, publicId, confirmed);
       } catch (err) {
         this.dispatchEvent(
           new CustomEvent<IFileFailedEventDetail>("file-failed", {
@@ -356,5 +422,185 @@ export class LafkenUploadManager extends EventTarget {
         );
       }
     }
+  }
+
+  /**
+   * Branch on the confirmed asset's state and emit the appropriate lifecycle
+   * event. For assets in `processing`, also initiates the polling loop.
+   */
+  private async handleConfirmedAsset(
+    fileId: string,
+    publicId: string,
+    asset: { state: string; publicId: string },
+  ): Promise<void> {
+    const state = asset.state;
+
+    if (state.startsWith("quarantined_")) {
+      const kind = quarantineKindFromState(state);
+      this.dispatchEvent(
+        new CustomEvent<IFileQuarantinedEventDetail>("file-quarantined", {
+          detail: { fileId, publicId, kind },
+        }),
+      );
+      return;
+    }
+
+    if (state === "rejected") {
+      this.dispatchEvent(
+        new CustomEvent<IFileRejectedTerminalEventDetail>("file-rejected-terminal", {
+          detail: { fileId, publicId },
+        }),
+      );
+      return;
+    }
+
+    if (state === "processing_failed") {
+      this.dispatchEvent(
+        new CustomEvent<IFileFailedEventDetail>("file-failed", {
+          detail: {
+            fileId,
+            error: new Error("processing_failed"),
+          },
+        }),
+      );
+      return;
+    }
+
+    if (state === "ready") {
+      this.dispatchEvent(
+        new CustomEvent<IFileReadyEventDetail>("file-ready", {
+          detail: { fileId, publicId, asset },
+        }),
+      );
+      return;
+    }
+
+    if (state === "processing") {
+      this.dispatchEvent(
+        new CustomEvent<IFileProcessingEventDetail>("file-processing", {
+          detail: { fileId, publicId },
+        }),
+      );
+      await this.pollUntilTerminal(fileId, publicId);
+      return;
+    }
+
+    // For any other state (e.g. "confirmed", "uploaded", "pending") emit
+    // file-confirmed to preserve backward compatibility.
+    this.dispatchEvent(
+      new CustomEvent<IFileConfirmedEventDetail>("file-confirmed", {
+        detail: { fileId, publicId },
+      }),
+    );
+  }
+
+  /**
+   * Poll `client.assets.get(publicId)` with exponential backoff until the
+   * asset reaches a terminal state or the polling timeout elapses.
+   *
+   * Backoff sequence: pollingIntervalMs, 2×, 4×, … capped at pollingMaxIntervalMs.
+   */
+  private async pollUntilTerminal(fileId: string, publicId: string): Promise<void> {
+    const startedAt = Date.now();
+    let intervalMs = this.pollingIntervalMs;
+
+    while (true) {
+      if (this.cancelled) return;
+
+      // Wait for current interval via a cancellable sleep.
+      const slept = await this.cancellableSleep(intervalMs);
+      if (!slept) return; // cancelled during sleep
+
+      if (Date.now() - startedAt >= this.pollingTimeoutMs) {
+        this.dispatchEvent(
+          new CustomEvent<IFileFailedEventDetail>("file-failed", {
+            detail: {
+              fileId,
+              error: new Error("polling-timeout"),
+            },
+          }),
+        );
+        return;
+      }
+
+      let asset: { state: string; publicId: string };
+      try {
+        asset = await this.opts.client.assets.get(publicId);
+      } catch {
+        // Transient errors — keep polling; the timeout will stop us eventually.
+        intervalMs = Math.min(intervalMs * 2, this.pollingMaxIntervalMs);
+        continue;
+      }
+
+      if (this.cancelled) return;
+
+      const state = asset.state;
+
+      if (state === "ready") {
+        this.dispatchEvent(
+          new CustomEvent<IFileReadyEventDetail>("file-ready", {
+            detail: { fileId, publicId, asset },
+          }),
+        );
+        return;
+      }
+
+      if (state.startsWith("quarantined_")) {
+        const kind = quarantineKindFromState(state);
+        this.dispatchEvent(
+          new CustomEvent<IFileQuarantinedEventDetail>("file-quarantined", {
+            detail: { fileId, publicId, kind },
+          }),
+        );
+        return;
+      }
+
+      if (state === "rejected") {
+        this.dispatchEvent(
+          new CustomEvent<IFileRejectedTerminalEventDetail>("file-rejected-terminal", {
+            detail: { fileId, publicId },
+          }),
+        );
+        return;
+      }
+
+      if (state === "processing_failed") {
+        this.dispatchEvent(
+          new CustomEvent<IFileFailedEventDetail>("file-failed", {
+            detail: {
+              fileId,
+              error: new Error("processing_failed"),
+            },
+          }),
+        );
+        return;
+      }
+
+      if (TERMINAL_STATES.has(state)) {
+        this.dispatchEvent(
+          new CustomEvent<IFileReadyEventDetail>("file-ready", {
+            detail: { fileId, publicId, asset },
+          }),
+        );
+        return;
+      }
+
+      // Not yet terminal — advance backoff and continue.
+      intervalMs = Math.min(intervalMs * 2, this.pollingMaxIntervalMs);
+    }
+  }
+
+  /**
+   * Sleep for `ms` milliseconds. Returns `true` if the sleep completed
+   * normally, `false` if cancelled via `cancelAll()`.
+   */
+  private cancellableSleep(ms: number): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => {
+        this.activePollingTimers.delete(timer);
+        resolve(true);
+      }, ms);
+      this.activePollingTimers.add(timer);
+    });
   }
 }
