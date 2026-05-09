@@ -1,5 +1,6 @@
 import {
   AssetStoragePort,
+  type IDeleteObjectInput,
   type IIssueSignedUploadUrlInput,
   type IIssueSignedUploadUrlResult,
   type IMoveObjectInput,
@@ -16,6 +17,7 @@ export class FakeAssetStorage extends AssetStoragePort {
   readonly readCalls: IReadObjectBytesInput[] = [];
   readonly readSigned: ISignReadUrlInput[] = [];
   readonly moveCalls: IMoveObjectInput[] = [];
+  readonly deleteCalls: IDeleteObjectInput[] = [];
   readonly objects: Map<string, Buffer> = new Map();
   existsResult = true;
 
@@ -57,6 +59,12 @@ export class FakeAssetStorage extends AssetStoragePort {
     return Promise.resolve(
       `https://fake-gcs.local/render-source/${encodeURIComponent(input.storageKey)}?sig=stub`,
     );
+  }
+
+  deleteObject(input: IDeleteObjectInput): Promise<void> {
+    this.deleteCalls.push(input);
+    this.objects.delete(input.storageKey);
+    return Promise.resolve();
   }
 
   moveObject(input: IMoveObjectInput): Promise<void> {

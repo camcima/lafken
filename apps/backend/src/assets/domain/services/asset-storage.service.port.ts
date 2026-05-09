@@ -46,6 +46,11 @@ export interface IMoveObjectInput {
   toKey: string;
 }
 
+export interface IDeleteObjectInput {
+  binding: IGcsBindingDescriptor;
+  storageKey: string;
+}
+
 export abstract class AssetStoragePort {
   abstract issueSignedUploadUrl(
     input: IIssueSignedUploadUrlInput,
@@ -73,4 +78,10 @@ export abstract class AssetStoragePort {
    * the underlying storage rejects the operation for other reasons.
    */
   abstract moveObject(input: IMoveObjectInput): Promise<void>;
+  /**
+   * Deletes an object from storage. Best-effort — callers MUST NOT rely on
+   * this succeeding. Implementations should use `ignoreNotFound: true` so a
+   * missing object is treated as a no-op rather than an error.
+   */
+  abstract deleteObject(input: IDeleteObjectInput): Promise<void>;
 }

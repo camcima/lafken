@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 
 import {
   AssetStoragePort,
+  type IDeleteObjectInput,
   type IGcsBindingDescriptor,
   type IIssueSignedUploadUrlInput,
   type IIssueSignedUploadUrlResult,
@@ -144,6 +145,10 @@ export class GcsAssetStorageAdapter extends AssetStoragePort {
       );
     }
     return this.signReadUrl(input);
+  }
+
+  async deleteObject(input: IDeleteObjectInput): Promise<void> {
+    await this.getBucket(input.binding).file(input.storageKey).delete({ ignoreNotFound: true });
   }
 
   private getBucket(binding: IGcsBindingDescriptor): Bucket {
