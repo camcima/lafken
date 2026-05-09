@@ -793,7 +793,7 @@ To do that, we must use the `@Api*()` decorator factories. For example:
   }
 ```
 
-Since the error handling (ie, when the API reply with a status code other than 2xx) enforces the usage of the Problem Details RFC 7807, when registering error response we must write the `"application/problem+json"` just because the default is always `"application/json"`.
+Since the error handling (ie, when the API reply with a status code other than 2xx) enforces the usage of the Problem Details RFC 9457 (the successor to RFC 7807, on-wire compatible), when registering error response we must write the `"application/problem+json"` just because the default is always `"application/json"`.
 
 When running the application, a Swagger UI page will be available at `/openapi` route;  
 while the JSON version of the OpenAPI specification is available at `/openapi.json` page and the YAML version will be available at `/openapi.yaml`

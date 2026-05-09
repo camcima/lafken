@@ -239,7 +239,7 @@ Layers per bounded context: `domain/`, `application/`, `infrastructure/`, **`pre
 
 - **Ports are abstract classes**, not interfaces. Wire via NestJS `useClass` / `useExisting` / `useFactory`. Constructor injection only — no `ModuleRef`.
 - Controllers translate domain errors to HTTP. Domain/application **never** throw `HttpException`.
-- Errors emitted as **RFC 7807 `application/problem+json`** via `CatchAllExceptionsForHttp`. `DomainError` → 422, `ValidationError` → 400.
+- Errors emitted as **RFC 9457 `application/problem+json`** via `CatchAllExceptionsForHttp`. `DomainError` → 422, `ValidationError` → 400.
 - Logging via `AppLoggerPort` (Pino). Redact PII / auth headers, include correlation IDs.
 - Migrations with **dbmate**: `pnpm migrate`, `migrate:new <name>`, `migrate:status`, `migrate:rollback`.
 - Tests centralized under `apps/backend/test/` (not colocated; mapper unit tests are the exception). Three Vitest projects: `pnpm unit/test`, `pnpm integration/test`, `pnpm e2e/test`. E2E needs the test DB up via `docker compose -f docker-compose.test.yml`.

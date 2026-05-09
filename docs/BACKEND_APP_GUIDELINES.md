@@ -54,7 +54,6 @@ class UserController {
 
 ### Mock adapter for local testing
 
-In order to test different scenarios for a valid or invalid auth, we have the `MockAzureAdBearerAuthnStrategy` adapter (`src/shared/presentation/auth/azure-ad/mock-azure-ad-bearer-authn.strategy.ts`) that will be used in case of the environment variable `AUTH_PROVIDER` is setted to `"mock"`.  
-In that file you can configure any user.
+The Azure-AD bearer strategy described in earlier revisions of this guide has been removed. Lafken authenticates API requests via OIDC only. For local development the `mock` auth provider (`AUTH_PROVIDER=mock`) returns a deterministic principal; the implementation lives under `apps/backend/src/shared/presentation/auth/`.
 
-Note that this only works when the `NODE_ENV` is not `"production"` - as we are not supposed to forge the auth provider.
+Note that this only works when the `NODE_ENV` is not `"production"` — we are not supposed to forge the auth provider in production.
