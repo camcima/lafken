@@ -47,7 +47,6 @@ const samplePolicy: NamespacePolicyResponseDTO = {
   virusScanRequired: true,
   retentionDays: 365,
   retentionMode: "delete",
-  exifHandling: "preserve",
   immutable: false,
   servingMode: "signed",
   signedUrlTtlSeconds: 7200,
@@ -145,7 +144,6 @@ describe("EditPolicyPage", () => {
     expect(screen.getByLabelText(/require virus scan/i)).toBeChecked();
     expect(screen.getByLabelText(/retention.*days/i)).toHaveValue(365);
     expect(screen.getByLabelText(/retention mode/i)).toHaveValue("delete");
-    expect(screen.getByLabelText(/exif handling/i)).toHaveValue("preserve");
     expect(screen.getByLabelText(/immutable/i)).not.toBeChecked();
     expect(screen.getByLabelText(/serving mode/i)).toHaveValue("signed");
     expect(screen.getByLabelText(/signed url ttl/i)).toHaveValue(7200);
@@ -198,7 +196,6 @@ describe("EditPolicyPage", () => {
             virusScanRequired: true,
             retentionDays: 365,
             retentionMode: "delete",
-            exifHandling: "preserve",
             immutable: false,
             servingMode: "signed",
             signedUrlTtlSeconds: 7200,

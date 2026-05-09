@@ -762,7 +762,6 @@
           "virusScanRequired": "Requerir análisis antivirus",
           "retentionDays": "Retención (días, vacío = indefinido)",
           "retentionMode": "Modo de retención",
-          "exifHandling": "Manejo de EXIF",
           "immutable": "Inmutable (no se podrán eliminar los activos)",
           "servingMode": "Modo de entrega",
           "signedUrlTtlSeconds": "TTL de URL firmada (segundos)",
@@ -775,7 +774,6 @@
           "virusScanRequiredHelp": "Rechaza uploads si el antivirus no está disponible.",
           "retentionDaysHelp": "Días para retener los activos. Déjalo vacío para retención indefinida.",
           "retentionModeHelp": "delete: borrado físico al expirar. archive: conserva con marca de archivado. none: sin acción automática.",
-          "exifHandlingHelp": "strip elimina el EXIF al guardar. preserve lo conserva. extract_then_strip guarda los metadatos en el servidor y luego los elimina.",
           "immutableHelp": "Una vez subidos, los activos no pueden reemplazarse ni editarse.",
           "servingModeHelp": "public: cualquiera puede acceder. signed: solo URLs prefirmadas. proxied: cada solicitud pasa por la app.",
           "signedUrlTtlSecondsHelp": "Duración de validez de cada URL firmada, en segundos.",
@@ -788,11 +786,6 @@
           "delete": "Eliminar",
           "archive": "Archivar",
           "none": "Ninguno"
-        },
-        "exifHandling": {
-          "strip": "Eliminar",
-          "preserve": "Preservar",
-          "extract_then_strip": "Extraer y luego eliminar"
         },
         "servingMode": {
           "public": "Público",
@@ -807,11 +800,6 @@
           "delete": "Elimina el activo y sus derivados cuando expira la retención.",
           "archive": "Marca como archivado pero conserva los bytes; no se sirve hasta restaurarlo.",
           "none": "Sin acción automática — los activos viven indefinidamente."
-        },
-        "exifHandlingHints": {
-          "strip": "Elimina todo el EXIF al subir. Objeto más pequeño, sin metadatos.",
-          "preserve": "Conserva todos los metadatos EXIF tal como los escribió la cámara.",
-          "extract_then_strip": "Extrae el EXIF a la base de datos y luego lo elimina del archivo."
         },
         "servingModeHints": {
           "public": "Cualquiera con la URL puede acceder — sin firma.",
@@ -921,7 +909,6 @@
           "retentionMode": "Modo de retención",
           "maxFileSizeBytes": "Tamaño máximo de archivo (bytes)",
           "allowedMimeTypes": "Tipos MIME permitidos",
-          "exifHandling": "Manejo de EXIF",
           "virusScanRequired": "Análisis antivirus requerido",
           "contentModeration": "Moderación de contenido",
           "requiredMetadataSchema": "Esquema de metadatos requerido",

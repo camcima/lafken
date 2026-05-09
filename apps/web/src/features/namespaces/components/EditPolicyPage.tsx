@@ -29,7 +29,6 @@ interface IFormValues {
   virusScanRequired: boolean;
   retentionDays: string;
   retentionMode: "delete" | "archive" | "none";
-  exifHandling: "strip" | "preserve" | "extract_then_strip";
   immutable: boolean;
   servingMode: "public" | "signed" | "proxied";
   signedUrlTtlSeconds: string;
@@ -46,7 +45,6 @@ const KNOWN_VIOLATION_FIELDS: ReadonlyArray<keyof IFormValues> = [
   "virusScanRequired",
   "retentionDays",
   "retentionMode",
-  "exifHandling",
   "immutable",
   "servingMode",
   "signedUrlTtlSeconds",
@@ -219,7 +217,6 @@ export function EditPolicyPage(): React.JSX.Element {
             { message: `Must be between 1 and ${MAX_RETENTION_DAYS}` },
           ),
         retentionMode: z.enum(["delete", "archive", "none"]),
-        exifHandling: z.enum(["strip", "preserve", "extract_then_strip"]),
         immutable: z.boolean(),
         servingMode: z.enum(["public", "signed", "proxied"]),
         signedUrlTtlSeconds: z
@@ -262,7 +259,6 @@ export function EditPolicyPage(): React.JSX.Element {
       virusScanRequired: currentPolicy?.virusScanRequired ?? true,
       retentionDays: numToStr(currentPolicy?.retentionDays),
       retentionMode: currentPolicy?.retentionMode ?? "none",
-      exifHandling: currentPolicy?.exifHandling ?? "strip",
       immutable: currentPolicy?.immutable ?? false,
       servingMode: currentPolicy?.servingMode ?? "signed",
       signedUrlTtlSeconds: numToStr(currentPolicy?.signedUrlTtlSeconds),
@@ -284,7 +280,6 @@ export function EditPolicyPage(): React.JSX.Element {
         retentionDays:
           currentPolicy.retentionDays !== null ? String(currentPolicy.retentionDays) : "",
         retentionMode: currentPolicy.retentionMode,
-        exifHandling: currentPolicy.exifHandling,
         immutable: currentPolicy.immutable,
         servingMode: currentPolicy.servingMode,
         signedUrlTtlSeconds:
@@ -420,7 +415,6 @@ export function EditPolicyPage(): React.JSX.Element {
             retentionMode: values.retentionMode,
             maxFileSizeBytes: Number(values.maxFileSizeBytes),
             allowedMimeTypes,
-            exifHandling: values.exifHandling,
             virusScanRequired: values.virusScanRequired,
             contentModeration,
             requiredMetadataSchema,
@@ -601,30 +595,6 @@ export function EditPolicyPage(): React.JSX.Element {
               {errors.retentionMode?.message ? (
                 <FieldMessage id="ep-retention-mode-error">
                   {errors.retentionMode.message}
-                </FieldMessage>
-              ) : null}
-            </div>
-
-            {/* EXIF handling */}
-            <div className="grid gap-2">
-              <FieldLabel htmlFor="ep-exif-handling">
-                {t("pages.namespaces.form.fields.exifHandling")}
-              </FieldLabel>
-              <SelectInput
-                id="ep-exif-handling"
-                aria-invalid={errors.exifHandling ? true : undefined}
-                aria-describedby={errors.exifHandling ? "ep-exif-handling-error" : undefined}
-                {...register("exifHandling")}
-              >
-                <option value="strip">{t("pages.namespaces.form.exifHandling.strip")}</option>
-                <option value="preserve">{t("pages.namespaces.form.exifHandling.preserve")}</option>
-                <option value="extract_then_strip">
-                  {t("pages.namespaces.form.exifHandling.extract_then_strip")}
-                </option>
-              </SelectInput>
-              {errors.exifHandling?.message ? (
-                <FieldMessage id="ep-exif-handling-error">
-                  {errors.exifHandling.message}
                 </FieldMessage>
               ) : null}
             </div>

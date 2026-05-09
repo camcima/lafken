@@ -166,7 +166,6 @@ describe("NewNamespacePage", () => {
             virusScanRequired: true,
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             allowedMimeTypes: expect.arrayContaining(["image/jpeg", "image/png", "image/webp"]),
-            exifHandling: "strip",
             servingMode: "signed",
           }),
         }),

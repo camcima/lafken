@@ -416,7 +416,6 @@ function makePolicy(
     retentionMode: "none",
     maxFileSizeBytes: 52_428_800,
     allowedMimeTypes: ["image/jpeg"],
-    exifHandling: "strip",
     virusScanRequired: true,
     immutable: false,
     servingMode: "signed",

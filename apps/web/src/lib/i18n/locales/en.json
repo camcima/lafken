@@ -639,7 +639,6 @@
           "virusScanRequired": "Require virus scan",
           "retentionDays": "Retention (days, optional)",
           "retentionMode": "Retention mode",
-          "exifHandling": "EXIF handling",
           "immutable": "Immutable",
           "servingMode": "Serving mode",
           "signedUrlTtlSeconds": "Signed URL TTL (seconds, optional)",
@@ -652,7 +651,6 @@
           "virusScanRequiredHelp": "Reject uploads if the antivirus scanner is unreachable.",
           "retentionDaysHelp": "Days to retain assets after upload. Leave empty for indefinite retention.",
           "retentionModeHelp": "delete: hard-delete after retention. archive: keep with an archived marker. none: no automatic action.",
-          "exifHandlingHelp": "strip removes EXIF on store. preserve keeps it. extract_then_strip stores metadata server-side, then strips.",
           "immutableHelp": "Once uploaded, assets cannot be replaced or edited in place.",
           "servingModeHelp": "public: anyone can fetch. signed: short-lived pre-signed URLs only. proxied: every request streams through the app.",
           "signedUrlTtlSecondsHelp": "How long a single signed URL stays valid, in seconds.",
@@ -665,11 +663,6 @@
           "delete": "Delete",
           "archive": "Archive",
           "none": "None"
-        },
-        "exifHandling": {
-          "strip": "Strip",
-          "preserve": "Preserve",
-          "extract_then_strip": "Extract then strip"
         },
         "servingMode": {
           "public": "Public",
@@ -684,11 +677,6 @@
           "delete": "Delete the asset and its renditions when retention expires.",
           "archive": "Mark archived but keep the bytes; never serve again unless restored.",
           "none": "No automatic action — assets live indefinitely."
-        },
-        "exifHandlingHints": {
-          "strip": "Remove all EXIF data on upload. Smallest object, no metadata.",
-          "preserve": "Keep all EXIF metadata as the camera wrote it.",
-          "extract_then_strip": "Extract EXIF into the database, then strip from the stored bytes."
         },
         "servingModeHints": {
           "public": "Anyone with the URL can fetch — no signature required.",
@@ -922,7 +910,6 @@
           "retentionMode": "Retention mode",
           "maxFileSizeBytes": "Max file size (bytes)",
           "allowedMimeTypes": "Allowed MIME types",
-          "exifHandling": "EXIF handling",
           "virusScanRequired": "Virus scan required",
           "contentModeration": "Content moderation",
           "requiredMetadataSchema": "Required metadata schema",

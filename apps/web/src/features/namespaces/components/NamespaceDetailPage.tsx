@@ -196,12 +196,6 @@ function RealPolicyTab({
           </span>,
         ],
         [
-          t("pages.namespaceDetail.policy.fields.exifHandling"),
-          <span key="exifHandling" className="font-mono">
-            {displayPolicy.exifHandling}
-          </span>,
-        ],
-        [
           t("pages.namespaceDetail.policy.fields.virusScanRequired"),
           <span key="virusScan" className="font-mono">
             {displayPolicy.virusScanRequired

@@ -42,7 +42,6 @@ interface IFormValues {
   virusScanRequired: boolean;
   retentionDays: string;
   retentionMode: "delete" | "archive" | "none";
-  exifHandling: "strip" | "preserve" | "extract_then_strip";
   immutable: boolean;
   servingMode: "public" | "signed" | "proxied";
   signedUrlTtlSeconds: string;
@@ -63,7 +62,6 @@ const KNOWN_VIOLATION_FIELDS: ReadonlyArray<keyof IFormValues> = [
   "virusScanRequired",
   "retentionDays",
   "retentionMode",
-  "exifHandling",
   "immutable",
   "servingMode",
   "signedUrlTtlSeconds",
@@ -226,7 +224,6 @@ function YamlPreview({ control, bindings }: Readonly<IYamlPreviewProps>): React.
     const requireVirusScan = values.virusScanRequired ?? false;
     const retentionDays = values.retentionDays ?? "";
     const retentionMode = values.retentionMode ?? "none";
-    const exifHandling = values.exifHandling ?? "strip";
     const immutable = values.immutable ?? false;
     const servingMode = values.servingMode ?? "signed";
     const signedTtl = values.signedUrlTtlSeconds ?? "";
@@ -254,7 +251,6 @@ function YamlPreview({ control, bindings }: Readonly<IYamlPreviewProps>): React.
     lines.push("  lifecycle:");
     if (retentionDays) lines.push(`    retentionDays: ${retentionDays}`);
     lines.push(`    retentionMode: ${retentionMode}`);
-    lines.push(`    exifHandling: ${exifHandling}`);
     lines.push(`    immutable: ${String(immutable)}`);
     lines.push("  serving:");
     lines.push(`    mode: ${servingMode}`);
@@ -315,7 +311,6 @@ export function NewNamespacePage(): React.JSX.Element {
             { message: `Must be between 1 and ${MAX_RETENTION_DAYS}` },
           ),
         retentionMode: z.enum(["delete", "archive", "none"]),
-        exifHandling: z.enum(["strip", "preserve", "extract_then_strip"]),
         immutable: z.boolean(),
         servingMode: z.enum(["public", "signed", "proxied"]),
         signedUrlTtlSeconds: z
@@ -361,7 +356,6 @@ export function NewNamespacePage(): React.JSX.Element {
       virusScanRequired: true,
       retentionDays: "",
       retentionMode: "none",
-      exifHandling: "strip",
       immutable: false,
       servingMode: "signed",
       signedUrlTtlSeconds: String(DEFAULT_SIGNED_URL_TTL),
@@ -494,7 +488,6 @@ export function NewNamespacePage(): React.JSX.Element {
           retentionMode: values.retentionMode,
           maxFileSizeBytes: Number(values.maxFileSizeBytes),
           allowedMimeTypes,
-          exifHandling: values.exifHandling,
           virusScanRequired: values.virusScanRequired,
           contentModeration,
           requiredMetadataSchema,
@@ -789,45 +782,6 @@ export function NewNamespacePage(): React.JSX.Element {
               {errors.retentionMode?.message ? (
                 <FieldMessage id="ns-retention-mode-error">
                   {errors.retentionMode.message}
-                </FieldMessage>
-              ) : null}
-            </div>
-
-            {/* EXIF handling */}
-            <div className="grid gap-2">
-              <span
-                id="ns-exif-handling-label"
-                className="text-foreground text-[11.5px] font-medium"
-              >
-                {t("pages.namespaces.form.fields.exifHandling")}
-              </span>
-              <RadioCardGroup<IFormValues, "strip" | "preserve" | "extract_then_strip">
-                control={form.control}
-                register={register}
-                name="exifHandling"
-                ariaLabelledBy="ns-exif-handling-label"
-                columns={3}
-                options={[
-                  {
-                    value: "strip",
-                    label: t("pages.namespaces.form.exifHandling.strip"),
-                    description: t("pages.namespaces.form.exifHandlingHints.strip"),
-                  },
-                  {
-                    value: "preserve",
-                    label: t("pages.namespaces.form.exifHandling.preserve"),
-                    description: t("pages.namespaces.form.exifHandlingHints.preserve"),
-                  },
-                  {
-                    value: "extract_then_strip",
-                    label: t("pages.namespaces.form.exifHandling.extract_then_strip"),
-                    description: t("pages.namespaces.form.exifHandlingHints.extract_then_strip"),
-                  },
-                ]}
-              />
-              {errors.exifHandling?.message ? (
-                <FieldMessage id="ns-exif-handling-error">
-                  {errors.exifHandling.message}
                 </FieldMessage>
               ) : null}
             </div>
