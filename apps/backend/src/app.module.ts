@@ -21,6 +21,7 @@ import { AuthorizationModule } from "./shared/infrastructure/authorization/autho
 import { environmentConfiguration } from "./shared/infrastructure/environment.configuration";
 import { LoggerModule } from "./shared/infrastructure/logger/logger.module";
 import { isDatabaseError } from "./shared/infrastructure/persistence/database-error";
+import { ApiMetricsMiddleware } from "./shared/infrastructure/telemetry/api-metrics.middleware";
 import { TelemetryModule } from "./shared/infrastructure/telemetry/telemetry.module";
 import { DomainError } from "./shared/kernel/domain/errors/domain-error.interface";
 import { ValidationError } from "./shared/kernel/domain/errors/validation-error.interface";
@@ -129,6 +130,8 @@ function appErrorBody(exception: DomainError | ValidationError, status: number):
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(JsonBodyParserMiddleware, UrlEncodedParserMiddleware).forRoutes("*");
+    consumer
+      .apply(ApiMetricsMiddleware, JsonBodyParserMiddleware, UrlEncodedParserMiddleware)
+      .forRoutes("*");
   }
 }

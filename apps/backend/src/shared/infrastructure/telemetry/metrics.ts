@@ -127,10 +127,18 @@ export const authzDecisionCounter: Counter = meter.createCounter(
 );
 
 // API
+// NOTE: `lafken.api.request.duration` is the v1.0 spec name. nestjs-otel 8.x
+// dropped its built-in `apiMetrics` middleware, so we record the histogram
+// ourselves from `ApiMetricsMiddleware` (alongside the standard
+// semantic-convention metric `http.server.duration`). When the OTel SDK is
+// bootstrapped at process start in production, `instrumentation-loader.ts`
+// also wires `@opentelemetry/instrumentation-http`, which emits the same
+// `http.server.duration` independently.
 export const apiRequestDurationHistogram: Histogram = meter.createHistogram(
   LAFKEN_METRIC_NAMES.API_REQUEST_DURATION,
   {
-    description: "HTTP request duration in milliseconds (also emitted by nestjs-otel)",
+    description:
+      "HTTP request duration in milliseconds (also emitted as the semconv name `http.server.duration` from ApiMetricsMiddleware)",
     unit: "ms",
   },
 );
