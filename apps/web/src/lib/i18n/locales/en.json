@@ -338,7 +338,11 @@
         "remove": "Remove file",
         "state": {
           "uploading": "uploading…",
-          "uploaded": "uploaded",
+          "processing": "processing…",
+          "ready": "ready",
+          "quarantined": "quarantined",
+          "rejected": "rejected",
+          "failed": "failed",
           "error": "error"
         }
       },

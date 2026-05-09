@@ -338,7 +338,11 @@
         "remove": "Quitar archivo",
         "state": {
           "uploading": "subiendo…",
-          "uploaded": "subido",
+          "processing": "procesando…",
+          "ready": "listo",
+          "quarantined": "en cuarentena",
+          "rejected": "rechazado",
+          "failed": "falló",
           "error": "error"
         }
       },

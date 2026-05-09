@@ -1,4 +1,8 @@
-import { type IUploadDropzoneRenderProps, UploadDropzone } from "@lafken/react";
+import {
+  type IUploadDropzoneRenderProps,
+  type IUploadFile,
+  UploadDropzone,
+} from "@lafken/react";
 import type { NamespacePolicyResponseDTO, NamespaceResponseDTO } from "@shared/backend-api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -27,6 +31,25 @@ import { cn, fmtBytes } from "@/lib/utils";
 const NAMESPACE_FETCH_LIMIT = 100;
 const MAX_TAGS = 32;
 const MAX_TAG_LENGTH = 64;
+
+/**
+ * Lifecycle states that represent a terminal failure for an upload tile —
+ * the file did make it to the backend but the pipeline rejected, quarantined,
+ * timed out polling, or otherwise failed it. These render with the warn-line
+ * border and surface the structured error message to the user.
+ */
+const TERMINAL_FAILURE_STATES: ReadonlyArray<IUploadFile["state"]> = [
+  "error",
+  "failed",
+  "quarantined",
+  "rejected",
+];
+
+function tileBorderForState(state: IUploadFile["state"]): string {
+  if (state === "ready") return "border-ok-line";
+  if (TERMINAL_FAILURE_STATES.includes(state)) return "border-warn-line";
+  return "border-border";
+}
 
 interface IUploadAssetsPageProps {
   /** Optional preselected namespace (from `?ns=<slug>`). */
@@ -252,17 +275,17 @@ function UploadAssetsPageBody(props: IUploadAssetsPageBodyProps): React.JSX.Elem
   // decide whether to retry or remove the bad tiles.
   useEffect(() => {
     if (!hasStarted || isUploading || files.length === 0) return;
-    if (files.every((file) => file.state === "uploaded")) {
+    if (files.every((file) => file.state === "ready")) {
       onAllUploadsDone();
     }
   }, [hasStarted, isUploading, files, onAllUploadsDone]);
 
   const totalBytes = files.reduce((acc, file) => acc + file.size, 0);
   const canSubmit = files.length > 0 && !isUploading;
-  const erroredCount = files.filter((file) => file.state === "error").length;
-  const uploadedCount = files.filter((file) => file.state === "uploaded").length;
+  const erroredCount = files.filter((file) => TERMINAL_FAILURE_STATES.includes(file.state)).length;
+  const readyCount = files.filter((file) => file.state === "ready").length;
   const showResultsBanner =
-    hasStarted && !isUploading && erroredCount > 0 && uploadedCount + erroredCount === files.length;
+    hasStarted && !isUploading && erroredCount > 0 && readyCount + erroredCount === files.length;
 
   function handleStart(): void {
     setHasStarted(true);
@@ -309,7 +332,7 @@ function UploadAssetsPageBody(props: IUploadAssetsPageBodyProps): React.JSX.Elem
         >
           <span>
             {t("pages.uploadAssets.results.partial", {
-              uploaded: uploadedCount,
+              uploaded: readyCount,
               total: files.length,
               failed: erroredCount,
             })}
@@ -471,12 +494,8 @@ function UploadAssetsPageBody(props: IUploadAssetsPageBodyProps): React.JSX.Elem
               {files.length > 0 && (
                 <div className="border-border/60 bg-card/50 grid grid-cols-2 gap-2 border-t p-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                   {files.map((file) => {
-                    const tileBorderClass: string =
-                      file.state === "uploaded"
-                        ? "border-ok-line"
-                        : file.state === "error"
-                          ? "border-warn-line"
-                          : "border-border";
+                    const tileBorderClass: string = tileBorderForState(file.state);
+                    const isFailureState: boolean = TERMINAL_FAILURE_STATES.includes(file.state);
                     return (
                       <div
                         key={file.id}
@@ -492,7 +511,7 @@ function UploadAssetsPageBody(props: IUploadAssetsPageBodyProps): React.JSX.Elem
                               alt={file.name}
                               className={cn(
                                 "max-h-full max-w-full object-contain ring-1 ring-black/10",
-                                file.state === "error" ? "opacity-40" : undefined,
+                                isFailureState ? "opacity-40" : undefined,
                               )}
                             />
                           ) : null}
@@ -517,7 +536,7 @@ function UploadAssetsPageBody(props: IUploadAssetsPageBodyProps): React.JSX.Elem
                             <span>{file.type}</span>
                             <span>{fmtBytes(file.size)}</span>
                           </div>
-                          {file.state === "error" && file.error ? (
+                          {isFailureState && file.error ? (
                             <div className="text-warn mt-1 line-clamp-2 text-[10.5px]">
                               {humanizeFileError(file.error, t)}
                             </div>
@@ -782,30 +801,61 @@ function NumberedSection(props: INumberedSectionProps): React.JSX.Element {
   );
 }
 
-// Maps the SDK's machine-readable quarantine error ("quarantined: <state>")
-// to an i18n key. Falls back to the raw message for non-quarantine errors.
-function humanizeFileError(message: string, t: (key: string) => string): string {
+// Maps the SDK's structured error to an i18n key. For quarantined files the
+// `kind` field carries the quarantine reason (e.g. "quarantined_virus"); for
+// every other failure state the raw `message` is shown.
+function humanizeFileError(
+  error: { message: string; kind?: string },
+  t: (key: string) => string,
+): string {
+  if (error.kind) {
+    const knownKinds: Record<string, string> = {
+      quarantined_invalid_format: "pages.uploadAssets.errors.quarantined.invalidFormat",
+      quarantined_virus: "pages.uploadAssets.errors.quarantined.virus",
+      quarantined_moderation: "pages.uploadAssets.errors.quarantined.moderation",
+    };
+    const key: string | undefined = knownKinds[error.kind];
+    return key ? t(key) : t("pages.uploadAssets.errors.quarantined.generic");
+  }
+  // Legacy "quarantined: <state>" message format from older SDK builds.
   const QUARANTINE_PREFIX = "quarantined: ";
-  if (!message.startsWith(QUARANTINE_PREFIX)) return message;
-  const state = message.slice(QUARANTINE_PREFIX.length);
-  const knownKinds: Record<string, string> = {
-    quarantined_invalid_format: "pages.uploadAssets.errors.quarantined.invalidFormat",
-    quarantined_virus: "pages.uploadAssets.errors.quarantined.virus",
-    quarantined_moderation: "pages.uploadAssets.errors.quarantined.moderation",
-  };
-  const key: string | undefined = knownKinds[state];
-  return key ? t(key) : t("pages.uploadAssets.errors.quarantined.generic");
+  if (error.message.startsWith(QUARANTINE_PREFIX)) {
+    const state = error.message.slice(QUARANTINE_PREFIX.length);
+    const knownKinds: Record<string, string> = {
+      quarantined_invalid_format: "pages.uploadAssets.errors.quarantined.invalidFormat",
+      quarantined_virus: "pages.uploadAssets.errors.quarantined.virus",
+      quarantined_moderation: "pages.uploadAssets.errors.quarantined.moderation",
+    };
+    const key: string | undefined = knownKinds[state];
+    return key ? t(key) : t("pages.uploadAssets.errors.quarantined.generic");
+  }
+  return error.message;
 }
 
-function FileStateOverlay({ state }: { state: string }): React.JSX.Element | null {
+function FileStateOverlay({
+  state,
+}: {
+  state: IUploadFile["state"];
+}): React.JSX.Element | null {
   const { t } = useTranslation();
-  if (state === "idle") return null;
+  // No overlay before the user starts the upload — `idle` and `preview` look
+  // identical to the dropzone preview (just the thumbnail).
+  if (state === "idle" || state === "preview") return null;
+
   const Icon =
-    state === "uploaded" ? Check : state === "error" ? X : state === "uploading" ? Upload : null;
+    state === "ready"
+      ? Check
+      : TERMINAL_FAILURE_STATES.includes(state)
+        ? X
+        : state === "uploading"
+          ? Upload
+          : state === "processing"
+            ? Upload
+            : null;
   const ribbonClass: string =
-    state === "uploaded"
+    state === "ready"
       ? "bg-ok text-ok-fg"
-      : state === "error"
+      : TERMINAL_FAILURE_STATES.includes(state)
         ? "bg-warn text-warn-fg"
         : "bg-secondary text-foreground";
   return (
