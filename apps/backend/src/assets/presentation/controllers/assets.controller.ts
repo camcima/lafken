@@ -32,10 +32,12 @@ import {
   ListAssetsQueryDTO,
   PreviewUrlResponseDTO,
   ProcessingJobResponseDTO,
+  RefreshUploadUrlResponseDTO,
 } from "@shared/backend-api";
 
 import { ConfirmUploadUseCase } from "@/assets/application/use-cases/confirm-upload.use-case";
 import { CreateUploadIntentUseCase } from "@/assets/application/use-cases/create-upload-intent.use-case";
+import { RefreshUploadUrlUseCase } from "@/assets/application/use-cases/refresh-upload-url.use-case";
 import { GetAssetByIdUseCase } from "@/assets/application/use-cases/get-asset-by-id.use-case";
 import { GetAssetByPublicIdUseCase } from "@/assets/application/use-cases/get-asset-by-public-id.use-case";
 import { GetAssetDownloadUrlUseCase } from "@/assets/application/use-cases/get-asset-download-url.use-case";
@@ -51,6 +53,7 @@ import { FileSizeExceedsPolicyError } from "@/assets/domain/errors/file-size-exc
 import { MimeTypeNotAllowedError } from "@/assets/domain/errors/mime-type-not-allowed.error";
 import { ProcessingJobNotFoundError } from "@/assets/domain/errors/processing-job-not-found.error";
 import { TusNotConfiguredError } from "@/assets/domain/errors/tus-not-configured.error";
+import { UploadIntentAlreadyConsumedError } from "@/assets/domain/errors/upload-intent-already-consumed.error";
 import { UploadIntentExpiredError } from "@/assets/domain/errors/upload-intent-expired.error";
 import { UploadIntentNotFoundError } from "@/assets/domain/errors/upload-intent-not-found.error";
 import { UploadedObjectMissingError } from "@/assets/domain/errors/uploaded-object-missing.error";
@@ -101,6 +104,7 @@ export class AssetsController {
     private readonly confirmUploadUseCase: ConfirmUploadUseCase,
     private readonly retryAssetProcessingUseCase: RetryAssetProcessingUseCase,
     private readonly getAssetDownloadUrlUseCase: GetAssetDownloadUrlUseCase,
+    private readonly refreshUploadUrlUseCase: RefreshUploadUrlUseCase,
     private readonly assetQueryRepository: AssetQueryRepositoryPort,
     private readonly previewUrlSigner: PreviewUrlSignerPort,
     private readonly assetStorage: AssetStoragePort,
@@ -386,6 +390,41 @@ export class AssetsController {
         err instanceof MimeTypeNotAllowedError ||
         err instanceof FileSizeExceedsPolicyError ||
         err instanceof TusNotConfiguredError
+      ) {
+        throw new UnprocessableEntityException(err.message, { cause: err });
+      }
+      throw err;
+    }
+  }
+
+  @Post("upload-intents/:publicId/refresh-url")
+  @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Reissue an upload URL for an unconsumed upload intent" })
+  @ApiOkResponse({ type: RefreshUploadUrlResponseDTO })
+  @ApiNotFoundResponse()
+  @ApiUnprocessableEntityResponse()
+  async refreshUploadUrl(
+    @Param("publicId") publicId: string,
+    @AuthenticatedUser() user: AuthenticatedUserType,
+  ): Promise<RefreshUploadUrlResponseDTO> {
+    try {
+      const result = await this.refreshUploadUrlUseCase.execute({
+        publicId,
+        requestedBy: user.emailAddress,
+      });
+      return {
+        uploadUrl: result.uploadUrl,
+        uploadHeaders: result.uploadHeaders,
+        expiresAt: result.expiresAt.toISOString(),
+      };
+    } catch (err) {
+      if (err instanceof UploadIntentNotFoundError) {
+        throw new NotFoundException(err.message, { cause: err });
+      }
+      if (
+        err instanceof UploadIntentExpiredError ||
+        err instanceof UploadIntentAlreadyConsumedError
       ) {
         throw new UnprocessableEntityException(err.message, { cause: err });
       }

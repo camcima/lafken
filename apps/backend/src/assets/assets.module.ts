@@ -13,6 +13,7 @@ import { GetAssetProcessingJobUseCase } from "./application/use-cases/get-asset-
 import { ListAssetAnalysesUseCase } from "./application/use-cases/list-asset-analyses.use-case";
 import { ListAssetStateTransitionsUseCase } from "./application/use-cases/list-asset-state-transitions.use-case";
 import { ListAssetsUseCase } from "./application/use-cases/list-assets.use-case";
+import { RefreshUploadUrlUseCase } from "./application/use-cases/refresh-upload-url.use-case";
 import { RetryAssetProcessingUseCase } from "./application/use-cases/retry-asset-processing.use-case";
 import { AssetsInfrastructureModule } from "./infrastructure/assets-infrastructure.module";
 import { AssetsController } from "./presentation/controllers/assets.controller";
@@ -36,6 +37,7 @@ import { AssetsController } from "./presentation/controllers/assets.controller";
     ConfirmUploadUseCase,
     RetryAssetProcessingUseCase,
     GetAssetDownloadUrlUseCase,
+    RefreshUploadUrlUseCase,
   ],
 })
 export class AssetsModule {}
