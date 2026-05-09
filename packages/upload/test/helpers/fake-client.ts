@@ -31,13 +31,17 @@ interface IRefreshUploadUrlCall {
   response: IRefreshUploadUrlResult;
 }
 
-export interface IFakeClient {
+export interface IFakeAssetsClient {
   createUploadIntent(input: ICreateUploadIntentInput): Promise<ICreateUploadIntentResult>;
   refreshUploadUrl(publicId: string): Promise<IRefreshUploadUrlResult>;
   confirmUpload(
     publicId: string,
     options?: unknown,
   ): Promise<{ publicId: string; state: string; storageKey: string }>;
+}
+
+export interface IFakeClient {
+  assets: IFakeAssetsClient;
   createUploadIntentCalls: ICreateUploadIntentCall[];
   refreshUploadUrlCalls: IRefreshUploadUrlCall[];
 }
@@ -56,51 +60,53 @@ export function fakeClientFor(opts: IFakeClientOptions = {}): IFakeClient {
     createUploadIntentCalls,
     refreshUploadUrlCalls,
 
-    async createUploadIntent(
-      input: ICreateUploadIntentInput,
-    ): Promise<ICreateUploadIntentResult> {
-      _counter += 1;
-      const publicId = `fake-pub-${_counter}`;
-      const response: ICreateUploadIntentResult = {
-        publicId,
-        protocol,
-        uploadUrl:
-          protocol === "tus"
-            ? `http://tusd.fake/files/${publicId}`
-            : `https://gcs.fake/upload/${publicId}`,
-        uploadHeaders:
-          protocol === "tus"
-            ? { "Tus-Resumable": "1.0.0" }
-            : { "x-goog-content-length-range": "0,10485760" },
-        expiresAt: new Date(Date.now() + initialExpiresInMs).toISOString(),
-      };
-      createUploadIntentCalls.push({ input, response });
-      return response;
-    },
+    assets: {
+      async createUploadIntent(
+        input: ICreateUploadIntentInput,
+      ): Promise<ICreateUploadIntentResult> {
+        _counter += 1;
+        const publicId = `fake-pub-${_counter}`;
+        const response: ICreateUploadIntentResult = {
+          publicId,
+          protocol,
+          uploadUrl:
+            protocol === "tus"
+              ? `http://tusd.fake/files/${publicId}`
+              : `https://gcs.fake/upload/${publicId}`,
+          uploadHeaders:
+            protocol === "tus"
+              ? { "Tus-Resumable": "1.0.0" }
+              : { "x-goog-content-length-range": "0,10485760" },
+          expiresAt: new Date(Date.now() + initialExpiresInMs).toISOString(),
+        };
+        createUploadIntentCalls.push({ input, response });
+        return response;
+      },
 
-    async refreshUploadUrl(publicId: string): Promise<IRefreshUploadUrlResult> {
-      if (opts.refreshError) {
-        throw opts.refreshError;
-      }
-      const response: IRefreshUploadUrlResult = {
-        uploadUrl:
-          protocol === "tus"
-            ? `http://tusd.fake/files/${publicId}?refreshed`
-            : `https://gcs.fake/upload/${publicId}?refreshed`,
-        uploadHeaders:
-          protocol === "tus"
-            ? { "Tus-Resumable": "1.0.0" }
-            : { "x-goog-content-length-range": "0,10485760" },
-        expiresAt: new Date(Date.now() + refreshExpiresInMs).toISOString(),
-      };
-      refreshUploadUrlCalls.push({ publicId, response });
-      return response;
-    },
+      async refreshUploadUrl(publicId: string): Promise<IRefreshUploadUrlResult> {
+        if (opts.refreshError) {
+          throw opts.refreshError;
+        }
+        const response: IRefreshUploadUrlResult = {
+          uploadUrl:
+            protocol === "tus"
+              ? `http://tusd.fake/files/${publicId}?refreshed`
+              : `https://gcs.fake/upload/${publicId}?refreshed`,
+          uploadHeaders:
+            protocol === "tus"
+              ? { "Tus-Resumable": "1.0.0" }
+              : { "x-goog-content-length-range": "0,10485760" },
+          expiresAt: new Date(Date.now() + refreshExpiresInMs).toISOString(),
+        };
+        refreshUploadUrlCalls.push({ publicId, response });
+        return response;
+      },
 
-    async confirmUpload(
-      publicId: string,
-    ): Promise<{ publicId: string; state: string; storageKey: string }> {
-      return { publicId, state: "confirmed", storageKey: `key/${publicId}` };
+      async confirmUpload(
+        publicId: string,
+      ): Promise<{ publicId: string; state: string; storageKey: string }> {
+        return { publicId, state: "confirmed", storageKey: `key/${publicId}` };
+      },
     },
   };
 }

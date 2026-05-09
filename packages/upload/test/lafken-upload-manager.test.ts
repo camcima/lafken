@@ -35,27 +35,29 @@ function makeClientMock(overrides?: {
   confirmUploadError?: Error;
 }) {
   return {
-    createUploadIntent: overrides?.createUploadIntentError
-      ? vi.fn().mockRejectedValue(overrides.createUploadIntentError)
-      : vi.fn().mockResolvedValue({
-          publicId: "pub-123",
-          uploadUrl: "https://storage.example.com/upload/key",
-          uploadHeaders: { "x-goog-content-length-range": "0,10485760" },
-          expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-        }),
-    confirmUpload: overrides?.confirmUploadError
-      ? vi.fn().mockRejectedValue(overrides.confirmUploadError)
-      : vi.fn().mockResolvedValue({
-          publicId: "pub-123",
-          namespaceSlug: "ns",
-          state: "confirmed",
-          storageKey: "key",
-          declaredMimeType: "image/png",
-          sizeBytes: 1024,
-          uploadedBy: null,
-          confirmedAt: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-        }),
+    assets: {
+      createUploadIntent: overrides?.createUploadIntentError
+        ? vi.fn().mockRejectedValue(overrides.createUploadIntentError)
+        : vi.fn().mockResolvedValue({
+            publicId: "pub-123",
+            uploadUrl: "https://storage.example.com/upload/key",
+            uploadHeaders: { "x-goog-content-length-range": "0,10485760" },
+            expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+          }),
+      confirmUpload: overrides?.confirmUploadError
+        ? vi.fn().mockRejectedValue(overrides.confirmUploadError)
+        : vi.fn().mockResolvedValue({
+            publicId: "pub-123",
+            namespaceSlug: "ns",
+            state: "confirmed",
+            storageKey: "key",
+            declaredMimeType: "image/png",
+            sizeBytes: 1024,
+            uploadedBy: null,
+            confirmedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+          }),
+    },
   };
 }
 
@@ -96,7 +98,7 @@ describe("LafkenUploadManager", () => {
     // Wait for async confirmCompletedFiles to finish
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
-    expect(client.confirmUpload).toHaveBeenCalledWith("pub-123", { width: 256, height: 128 });
+    expect(client.assets.confirmUpload).toHaveBeenCalledWith("pub-123", { width: 256, height: 128 });
     expect(confirmedEvents).toHaveLength(1);
     expect(confirmedEvents[0]).toEqual({ fileId: uppyFile.id, publicId: "pub-123" });
   });
@@ -123,7 +125,7 @@ describe("LafkenUploadManager", () => {
 
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
-    expect(client.confirmUpload).toHaveBeenCalledWith("pub-789", { width: 256, height: 128 });
+    expect(client.assets.confirmUpload).toHaveBeenCalledWith("pub-789", { width: 256, height: 128 });
   });
 
   it("calls confirmUpload without dimensions for non-image files", async () => {
@@ -148,7 +150,7 @@ describe("LafkenUploadManager", () => {
 
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
-    expect(client.confirmUpload).toHaveBeenCalledWith("pub-doc", undefined);
+    expect(client.assets.confirmUpload).toHaveBeenCalledWith("pub-doc", undefined);
   });
 
   it("forwards shared metadata to confirmUpload alongside dimensions", async () => {
@@ -177,7 +179,7 @@ describe("LafkenUploadManager", () => {
     uppy.emit("complete", { successful: [uppyFile], failed: [] });
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
-    expect(client.confirmUpload).toHaveBeenCalledWith("pub-shared", {
+    expect(client.assets.confirmUpload).toHaveBeenCalledWith("pub-shared", {
       externalRefType: "work_order",
       externalRefId: "WO-1",
       tags: ["preflight"],
@@ -189,17 +191,19 @@ describe("LafkenUploadManager", () => {
   it("isolates pre-processor failures: bad file is dropped, others proceed", async () => {
     const intentError = new Error("MimeTypeNotAllowedError: application/pdf is not allowed");
     const client = {
-      createUploadIntent: vi
-        .fn()
-        // First call (PNG) succeeds; second call (PDF) is rejected by namespace policy.
-        .mockResolvedValueOnce({
-          publicId: "pub-png",
-          uploadUrl: "https://storage.example.com/upload/png",
-          uploadHeaders: {},
-          expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-        })
-        .mockRejectedValueOnce(intentError),
-      confirmUpload: vi.fn(),
+      assets: {
+        createUploadIntent: vi
+          .fn()
+          // First call (PNG) succeeds; second call (PDF) is rejected by namespace policy.
+          .mockResolvedValueOnce({
+            publicId: "pub-png",
+            uploadUrl: "https://storage.example.com/upload/png",
+            uploadHeaders: {},
+            expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+          })
+          .mockRejectedValueOnce(intentError),
+        confirmUpload: vi.fn(),
+      },
     };
 
     const manager = new LafkenUploadManager({
@@ -244,18 +248,20 @@ describe("LafkenUploadManager", () => {
     // server accepted the bytes but flagged them for review. From the user's
     // perspective this is a failure (the file isn't usable yet).
     const client = {
-      createUploadIntent: vi.fn(),
-      confirmUpload: vi.fn().mockResolvedValue({
-        publicId: "pub-quar",
-        namespaceSlug: "ns",
-        state: "quarantined_invalid_format",
-        storageKey: "key",
-        declaredMimeType: "image/jpeg",
-        sizeBytes: 1024,
-        uploadedBy: null,
-        confirmedAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      }),
+      assets: {
+        createUploadIntent: vi.fn(),
+        confirmUpload: vi.fn().mockResolvedValue({
+          publicId: "pub-quar",
+          namespaceSlug: "ns",
+          state: "quarantined_invalid_format",
+          storageKey: "key",
+          declaredMimeType: "image/jpeg",
+          sizeBytes: 1024,
+          uploadedBy: null,
+          confirmedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+        }),
+      },
     };
     const manager = new LafkenUploadManager({
       client: client as never,
@@ -284,7 +290,7 @@ describe("LafkenUploadManager", () => {
     uppy.emit("complete", { successful: [uppyFile], failed: [] });
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
-    expect(client.confirmUpload).toHaveBeenCalledTimes(1);
+    expect(client.assets.confirmUpload).toHaveBeenCalledTimes(1);
     expect(failedEvents).toHaveLength(1);
     expect(failedEvents[0].error.message).toBe("quarantined: quarantined_invalid_format");
     expect(confirmedEvents).toHaveLength(0);
@@ -320,7 +326,7 @@ describe("LafkenUploadManager", () => {
 
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
-    expect(client.confirmUpload).toHaveBeenCalledWith("pub-456", { width: 256, height: 128 });
+    expect(client.assets.confirmUpload).toHaveBeenCalledWith("pub-456", { width: 256, height: 128 });
     expect(failedEvents).toHaveLength(1);
     expect(failedEvents[0].fileId).toBe(uppyFile.id);
     expect(failedEvents[0].error).toBe(confirmError);

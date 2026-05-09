@@ -242,7 +242,7 @@ export class LafkenUploadManager extends EventTarget {
         if (!file) return;
 
         try {
-          const result = await this.opts.client.createUploadIntent({
+          const result = await this.opts.client.assets.createUploadIntent({
             namespaceSlug: this.opts.namespaceSlug,
             declaredMimeType: (file.type as string | undefined) ?? "application/octet-stream",
             declaredSizeBytes: (file.size as number | undefined) ?? 0,
@@ -258,7 +258,7 @@ export class LafkenUploadManager extends EventTarget {
           // addFiles() and start().
           if (expiresAt.getTime() - Date.now() < this.refreshSafetyMarginMs) {
             try {
-              const refreshed = await this.opts.client.refreshUploadUrl(result.publicId);
+              const refreshed = await this.opts.client.assets.refreshUploadUrl(result.publicId);
               uploadUrl = refreshed.uploadUrl;
               uploadHeaders = refreshed.uploadHeaders;
               this.expiresAtByFileId.set(fileId, new Date(refreshed.expiresAt));
@@ -324,7 +324,7 @@ export class LafkenUploadManager extends EventTarget {
           ...(dims ? { width: dims.width, height: dims.height } : {}),
         };
         const options = Object.keys(merged).length > 0 ? merged : undefined;
-        const confirmed = await this.opts.client.confirmUpload(publicId, options);
+        const confirmed = await this.opts.client.assets.confirmUpload(publicId, options);
         // The server may accept the upload but transition the asset directly
         // into a quarantine state (e.g. magic-byte sniff disagreed with the
         // declared MIME). Surface that as a failed file so the UI can show
