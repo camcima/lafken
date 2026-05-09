@@ -1,5 +1,6 @@
 import { Asset, type IAssetProps } from "@/assets/domain/entities/asset.entity";
 import { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
+import { MimeSniffPort } from "@/assets/domain/services/mime-sniff.service.port";
 import {
   type INamespacePolicyProps,
   NamespacePolicy,
@@ -100,4 +101,14 @@ export function makeJob(assetId: string = TEST_UUIDS.asset1, attemptNumber = 1):
     createdAt: new Date("2026-05-06T11:59:00.000Z"),
     updatedAt: new Date("2026-05-06T12:00:00.000Z"),
   });
+}
+
+export class FakeMimeSniff extends MimeSniffPort {
+  result: string | null = "image/png";
+  calls: Buffer[] = [];
+
+  async sniff(bytes: Buffer): Promise<string | null> {
+    this.calls.push(bytes);
+    return this.result;
+  }
 }

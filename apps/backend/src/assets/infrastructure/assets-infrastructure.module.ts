@@ -8,6 +8,7 @@ import { UploadIntentWriteRepositoryPort } from "@/assets/domain/repositories/up
 import { AssetStoragePort } from "@/assets/domain/services/asset-storage.service.port";
 import { ContentModerationPort } from "@/assets/domain/services/content-moderation.service.port";
 import { ImageInspectionPort } from "@/assets/domain/services/image-inspection.service.port";
+import { MimeSniffPort } from "@/assets/domain/services/mime-sniff.service.port";
 import { PreviewUrlSignerPort } from "@/assets/domain/services/preview-url-signer.port";
 import { VirusScanPort } from "@/assets/domain/services/virus-scan.service.port";
 import { environmentConfiguration } from "@/shared/infrastructure/environment.configuration";
@@ -19,6 +20,7 @@ import { AssetWriteRepository } from "./persistence/repositories/asset-write.rep
 import { ProcessingJobRepository } from "./persistence/repositories/processing-job.repository";
 import { UploadIntentWriteRepository } from "./persistence/repositories/upload-intent-write.repository";
 import { ClamAvVirusScanAdapter } from "./services/clamav-virus-scan.adapter";
+import { FileTypeMimeSniffAdapter } from "./services/file-type-mime-sniff.adapter";
 import { GcsAssetStorageAdapter } from "./services/gcs-asset-storage.adapter";
 import { ImgproxyPreviewUrlSigner } from "./services/imgproxy-preview-url-signer.adapter";
 import { LocalContentModerationAdapter } from "./services/local-content-moderation.adapter";
@@ -49,6 +51,8 @@ import { SharpImageInspectionAdapter } from "./services/sharp-image-inspection.a
         }),
     },
     { provide: ImageInspectionPort, useClass: SharpImageInspectionAdapter },
+    FileTypeMimeSniffAdapter,
+    { provide: MimeSniffPort, useExisting: FileTypeMimeSniffAdapter },
     {
       provide: VirusScanPort,
       useFactory: (): VirusScanPort => {
@@ -99,6 +103,7 @@ import { SharpImageInspectionAdapter } from "./services/sharp-image-inspection.a
     UploadIntentWriteRepositoryPort,
     AssetStoragePort,
     ImageInspectionPort,
+    MimeSniffPort,
     VirusScanPort,
     ContentModerationPort,
     PreviewUrlSignerPort,

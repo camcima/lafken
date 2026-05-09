@@ -35,7 +35,13 @@ import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/
 
 import { FakeAppLogger } from "../../../__fakes__/fake-app-logger";
 import { FakeAssetStorage } from "../../../__fakes__/fake-asset-storage";
-import { makeAsset, makePolicy, makeStorageBinding, TEST_UUIDS } from "./processing-test-fixtures";
+import {
+  FakeMimeSniff,
+  makeAsset,
+  makePolicy,
+  makeStorageBinding,
+  TEST_UUIDS,
+} from "./processing-test-fixtures";
 
 describe("ProcessClaimedAssetUseCase", () => {
   let assetRepo: InMemoryAssetProcessingRepository;
@@ -44,6 +50,7 @@ describe("ProcessClaimedAssetUseCase", () => {
   let imageInspection: FakeImageInspection;
   let virusScan: FakeVirusScan;
   let moderation: FakeContentModeration;
+  let mimeSniff: FakeMimeSniff;
   let storageBindings: FakeStorageBindingRepository;
   let useCase: ProcessClaimedAssetUseCase;
 
@@ -55,6 +62,7 @@ describe("ProcessClaimedAssetUseCase", () => {
     imageInspection = new FakeImageInspection();
     virusScan = new FakeVirusScan();
     moderation = new FakeContentModeration();
+    mimeSniff = new FakeMimeSniff();
     storageBindings = new FakeStorageBindingRepository();
     useCase = new ProcessClaimedAssetUseCase(
       assetRepo,
@@ -63,6 +71,7 @@ describe("ProcessClaimedAssetUseCase", () => {
       imageInspection,
       virusScan,
       moderation,
+      mimeSniff,
       storageBindings,
       new FakeAppLogger(),
     );
@@ -84,6 +93,7 @@ describe("ProcessClaimedAssetUseCase", () => {
     expect(jobRepo.completed).toBe(true);
     expect(jobRepo.currentStepUpdates.map((item) => item.currentStep)).toEqual([
       "virus_scan",
+      "magic_byte_detection",
       "image_inspection",
     ]);
 
@@ -94,7 +104,11 @@ describe("ProcessClaimedAssetUseCase", () => {
     expect(metadata["total_duration_ms"] as number).toBeGreaterThanOrEqual(0);
     expect(Array.isArray(metadata["steps"])).toBe(true);
     const steps = metadata["steps"] as Array<{ step: string }>;
-    expect(steps.map((entry) => entry.step)).toEqual(["virus_scan", "image_inspection"]);
+    expect(steps.map((entry) => entry.step)).toEqual([
+      "virus_scan",
+      "magic_byte_detection",
+      "image_inspection",
+    ]);
   });
 
   it("records current_step transitions in order when moderation is enabled", async () => {
@@ -109,6 +123,7 @@ describe("ProcessClaimedAssetUseCase", () => {
     expect(result.kind).toBe("completed");
     expect(jobRepo.currentStepUpdates.map((item) => item.currentStep)).toEqual([
       "virus_scan",
+      "magic_byte_detection",
       "image_inspection",
       "content_moderation",
     ]);
@@ -119,6 +134,7 @@ describe("ProcessClaimedAssetUseCase", () => {
     const steps = metadata["steps"] as Array<{ step: string }>;
     expect(steps.map((entry) => entry.step)).toEqual([
       "virus_scan",
+      "magic_byte_detection",
       "image_inspection",
       "content_moderation",
     ]);
@@ -179,6 +195,50 @@ describe("ProcessClaimedAssetUseCase", () => {
     // Virus scan is the first check; image inspection must not run.
     expect(assetRepo.analyses.map((entry) => entry.analyzer)).toEqual(["virus_scan"]);
     expect(jobRepo.currentStepUpdates.map((entry) => entry.currentStep)).toEqual(["virus_scan"]);
+  });
+
+  it("rejects with unrecognized_format when the magic-byte sniff returns null", async () => {
+    mimeSniff.result = null;
+
+    await useCase.execute({ assetId: TEST_UUIDS.asset1, workerId: "worker-a", attemptNumber: 1 });
+
+    const terminal = assetRepo.transitions.at(-1);
+    expect(terminal?.toState).toBe("rejected");
+    expect(terminal?.reason).toBe("unrecognized_format");
+  });
+
+  it("rejects with mime_type_not_allowed when sniffed MIME is outside policy allow-list", async () => {
+    mimeSniff.result = "image/gif";
+
+    await useCase.execute({ assetId: TEST_UUIDS.asset1, workerId: "worker-a", attemptNumber: 1 });
+
+    const terminal = assetRepo.transitions.at(-1);
+    expect(terminal?.toState).toBe("rejected");
+    expect(terminal?.reason).toBe("mime_type_not_allowed");
+  });
+
+  it("rejects with format_inconsistency when sharp's detected format disagrees with the sniffed MIME", async () => {
+    mimeSniff.result = "image/png";
+    imageInspection.result = {
+      decision: "error",
+      reason: "format_inconsistency",
+      actualMimeType: "image/jpeg",
+      format: "jpeg",
+      sizeBytes: 12n,
+      width: null,
+      height: null,
+      contentHash: Buffer.alloc(32),
+      captureContext: null,
+      analyzer: "image_inspection",
+      analyzerVersion: "sharp-v1",
+      findings: { duration_ms: 0 },
+    };
+
+    await useCase.execute({ assetId: TEST_UUIDS.asset1, workerId: "worker-a", attemptNumber: 1 });
+
+    const terminal = assetRepo.transitions.at(-1);
+    expect(terminal?.toState).toBe("rejected");
+    expect(terminal?.reason).toBe("format_inconsistency");
   });
 
   it("quarantines moderation results when policy config is present", async () => {

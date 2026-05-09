@@ -8,6 +8,7 @@ import { ProcessingJobRepositoryPort } from "@/assets/domain/repositories/proces
 import { AssetStoragePort } from "@/assets/domain/services/asset-storage.service.port";
 import { ContentModerationPort } from "@/assets/domain/services/content-moderation.service.port";
 import { ImageInspectionPort } from "@/assets/domain/services/image-inspection.service.port";
+import { MimeSniffPort } from "@/assets/domain/services/mime-sniff.service.port";
 import { VirusScanPort } from "@/assets/domain/services/virus-scan.service.port";
 import {
   type AssetState,
@@ -53,6 +54,7 @@ export class ProcessClaimedAssetUseCase {
     private readonly imageInspection: ImageInspectionPort,
     private readonly virusScan: VirusScanPort,
     private readonly moderation: ContentModerationPort,
+    private readonly mimeSniff: MimeSniffPort,
     private readonly storageBindingRepo: StorageBindingQueryRepositoryPort,
     private readonly logger: AppLoggerPort,
   ) {
@@ -201,6 +203,65 @@ export class ProcessClaimedAssetUseCase {
     await this.recordCurrentStep({
       assetId: asset.props.id,
       workerId: input.workerId,
+      currentStep: "magic_byte_detection",
+    });
+    const sniffStartedAt: Date = new Date();
+    const sniffedMimeType: string | null = await this.runStep("magic_byte_detection", () =>
+      this.mimeSniff.sniff(bytes),
+    );
+    const sniffFinishedAt: Date = new Date();
+    stepTimings.push(
+      makeStepTiming({
+        step: "magic_byte_detection",
+        startedAt: sniffStartedAt,
+        finishedAt: sniffFinishedAt,
+        decision: sniffedMimeType === null ? "error" : "pass",
+      }),
+    );
+
+    if (sniffedMimeType === null) {
+      machine.send({ type: "MIME_INVALID" });
+      const reason: string = "unrecognized_format";
+      this.logger.info(
+        { assetId: asset.props.id, toState: "rejected", reason },
+        "transitioning to terminal state",
+      );
+      await this.transitionToTerminal({
+        assetId: asset.props.id,
+        fromState: currentState,
+        toState: "rejected",
+        reason,
+        workerId: input.workerId,
+        attemptNumber: input.attemptNumber,
+        step: "magic_byte_detection",
+        durationMs: calculateDurationMs(sniffStartedAt, sniffFinishedAt),
+      });
+      return { kind: "completed" };
+    }
+    if (!policy.props.allowedMimeTypes.includes(sniffedMimeType)) {
+      machine.send({ type: "MIME_INVALID" });
+      const reason: string = "mime_type_not_allowed";
+      this.logger.info(
+        { assetId: asset.props.id, toState: "rejected", reason, sniffedMimeType },
+        "transitioning to terminal state",
+      );
+      await this.transitionToTerminal({
+        assetId: asset.props.id,
+        fromState: currentState,
+        toState: "rejected",
+        reason,
+        workerId: input.workerId,
+        attemptNumber: input.attemptNumber,
+        step: "magic_byte_detection",
+        durationMs: calculateDurationMs(sniffStartedAt, sniffFinishedAt),
+      });
+      return { kind: "completed" };
+    }
+    machine.send({ type: "MIME_VALID" });
+
+    await this.recordCurrentStep({
+      assetId: asset.props.id,
+      workerId: input.workerId,
       currentStep: "image_inspection",
     });
     const inspectionStartedAt: Date = new Date();
@@ -208,6 +269,7 @@ export class ProcessClaimedAssetUseCase {
       this.imageInspection.inspect({
         bytes,
         declaredMimeType: asset.props.declaredMimeType,
+        sniffedMimeType,
         allowedMimeTypes: policy.props.allowedMimeTypes,
       }),
     );
