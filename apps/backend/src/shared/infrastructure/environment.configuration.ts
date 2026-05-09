@@ -159,6 +159,23 @@ const environmentSchema = z
     CLAMAV_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
     /** Chunk size in bytes used when streaming data to ClamAV. */
     CLAMAV_CHUNK_SIZE_BYTES: z.coerce.number().int().positive().default(65_536),
+
+    /** Browser-facing tusd endpoint (e.g. http://localhost:1080/files/). When
+     *  unset, requests with `protocol: "tus"` fail with TusNotConfiguredError. */
+    TUSD_ENDPOINT_URL: z.preprocess(
+      (v) => (v === "" ? undefined : v),
+      z.string().url().optional(),
+    ),
+    /** Backend-side tusd URL for hooks. Reserved for future use; not consumed
+     *  in v1.0 but accepted to keep deploys forward-compatible. */
+    TUSD_INTERNAL_URL: z.preprocess(
+      (v) => (v === "" ? undefined : v),
+      z.string().url().optional(),
+    ),
+    /** Frequency of the orphan-intent sweep loop on the worker. */
+    ORPHAN_INTENT_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(60_000),
+    /** Time after `upload_url_expires_at` before the sweeper acts on an intent. */
+    ORPHAN_INTENT_GRACE_MS: z.coerce.number().int().nonnegative().default(300_000),
   })
   .refine(
     (data) => {
