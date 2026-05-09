@@ -47,15 +47,12 @@ export class SharpImageInspectionAdapter extends ImageInspectionPort {
       const format: string | null = metadata.format ?? null;
       const actualMimeType: string | null = format ? (FORMAT_TO_MIME[format] ?? null) : null;
 
-      if (!actualMimeType) {
-        return this.errorResult(input, startedAt, contentHash, "unrecognized_format", null, format);
-      }
-      if (!input.allowedMimeTypes.includes(actualMimeType)) {
+      if (actualMimeType !== input.sniffedMimeType) {
         return this.errorResult(
           input,
           startedAt,
           contentHash,
-          "mime_type_not_allowed",
+          "format_inconsistency",
           actualMimeType,
           format,
         );

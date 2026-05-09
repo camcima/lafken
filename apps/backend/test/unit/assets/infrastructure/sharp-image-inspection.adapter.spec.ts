@@ -20,6 +20,7 @@ describe("SharpImageInspectionAdapter", () => {
     const result = await adapter.inspect({
       bytes,
       declaredMimeType: "image/png",
+      sniffedMimeType: "image/png",
       allowedMimeTypes: ["image/png"],
     });
 
@@ -38,36 +39,13 @@ describe("SharpImageInspectionAdapter", () => {
     const result = await adapter.inspect({
       bytes: Buffer.from("not-an-image"),
       declaredMimeType: "image/png",
+      sniffedMimeType: "image/png",
       allowedMimeTypes: ["image/png"],
     });
 
     expect(result.decision).toBe("error");
     expect(result.reason).toBe("invalid_image_format");
     expect(result.actualMimeType).toBeNull();
-  });
-
-  it("rejects an actual MIME type that is not allowed by the policy", async () => {
-    const adapter = new SharpImageInspectionAdapter();
-    const bytes = await sharp({
-      create: {
-        width: 1,
-        height: 1,
-        channels: 3,
-        background: { r: 0, g: 0, b: 255 },
-      },
-    })
-      .jpeg()
-      .toBuffer();
-
-    const result = await adapter.inspect({
-      bytes,
-      declaredMimeType: "image/jpeg",
-      allowedMimeTypes: ["image/png"],
-    });
-
-    expect(result.decision).toBe("error");
-    expect(result.reason).toBe("mime_type_not_allowed");
-    expect(result.actualMimeType).toBe("image/jpeg");
   });
 
   it("rejects images that exceed the input pixel cap instead of hanging the worker", async () => {
@@ -87,10 +65,48 @@ describe("SharpImageInspectionAdapter", () => {
     const result = await adapter.inspect({
       bytes,
       declaredMimeType: "image/png",
+      sniffedMimeType: "image/png",
       allowedMimeTypes: ["image/png"],
     });
 
     expect(result.decision).toBe("error");
     expect(result.reason).toBe("invalid_image_format");
+  });
+
+  it("returns format_inconsistency when sharp's detected format does not match the sniffed MIME", async () => {
+    const adapter = new SharpImageInspectionAdapter();
+    const pngBytes = await sharp({
+      create: { width: 4, height: 4, channels: 3, background: { r: 255, g: 0, b: 0 } },
+    })
+      .png()
+      .toBuffer();
+
+    const result = await adapter.inspect({
+      bytes: pngBytes,
+      declaredMimeType: "image/png",
+      sniffedMimeType: "image/jpeg",
+      allowedMimeTypes: ["image/png", "image/jpeg"],
+    });
+
+    expect(result.decision).toBe("error");
+    expect(result.reason).toBe("format_inconsistency");
+  });
+
+  it("passes when sharp's detected format matches the sniffed MIME", async () => {
+    const adapter = new SharpImageInspectionAdapter();
+    const pngBytes = await sharp({
+      create: { width: 4, height: 4, channels: 3, background: { r: 255, g: 0, b: 0 } },
+    })
+      .png()
+      .toBuffer();
+
+    const result = await adapter.inspect({
+      bytes: pngBytes,
+      declaredMimeType: "image/png",
+      sniffedMimeType: "image/png",
+      allowedMimeTypes: ["image/png"],
+    });
+
+    expect(result.decision).toBe("pass");
   });
 });

@@ -1,6 +1,7 @@
 export interface IImageInspectionInput {
   bytes: Buffer;
   declaredMimeType: string | null;
+  sniffedMimeType: string;
   allowedMimeTypes: string[];
 }
 
