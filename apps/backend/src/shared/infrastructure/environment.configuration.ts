@@ -127,6 +127,10 @@ const environmentSchema = z
     PROCESSING_WORKER_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().positive().default(10_000),
     PROCESSING_WORKER_STALE_CLAIM_MS: z.coerce.number().int().positive().default(60_000),
     PROCESSING_WORKER_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
+    PROCESSING_WORKER_INITIAL_BACKOFF_MS: z.coerce.number().int().positive().default(1000),
+    PROCESSING_WORKER_BACKOFF_MULTIPLIER: z.coerce.number().positive().default(3),
+    PROCESSING_WORKER_MAX_BACKOFF_MS: z.coerce.number().int().positive().default(600_000),
+    PROCESSING_WORKER_WORKFLOW_TIMEOUT_MS: z.coerce.number().int().positive().default(900_000),
     PROCESSING_WORKER_SHUTDOWN_GRACE_MS: z.coerce.number().int().positive().default(30_000),
     /**
      * Forces the local virus-scan adapter to report an infected outcome.
