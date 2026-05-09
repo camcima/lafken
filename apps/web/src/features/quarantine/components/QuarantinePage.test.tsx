@@ -75,6 +75,11 @@ vi.mock("@/features/quarantine/hooks/useQuarantine", () => ({
   }),
 }));
 
+vi.mock("@/features/quarantine/hooks/useQuarantineMutations", () => ({
+  useReleaseQuarantinedAsset: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useRejectQuarantinedAsset: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 vi.mock("@tanstack/react-router", async () => {
   const actual =
     await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");

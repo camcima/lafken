@@ -60,6 +60,14 @@ vi.mock("@/features/dashboard/hooks/useDashboardOverview", () => ({
   useDashboardOverview: () => ({ data: undefined, isLoading: false }),
 }));
 
+// The feature hooks call useLafkenClient(); provide a no-op stub so the
+// component tree can mount without a real <LafkenProvider>.
+vi.mock("@lafken/react", () => ({
+  useLafkenClient: () => ({
+    assets: { get: vi.fn().mockResolvedValue(undefined) },
+  }),
+}));
+
 describe("AppShell", () => {
   it("renders LAFKEN branding and sidebar", () => {
     renderShell();
