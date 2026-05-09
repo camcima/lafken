@@ -27,6 +27,7 @@ export * from "./presentation/assets/processing-job-response.dto";
 export * from "./presentation/assets/list-assets-query.dto";
 export * from "./presentation/assets/create-upload-intent-request.dto";
 export * from "./presentation/assets/create-upload-intent-response.dto";
+export * from "./presentation/assets/refresh-upload-url-response.dto";
 export * from "./presentation/assets/confirm-upload-request.dto";
 export * from "./presentation/assets/preview-url-response.dto";
 export * from "./presentation/assets/asset-download-url-response.dto";

@@ -21,6 +21,7 @@
   "scripts": {
     "type-check": "tsc --noEmit --project tsconfig.json",
     "build": "tsc --project tsconfig.json",
+    "test": "vitest run",
     "// ============================ sytle ============================ //": "",
     "lint": "eslint \"./**/*.ts\"",
     "lint:fix": "eslint \"./**/*.ts\" --fix",
@@ -30,6 +31,9 @@
   "devDependencies": {
     "@shared/style-config": "workspace:*",
     "@shared/typescript-config": "workspace:*",
-    "tslib": "^2.8.1"
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "tslib": "^2.8.1",
+    "vitest": "^4.1.2"
   }
 }

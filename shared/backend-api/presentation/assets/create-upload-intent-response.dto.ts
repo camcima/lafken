@@ -4,6 +4,9 @@ export class CreateUploadIntentResponseDTO {
   @ApiProperty()
   publicId!: string;
 
+  @ApiProperty({ enum: ["simple", "tus"], description: "Protocol the URL is for" })
+  protocol!: "simple" | "tus";
+
   @ApiProperty()
   uploadUrl!: string;
 

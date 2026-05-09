@@ -1,7 +1,9 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsInt, IsString, Matches, Min, MinLength } from "class-validator";
+import { IsIn, IsInt, IsOptional, IsString, Matches, Min, MinLength } from "class-validator";
 
 const MIME_TYPE_PATTERN = /^[a-z]+\/[a-z0-9.+-]+$/i;
+const UPLOAD_PROTOCOLS = ["simple", "tus"] as const;
+export type UploadProtocol = (typeof UPLOAD_PROTOCOLS)[number];
 
 export class CreateUploadIntentRequestDTO {
   @IsString()
@@ -18,4 +20,13 @@ export class CreateUploadIntentRequestDTO {
   @Min(1)
   @ApiProperty({ example: 102400, minimum: 1 })
   declaredSizeBytes!: number;
+
+  @IsOptional()
+  @IsIn(UPLOAD_PROTOCOLS as unknown as string[])
+  @ApiProperty({
+    enum: UPLOAD_PROTOCOLS,
+    required: false,
+    description: "Upload protocol. Defaults to 'simple' (one-shot signed PUT).",
+  })
+  protocol?: UploadProtocol;
 }
