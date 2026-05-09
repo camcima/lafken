@@ -4,6 +4,7 @@ import type {
   AuthorizationPrincipal,
   AuthorizationResource,
 } from "@/shared/application/authorization.port";
+import { authzDecisionCounter } from "@/shared/infrastructure/telemetry/metrics";
 
 export class AllowAllAuthorizationAdapter extends AuthorizationPort {
   constructor(environment: string) {
@@ -17,9 +18,10 @@ export class AllowAllAuthorizationAdapter extends AuthorizationPort {
 
   can(
     _principal: AuthorizationPrincipal,
-    _action: AuthorizationAction,
+    action: AuthorizationAction,
     _resource: AuthorizationResource,
   ): Promise<boolean> {
+    authzDecisionCounter.add(1, { action, result: "allow" });
     return Promise.resolve(true);
   }
 }
