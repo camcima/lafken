@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProcessingRetryPolicy } from "@/assets/application/processing/processing-retry-policy";
+import { TransientProcessingError } from "@/assets/application/processing/transient-processing.error";
 import { ProcessingWorkerService } from "@/assets/application/processing/processing-worker.service";
 import type { Asset } from "@/assets/domain/entities/asset.entity";
 import type { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
@@ -34,15 +35,19 @@ describe("ProcessingWorkerService", () => {
     jobRepo = new FakeProcessingJobRepository();
     assetRepo = new FakeAssetProcessingRepository();
     processor = new FakeProcessClaimedAssetUseCase();
-    retryPolicy = new ProcessingRetryPolicy({ maxAttempts: 5, jitter: () => 0 });
+    retryPolicy = new ProcessingRetryPolicy({
+      maxAttempts: 5,
+      initialBackoffMs: 1000,
+      backoffMultiplier: 3,
+      maxBackoffMs: 600_000,
+      jitter: () => 0,
+    });
     service = new ProcessingWorkerService(
       jobRepo,
       processor,
       retryPolicy,
       assetRepo,
       new FakeAppLogger(),
-      undefined,
-      { sleep: () => Promise.resolve() },
     );
   });
 
@@ -76,48 +81,47 @@ describe("ProcessingWorkerService", () => {
     expect(jobRepo.claimCalls).toHaveLength(0);
   });
 
-  it("applies in-memory retry on transient failure", async () => {
+  it("releases the job for delayed retry after a single transient failure", async () => {
     jobRepo.claimedJobs = [makeJob(TEST_UUIDS.asset1)];
     processor.failures = 1;
+    processor.errorFactory = () => new TransientProcessingError("virus_scan", new Error("boom"));
 
     await service.tick();
     await service.drainInFlight();
 
-    expect(processor.calls).toHaveLength(2);
-    expect(jobRepo.releaseCalls).toEqual([]);
-    expect(jobRepo.failedCalls).toEqual([]);
-  });
-
-  it("releases for delayed retry after the in-memory budget", async () => {
-    jobRepo.claimedJobs = [makeJob(TEST_UUIDS.asset1)];
-    processor.failures = 4; // exceeds 3 in-memory slots
-
-    await service.tick();
-    await service.drainInFlight();
-
-    expect(processor.calls).toHaveLength(4);
+    expect(processor.calls).toHaveLength(1);
     expect(jobRepo.releaseCalls).toHaveLength(1);
-    expect(jobRepo.releaseCalls[0]?.assetId).toBe(TEST_UUIDS.asset1);
     expect(jobRepo.releaseCalls[0]?.attemptNumber).toBe(2);
     expect(jobRepo.failedCalls).toEqual([]);
   });
 
-  it("marks the job failed after the retry budget is exhausted", async () => {
-    // attemptNumber 5 with maxAttempts 5: after 3 in-memory failures, the
-    // policy returns "exhausted" because nextAttemptNumber (6) > maxAttempts (5).
+  it("marks the job failed when the retry budget is exhausted", async () => {
     jobRepo.claimedJobs = [makeJob(TEST_UUIDS.asset1, 5)];
-    processor.failures = Infinity;
+    processor.failures = 1;
+    processor.errorFactory = () => new TransientProcessingError("virus_scan", new Error("boom"));
 
     await service.tick();
     await service.drainInFlight();
 
-    // 3 in-memory failures + 1 final attempt that produces the exhaust decision.
-    expect(processor.calls).toHaveLength(4);
     expect(jobRepo.releaseCalls).toEqual([]);
     expect(jobRepo.failedCalls).toHaveLength(1);
     expect(assetRepo.transitions.at(-1)?.toState).toBe("processing_failed");
-    expect(assetRepo.transitions.at(-1)?.fromState).toBe("processing");
     expect(assetRepo.transitions.at(-1)?.reason).toBe("retry_budget_exhausted");
+  });
+
+  it("short-circuits to processing_failed for non-transient errors", async () => {
+    jobRepo.claimedJobs = [makeJob(TEST_UUIDS.asset1)];
+    processor.failures = 1;
+    processor.errorFactory = () => new Error("permanent boom");
+
+    await service.tick();
+    await service.drainInFlight();
+
+    expect(processor.calls).toHaveLength(1);
+    expect(jobRepo.releaseCalls).toEqual([]);
+    expect(jobRepo.failedCalls).toHaveLength(1);
+    expect(assetRepo.transitions.at(-1)?.toState).toBe("processing_failed");
+    expect(assetRepo.transitions.at(-1)?.reason).toBe("permanent_error");
   });
 
   describe("shutdown release", () => {
@@ -224,12 +228,13 @@ class FakeAssetProcessingRepository extends AssetProcessingRepositoryPort {
 class FakeProcessClaimedAssetUseCase {
   readonly calls: Array<{ assetId: string; workerId: string; attemptNumber: number }> = [];
   failures = 0;
+  errorFactory: (() => Error) = () => new Error("processor failure");
 
   execute(input: { assetId: string; workerId: string; attemptNumber: number }): Promise<unknown> {
     this.calls.push(input);
     if (this.failures > 0) {
       this.failures -= 1;
-      return Promise.reject(new Error("simulated transient failure"));
+      return Promise.reject(this.errorFactory());
     }
     return Promise.resolve();
   }

@@ -21,6 +21,9 @@ import { AssetsInfrastructureModule } from "./infrastructure/assets-infrastructu
       useFactory: (): ProcessingRetryPolicy =>
         new ProcessingRetryPolicy({
           maxAttempts: environmentConfiguration.PROCESSING_WORKER_MAX_ATTEMPTS,
+          initialBackoffMs: environmentConfiguration.PROCESSING_WORKER_INITIAL_BACKOFF_MS,
+          backoffMultiplier: environmentConfiguration.PROCESSING_WORKER_BACKOFF_MULTIPLIER,
+          maxBackoffMs: environmentConfiguration.PROCESSING_WORKER_MAX_BACKOFF_MS,
         }),
     },
   ],

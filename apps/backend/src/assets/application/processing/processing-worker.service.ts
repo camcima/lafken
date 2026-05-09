@@ -12,23 +12,12 @@ import { ProcessClaimedAssetUseCase } from "./process-claimed-asset.use-case";
 import { makeTransitionMetadata } from "./processing-evidence";
 import { ProcessingRetryPolicy, type RetryDecision } from "./processing-retry-policy";
 import { ReclaimStaleProcessingJobsUseCase } from "./reclaim-stale-processing-jobs.use-case";
+import { TransientProcessingError } from "./transient-processing.error";
 
 const ZERO_REMAINING_CAPACITY = 0;
-const SHUTDOWN_WAKEUP_INTERVAL_MS = 100;
-const ZERO_FAILURE_COUNT = 0;
-const FIRST_FAILURE_INCREMENT = 1;
 
 export interface IProcessClaimedAssetProcessor {
   execute(input: { assetId: string; workerId: string; attemptNumber: number }): Promise<unknown>;
-}
-
-/**
- * Optional knobs used by tests to control sleep timing without juggling fake
- * timers. Production wiring leaves them unset and the service uses the real
- * `setTimeout`.
- */
-export interface IProcessingWorkerOptions {
-  sleep?: (ms: number) => Promise<void>;
 }
 
 interface IInFlightEntry {
@@ -44,7 +33,6 @@ export class ProcessingWorkerService implements OnModuleDestroy {
   private pollTimer: NodeJS.Timeout | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private sweeperTimer: NodeJS.Timeout | null = null;
-  private readonly sleep: (ms: number) => Promise<void>;
 
   constructor(
     private readonly jobs: ProcessingJobRepositoryPort,
@@ -55,12 +43,8 @@ export class ProcessingWorkerService implements OnModuleDestroy {
     private readonly logger: AppLoggerPort,
     @Optional()
     private readonly reclaimer?: ReclaimStaleProcessingJobsUseCase,
-    @Optional()
-    @Inject("PROCESSING_WORKER_OPTIONS")
-    options?: IProcessingWorkerOptions,
   ) {
     this.logger.setContext(ProcessingWorkerService.name);
-    this.sleep = options?.sleep ?? this.defaultSleep.bind(this);
   }
 
   start(): void {
@@ -206,83 +190,52 @@ export class ProcessingWorkerService implements OnModuleDestroy {
   }
 
   private async process(assetId: string, attemptNumber: number): Promise<void> {
-    let failureCount: number = ZERO_FAILURE_COUNT;
-    for (;;) {
-      try {
-        await this.processor.execute({ assetId, workerId: this.workerId, attemptNumber });
+    try {
+      await this.processor.execute({ assetId, workerId: this.workerId, attemptNumber });
+    } catch (err) {
+      const lastError: string = err instanceof Error ? err.message : String(err);
+
+      if (!(err instanceof TransientProcessingError)) {
+        this.logger.error(
+          { assetId, attemptNumber, err: lastError },
+          "permanent processing error; marking failed without retry",
+        );
+        await this.markFailed(assetId, attemptNumber, "permanent_error", lastError);
         return;
-      } catch (err) {
-        const decision: RetryDecision = this.retryPolicy.nextRetry({
-          attemptNumber,
-          failureCountInAttempt: failureCount,
-        });
-        failureCount += FIRST_FAILURE_INCREMENT;
-        const lastError: string = err instanceof Error ? err.message : String(err);
+      }
 
-        if (decision.kind === "in_memory") {
-          this.logger.warn(
-            {
-              assetId,
-              attemptNumber,
-              failureCount,
-              delayMs: decision.delayMs,
-              err: lastError,
-            },
-            "processing step failed; retrying in-memory",
-          );
-          await this.sleep(decision.delayMs);
-          if (this.shutdownStarted) {
-            this.logger.info(
-              { assetId, attemptNumber },
-              "shutdown started during in-memory retry; aborting",
-            );
-            return;
-          }
-          continue;
-        }
-
-        if (decision.kind === "release") {
-          this.logger.warn(
-            {
-              assetId,
-              attemptNumber,
-              nextAttemptNumber: decision.nextAttemptNumber,
-              delayMs: decision.delayMs,
-              err: lastError,
-            },
-            "in-memory retries exhausted; releasing for delayed retry",
-          );
-          const notBefore: Date = new Date(Date.now() + decision.delayMs);
-          const released: boolean = await this.jobs.releaseForRetry({
-            assetId,
-            workerId: this.workerId,
-            notBefore,
-            attemptNumber: decision.nextAttemptNumber,
-            lastError,
-            now: new Date(),
-          });
-          if (!released) {
-            this.logger.warn(
-              { assetId, attemptNumber },
-              "releaseForRetry lost race; another worker may own this job",
-            );
-          }
-          return;
-        }
-
+      const decision: RetryDecision = this.retryPolicy.nextRetry({ attemptNumber });
+      if (decision.kind === "exhausted") {
         this.logger.error(
           { assetId, attemptNumber, err: lastError },
           "retry budget exhausted; marking job failed",
         );
-        await this.markExhausted(assetId, attemptNumber, lastError);
+        await this.markFailed(assetId, attemptNumber, "retry_budget_exhausted", lastError);
         return;
+      }
+
+      const notBefore: Date = new Date(Date.now() + decision.delayMs);
+      const released: boolean = await this.jobs.releaseForRetry({
+        assetId,
+        workerId: this.workerId,
+        notBefore,
+        attemptNumber: decision.nextAttemptNumber,
+        lastError,
+        now: new Date(),
+      });
+      if (!released) {
+        this.logger.warn(
+          { assetId, attemptNumber },
+          "releaseForRetry lost race; another worker may own this job",
+        );
       }
     }
   }
 
-  private async markExhausted(
+  private async markFailed(
     assetId: string,
     attemptNumber: number,
+    reason: string,
     lastError: string,
   ): Promise<void> {
     const now: Date = new Date();
@@ -290,44 +243,21 @@ export class ProcessingWorkerService implements OnModuleDestroy {
       assetId,
       fromState: "processing",
       toState: "processing_failed",
-      reason: "retry_budget_exhausted",
+      reason,
       metadata: makeTransitionMetadata({
         workerId: this.workerId,
         attemptNumber,
-        reasonCode: "retry_budget_exhausted",
+        reasonCode: reason,
       }),
       occurredBy: `worker:${this.workerId}`,
       now,
     });
     if (!transitioned) {
       this.logger.warn(
-        { assetId, attemptNumber },
-        "asset was not in 'processing' when marking exhausted; another actor moved it",
+        { assetId, attemptNumber, reason },
+        "asset was not in 'processing' when marking failed; another actor moved it",
       );
     }
-    await this.jobs.markFailed({
-      assetId,
-      workerId: this.workerId,
-      lastError,
-      now,
-    });
-  }
-
-  /**
-   * Cancellable sleep. Wakes early if shutdown begins so we don't hold the
-   * process open for the full retry delay during graceful shutdown.
-   */
-  private async defaultSleep(totalMs: number): Promise<void> {
-    const deadline: number = Date.now() + totalMs;
-    while (!this.shutdownStarted) {
-      const remaining: number = deadline - Date.now();
-      if (remaining <= 0) {
-        return;
-      }
-      const chunk: number = Math.min(remaining, SHUTDOWN_WAKEUP_INTERVAL_MS);
-      await new Promise<void>((resolve): void => {
-        setTimeout(resolve, chunk);
-      });
-    }
+    await this.jobs.markFailed({ assetId, workerId: this.workerId, lastError, now });
   }
 }
