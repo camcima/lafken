@@ -102,13 +102,17 @@ vi.mock("@/features/namespaces/hooks/useNamespaces", () => ({
   useNamespacePresets: () => ({ data: [], isLoading: false }),
 }));
 
-const mockGetDownloadUrl = vi.fn().mockResolvedValue("https://storage.example.com/blob.jpg?sig=x");
-const mockRetryAssetProcessing = vi.fn().mockResolvedValue(undefined);
+const mockGetDownloadUrl = vi
+  .fn()
+  .mockResolvedValue({ url: "https://storage.example.com/blob.jpg?sig=x" });
+const mockRetryProcessing = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/lib/lafken-client", () => ({
   getLafkenClient: () => ({
-    getDownloadUrl: mockGetDownloadUrl,
-    retryAssetProcessing: mockRetryAssetProcessing,
+    assets: {
+      getDownloadUrl: mockGetDownloadUrl,
+      retryProcessing: mockRetryProcessing,
+    },
   }),
 }));
 
@@ -149,7 +153,7 @@ describe("AssetDetailPage", () => {
   beforeEach(() => {
     mockAsset = TEST_ASSET;
     mockGetDownloadUrl.mockClear();
-    mockRetryAssetProcessing.mockClear();
+    mockRetryProcessing.mockClear();
   });
 
   it("renders the asset's public ID from BE data", () => {
@@ -188,13 +192,13 @@ describe("AssetDetailPage", () => {
     expect(screen.getByRole("button", { name: /retry processing/i })).toBeInTheDocument();
   });
 
-  it("calls the SDK retryAssetProcessing when the retry button is clicked", async () => {
+  it("calls the SDK retryProcessing when the retry button is clicked", async () => {
     mockAsset = withState("processing_failed");
     renderPage();
     const button = screen.getByRole("button", { name: /retry processing/i });
     await userEvent.click(button);
-    expect(mockRetryAssetProcessing).toHaveBeenCalledTimes(1);
-    expect(mockRetryAssetProcessing).toHaveBeenCalledWith({ id: TEST_ASSET.id });
+    expect(mockRetryProcessing).toHaveBeenCalledTimes(1);
+    expect(mockRetryProcessing).toHaveBeenCalledWith(TEST_ASSET.publicId);
   });
 
   it("renders system preset rows in the PresetsCard", () => {

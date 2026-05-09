@@ -27,7 +27,7 @@ export function ActionBar({ asset, onCopy, onToast }: IActionBarProps): React.JS
     setIsDownloading(true);
     try {
       const client = getLafkenClient();
-      const url: string = await client.getDownloadUrl({ publicId: asset.publicId });
+      const { url } = await client.assets.getDownloadUrl({ publicId: asset.publicId });
       // Open in a new tab; some browsers honour the storage object's
       // Content-Disposition for inline rendering, others trigger a download.
       // The user can then "Save as…" if needed. window.location.href would
@@ -45,7 +45,7 @@ export function ActionBar({ asset, onCopy, onToast }: IActionBarProps): React.JS
     setIsRetrying(true);
     try {
       const client = getLafkenClient();
-      await client.retryAssetProcessing({ id: asset.id });
+      await client.assets.retryProcessing(asset.publicId);
       onToast(t("pages.assetDetail.actions.toasts.retryStarted"));
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: assetsKeys.detail(asset.id) }),
