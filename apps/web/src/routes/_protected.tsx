@@ -9,7 +9,7 @@ import type { SetupStep } from "@/components/setup/types";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/layouts/AppShell";
 import { buildRedirectTarget } from "@/lib/auth/validateRedirect";
-import { healthService } from "@/services";
+import { isBackendHealthy } from "@/lib/health/health-check";
 
 export const Route = createFileRoute("/_protected")({
   component: ProtectedLayout,
@@ -43,7 +43,7 @@ function ProtectedLayout() {
       id: "health",
       message: t("setup.health"),
       run: async () => {
-        const ok = await healthService.isHealthy();
+        const ok = await isBackendHealthy();
         if (!ok) {
           return {
             type: "failure",
