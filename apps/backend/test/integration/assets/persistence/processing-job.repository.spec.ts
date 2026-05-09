@@ -89,6 +89,47 @@ describe("ProcessingJobRepository", () => {
     ).resolves.toBe(false);
   });
 
+  describe("countDueJobs", () => {
+    it("counts released and claimed jobs whose not_before has elapsed", async () => {
+      // Seed three more jobs alongside the default released-and-due one
+      // produced by `seedUploadedAssetWithJob`.
+      const futureNotBefore = new Date("2026-05-06T13:00:00.000Z");
+      const pastNotBefore = new Date("2026-05-06T11:55:00.000Z");
+
+      const otherAssetIds: string[] = [];
+      for (let i = 0; i < 3; i += 1) {
+        otherAssetIds.push(await seedUploadedAssetWithJob(db, `count-due-${i}`));
+      }
+
+      // Job 0: future not_before → not due → excluded
+      await db.connection
+        .updateTable("processing_jobs")
+        .set({ not_before: futureNotBefore, state: "released" })
+        .where("asset_id", "=", otherAssetIds[0])
+        .execute();
+      // Job 1: claimed and past not_before → due → included
+      await db.connection
+        .updateTable("processing_jobs")
+        .set({ not_before: pastNotBefore, state: "claimed", worker_id: "w-1" })
+        .where("asset_id", "=", otherAssetIds[1])
+        .execute();
+      // Job 2: completed → excluded
+      await db.connection
+        .updateTable("processing_jobs")
+        .set({ state: "completed" })
+        .where("asset_id", "=", otherAssetIds[2])
+        .execute();
+
+      const count = await repository.countDueJobs({
+        now: new Date("2026-05-06T12:00:00.000Z"),
+      });
+
+      // Default seeded job is released and due (not_before = 11:59), plus the
+      // claimed-and-due Job 1 → 2 total.
+      expect(count).toBe(2);
+    });
+  });
+
   it("releases claimed jobs for retry with backoff", async () => {
     await repository.claimAvailable({
       workerId: "worker-a",
@@ -133,18 +174,22 @@ async function cleanDatabase(db: DatabaseClient): Promise<void> {
   });
 }
 
-async function seedUploadedAssetWithJob(db: DatabaseClient): Promise<string> {
+async function seedUploadedAssetWithJob(db: DatabaseClient, suffix = "default"): Promise<string> {
   return db.connection.transaction().execute(async (tx) => {
     const binding = await tx
       .insertInto("storage_bindings")
-      .values({ name: "processing-test-binding", adapter_type: "gcs", config: { bucket: "test" } })
+      .values({
+        name: `processing-test-binding-${suffix}`,
+        adapter_type: "gcs",
+        config: { bucket: "test" },
+      })
       .returning("id")
       .executeTakeFirstOrThrow();
 
     const namespace = await tx
       .insertInto("namespaces")
       .values({
-        slug: "processing-assets",
+        slug: `processing-assets-${suffix}`,
         display_name: "Processing Assets",
         description: null,
         current_policy_id: NIL_UUID,
@@ -176,7 +221,11 @@ async function seedUploadedAssetWithJob(db: DatabaseClient): Promise<string> {
       .returning("id")
       .executeTakeFirstOrThrow();
 
-    await tx.updateTable("namespaces").set({ current_policy_id: policy.id }).execute();
+    await tx
+      .updateTable("namespaces")
+      .set({ current_policy_id: policy.id })
+      .where("id", "=", namespace.id)
+      .execute();
 
     const asset = await tx
       .insertInto("assets")
@@ -185,7 +234,7 @@ async function seedUploadedAssetWithJob(db: DatabaseClient): Promise<string> {
         policy_version_id: policy.id,
         state: "uploaded",
         storage_binding_id: binding.id,
-        storage_key: "uploads/processing-test.png",
+        storage_key: `uploads/processing-test-${suffix}.png`,
         declared_mime_type: "image/png",
         size_bytes: 42n,
         effective_max_size_bytes: 52_428_800n,

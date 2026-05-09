@@ -39,6 +39,10 @@ export interface IReleaseStaleClaimInput {
   now: Date;
 }
 
+export interface ICountDueJobsInput {
+  now: Date;
+}
+
 export abstract class ProcessingJobRepositoryPort {
   abstract claimAvailable(input: IClaimJobsInput): Promise<ProcessingJob[]>;
   abstract heartbeat(input: IHeartbeatInput): Promise<boolean>;
@@ -48,4 +52,5 @@ export abstract class ProcessingJobRepositoryPort {
   abstract markFailed(input: IMarkTerminalJobInput): Promise<boolean>;
   abstract findStaleClaims(input: IFindStaleClaimsInput): Promise<ProcessingJob[]>;
   abstract releaseStaleClaim(input: IReleaseStaleClaimInput): Promise<boolean>;
+  abstract countDueJobs(input: ICountDueJobsInput): Promise<number>;
 }

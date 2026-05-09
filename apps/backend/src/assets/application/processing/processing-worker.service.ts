@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { Inject, Injectable, type OnModuleDestroy, Optional } from "@nestjs/common";
+import type { ObservableCallback } from "@opentelemetry/api";
 
 import type { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
 import { AssetProcessingRepositoryPort } from "@/assets/domain/repositories/asset-processing.repository.port";
@@ -10,6 +11,7 @@ import { environmentConfiguration } from "@/shared/infrastructure/environment.co
 import {
   processingJobClaimedCounter,
   processingJobReleasedCounter,
+  processingQueueDepthGauge,
   processingRetryCounter,
   processingTerminalStateCounter,
   processingWorkflowTimeoutCounter,
@@ -46,6 +48,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private sweeperTimer: NodeJS.Timeout | null = null;
   private orphanSweepTimer: NodeJS.Timeout | null = null;
+  private queueDepthCallback: ObservableCallback | null = null;
   private readonly workflowTimeoutMs: number;
 
   constructor(
@@ -67,7 +70,31 @@ export class ProcessingWorkerService implements OnModuleDestroy {
       options?.workflowTimeoutMs ?? environmentConfiguration.PROCESSING_WORKER_WORKFLOW_TIMEOUT_MS;
   }
 
+  /**
+   * Wires the `lafken.processing.queue_depth` observable gauge to the
+   * `countDueJobs` repository call. The callback is registered exactly once
+   * across the lifetime of the worker, even if `start()` is invoked more than
+   * once, so we don't double-observe the gauge under restart paths.
+   */
+  registerQueueDepthCallback(): void {
+    if (this.queueDepthCallback !== null) {
+      return;
+    }
+    const callback: ObservableCallback = async (result): Promise<void> => {
+      try {
+        const depth: number = await this.jobs.countDueJobs({ now: new Date() });
+        result.observe(depth);
+      } catch (err) {
+        const message: string = err instanceof Error ? err.message : String(err);
+        this.logger.warn({ err: message }, "queue depth gauge observation failed");
+      }
+    };
+    this.queueDepthCallback = callback;
+    processingQueueDepthGauge.addCallback(callback);
+  }
+
   start(): void {
+    this.registerQueueDepthCallback();
     this.pollTimer = setInterval(
       (): void => void this.tick(),
       environmentConfiguration.PROCESSING_WORKER_POLL_INTERVAL_MS,
@@ -164,6 +191,10 @@ export class ProcessingWorkerService implements OnModuleDestroy {
     }
     if (this.orphanSweepTimer) {
       clearInterval(this.orphanSweepTimer);
+    }
+    if (this.queueDepthCallback !== null) {
+      processingQueueDepthGauge.removeCallback(this.queueDepthCallback);
+      this.queueDepthCallback = null;
     }
   }
 

@@ -359,6 +359,10 @@ class InMemoryProcessingJobRepository extends ProcessingJobRepositoryPort {
   releaseStaleClaim(): never {
     throw new Error("releaseStaleClaim is not used by ProcessClaimedAssetUseCase tests");
   }
+
+  countDueJobs(): never {
+    throw new Error("countDueJobs is not used by ProcessClaimedAssetUseCase tests");
+  }
 }
 
 class FakeImageInspection extends ImageInspectionPort {

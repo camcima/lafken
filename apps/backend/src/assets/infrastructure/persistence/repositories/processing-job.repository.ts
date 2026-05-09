@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import type { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
 import {
   type IClaimJobsInput,
+  type ICountDueJobsInput,
   type IFindStaleClaimsInput,
   type IHeartbeatInput,
   type IMarkTerminalJobInput,
@@ -129,6 +130,19 @@ export class ProcessingJobRepository extends ProcessingJobRepositoryPort {
       .limit(input.limit)
       .execute();
     return rows.map((row): ProcessingJob => ProcessingJobDbMapper.toDomain(row));
+  }
+
+  async countDueJobs(input: ICountDueJobsInput): Promise<number> {
+    // Mirrors claimAvailable's selection predicate (released or claimed jobs
+    // whose not_before has elapsed). Used for the
+    // `lafken.processing.queue_depth` observable gauge.
+    const row = await this.db.connection
+      .selectFrom("processing_jobs")
+      .select((eb) => eb.fn.countAll<string>().as("count"))
+      .where("state", "in", ["released", "claimed"])
+      .where((eb) => eb.or([eb("not_before", "is", null), eb("not_before", "<=", input.now)]))
+      .executeTakeFirstOrThrow();
+    return Number(row.count);
   }
 
   async releaseStaleClaim(input: IReleaseStaleClaimInput): Promise<boolean> {

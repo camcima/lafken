@@ -163,4 +163,8 @@ class StaleJobRepository extends ProcessingJobRepositoryPort {
     };
     return Promise.resolve(true);
   }
+
+  countDueJobs(): never {
+    throw new Error("countDueJobs is not used by stale reclaim tests");
+  }
 }

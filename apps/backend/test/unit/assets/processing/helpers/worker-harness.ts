@@ -52,6 +52,9 @@ class NoopProcessingJobRepository extends ProcessingJobRepositoryPort {
   releaseStaleClaim() {
     return Promise.resolve(true);
   }
+  countDueJobs() {
+    return Promise.resolve(0);
+  }
 }
 
 class NoopAssetProcessingRepository extends AssetProcessingRepositoryPort {

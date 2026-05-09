@@ -217,6 +217,11 @@ class FakeProcessingJobRepository extends ProcessingJobRepositoryPort {
   releaseStaleClaim(): never {
     throw new Error("releaseStaleClaim is not used by ProcessingWorkerService tests");
   }
+
+  dueJobsCount = 0;
+  countDueJobs(): Promise<number> {
+    return Promise.resolve(this.dueJobsCount);
+  }
 }
 
 class FakeAssetProcessingRepository extends AssetProcessingRepositoryPort {

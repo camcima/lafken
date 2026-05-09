@@ -110,6 +110,9 @@ class InMemoryProcessingJobRepository extends ProcessingJobRepositoryPort {
   releaseStaleClaim(): never {
     throw new Error("not used");
   }
+  countDueJobs(): never {
+    throw new Error("not used");
+  }
 }
 
 class FakeImageInspection extends ImageInspectionPort {
@@ -263,6 +266,45 @@ describe("processing worker metrics", () => {
     ).toBe(1);
   });
 
+  it("registers a queue_depth observable callback that observes countDueJobs", async () => {
+    const jobRepo = new SpyJobRepository();
+    jobRepo.dueJobsCount = 7;
+    const assetRepo = new InMemoryAssetProcessingRepository();
+    const processor = new FakeProcessor();
+    const retryPolicy = new ProcessingRetryPolicy({
+      maxAttempts: 5,
+      initialBackoffMs: 1000,
+      backoffMultiplier: 3,
+      maxBackoffMs: 600_000,
+      jitter: () => 0,
+    });
+    const service = new ProcessingWorkerService(
+      jobRepo,
+      processor,
+      retryPolicy,
+      assetRepo,
+      new FakeAppLogger(),
+      undefined,
+      { workflowTimeoutMs: 100 },
+    );
+
+    service.registerQueueDepthCallback();
+
+    // Force the periodic reader to collect; this triggers all registered
+    // observable callbacks, including the one we just registered.
+    await handle.forceFlush();
+
+    const metrics = handle.exporter.getMetrics();
+    const queueDepthMetric = metrics
+      .flatMap((batch) => batch.scopeMetrics.flatMap((scope) => scope.metrics))
+      .find((m) => m.descriptor.name === LAFKEN_METRIC_NAMES.PROCESSING_QUEUE_DEPTH);
+
+    expect(queueDepthMetric).toBeDefined();
+    expect(queueDepthMetric?.dataPoints[0]?.value).toBe(7);
+
+    service.beginShutdown();
+  });
+
   it("emits processing.retry { error_class: 'transient' } and processing.job.released { reason: 'transient_error' } on transient failure", async () => {
     const jobRepo = new SpyJobRepository();
     jobRepo.claimedJobs = [makeJob(TEST_UUIDS.asset1)];
@@ -308,6 +350,7 @@ describe("processing worker metrics", () => {
 
 class SpyJobRepository extends ProcessingJobRepositoryPort {
   claimedJobs: ProcessingJob[] = [];
+  dueJobsCount = 0;
   readonly claimCalls: IClaimJobsInput[] = [];
 
   claimAvailable(input: IClaimJobsInput): Promise<ProcessingJob[]> {
@@ -334,6 +377,9 @@ class SpyJobRepository extends ProcessingJobRepositoryPort {
   }
   releaseStaleClaim(): never {
     throw new Error("not used");
+  }
+  countDueJobs(): Promise<number> {
+    return Promise.resolve(this.dueJobsCount);
   }
 }
 
