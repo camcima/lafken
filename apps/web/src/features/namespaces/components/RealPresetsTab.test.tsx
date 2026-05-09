@@ -61,7 +61,6 @@ function makePreset(
     version,
     params: { fit: "cover", format: "webp", quality: 80, width: 1080, height: 720 },
     active: true,
-    preGenerate: false,
     createdAt: "2026-01-01T10:00:00.000Z",
     ...overrides,
   };

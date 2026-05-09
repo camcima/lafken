@@ -52,7 +52,7 @@ const samplePreset: NamespacePresetResponseDTO = {
     height: 300,
   },
   active: true,
-  preGenerate: false,
+
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
@@ -269,7 +269,7 @@ describe("EditPresetPage", () => {
       version: 1,
       params: { fit: "cover", format: "webp", quality: 60, width: 400, height: 300 },
       active: false,
-      preGenerate: false,
+    
       createdAt: "2026-01-01T00:00:00.000Z",
     };
     mockPresets = [samplePreset, v1Preset];
@@ -292,7 +292,7 @@ describe("EditPresetPage", () => {
       version: 1,
       params: { fit: "cover", format: "webp", quality: 60, width: 400, height: 300 },
       active: false,
-      preGenerate: false,
+    
       createdAt: "2026-01-01T00:00:00.000Z",
     };
     mockPresets = [samplePreset, v1Preset];
