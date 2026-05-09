@@ -4,9 +4,11 @@ Asset Management Service
 
 *Technical Specification*
 
-Version 0.3 — Draft
+Version 0.4 — Draft
 
-April 27, 2026
+May 9, 2026
+
+Supersedes v0.3 in part. The cuts and decisions applied in this revision are recorded in `docs/superpowers/specs/2026-05-09-lafken-v1-rebaseline-design.md` (design) and `docs/superpowers/plans/2026-05-09-lafken-v1-1-scope-rebaseline-plan.md` (implementation).
 
 *Lafken means* 
 
