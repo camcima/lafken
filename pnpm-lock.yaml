@@ -469,7 +469,7 @@ importers:
         specifier: 10.2.13
         version: 10.2.13(eslint@9.39.4(jiti@2.6.1))(storybook@10.3.4(@testing-library/dom@10.4.1)(prettier@3.8.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(typescript@5.9.3)
       jsdom:
-        specifier: ^28.0.0
+        specifier: ^28.1.0
         version: 28.1.0(@noble/hashes@1.8.0)
       msw:
         specifier: ^2.13.0
@@ -530,7 +530,7 @@ importers:
         specifier: workspace:*
         version: link:../upload
       '@tanstack/react-query':
-        specifier: ^5.0.0
+        specifier: ^5.96.2
         version: 5.96.2(react@19.2.4)
     devDependencies:
       '@shared/typescript-config':
@@ -543,7 +543,7 @@ importers:
         specifier: ^19.2.14
         version: 19.2.14
       jsdom:
-        specifier: ^28.0.0
+        specifier: ^28.1.0
         version: 28.1.0(@noble/hashes@1.8.0)
       react:
         specifier: ^19.2.4

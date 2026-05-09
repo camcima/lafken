@@ -26,7 +26,7 @@
   },
   "peerDependencies": {
     "react": "^19.2.4",
-    "@tanstack/react-query": "^5.0.0"
+    "@tanstack/react-query": "^5.96.2"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -40,7 +40,7 @@
     "@shared/typescript-config": "workspace:*",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.14",
-    "jsdom": "^28.0.0",
+    "jsdom": "^28.1.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "vitest": "^4.1.2"
