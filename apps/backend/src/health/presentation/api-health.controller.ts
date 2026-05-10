@@ -3,8 +3,8 @@ import { ApiOkResponse, ApiSecurity, ApiTags } from "@nestjs/swagger";
 import { HealthCheckService, HealthIndicatorService } from "@nestjs/terminus";
 import type { Response } from "express";
 
-import { DatabaseHealthIndicatorService } from "../application/services/database-health-indicator.service";
 import { HealthCheckResultResponseDTO } from "./dto/health-check-result.dto";
+import { DatabaseHealthIndicator } from "./indicators/database-health.indicator";
 import { HealthApplicationResponseMapper } from "./mappers/health-application-response.mapper";
 
 /**
@@ -21,7 +21,7 @@ export class ApiHealthController {
   constructor(
     private readonly healthIndicatorService: HealthIndicatorService,
     private readonly healthCheckService: HealthCheckService,
-    private readonly databaseHealthIndicatorService: DatabaseHealthIndicatorService,
+    private readonly databaseHealthIndicatorService: DatabaseHealthIndicator,
   ) {}
 
   @Get()

@@ -5,27 +5,23 @@ import { AppLoggerPort } from "../shared/application/app-logger.port";
 import { LoggerModule } from "../shared/infrastructure/logger/logger.module";
 import { DatabaseClient } from "../shared/infrastructure/persistence/database-client";
 import { DatabaseModule } from "../shared/infrastructure/persistence/database.module";
-import { DatabaseHealthIndicatorService } from "./application/services/database-health-indicator.service";
 import { ApiHealthController } from "./presentation/api-health.controller";
+import { DatabaseHealthIndicator } from "./presentation/indicators/database-health.indicator";
 
 @Module({
   imports: [LoggerModule, DatabaseModule, TerminusModule],
   providers: [
     {
-      provide: DatabaseHealthIndicatorService,
+      provide: DatabaseHealthIndicator,
       inject: [AppLoggerPort, DatabaseClient, HealthIndicatorService],
       useFactory: (
         appLogger: AppLoggerPort,
         databaseClient: DatabaseClient,
         healthIndicatorService: HealthIndicatorService,
       ) => {
-        appLogger.setContext(DatabaseHealthIndicatorService.name);
+        appLogger.setContext(DatabaseHealthIndicator.name);
 
-        return new DatabaseHealthIndicatorService(
-          appLogger,
-          databaseClient,
-          healthIndicatorService,
-        );
+        return new DatabaseHealthIndicator(appLogger, databaseClient, healthIndicatorService);
       },
     },
   ],

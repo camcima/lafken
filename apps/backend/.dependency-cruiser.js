@@ -6,19 +6,31 @@ module.exports = {
     // It uses a capture group `([^/]+)` for the feature name and a backreference `\\1`
     // to ensure the rule is constrained to a single feature slice.
     {
-      name: 'feature-domain-cannot-depend-on-other-layers-in-same-feature',
-      severity: 'error',
-      from: { path: '^src/([^/]+)/domain' },
-      to: { path: '^src/\\1/(application|infrastructure)' },
+      name: "feature-domain-cannot-depend-on-other-layers-in-same-feature",
+      severity: "error",
+      from: { path: "^src/([^/]+)/domain" },
+      to: { path: "^src/\\1/(application|infrastructure)" },
     },
 
     // This rule ensures the application layer of a feature
     // does not depend on the infrastructure layer of the *same* feature.
     {
-      name: 'feature-application-cannot-depend-on-infrastructure-in-same-feature',
-      severity: 'error',
-      from: { path: '^src/([^/]+)/application' },
-      to: { path: '^src/\\1/infrastructure' },
+      name: "feature-application-cannot-depend-on-infrastructure-in-same-feature",
+      severity: "error",
+      from: { path: "^src/([^/]+)/application" },
+      to: { path: "^src/\\1/infrastructure" },
+    },
+
+    // This rule forbids any application-layer file (path contains /application/)
+    // from importing directly from shared/infrastructure. Application code must
+    // define a port and have the adapter injected at the composition root.
+    {
+      name: "no-application-into-shared-infrastructure",
+      severity: "error",
+      comment:
+        "Application code must not depend on shared infrastructure. Define an application-layer port and bind the adapter at the composition root.",
+      from: { path: "/application/" },
+      to: { path: "^src/shared/infrastructure/" },
     },
 
     // OPTIONAL BUT RECOMMENDED:
@@ -26,11 +38,11 @@ module.exports = {
     // from depending on the implementation of another feature (e.g., `users/domain`).
     // Features should communicate through their public API (e.g., the feature module).
     {
-      name: 'no-cross-feature-implementation-imports',
-      severity: 'warn', // Start with 'warn' to avoid breaking builds immediately
-      from: { path: '^src/([^/]+)/(domain|application)' },
+      name: "no-cross-feature-implementation-imports",
+      severity: "warn", // Start with 'warn' to avoid breaking builds immediately
+      from: { path: "^src/([^/]+)/(domain|application)" },
       to: {
-        path: '^src/((?!\\1)[^/]+)/(domain|application)',
+        path: "^src/((?!\\1)[^/]+)/(domain|application)",
         // You can add exceptions here for shared libraries, e.g.,
         // pathNot: ['^src/shared']
       },
@@ -39,7 +51,10 @@ module.exports = {
   options: {
     // ... other options
     doNotFollow: {
-      path: 'node_modules',
+      path: "node_modules",
+    },
+    tsConfig: {
+      fileName: "tsconfig.json",
     },
   },
 };

@@ -2,12 +2,12 @@ import { HealthIndicatorService } from "@nestjs/terminus";
 import { describe, expect, it } from "vitest";
 import { mock } from "vitest-mock-extended";
 
-import { DatabaseHealthIndicatorService } from "@/health/application/services/database-health-indicator.service";
+import { DatabaseHealthIndicator } from "@/health/presentation/indicators/database-health.indicator";
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
-describe("DatabaseHealthIndicatorService", () => {
-  let service: DatabaseHealthIndicatorService;
+describe("DatabaseHealthIndicator", () => {
+  let service: DatabaseHealthIndicator;
   let loggerMock: ReturnType<typeof mock<AppLoggerPort>>;
   let databaseClientMock: ReturnType<typeof mock<DatabaseClient>>;
   let healthIndicatorServiceMock: ReturnType<typeof mock<HealthIndicatorService>>;
@@ -17,7 +17,7 @@ describe("DatabaseHealthIndicatorService", () => {
     databaseClientMock = mock<DatabaseClient>();
     healthIndicatorServiceMock = mock<HealthIndicatorService>();
 
-    service = new DatabaseHealthIndicatorService(
+    service = new DatabaseHealthIndicator(
       loggerMock,
       databaseClientMock,
       healthIndicatorServiceMock,

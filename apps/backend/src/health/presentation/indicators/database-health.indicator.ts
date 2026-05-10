@@ -3,7 +3,7 @@ import { HealthIndicatorResult, HealthIndicatorService } from "@nestjs/terminus"
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
-export class DatabaseHealthIndicatorService {
+export class DatabaseHealthIndicator {
   constructor(
     private readonly logger: AppLoggerPort,
     private readonly databaseClient: DatabaseClient,
