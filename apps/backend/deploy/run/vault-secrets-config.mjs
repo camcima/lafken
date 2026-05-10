@@ -1,6 +1,6 @@
 const env = process.env['ENV'];
 
-const projectKey = "emx-tmpl";
+const projectKey = "lafken";
 const projectName = "lafken";
 
 if (!env) {

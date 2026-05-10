@@ -9,9 +9,9 @@
 # -----------------------------------------------------------------------------
 
 ## Environment variables for the Web as defined in the `public/config.js.template` file
-set-env-vars: ENVIRONMENT=intg,AUTH_PROVIDER=msal,API_URL=https://emx-tmpl-monorepo.intg.appslatam.com/be,AZURE_CLIENT_ID=12346,AZURE_TENANT_ID=99d911b9-6dc3-401c-9398-08fc6b377b74,AZURE_REDIRECT_URI=https://emx-tmpl-monorepo.intg.appslatam.com
+set-env-vars: ENVIRONMENT=intg,AUTH_PROVIDER=oidc,API_URL=https://lafken-monorepo.intg.appslatam.com/be,OIDC_AUTHORITY=https://lafken-monorepo.intg.appslatam.com/dev-oidc,OIDC_CLIENT_ID=lafken-web,OIDC_AUDIENCE=lafken-api,OIDC_REDIRECT_URI=https://lafken-monorepo.intg.appslatam.com/auth/callback,OIDC_POST_LOGOUT_REDIRECT_URI=https://lafken-monorepo.intg.appslatam.com/auth/login,OIDC_SCOPES=openid profile email
 port: 8080
-service-account: emx-tmpl-web-sa@emx-intg-ab3d.iam.gserviceaccount.com
+service-account: lafken-web-sa@emx-intg-ab3d.iam.gserviceaccount.com
 project: emx-intg-ab3d
 region: us-east1
 cpu-boost:
@@ -23,4 +23,4 @@ execution-environment: gen2
 allow-unauthenticated:
 ingress: internal-and-cloud-load-balancing
 no-default-url:
-labels: cmdb-emx_tmpl=emx_tmpl,iac=false
+labels: cmdb-lafken=lafken,iac=false

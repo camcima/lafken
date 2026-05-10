@@ -257,6 +257,9 @@ importers:
       '@types/express':
         specifier: ^5.0.6
         version: 5.0.6
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
       '@types/opossum':
         specifier: ^8.1.9
         version: 8.1.9
@@ -287,6 +290,9 @@ importers:
       dotenv-expand:
         specifier: ^12.0.3
         version: 12.0.3
+      js-yaml:
+        specifier: ^4.1.1
+        version: 4.1.1
       kysely-codegen:
         specifier: ^0.20.0
         version: 0.20.0(kysely@0.28.16)(pg@8.20.0)(typescript@5.9.3)
@@ -444,6 +450,9 @@ importers:
       '@types/eslint-plugin-jsx-a11y':
         specifier: ^6.10.1
         version: 6.10.1(jiti@2.6.1)
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -468,6 +477,9 @@ importers:
       eslint-plugin-storybook:
         specifier: 10.2.13
         version: 10.2.13(eslint@9.39.4(jiti@2.6.1))(storybook@10.3.4(@testing-library/dom@10.4.1)(prettier@3.8.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(typescript@5.9.3)
+      js-yaml:
+        specifier: ^4.1.1
+        version: 4.1.1
       jsdom:
         specifier: ^28.1.0
         version: 28.1.0(@noble/hashes@1.8.0)
@@ -4016,6 +4028,9 @@ packages:
 
   '@types/http-errors@2.0.5':
     resolution: {integrity: sha512-r8Tayk8HJnX0FztbZN7oVqGccWgw98T/0neJphO91KkmOzug1KkofZURD4UaD5uH8AqcFLfdPErnBod0u71/qg==}
+
+  '@types/js-yaml@4.0.9':
+    resolution: {integrity: sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==}
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
@@ -12294,6 +12309,8 @@ snapshots:
 
   '@types/http-errors@2.0.5': {}
 
+  '@types/js-yaml@4.0.9': {}
+
   '@types/json-schema@7.0.15': {}
 
   '@types/jsonwebtoken@9.0.10':
@@ -12884,7 +12901,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
-      vitest: 4.1.2(@opentelemetry/api@1.9.1)(@types/node@25.3.0)(@vitest/ui@4.1.2)(jsdom@29.0.1(@noble/hashes@1.8.0))(msw@2.13.0(@types/node@25.3.0)(typescript@5.9.3))(vite@8.0.5(@types/node@25.3.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.2(@opentelemetry/api@1.9.1)(@types/node@22.19.11)(@vitest/ui@4.1.2)(jsdom@29.0.1(@noble/hashes@1.8.0))(msw@2.13.0(@types/node@22.19.11)(typescript@5.9.3))(vite@8.0.5(@types/node@22.19.11)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
 
   '@vitest/utils@3.2.4':
     dependencies:

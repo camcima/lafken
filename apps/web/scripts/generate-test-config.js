@@ -31,27 +31,16 @@ function validateUrl(value, name) {
   }
 }
 
-/**
- * Validates UUID format.
- */
-function validateUuid(value, name) {
-  if (!value) {
-    return;
-  }
-
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(value)) {
-    throw new Error(`${name} must be a valid UUID format: ${value}`);
-  }
-}
 
 // Read environment variables with defaults
 const environment = process.env.ENVIRONMENT || "intg";
-const authProvider = process.env.AUTH_PROVIDER || "mock";
-const azureClientId = process.env.AZURE_CLIENT_ID || "";
-const azureRedirectUri = process.env.AZURE_REDIRECT_URI || "";
-const azureTenantId = process.env.AZURE_TENANT_ID || "";
-const azurePostLogoutRedirectUri = process.env.AZURE_POST_LOGOUT_REDIRECT_URI || "";
+const authProvider = process.env.AUTH_PROVIDER || "oidc";
+const oidcAuthority = process.env.OIDC_AUTHORITY || "";
+const oidcClientId = process.env.OIDC_CLIENT_ID || "";
+const oidcAudience = process.env.OIDC_AUDIENCE || "";
+const oidcRedirectUri = process.env.OIDC_REDIRECT_URI || "";
+const oidcPostLogoutRedirectUri = process.env.OIDC_POST_LOGOUT_REDIRECT_URI || "";
+const oidcScopes = process.env.OIDC_SCOPES || "openid profile email";
 const monitoringUrl = process.env.MONITORING_URL || "";
 const apiUrl = process.env.API_URL || "";
 
@@ -65,30 +54,23 @@ if (!authProvider) {
 
 // Validate enum values
 validateEnum(environment, "ENVIRONMENT", ["intg", "prod"]);
-validateEnum(authProvider, "AUTH_PROVIDER", ["mock", "msal"]);
+validateEnum(authProvider, "AUTH_PROVIDER", ["oidc"]);
 
 // Validate URLs if provided
-if (azureRedirectUri) {
-  validateUrl(azureRedirectUri, "AZURE_REDIRECT_URI");
+if (oidcAuthority) {
+  validateUrl(oidcAuthority, "OIDC_AUTHORITY");
 }
-if (azurePostLogoutRedirectUri) {
-  validateUrl(azurePostLogoutRedirectUri, "AZURE_POST_LOGOUT_REDIRECT_URI");
+if (oidcRedirectUri) {
+  validateUrl(oidcRedirectUri, "OIDC_REDIRECT_URI");
+}
+if (oidcPostLogoutRedirectUri) {
+  validateUrl(oidcPostLogoutRedirectUri, "OIDC_POST_LOGOUT_REDIRECT_URI");
 }
 if (monitoringUrl) {
   validateUrl(monitoringUrl, "MONITORING_URL");
 }
 if (apiUrl) {
   validateUrl(apiUrl, "API_URL");
-}
-
-// Validate UUIDs if provided and AUTH_PROVIDER is msal
-if (authProvider === "msal") {
-  if (azureClientId) {
-    validateUuid(azureClientId, "AZURE_CLIENT_ID");
-  }
-  if (azureTenantId) {
-    validateUuid(azureTenantId, "AZURE_TENANT_ID");
-  }
 }
 
 // Read template file
@@ -100,10 +82,12 @@ const template = readFileSync(templatePath, "utf-8");
 const configJs = template
   .replace(/\$\{ENVIRONMENT:-[^}]*\}/g, environment)
   .replace(/\$\{AUTH_PROVIDER:-[^}]*\}/g, authProvider)
-  .replace(/\$\{AZURE_CLIENT_ID:-[^}]*\}/g, azureClientId)
-  .replace(/\$\{AZURE_REDIRECT_URI:-[^}]*\}/g, azureRedirectUri)
-  .replace(/\$\{AZURE_TENANT_ID:-[^}]*\}/g, azureTenantId)
-  .replace(/\$\{AZURE_POST_LOGOUT_REDIRECT_URI:-[^}]*\}/g, azurePostLogoutRedirectUri)
+  .replace(/\$\{OIDC_AUTHORITY:-[^}]*\}/g, oidcAuthority)
+  .replace(/\$\{OIDC_CLIENT_ID:-[^}]*\}/g, oidcClientId)
+  .replace(/\$\{OIDC_AUDIENCE:-[^}]*\}/g, oidcAudience)
+  .replace(/\$\{OIDC_REDIRECT_URI:-[^}]*\}/g, oidcRedirectUri)
+  .replace(/\$\{OIDC_POST_LOGOUT_REDIRECT_URI:-[^}]*\}/g, oidcPostLogoutRedirectUri)
+  .replace(/\$\{OIDC_SCOPES:-[^}]*\}/g, oidcScopes)
   .replace(/\$\{MONITORING_URL:-[^}]*\}/g, monitoringUrl)
   .replace(/\$\{API_URL:-[^}]*\}/g, apiUrl);
 

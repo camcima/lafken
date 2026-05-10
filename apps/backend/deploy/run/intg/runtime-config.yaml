@@ -9,9 +9,9 @@
 # -----------------------------------------------------------------------------
 
 ## Environment variables for the Backend as defined in the `.env` file
-set-env-vars: ENV=intg,APP_PORT=3000,NODE_ENV=production,DB_NAME=emx-tmpl-intg-pgsql-db-1-us-east1-intgab3f,DB_USER=emx-tmpl-username,DB_HOST=10.46.0.48,DB_PORT=5432,AUTH_PROVIDER=msal,AUTH_CLIENT_ID=138fb3f5-bc13-4b83-90b4-63d77b7f4e17,AUTH_TENANT_ID=99d911b9-6dc3-401c-9398-08fc6b377b74
+set-env-vars: ENV=intg,APP_PORT=3000,NODE_ENV=production,DB_NAME=lafken-intg-pgsql-db-1-us-east1-intgab3f,DB_USER=lafken-username,DB_HOST=10.46.0.48,DB_PORT=5432,AUTH_PROVIDER=oidc,OIDC_ISSUER=https://lafken-monorepo.intg.appslatam.com/dev-oidc,OIDC_AUDIENCE=lafken-api,OIDC_PRINCIPAL_CLAIM=preferred_username,OIDC_ROLES_CLAIM=roles
 port: 3000
-service-account: emx-tmpl-backend-sa@emx-intg-ab3d.iam.gserviceaccount.com
+service-account: lafken-backend-sa@emx-intg-ab3d.iam.gserviceaccount.com
 project: emx-intg-ab3d
 region: us-east1
 cpu-boost:
@@ -28,4 +28,4 @@ subnet: sub-us-east1
 vpc-egress: all-traffic
 ingress: internal-and-cloud-load-balancing
 no-allow-unauthenticated:
-labels: cmdb-emx_tmpl=emx_tmpl,iac=false
+labels: cmdb-lafken=lafken,iac=false
