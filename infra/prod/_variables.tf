@@ -11,14 +11,14 @@ variable "project_id" {
 }
 
 variable "project_key" {
-  description = "Project key from TFC variable set in kebab case format (eg, IT Asset: emx-tmpl)"
+  description = "Project key from TFC variable set in kebab case format (eg, IT Asset: lafken)"
   type        = string
 }
 
 variable "project_name" {
   description = "Monorepo repository name"
   type        = string
-  default     = "template-emantto-project"
+  default     = "lafken"
 }
 
 variable "environment" {
@@ -62,7 +62,7 @@ variable "app_role" {
 
 variable "display_name" {
   type    = string
-  default = "emx-template-emantto-monorepo-app"
+  default = "lafken-monorepo-app"
 }
 
 variable "itelement" {
@@ -82,7 +82,7 @@ variable "owners" {
 
 variable "redirect_uris" {
   type    = list(string)
-  default = ["https://emx-template-emantto.appslatam.com/", "http://localhost:5173/"]
+  default = ["https://lafken.appslatam.com/", "http://localhost:5173/"]
 }
 
 variable "tipo_aplicacion" {

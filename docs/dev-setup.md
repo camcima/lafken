@@ -23,11 +23,11 @@ pnpm lefthook install   # installs git hooks once
 
 ## Environment files
 
-| File | What for |
-| ---- | -------- |
-| `apps/backend/.env` | Backend API + worker. Copy from `apps/backend/.env.example`. |
-| `apps/backend/.env.test` | Backend integration / E2E. Copy from `apps/backend/.env.test.example`. |
-| `apps/web/.env.local` | Web app overrides. Copy only if you need to override `apps/web/.env.example`. |
+| File                     | What for                                                                      |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| `apps/backend/.env`      | Backend API + worker. Copy from `apps/backend/.env.example`.                  |
+| `apps/backend/.env.test` | Backend integration / E2E. Copy from `apps/backend/.env.test.example`.        |
+| `apps/web/.env.local`    | Web app overrides. Copy only if you need to override `apps/web/.env.example`. |
 
 `apps/web/.env.example` is committed and used as the baseline; you
 only need `.env.local` to override individual values.
@@ -62,9 +62,20 @@ docker compose -f apps/backend/docker-compose.test.yml up -d
 pnpm -F backend migrate
 ```
 
-After every migration, run `kysely-codegen` (wired into the migrate
-flow) so `apps/backend/src/shared/infrastructure/database/db.types.ts`
-stays in sync. CI fails commits where the two are out of step.
+After applying migrations, regenerate the Kysely types:
+
+```bash
+pnpm -F backend migrate
+pnpm -F backend kysely-codegen
+```
+
+For convenience there's a combined script:
+
+```bash
+pnpm -F backend db:update
+```
+
+…which runs both in sequence. CI fails commits where migrations and `apps/backend/src/shared/infrastructure/persistence/db.types.ts` are out of step.
 
 ## Run
 
@@ -94,25 +105,25 @@ prefer a single command.
 
 ## Test tiers
 
-| Command | What runs |
-| ------- | --------- |
-| `pnpm -F backend unit/test` | Pure domain + use-case tests. Fast. |
+| Command                            | What runs                                                                                                                  |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm -F backend unit/test`        | Pure domain + use-case tests. Fast.                                                                                        |
 | `pnpm -F backend integration/test` | Repository + adapter tests against real Postgres. Requires `docker compose -f apps/backend/docker-compose.test.yml up -d`. |
-| `pnpm -F backend e2e/test` | Full HTTP flow tests. Same compose dependency. |
-| `pnpm -F web test` | Web Vitest + RTL component tests. |
-| `pnpm -F web-tests test:e2e` | Playwright E2E against a built web app + local backend. |
-| `pnpm test` | Runs every project's default test command via Turborepo. |
-| `pnpm type-check` | Type-checks every workspace. |
-| `pnpm -F backend dep-check` | Dependency Cruiser — fails on layer violations. |
+| `pnpm -F backend e2e/test`         | Full HTTP flow tests. Same compose dependency.                                                                             |
+| `pnpm -F web test`                 | Web Vitest + RTL component tests.                                                                                          |
+| `pnpm -F web-tests test:e2e`       | Playwright E2E against a built web app + local backend.                                                                    |
+| `pnpm test`                        | Runs every project's default test command via Turborepo.                                                                   |
+| `pnpm type-check`                  | Type-checks every workspace.                                                                                               |
+| `pnpm -F backend dep-check`        | Dependency Cruiser — fails on layer violations.                                                                            |
 
 ## Common pitfalls
 
-| Symptom | Cause | Fix |
-| ------- | ----- | --- |
-| `ECONNREFUSED 5433` | Postgres not running. | `docker compose -f apps/backend/docker-compose.yml up -d`. |
-| `JWKS could not be parsed` | OIDC provider not running. | Start the dev OIDC container, or set `AUTH_PROVIDER=mock` for local dev. |
-| Web app shows stale config | `public/config.js` not regenerated. | Restart `pnpm -F web dev` (the Vite dev plugin regenerates on boot). |
-| `db.types.ts` is out of date | Forgot to run migrate. | `pnpm -F backend migrate`. CI fails commits where migrations and `db.types.ts` are out of sync. |
+| Symptom                      | Cause                                       | Fix                                                                                                                               |
+| ---------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `ECONNREFUSED 5433`          | Postgres not running.                       | `docker compose -f apps/backend/docker-compose.yml up -d`.                                                                        |
+| `JWKS could not be parsed`   | OIDC provider not running.                  | Start the dev OIDC container, or set `AUTH_PROVIDER=mock` for local dev.                                                          |
+| Web app shows stale config   | `public/config.js` not regenerated.         | Restart `pnpm -F web dev` (the Vite dev plugin regenerates on boot).                                                              |
+| `db.types.ts` is out of date | Forgot to regenerate types after migrating. | `pnpm -F backend db:update` (runs migrate + kysely-codegen). CI fails commits where migrations and `db.types.ts` are out of sync. |
 
 ## Next
 

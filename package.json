@@ -1,16 +1,16 @@
 {
-  "name": "template-emantto-project",
+  "name": "lafken",
   "private": true,
   "description": "",
   "license": "MIT",
   "version": "0.0.0",
-  "author": "eMantto",
+  "author": "Lafken",
   "engines": {
     "node": ">=22.0.0"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://gitlab.com/latamairlines/oper/emx/emx-tmpl/template-emantto-project.git"
+    "url": "git+https://github.com/camcima/lafken.git"
   },
   "publish": false,
   "scripts": {
@@ -22,6 +22,7 @@
     "validate:deploy": "turbo run validate:deploy",
     "syncpack:check": "syncpack lint",
     "syncpack:fix": "syncpack fix",
+    "check:no-template": "bash scripts/check-no-template.sh",
     "find-dead-code": "knip -c ./knip.jsonc --production --no-exit-code --use-tsconfig-files",
     "// ====================== commands for CI/CD ====================== //": "",
     "build": "turbo run build",

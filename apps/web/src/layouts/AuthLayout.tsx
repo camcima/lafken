@@ -18,7 +18,7 @@ export function AuthLayout({ children }: Readonly<AuthLayoutProps>) {
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-600">
               <span className="text-xl font-bold text-white">L</span>
             </div>
-            <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">LATAM eMantto</h2>
+            <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">Lafken</h2>
           </div>
 
           {/* Auth Form Content */}

@@ -36,6 +36,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"eslint.config.mjs\" --ignore-path ../../.prettierignore",
     "format-check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" --ignore-path ../../.prettierignore",
     "// ============================== db ============================== //": "",
+    "db:update": "pnpm migrate && pnpm kysely-codegen",
     "migrate": "dbmate --no-dump-schema --env DATABASE_URL up",
     "migrate:new": "dbmate --no-dump-schema --env DATABASE_URL new",
     "migrate:status": "dbmate --no-dump-schema --env DATABASE_URL status",

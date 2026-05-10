@@ -11,7 +11,7 @@ export default function Spinner() {
           width={625}
           height={1009}
           className="animate-blink h-auto w-12"
-          alt="eMantto - Latam"
+          alt="Lafken"
           loading="eager"
           decoding="async"
           fetchPriority="high"

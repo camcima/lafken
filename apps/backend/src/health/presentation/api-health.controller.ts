@@ -10,7 +10,7 @@ import { HealthApplicationResponseMapper } from "./mappers/health-application-re
 /**
  * Health endpoints are intentionally public so Cloud Run liveness/startup
  * probes and external load balancers can reach them without an auth token.
- * `@ApiSecurity({})` overrides the globally-applied `azure_ad_jwt`
+ * `@ApiSecurity({})` overrides the globally-applied `oidc_jwt`
  * requirement so the generated Cloud Endpoints spec advertises the same
  * thing that the NestJS app actually enforces.
  */

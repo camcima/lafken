@@ -1,6 +1,6 @@
 /**
  * Provider-agnostic authentication interface
- * All auth providers (MSAL, Auth0, Cognito, etc.) must implement this interface
+ * All auth providers (OIDC, mock, etc.) must implement this interface
  */
 
 /**

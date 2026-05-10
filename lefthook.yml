@@ -41,6 +41,8 @@ pre-push:
       run: pnpx turbo run type-check
     validate-deploy:
       run: pnpm validate:deploy
+    check-no-template:
+      run: pnpm check:no-template
     syncpack:
       run: pnpx syncpack lint --dependency-types prod,dev
 

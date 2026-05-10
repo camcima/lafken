@@ -1,6 +1,6 @@
-# Frontend Template Guide (eMantto)
+# Frontend Application Guidelines (Lafken)
 
-This document describes the architecture, technologies, and development guidelines for the eMantto application frontend, based on the LATAM Airlines needs.
+This document describes the architecture, technologies, and development guidelines for the Lafken application frontend.
 
 ## 🏗️ Introduction and Architectural Decisions
 

@@ -3,10 +3,8 @@
 ## Authentication and Authorization with Azure AD
 
 To implement auth in the application, we will have an `AuthModule` (`auth.module.ts`).
-It will require two environment variables:
-
-- `AUTH_TENANT_ID`
-- `AUTH_CLIENT_ID`
+For OIDC-based auth it will require the OIDC provider configuration variables defined in
+`apps/backend/src/shared/infrastructure/environment.configuration.ts`.
 
 This module is:
 
