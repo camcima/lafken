@@ -6,6 +6,7 @@ import { LegalHoldAlreadyLiftedError } from "@/legal-holds/domain/errors/legal-h
 import { LegalHoldNotFoundError } from "@/legal-holds/domain/errors/legal-hold-not-found.error";
 import { LegalHoldQueryRepositoryPort } from "@/legal-holds/domain/repositories/legal-hold-query.repository.port";
 import { LegalHoldWriteRepositoryPort } from "@/legal-holds/domain/repositories/legal-hold-write.repository.port";
+import { UnitOfWorkPort } from "@/shared/application/unit-of-work.port";
 
 export interface ILiftLegalHoldUseCaseInput {
   holdId: string;
@@ -20,6 +21,7 @@ export class LiftLegalHoldUseCase {
     private readonly queryRepo: LegalHoldQueryRepositoryPort,
     private readonly writeRepo: LegalHoldWriteRepositoryPort,
     private readonly auditWriteRepo: AuditWriteRepositoryPort,
+    private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
   async execute(input: ILiftLegalHoldUseCaseInput): Promise<LegalHold> {
@@ -33,24 +35,26 @@ export class LiftLegalHoldUseCase {
 
     const assetInternalIds = await this.queryRepo.listAssetInternalIds(input.holdId);
 
-    const lifted: LegalHold = await this.writeRepo.liftHold({
-      id: input.holdId,
-      liftedBy: input.liftedBy,
-      liftReason: input.liftReason,
-      assetInternalIds,
-    });
+    return this.unitOfWork.execute(async () => {
+      const lifted: LegalHold = await this.writeRepo.liftHold({
+        id: input.holdId,
+        liftedBy: input.liftedBy,
+        liftReason: input.liftReason,
+        assetInternalIds,
+      });
 
-    await this.auditWriteRepo.record({
-      entityType: "legal_hold",
-      entityId: lifted.props.id,
-      action: "lift",
-      occurredBy: input.liftedBy,
-      requestIp: input.requestIp,
-      reason: input.liftReason,
-      beforeState: { active: true },
-      afterState: { active: false, assetCount: assetInternalIds.length },
-    });
+      await this.auditWriteRepo.record({
+        entityType: "legal_hold",
+        entityId: lifted.props.id,
+        action: "lift",
+        occurredBy: input.liftedBy,
+        requestIp: input.requestIp,
+        reason: input.liftReason,
+        beforeState: { active: true },
+        afterState: { active: false, assetCount: assetInternalIds.length },
+      });
 
-    return lifted;
+      return lifted;
+    });
   }
 }

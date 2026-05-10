@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { Kysely, Transaction } from "kysely";
 
 import type { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
 import {
@@ -11,7 +12,9 @@ import {
   type IReleaseStaleClaimInput,
   ProcessingJobRepositoryPort,
 } from "@/assets/domain/repositories/processing-job.repository.port";
+import { ConnectionResolver } from "@/shared/infrastructure/persistence/connection-resolver";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import type { DB } from "@/shared/infrastructure/persistence/db.types";
 
 import { ProcessingJobDbMapper } from "../mappers/processing-job.db-mapper";
 
@@ -23,12 +26,18 @@ const ZERO_UPDATED_ROWS = 0n;
 
 @Injectable()
 export class ProcessingJobRepository extends ProcessingJobRepositoryPort {
-  constructor(private readonly db: DatabaseClient) {
+  constructor(
+    private readonly db: DatabaseClient,
+    private readonly resolver: ConnectionResolver,
+  ) {
     super();
   }
 
   async claimAvailable(input: IClaimJobsInput): Promise<ProcessingJob[]> {
-    const rows = await this.db.connection.transaction().execute(async (tx) => {
+    const conn = this.resolver.resolve();
+    const isAlreadyInTx = conn !== this.db.connection;
+
+    const work = async (tx: Kysely<DB> | Transaction<DB>): Promise<ProcessingJob[]> => {
       const selected = await tx
         .selectFrom("processing_jobs")
         .selectAll()
@@ -58,19 +67,25 @@ export class ProcessingJobRepository extends ProcessingJobRepositoryPort {
         .where("asset_id", "in", assetIds)
         .execute();
 
-      return tx
+      const rows = await tx
         .selectFrom("processing_jobs")
         .selectAll()
         .where("asset_id", "in", assetIds)
         .orderBy("created_at", "asc")
         .execute();
-    });
 
-    return rows.map((row): ProcessingJob => ProcessingJobDbMapper.toDomain(row));
+      return rows.map((row): ProcessingJob => ProcessingJobDbMapper.toDomain(row));
+    };
+
+    if (isAlreadyInTx) {
+      return work(conn);
+    }
+    return this.db.connection.transaction().execute(work);
   }
 
   async heartbeat(input: IHeartbeatInput): Promise<boolean> {
-    const result = await this.db.connection
+    const result = await this.resolver
+      .resolve()
       .updateTable("processing_jobs")
       .set({ heartbeat_at: input.now })
       .where("asset_id", "=", input.assetId)
@@ -81,7 +96,8 @@ export class ProcessingJobRepository extends ProcessingJobRepositoryPort {
   }
 
   async updateCurrentStep(input: IHeartbeatInput & { currentStep: string }): Promise<boolean> {
-    const result = await this.db.connection
+    const result = await this.resolver
+      .resolve()
       .updateTable("processing_jobs")
       .set({ current_step: input.currentStep, heartbeat_at: input.now })
       .where("asset_id", "=", input.assetId)
@@ -92,7 +108,8 @@ export class ProcessingJobRepository extends ProcessingJobRepositoryPort {
   }
 
   async releaseForRetry(input: IReleaseForRetryInput): Promise<boolean> {
-    const result = await this.db.connection
+    const result = await this.resolver
+      .resolve()
       .updateTable("processing_jobs")
       .set({
         state: "released",
@@ -121,7 +138,8 @@ export class ProcessingJobRepository extends ProcessingJobRepositoryPort {
   }
 
   async findStaleClaims(input: IFindStaleClaimsInput): Promise<ProcessingJob[]> {
-    const rows = await this.db.connection
+    const rows = await this.resolver
+      .resolve()
       .selectFrom("processing_jobs")
       .selectAll()
       .where("state", "=", "claimed")
@@ -136,7 +154,8 @@ export class ProcessingJobRepository extends ProcessingJobRepositoryPort {
     // Mirrors claimAvailable's selection predicate (released or claimed jobs
     // whose not_before has elapsed). Used for the
     // `lafken.processing.queue_depth` observable gauge.
-    const row = await this.db.connection
+    const row = await this.resolver
+      .resolve()
       .selectFrom("processing_jobs")
       .select((eb) => eb.fn.countAll<string>().as("count"))
       .where("state", "in", ["released", "claimed"])
@@ -146,7 +165,8 @@ export class ProcessingJobRepository extends ProcessingJobRepositoryPort {
   }
 
   async releaseStaleClaim(input: IReleaseStaleClaimInput): Promise<boolean> {
-    const result = await this.db.connection
+    const result = await this.resolver
+      .resolve()
       .updateTable("processing_jobs")
       .set({
         state: "released",
@@ -166,7 +186,8 @@ export class ProcessingJobRepository extends ProcessingJobRepositoryPort {
   }
 
   private async markTerminal(input: IMarkTerminalJobInput, state: string): Promise<boolean> {
-    const result = await this.db.connection
+    const result = await this.resolver
+      .resolve()
       .updateTable("processing_jobs")
       .set({
         state,

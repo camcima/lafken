@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { NamespaceQueryRepository } from "@/namespaces/infrastructure/persistence/repositories/namespace-query.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { createConnectionResolver } from "../../helpers/create-connection-resolver";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 describe("NamespaceQueryRepository", () => {
@@ -11,7 +12,7 @@ describe("NamespaceQueryRepository", () => {
 
   beforeAll(async () => {
     db = await createTestDatabaseClient();
-    repository = new NamespaceQueryRepository(db);
+    repository = new NamespaceQueryRepository(db, createConnectionResolver(db));
   });
 
   beforeEach(async () => {

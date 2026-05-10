@@ -7,6 +7,7 @@ import { LegalHoldNotFoundError } from "@/legal-holds/domain/errors/legal-hold-n
 
 import { FakeLegalHoldQueryRepository } from "../../../__fakes__/fake-legal-hold-query.repository";
 import { FakeLegalHoldWriteRepository } from "../../../__fakes__/fake-legal-hold-write.repository";
+import { FakeUnitOfWork } from "../../../__fakes__/fake-unit-of-work";
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 
@@ -38,7 +39,7 @@ describe("LiftLegalHoldUseCase", () => {
     queryRepo = new FakeLegalHoldQueryRepository();
     writeRepo = new FakeLegalHoldWriteRepository();
     auditRepo = new InMemoryAuditWriteRepository();
-    useCase = new LiftLegalHoldUseCase(queryRepo, writeRepo, auditRepo);
+    useCase = new LiftLegalHoldUseCase(queryRepo, writeRepo, auditRepo, new FakeUnitOfWork());
   });
 
   it("lifts a hold and forwards the covered internal ids to the write repo", async () => {

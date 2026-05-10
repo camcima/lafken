@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { Kysely, Transaction } from "kysely";
 
 import type { Asset } from "@/assets/domain/entities/asset.entity";
 import {
@@ -12,7 +13,9 @@ import {
 import type { AssetState } from "@/assets/domain/value-objects/asset-state.value-object";
 import type { NamespacePolicy } from "@/namespaces/domain/entities/namespace-policy.entity";
 import { NamespacePolicyDbMapper } from "@/namespaces/infrastructure/persistence/mappers/namespace-policy.db-mapper";
+import { ConnectionResolver } from "@/shared/infrastructure/persistence/connection-resolver";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import type { DB } from "@/shared/infrastructure/persistence/db.types";
 
 import { AssetDbMapper } from "../mappers/asset.db-mapper";
 
@@ -24,12 +27,17 @@ const ZERO_UPDATED_ROWS = 0n;
 
 @Injectable()
 export class AssetProcessingRepository extends AssetProcessingRepositoryPort {
-  constructor(private readonly db: DatabaseClient) {
+  constructor(
+    private readonly db: DatabaseClient,
+    private readonly resolver: ConnectionResolver,
+  ) {
     super();
   }
 
   async findAssetWithPolicy(assetId: string): Promise<IAssetWithPolicy | null> {
-    const assetRow = await this.db.connection
+    const conn = this.resolver.resolve();
+
+    const assetRow = await conn
       .selectFrom("assets")
       .selectAll()
       .where("id", "=", assetId)
@@ -39,7 +47,7 @@ export class AssetProcessingRepository extends AssetProcessingRepositoryPort {
       return null;
     }
 
-    const policyRow = await this.db.connection
+    const policyRow = await conn
       .selectFrom("namespace_policies")
       .selectAll()
       .where("id", "=", assetRow.policy_version_id)
@@ -55,7 +63,10 @@ export class AssetProcessingRepository extends AssetProcessingRepositoryPort {
   }
 
   async transitionAsset(input: ITransitionAssetInput): Promise<boolean> {
-    return this.db.connection.transaction().execute(async (tx): Promise<boolean> => {
+    const conn = this.resolver.resolve();
+    const isAlreadyInTx = conn !== this.db.connection;
+
+    const work = async (tx: Kysely<DB> | Transaction<DB>): Promise<boolean> => {
       const updateValues: {
         state: AssetState;
         state_reason: string;
@@ -94,11 +105,17 @@ export class AssetProcessingRepository extends AssetProcessingRepositoryPort {
         .execute();
 
       return true;
-    });
+    };
+
+    if (isAlreadyInTx) {
+      return work(conn);
+    }
+    return this.db.connection.transaction().execute(work);
   }
 
   async recordAnalysis(input: IRecordAnalysisInput): Promise<void> {
-    await this.db.connection
+    await this.resolver
+      .resolve()
       .insertInto("asset_analyses")
       .values({
         asset_id: input.assetId,
@@ -112,7 +129,8 @@ export class AssetProcessingRepository extends AssetProcessingRepositoryPort {
   }
 
   async updateDerivedMetadata(input: IUpdateDerivedMetadataInput): Promise<void> {
-    await this.db.connection
+    await this.resolver
+      .resolve()
       .updateTable("assets")
       .set({
         mime_type: input.mimeType,
@@ -137,7 +155,10 @@ export class AssetProcessingRepository extends AssetProcessingRepositoryPort {
    * transition leaves the job row untouched.
    */
   async restartProcessing(input: IRestartProcessingInput): Promise<boolean> {
-    return this.db.connection.transaction().execute(async (tx): Promise<boolean> => {
+    const conn = this.resolver.resolve();
+    const isAlreadyInTx = conn !== this.db.connection;
+
+    const work = async (tx: Kysely<DB> | Transaction<DB>): Promise<boolean> => {
       const updated = await tx
         .updateTable("assets")
         .set({
@@ -196,7 +217,12 @@ export class AssetProcessingRepository extends AssetProcessingRepositoryPort {
         .execute();
 
       return true;
-    });
+    };
+
+    if (isAlreadyInTx) {
+      return work(conn);
+    }
+    return this.db.connection.transaction().execute(work);
   }
 
   private hasUpdatedRows(result: IUpdateResultLike): boolean {

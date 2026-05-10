@@ -2,6 +2,8 @@ import { Module } from "@nestjs/common";
 
 import { AuditInfrastructureModule } from "@/audit/infrastructure/audit-infrastructure.module";
 import { NamespacesInfrastructureModule } from "@/namespaces/infrastructure/namespaces-infrastructure.module";
+import { DatabaseModule } from "@/shared/infrastructure/persistence/database.module";
+import { TelemetryModule } from "@/shared/infrastructure/telemetry/telemetry.module";
 import { SystemInfrastructureModule } from "@/system/infrastructure/system-infrastructure.module";
 
 import { ConfirmUploadUseCase } from "./application/use-cases/confirm-upload.use-case";
@@ -20,6 +22,8 @@ import { AssetsController } from "./presentation/controllers/assets.controller";
 
 @Module({
   imports: [
+    DatabaseModule,
+    TelemetryModule,
     AssetsInfrastructureModule,
     NamespacesInfrastructureModule,
     SystemInfrastructureModule,

@@ -1,6 +1,8 @@
 import { DynamicModule, Module } from "@nestjs/common";
 import { mock } from "vitest-mock-extended";
 
+import { UnitOfWorkPort } from "../../src/shared/application/unit-of-work.port";
+import { ConnectionResolver } from "../../src/shared/infrastructure/persistence/connection-resolver";
 import { DatabaseAsyncLocalStorage } from "../../src/shared/infrastructure/persistence/database-async-local-storage";
 import { DatabaseClient } from "../../src/shared/infrastructure/persistence/database-client";
 import { DatabaseUnitOfWork } from "../../src/shared/infrastructure/persistence/database-unit-of-work";
@@ -20,13 +22,31 @@ import { DatabaseUnitOfWork } from "../../src/shared/infrastructure/persistence/
       },
     },
     {
+      provide: UnitOfWorkPort,
+      useFactory: () => {
+        return mock<UnitOfWorkPort>();
+      },
+    },
+    {
       provide: DatabaseAsyncLocalStorage,
       useFactory: () => {
         return mock<DatabaseAsyncLocalStorage>();
       },
     },
+    {
+      provide: ConnectionResolver,
+      useFactory: () => {
+        return mock<ConnectionResolver>();
+      },
+    },
   ],
-  exports: [DatabaseClient, DatabaseUnitOfWork, DatabaseAsyncLocalStorage],
+  exports: [
+    DatabaseClient,
+    DatabaseUnitOfWork,
+    UnitOfWorkPort,
+    DatabaseAsyncLocalStorage,
+    ConnectionResolver,
+  ],
 })
 export class NoopDatabaseModuleMock {
   /**

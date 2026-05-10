@@ -8,6 +8,7 @@ import {
   NamespacePage,
   NamespaceQueryRepositoryPort,
 } from "@/namespaces/domain/repositories/namespace-query.repository.port";
+import { ConnectionResolver } from "@/shared/infrastructure/persistence/connection-resolver";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
 import { NamespacePolicyDbMapper } from "../mappers/namespace-policy.db-mapper";
@@ -16,7 +17,10 @@ import { NamespaceDbMapper } from "../mappers/namespace.db-mapper";
 
 @Injectable()
 export class NamespaceQueryRepository implements NamespaceQueryRepositoryPort {
-  constructor(private readonly db: DatabaseClient) {}
+  constructor(
+    private readonly db: DatabaseClient,
+    private readonly resolver: ConnectionResolver,
+  ) {}
 
   async list(input: ListNamespacesInput): Promise<NamespacePage> {
     const offset = (input.page - 1) * input.limit;
@@ -89,7 +93,8 @@ export class NamespaceQueryRepository implements NamespaceQueryRepositoryPort {
   }
 
   async findStorageBindingName(storageBindingId: string): Promise<string | null> {
-    const row = await this.db.connection
+    const row = await this.resolver
+      .resolve()
       .selectFrom("storage_bindings")
       .select("name")
       .where("id", "=", storageBindingId)
@@ -98,7 +103,8 @@ export class NamespaceQueryRepository implements NamespaceQueryRepositoryPort {
   }
 
   async findCurrentPolicyVersion(namespaceId: string): Promise<number | null> {
-    const row = await this.db.connection
+    const row = await this.resolver
+      .resolve()
       .selectFrom("namespaces as n")
       .innerJoin("namespace_policies as p", "p.id", "n.current_policy_id")
       .select("p.version")

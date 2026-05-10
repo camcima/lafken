@@ -5,14 +5,14 @@ import {
   type IRecordAuditInput,
 } from "@/audit/domain/repositories/audit-write.repository.port";
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
-import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import { ConnectionResolver } from "@/shared/infrastructure/persistence/connection-resolver";
 
 // Best-effort writer: failures are logged but never thrown so a transient audit
 // issue can't roll back the business mutation that already committed.
 @Injectable()
 export class AuditWriteRepository extends AuditWriteRepositoryPort {
   constructor(
-    private readonly db: DatabaseClient,
+    private readonly resolver: ConnectionResolver,
     private readonly logger: AppLoggerPort,
   ) {
     super();
@@ -21,7 +21,8 @@ export class AuditWriteRepository extends AuditWriteRepositoryPort {
 
   async record(input: IRecordAuditInput): Promise<void> {
     try {
-      await this.db.connection
+      await this.resolver
+        .resolve()
         .insertInto("configuration_audit_log")
         .values({
           entity_type: input.entityType,

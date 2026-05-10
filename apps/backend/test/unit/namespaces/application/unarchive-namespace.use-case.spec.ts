@@ -5,6 +5,7 @@ import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
+import { FakeUnitOfWork } from "../../../__fakes__/fake-unit-of-work";
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
@@ -34,7 +35,7 @@ describe("UnarchiveNamespaceUseCase", () => {
     queryRepo = new InMemoryNamespaceQueryRepository();
     writeRepo = new InMemoryNamespaceWriteRepository();
     auditRepo = new InMemoryAuditWriteRepository();
-    useCase = new UnarchiveNamespaceUseCase(queryRepo, writeRepo, auditRepo);
+    useCase = new UnarchiveNamespaceUseCase(queryRepo, writeRepo, auditRepo, new FakeUnitOfWork());
   });
 
   it("unarchives an archived namespace and returns it with archivedAt === null", async () => {

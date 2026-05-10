@@ -6,6 +6,7 @@ import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import { NamespaceWriteRepositoryPort } from "@/namespaces/domain/repositories/namespace-write.repository.port";
+import { UnitOfWorkPort } from "@/shared/application/unit-of-work.port";
 
 const AUDIT_FALLBACK_PRINCIPAL = "system";
 
@@ -21,6 +22,7 @@ export class ArchiveNamespaceUseCase {
     private readonly queryRepository: NamespaceQueryRepositoryPort,
     private readonly writeRepository: NamespaceWriteRepositoryPort,
     private readonly auditWriteRepo: AuditWriteRepositoryPort,
+    private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
   async execute(input: IArchiveNamespaceInput): Promise<NamespaceWithMetadata> {
@@ -30,26 +32,35 @@ export class ArchiveNamespaceUseCase {
     }
 
     const wasArchived: boolean = existing.props.archivedAt !== null;
-    const namespace: Namespace = wasArchived
-      ? existing
-      : await this.writeRepository.archive(input.slug);
 
     const [storageBindingName, currentPolicyVersion] = await Promise.all([
-      this.queryRepository.findStorageBindingName(namespace.props.storageBindingId),
-      this.queryRepository.findCurrentPolicyVersion(namespace.props.id),
+      this.queryRepository.findStorageBindingName(existing.props.storageBindingId),
+      this.queryRepository.findCurrentPolicyVersion(existing.props.id),
     ]);
 
-    if (!wasArchived) {
+    if (wasArchived) {
+      return {
+        namespace: existing,
+        storageBindingName: storageBindingName ?? "unknown",
+        currentPolicyVersion: currentPolicyVersion ?? 0,
+      };
+    }
+
+    const namespace: Namespace = await this.unitOfWork.execute(async () => {
+      const archived = await this.writeRepository.archive(input.slug);
+
       await this.auditWriteRepo.record({
         entityType: "namespace",
-        entityId: namespace.props.slug.value,
+        entityId: archived.props.slug.value,
         action: "archive",
         occurredBy: input.occurredBy ?? AUDIT_FALLBACK_PRINCIPAL,
         requestIp: input.requestIp,
         beforeState: { archivedAt: null },
-        afterState: { archivedAt: namespace.props.archivedAt?.toISOString() ?? null },
+        afterState: { archivedAt: archived.props.archivedAt?.toISOString() ?? null },
       });
-    }
+
+      return archived;
+    });
 
     return {
       namespace,

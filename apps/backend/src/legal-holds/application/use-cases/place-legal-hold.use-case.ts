@@ -6,6 +6,7 @@ import type { LegalHold } from "@/legal-holds/domain/entities/legal-hold.entity"
 import { AssetsNotFoundForLegalHoldError } from "@/legal-holds/domain/errors/assets-not-found-for-legal-hold.error";
 import { EmptyAssetSelectionError } from "@/legal-holds/domain/errors/empty-asset-selection.error";
 import { LegalHoldWriteRepositoryPort } from "@/legal-holds/domain/repositories/legal-hold-write.repository.port";
+import { UnitOfWorkPort } from "@/shared/application/unit-of-work.port";
 
 const MAX_NAMESPACE_SLUGS_IN_SUMMARY = 3;
 
@@ -23,6 +24,7 @@ export class PlaceLegalHoldUseCase {
     private readonly assetQueryRepo: AssetQueryRepositoryPort,
     private readonly writeRepo: LegalHoldWriteRepositoryPort,
     private readonly auditWriteRepo: AuditWriteRepositoryPort,
+    private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
   async execute(input: IPlaceLegalHoldUseCaseInput): Promise<LegalHold> {
@@ -45,28 +47,30 @@ export class PlaceLegalHoldUseCase {
       namespaceSlugs: resolved.map((resolution) => resolution.namespaceSlug),
     });
 
-    const hold: LegalHold = await this.writeRepo.placeHold({
-      caseReference: input.caseReference,
-      description: input.description,
-      scopeSummary,
-      placedBy: input.placedBy,
-      assetInternalIds: resolved.map((resolution) => resolution.id),
-    });
+    return this.unitOfWork.execute(async () => {
+      const hold: LegalHold = await this.writeRepo.placeHold({
+        caseReference: input.caseReference,
+        description: input.description,
+        scopeSummary,
+        placedBy: input.placedBy,
+        assetInternalIds: resolved.map((resolution) => resolution.id),
+      });
 
-    await this.auditWriteRepo.record({
-      entityType: "legal_hold",
-      entityId: hold.props.id,
-      action: "place",
-      occurredBy: input.placedBy,
-      requestIp: input.requestIp,
-      afterState: {
-        caseReference: hold.props.caseReference,
-        scopeSummary: hold.props.scopeSummary,
-        assetCount: resolved.length,
-      },
-    });
+      await this.auditWriteRepo.record({
+        entityType: "legal_hold",
+        entityId: hold.props.id,
+        action: "place",
+        occurredBy: input.placedBy,
+        requestIp: input.requestIp,
+        afterState: {
+          caseReference: hold.props.caseReference,
+          scopeSummary: hold.props.scopeSummary,
+          assetCount: resolved.length,
+        },
+      });
 
-    return hold;
+      return hold;
+    });
   }
 }
 

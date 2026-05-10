@@ -5,6 +5,7 @@ import { LegalHoldQueryRepository } from "@/legal-holds/infrastructure/persisten
 import { LegalHoldWriteRepository } from "@/legal-holds/infrastructure/persistence/repositories/legal-hold-write.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { createConnectionResolver } from "../../helpers/create-connection-resolver";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
@@ -21,7 +22,7 @@ describe("LegalHoldWriteRepository", () => {
 
   beforeAll(async () => {
     db = await createTestDatabaseClient();
-    writeRepo = new LegalHoldWriteRepository(db);
+    writeRepo = new LegalHoldWriteRepository(db, createConnectionResolver(db));
     queryRepo = new LegalHoldQueryRepository(db);
   });
 

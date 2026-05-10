@@ -8,10 +8,10 @@ import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-que
 import { AssetWriteRepositoryPort } from "@/assets/domain/repositories/asset-write.repository.port";
 import { UploadIntentWriteRepositoryPort } from "@/assets/domain/repositories/upload-intent-write.repository.port";
 import { AssetStoragePort } from "@/assets/domain/services/asset-storage.service.port";
-import type { UploadProtocol } from "@/assets/domain/services/upload-url-issuer.service.port";
 import { AuditWriteRepositoryPort } from "@/audit/domain/repositories/audit-write.repository.port";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
-import { uploadConfirmedCounter } from "@/shared/infrastructure/telemetry/metrics";
+import { MetricsPort } from "@/shared/application/metrics.port";
+import { UnitOfWorkPort } from "@/shared/application/unit-of-work.port";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 3600;
@@ -35,6 +35,8 @@ export class ConfirmUploadUseCase {
     private readonly storageBindingQueryRepo: StorageBindingQueryRepositoryPort,
     private readonly assetQueryRepo: AssetQueryRepositoryPort,
     private readonly auditWriteRepo: AuditWriteRepositoryPort,
+    private readonly metrics: MetricsPort,
+    private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
   async execute(input: IConfirmUploadInput): Promise<Asset> {
@@ -87,55 +89,52 @@ export class ConfirmUploadUseCase {
       );
     }
 
-    const asset: Asset = await this.assetWriteRepo.createUploadedAsset({
-      publicId: intent.props.publicId,
-      namespaceId: intent.props.namespaceId,
-      policyVersionId: intent.props.policyVersionId,
-      storageBindingId: intent.props.storageBindingId,
-      storageKey: intent.props.storageKey,
-      declaredMimeType: intent.props.declaredMimeType,
-      declaredSizeBytes: intent.props.declaredSizeBytes,
-      uploadedBy: input.uploadedBy,
-      effectiveMaxSizeBytes: policy.props.maxFileSizeBytes,
-      effectiveUrlTtl: policy.props.signedUrlTtlSeconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS,
-      intentId: intent.props.id,
-      width: input.width ?? null,
-      height: input.height ?? null,
-    });
-
+    // Resolve the namespace slug before entering the UoW block so the read
+    // runs on the default connection (the namespace already exists).
     const namespaceSlug =
-      (await this.assetQueryRepo.findNamespaceSlug(asset.props.namespaceId)) ?? null;
+      (await this.assetQueryRepo.findNamespaceSlug(intent.props.namespaceId)) ?? null;
 
-    await this.auditWriteRepo.record({
-      entityType: "asset",
-      entityId: asset.props.publicId,
-      action: "create",
-      occurredBy: input.uploadedBy ?? AUDIT_FALLBACK_PRINCIPAL,
-      requestIp: input.requestIp,
-      afterState: {
-        namespace: namespaceSlug,
-        storageKey: asset.props.storageKey,
-        declaredMimeType: asset.props.declaredMimeType,
-        sizeBytes: asset.props.sizeBytes !== null ? String(asset.props.sizeBytes) : null,
-      },
+    const asset: Asset = await this.unitOfWork.execute(async () => {
+      const created: Asset = await this.assetWriteRepo.createUploadedAsset({
+        publicId: intent.props.publicId,
+        namespaceId: intent.props.namespaceId,
+        policyVersionId: intent.props.policyVersionId,
+        storageBindingId: intent.props.storageBindingId,
+        storageKey: intent.props.storageKey,
+        declaredMimeType: intent.props.declaredMimeType,
+        declaredSizeBytes: intent.props.declaredSizeBytes,
+        uploadedBy: input.uploadedBy,
+        effectiveMaxSizeBytes: policy.props.maxFileSizeBytes,
+        effectiveUrlTtl: policy.props.signedUrlTtlSeconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS,
+        intentId: intent.props.id,
+        width: input.width ?? null,
+        height: input.height ?? null,
+      });
+
+      await this.auditWriteRepo.record({
+        entityType: "asset",
+        entityId: created.props.publicId,
+        action: "create",
+        occurredBy: input.uploadedBy ?? AUDIT_FALLBACK_PRINCIPAL,
+        requestIp: input.requestIp,
+        afterState: {
+          namespace: namespaceSlug,
+          storageKey: created.props.storageKey,
+          declaredMimeType: created.props.declaredMimeType,
+          sizeBytes: created.props.sizeBytes !== null ? String(created.props.sizeBytes) : null,
+        },
+      });
+
+      return created;
     });
 
     if (namespaceSlug !== null) {
-      uploadConfirmedCounter.add(1, {
-        namespace_slug: namespaceSlug,
-        protocol: deriveIntentProtocol(intent.props.uploadUrl),
+      this.metrics.recordUploadConfirmed({
+        namespaceSlug,
+        state: asset.props.state,
       });
     }
 
     return asset;
   }
-}
-
-/**
- * Derives the upload protocol from the persisted intent URL. Mirrors the
- * heuristic in `RefreshUploadUrlUseCase` — GCS V4-signed URLs always include
- * "X-Goog-Signature"; tusd resource URLs do not.
- */
-function deriveIntentProtocol(uploadUrl: string): UploadProtocol {
-  return uploadUrl.includes("X-Goog-Signature") ? "simple" : "tus";
 }

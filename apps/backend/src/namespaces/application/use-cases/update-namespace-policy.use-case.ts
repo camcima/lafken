@@ -10,6 +10,7 @@ import type {
   ICreatePolicyVersionResult,
 } from "@/namespaces/domain/repositories/namespace-write.repository.port";
 import { NamespaceWriteRepositoryPort } from "@/namespaces/domain/repositories/namespace-write.repository.port";
+import { UnitOfWorkPort } from "@/shared/application/unit-of-work.port";
 
 const RETRY_LIMIT = 1;
 const AUDIT_FALLBACK_PRINCIPAL = "system";
@@ -27,6 +28,7 @@ export class UpdateNamespacePolicyUseCase {
     private readonly queryRepository: NamespaceQueryRepositoryPort,
     private readonly writeRepository: NamespaceWriteRepositoryPort,
     private readonly auditWriteRepo: AuditWriteRepositoryPort,
+    private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
   async execute(input: IUpdateNamespacePolicyInput): Promise<ICreatePolicyVersionResult> {
@@ -45,20 +47,23 @@ export class UpdateNamespacePolicyUseCase {
     let lastError: PolicyVersionConflictError | null = null;
     for (let attempt = 0; attempt <= RETRY_LIMIT; attempt += 1) {
       try {
-        const result: ICreatePolicyVersionResult = await this.writeRepository.createPolicyVersion({
-          namespaceId: namespace.props.id,
-          policy: input.policy,
-          createdBy: input.createdBy,
-        });
-        await this.auditWriteRepo.record({
-          entityType: "namespace_policy",
-          entityId: namespace.props.slug.value,
-          action: "update",
-          occurredBy: input.createdBy ?? AUDIT_FALLBACK_PRINCIPAL,
-          requestIp: input.requestIp,
-          beforeState: beforeVersion === null ? null : { version: beforeVersion },
-          // Version-only diff — the full policy payload contains bigint values that don't serialize to jsonb.
-          afterState: { version: result.newPolicyVersion },
+        const result: ICreatePolicyVersionResult = await this.unitOfWork.execute(async () => {
+          const created = await this.writeRepository.createPolicyVersion({
+            namespaceId: namespace.props.id,
+            policy: input.policy,
+            createdBy: input.createdBy,
+          });
+          await this.auditWriteRepo.record({
+            entityType: "namespace_policy",
+            entityId: namespace.props.slug.value,
+            action: "update",
+            occurredBy: input.createdBy ?? AUDIT_FALLBACK_PRINCIPAL,
+            requestIp: input.requestIp,
+            beforeState: beforeVersion === null ? null : { version: beforeVersion },
+            // Version-only diff — the full policy payload contains bigint values that don't serialize to jsonb.
+            afterState: { version: created.newPolicyVersion },
+          });
+          return created;
         });
         return result;
       } catch (err) {
