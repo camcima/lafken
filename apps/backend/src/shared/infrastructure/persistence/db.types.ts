@@ -103,7 +103,9 @@ export interface ConfigurationAuditLog {
 export interface LegalHoldAssets {
   added_at: Generated<Timestamp>;
   asset_id: string;
+  created_at: Generated<Timestamp>;
   legal_hold_id: string;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface LegalHolds {
