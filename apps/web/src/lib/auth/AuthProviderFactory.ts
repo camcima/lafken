@@ -1,6 +1,8 @@
 /**
  * Auth Provider Factory
  * Creates the appropriate auth provider based on configuration.
+ * Lafken supports OIDC only; the legacy mock provider was removed because
+ * dev environments use the local dev-oidc container.
  */
 import { getRuntimeValue } from "@/config/app-config";
 import { logger } from "@/lib/logger";
@@ -10,21 +12,6 @@ import { getOIDCConfig } from "./config/oidc-config";
 import type { IAuthProvider } from "./interface/IAuthProvider";
 
 /**
- * Supported authentication provider identifiers.
- */
-export type AuthProviderType = "oidc" | "mock" | undefined | (string & {});
-
-/**
- * Auth provider factory configuration.
- */
-export interface AuthProviderFactoryConfig {
-  /** The type of auth provider to create */
-  providerType: AuthProviderType;
-  /** Additional provider-specific configuration */
-  config?: Record<string, unknown>;
-}
-
-/**
  * Singleton promise — caching the promise (not just the result) prevents
  * concurrent callers from each creating their own instance, which is
  * critical under React Strict Mode where effects double-fire.
@@ -32,34 +19,13 @@ export interface AuthProviderFactoryConfig {
 let authProviderPromise: Promise<IAuthProvider> | null = null;
 
 /**
- * Creates an auth provider based on configuration.
- * @param config Factory configuration
- * @returns The configured auth provider instance
+ * Creates an OIDC auth provider.
+ * @returns The configured OIDCAuthAdapter instance
  */
-export const createAuthProvider = async (
-  config: AuthProviderFactoryConfig,
-): Promise<IAuthProvider> => {
-  const { providerType } = config;
-
-  logger.info(`Creating auth provider: ${providerType}`);
-
-  if (providerType === "oidc" || !providerType) {
-    const oidcConfig = getOIDCConfig();
-    return new OIDCAuthAdapter(oidcConfig);
-  }
-
-  if (providerType === "mock") {
-    if (import.meta.env.MODE === "production") {
-      throw new Error(
-        "Mock auth provider is not allowed in production builds. " +
-          "This indicates a misconfigured AUTH_PROVIDER environment variable.",
-      );
-    }
-    const { MockAuthAdapter } = await import("@/mocks/MockAuthAdapter");
-    return new MockAuthAdapter();
-  }
-
-  throw new Error(`Unknown auth provider type: ${providerType}`);
+export const createAuthProvider = (): Promise<IAuthProvider> => {
+  logger.info("Creating auth provider: oidc");
+  const oidcConfig = getOIDCConfig();
+  return Promise.resolve(new OIDCAuthAdapter(oidcConfig));
 };
 
 /**
@@ -72,7 +38,7 @@ export const getAuthProvider = async (): Promise<IAuthProvider> => {
       const providerType = getRuntimeValue("AUTH_PROVIDER");
       logger.info(`Initializing auth provider: ${providerType}`);
 
-      return createAuthProvider({ providerType });
+      return createAuthProvider();
     })();
   }
 

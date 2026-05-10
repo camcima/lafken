@@ -42,8 +42,6 @@ export const LAFKEN_METRIC_NAMES = {
   SERVING_PREVIEW_URL_ISSUED: "lafken.serving.preview_url.issued",
   SERVING_PREVIEW_URL_DURATION: "lafken.serving.preview_url.duration",
   SERVING_DOWNLOAD_URL_ISSUED: "lafken.serving.download_url.issued",
-  // Authorization
-  AUTHZ_DECISION: "lafken.authz.decision",
   // API (also emitted by nestjs-otel http instrumentation)
   API_REQUEST_DURATION: "lafken.api.request.duration",
 } as const;
@@ -118,12 +116,6 @@ export const previewUrlDurationHistogram: Histogram = meter.createHistogram(
 export const downloadUrlIssuedCounter: Counter = meter.createCounter(
   LAFKEN_METRIC_NAMES.SERVING_DOWNLOAD_URL_ISSUED,
   { description: "Number of signed download URLs minted" },
-);
-
-// Authorization
-export const authzDecisionCounter: Counter = meter.createCounter(
-  LAFKEN_METRIC_NAMES.AUTHZ_DECISION,
-  { description: "Authorization decisions (with action, result)" },
 );
 
 // API

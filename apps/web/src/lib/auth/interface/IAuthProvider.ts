@@ -109,7 +109,7 @@ export interface IAuthProvider {
 
   /**
    * Gets the provider name/type
-   * @returns The provider identifier (e.g., 'msal', 'auth0', 'cognito')
+   * @returns The provider identifier (e.g., 'oidc', 'mock')
    */
   getProviderName(): string;
 

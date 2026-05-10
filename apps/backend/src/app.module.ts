@@ -17,7 +17,6 @@ import { LegalHoldsModule } from "./legal-holds/legal-holds.module";
 import { NamespacesModule } from "./namespaces/namespaces.module";
 import { QuarantineModule } from "./quarantine/quarantine.module";
 import { AppLoggerPort } from "./shared/application/app-logger.port";
-import { AuthorizationModule } from "./shared/infrastructure/authorization/authorization.module";
 import { environmentConfiguration } from "./shared/infrastructure/environment.configuration";
 import { LoggerModule } from "./shared/infrastructure/logger/logger.module";
 import { isDatabaseError } from "./shared/infrastructure/persistence/database-error";
@@ -59,7 +58,6 @@ function appErrorBody(exception: DomainError | ValidationError, status: number):
     TelemetryModule,
     HealthModule,
     AuthModule,
-    AuthorizationModule,
     NamespacesModule,
     AssetsModule,
     QuarantineModule,

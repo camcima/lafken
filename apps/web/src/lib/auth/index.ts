@@ -13,12 +13,7 @@ export type {
 } from "./interface/IAuthProvider";
 
 // Factory
-export {
-  getAuthProvider,
-  resetAuthProvider,
-  setAuthProvider,
-  type AuthProviderType,
-} from "./AuthProviderFactory";
+export { getAuthProvider, resetAuthProvider, setAuthProvider } from "./AuthProviderFactory";
 
 // Config (for manual setup if needed)
 export * from "./config";

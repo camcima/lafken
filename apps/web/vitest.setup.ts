@@ -5,7 +5,7 @@ import "@testing-library/jest-dom";
 Object.defineProperty(globalThis, "__APP_CONFIG__", {
   value: Object.freeze({
     ENVIRONMENT: "intg",
-    AUTH_PROVIDER: "mock",
+    AUTH_PROVIDER: "oidc",
     API_URL: "http://localhost:3001",
     OIDC_AUTHORITY: "",
     OIDC_CLIENT_ID: "",

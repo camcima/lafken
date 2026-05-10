@@ -9,9 +9,9 @@ process.env.DB_PORT = "5432";
 process.env.DB_USER = "";
 process.env.DB_NAME = "";
 process.env.DB_PASSWORD = "";
-process.env.AUTH_PROVIDER = "mock";
-process.env.AUTH_TENANT_ID = "no-op";
-process.env.AUTH_CLIENT_ID = "no-op";
+process.env.AUTH_PROVIDER = "oidc";
+process.env.OIDC_ISSUER = "http://localhost:8095";
+process.env.OIDC_AUDIENCE = "lafken-api";
 
 import fs from "node:fs";
 import path from "node:path";

@@ -29,17 +29,17 @@ At container startup, `entrypoint.sh` runs `envsubst` on `public/config.js.templ
 
 **Runtime** (`__APP_CONFIG__` via `.env.local` in dev, environment in prod):
 
-| Variable                         | Required  | Description                |
-| -------------------------------- | --------- | -------------------------- |
-| `ENVIRONMENT`                    | Yes       | `intg` or `prod`           |
-| `AUTH_PROVIDER`                  | Yes       | `mock` or `oidc`           |
-| `API_URL`                        | Yes       | Backend API URL            |
-| `MONITORING_URL`                 | No        | Grafana Faro collector URL |
-| `OIDC_AUTHORITY`                 | OIDC only | OIDC issuer URL            |
-| `OIDC_CLIENT_ID`                 | OIDC only | OIDC client ID             |
-| `OIDC_AUDIENCE`                  | OIDC only | API audience               |
-| `OIDC_REDIRECT_URI`              | OIDC only | OAuth redirect URI         |
-| `AZURE_POST_LOGOUT_REDIRECT_URI` | MSAL only | Post-logout redirect URI   |
+| Variable                        | Required  | Description                |
+| ------------------------------- | --------- | -------------------------- |
+| `ENVIRONMENT`                   | Yes       | `intg` or `prod`           |
+| `AUTH_PROVIDER`                 | Yes       | `oidc`                     |
+| `API_URL`                       | Yes       | Backend API URL            |
+| `MONITORING_URL`                | No        | Grafana Faro collector URL |
+| `OIDC_AUTHORITY`                | OIDC only | OIDC issuer URL            |
+| `OIDC_CLIENT_ID`                | OIDC only | OIDC client ID             |
+| `OIDC_AUDIENCE`                 | OIDC only | API audience               |
+| `OIDC_REDIRECT_URI`             | OIDC only | OAuth redirect URI         |
+| `OIDC_POST_LOGOUT_REDIRECT_URI` | OIDC only | Post-logout redirect URI   |
 
 See [`app-config.ts`](./src/config/app-config.ts) for the Zod schema and validation.
 
@@ -225,7 +225,7 @@ pnpm test:e2e --debug
 - Verify Web is running: `curl http://localhost:4173`
 - Check Web build: `pnpm -F web build`
 
-**Error**: `Mock authentication not working`
+**Error**: `Authentication not working`
 
-- Verify `VITE_AUTH_PROVIDER=mock` is set in `.env.local` (mock auth is
-  intended for local development and the smoke suite only)
+- Verify `VITE_AUTH_PROVIDER=oidc` is set in `.env.local` and that the
+  dev-oidc container is running (`docker compose up -d dev-oidc`)
