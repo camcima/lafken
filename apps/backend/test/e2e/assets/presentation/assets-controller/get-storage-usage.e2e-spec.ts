@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
@@ -130,7 +131,7 @@ describe.skip("[E2E] GET /v1/assets/storage-usage", () => {
     const response = await request(app.getHttpServer())
       .get("/v1/assets/storage-usage")
       .query({ namespaceSlug: "usage-empty" })
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -149,7 +150,7 @@ describe.skip("[E2E] GET /v1/assets/storage-usage", () => {
     const response = await request(app.getHttpServer())
       .get("/v1/assets/storage-usage")
       .query({ namespaceSlug: "usage-filled" })
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -163,7 +164,7 @@ describe.skip("[E2E] GET /v1/assets/storage-usage", () => {
     const response = await request(app.getHttpServer())
       .get("/v1/assets/storage-usage")
       .query({ namespaceSlug: "no-such-namespace" })
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(404);
     expect(response.headers["content-type"]).toMatch(/application\/problem\+json/);
@@ -174,7 +175,7 @@ describe.skip("[E2E] GET /v1/assets/storage-usage", () => {
   it("returns 422 when the namespaceSlug query parameter is missing", async () => {
     const response = await request(app.getHttpServer())
       .get("/v1/assets/storage-usage")
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(422);
     expect(response.headers["content-type"]).toMatch(/application\/problem\+json/);

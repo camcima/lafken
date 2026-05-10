@@ -1,4 +1,4 @@
-import { type APIRequestContext, type Page, expect, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 
 const REQUIRES_FAKE_GCS = process.env.LAFKEN_E2E_REQUIRES_FAKE_GCS === "true";
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:3000";
@@ -16,10 +16,7 @@ async function signInIfNeeded(page: Page): Promise<void> {
  * Seeds a storage binding via the BE API directly.
  * Returns the created binding's ID.
  */
-async function seedStorageBinding(
-  request: APIRequestContext,
-  name: string,
-): Promise<string> {
+async function seedStorageBinding(request: APIRequestContext, name: string): Promise<string> {
   const response = await request.post(`${BACKEND_URL}/system/storage-bindings`, {
     data: {
       name,
@@ -67,29 +64,19 @@ async function seedNamespace(
 /**
  * Archives a namespace via the BE API for cleanup.
  */
-async function deleteNamespace(
-  request: APIRequestContext,
-  slug: string,
-): Promise<void> {
-  await request
-    .post(`${BACKEND_URL}/namespaces/${slug}/archive`)
-    .catch(() => undefined);
+async function deleteNamespace(request: APIRequestContext, slug: string): Promise<void> {
+  await request.post(`${BACKEND_URL}/namespaces/${slug}/archive`).catch(() => undefined);
 }
 
 /**
  * Deletes a storage binding via the BE API for cleanup.
  */
-async function deleteStorageBinding(
-  request: APIRequestContext,
-  name: string,
-): Promise<void> {
-  await request
-    .delete(`${BACKEND_URL}/system/storage-bindings/${name}`)
-    .catch(() => undefined);
+async function deleteStorageBinding(request: APIRequestContext, name: string): Promise<void> {
+  await request.delete(`${BACKEND_URL}/system/storage-bindings/${name}`).catch(() => undefined);
 }
 
 test.describe("Namespace policy editing @requires-fake-gcs", () => {
-  test.beforeEach(async () => {
+  test.beforeEach(() => {
     test.skip(
       !REQUIRES_FAKE_GCS,
       "Set LAFKEN_E2E_REQUIRES_FAKE_GCS=true with the backend + fake-gcs running.",
@@ -100,8 +87,8 @@ test.describe("Namespace policy editing @requires-fake-gcs", () => {
     page,
     request,
   }) => {
-    const bindingName = `e2e-binding-policy-${Date.now()}`;
-    const namespaceSlug = `e2e-ns-policy-${Date.now()}`;
+    const bindingName = `e2e-binding-policy-${String(Date.now())}`;
+    const namespaceSlug = `e2e-ns-policy-${String(Date.now())}`;
 
     let bindingId: string | undefined;
 

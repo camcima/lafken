@@ -4,7 +4,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 describe("[E2E] GET /v1/namespaces", () => {
   let app: INestApplication;
@@ -22,30 +24,13 @@ describe("[E2E] GET /v1/namespaces", () => {
   });
 
   beforeEach(async () => {
-    // Clean the namespace-related tables before each test so data from other
-    // test runs does not interfere. Uses a transaction to handle the
-    // DEFERRABLE FK: namespaces.current_policy_id → namespace_policies.
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      // Delete policies first (deferred FK namespaces.current_policy_id checked at commit).
-      // Namespaces must be deleted after policies to satisfy the RESTRICT FK
-      // namespace_policies.namespace_id → namespaces.id.
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-    });
+    await truncateAllAssetTables(db);
   });
 
   it("returns an empty paginated response when there are no namespaces", async () => {
     const response = await request(app.getHttpServer())
       .get("/v1/namespaces")
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({
@@ -60,7 +45,7 @@ describe("[E2E] GET /v1/namespaces", () => {
   it("returns RFC 9457 404 for an unknown slug", async () => {
     const response = await request(app.getHttpServer())
       .get("/v1/namespaces/missing-slug")
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(404);
     expect(response.headers["content-type"]).toContain("application/problem+json");

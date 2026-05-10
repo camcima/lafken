@@ -1,5 +1,26 @@
 name: lafken-backend-test
 services:
+  dev-oidc:
+    image: ghcr.io/camcima/dev-oidc:0.3.1
+    restart: unless-stopped
+    volumes:
+      - ./dev-oidc.config.json:/config/config.json:ro
+      - dev_oidc_test_data:/data
+    ports:
+      - "8095:8095"
+    environment:
+      # Browser-side issuer. The backend process also resolves
+      # http://localhost:8095 by going through the host's published port,
+      # which keeps the JWT `iss` claim consistent for both sides.
+      DEV_OIDC_PUBLIC_URL: http://localhost:8095
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "wget -q -O- http://127.0.0.1:8095/.well-known/openid-configuration > /dev/null || exit 1"
+      interval: 5s
+      timeout: 2s
+      retries: 10
+
   postgres-e2e:
     image: postgres:18-alpine
     restart: unless-stopped
@@ -76,3 +97,6 @@ services:
       timeout: 5s
       retries: 30
       start_period: 60s
+
+volumes:
+  dev_oidc_test_data:

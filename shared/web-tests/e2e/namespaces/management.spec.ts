@@ -1,12 +1,11 @@
-import { type APIRequestContext, type Page, expect, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 
 const REQUIRES_FAKE_GCS = process.env.LAFKEN_E2E_REQUIRES_FAKE_GCS === "true";
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:3000";
 
 /**
- * Drives the mock-auth login flow if the SPA redirected to /auth/login.
- * Under AUTH_PROVIDER=mock the welcome screen still requires an explicit
- * "Sign in" click; after that the mock provider authenticates immediately.
+ * Handles the login flow if the SPA redirected to /auth/login.
+ * Clicks "Sign in" on the login page to initiate the OIDC flow.
  */
 async function signInIfNeeded(page: Page): Promise<void> {
   if (/\/auth\/login/.test(page.url())) {
@@ -24,10 +23,7 @@ async function gotoNamespacesPage(page: Page): Promise<void> {
  * Seeds a storage binding via the BE API directly, bypassing the UI.
  * Returns the created binding's ID.
  */
-async function seedStorageBinding(
-  request: APIRequestContext,
-  name: string,
-): Promise<string> {
+async function seedStorageBinding(request: APIRequestContext, name: string): Promise<string> {
   const response = await request.post(`${BACKEND_URL}/system/storage-bindings`, {
     data: {
       name,
@@ -78,30 +74,20 @@ async function seedNamespace(
  * Deletes a namespace via the BE API for cleanup.
  * No-ops if the namespace does not exist (404).
  */
-async function deleteNamespace(
-  request: APIRequestContext,
-  slug: string,
-): Promise<void> {
+async function deleteNamespace(request: APIRequestContext, slug: string): Promise<void> {
   // Best-effort cleanup — archive then ignore errors
-  await request
-    .post(`${BACKEND_URL}/namespaces/${slug}/archive`)
-    .catch(() => undefined);
+  await request.post(`${BACKEND_URL}/namespaces/${slug}/archive`).catch(() => undefined);
 }
 
 /**
  * Deletes a storage binding via the BE API for cleanup.
  */
-async function deleteStorageBinding(
-  request: APIRequestContext,
-  name: string,
-): Promise<void> {
-  await request
-    .delete(`${BACKEND_URL}/system/storage-bindings/${name}`)
-    .catch(() => undefined);
+async function deleteStorageBinding(request: APIRequestContext, name: string): Promise<void> {
+  await request.delete(`${BACKEND_URL}/system/storage-bindings/${name}`).catch(() => undefined);
 }
 
 test.describe("Namespace management @requires-fake-gcs", () => {
-  test.beforeEach(async () => {
+  test.beforeEach(() => {
     test.skip(
       !REQUIRES_FAKE_GCS,
       "Set LAFKEN_E2E_REQUIRES_FAKE_GCS=true with the backend + fake-gcs running.",
@@ -112,8 +98,8 @@ test.describe("Namespace management @requires-fake-gcs", () => {
     page,
     request,
   }) => {
-    const bindingName = `e2e-binding-create-${Date.now()}`;
-    const namespaceSlug = `e2e-ns-create-${Date.now()}`;
+    const bindingName = `e2e-binding-create-${String(Date.now())}`;
+    const namespaceSlug = `e2e-ns-create-${String(Date.now())}`;
 
     let bindingId: string | undefined;
 
@@ -147,13 +133,10 @@ test.describe("Namespace management @requires-fake-gcs", () => {
     }
   });
 
-  test("operator can edit namespace metadata via the drawer", async ({
-    page,
-    request,
-  }) => {
-    const bindingName = `e2e-binding-edit-${Date.now()}`;
-    const namespaceSlug = `e2e-ns-edit-${Date.now()}`;
-    const updatedDisplayName = `Updated Display Name ${Date.now()}`;
+  test("operator can edit namespace metadata via the drawer", async ({ page, request }) => {
+    const bindingName = `e2e-binding-edit-${String(Date.now())}`;
+    const namespaceSlug = `e2e-ns-edit-${String(Date.now())}`;
+    const updatedDisplayName = `Updated Display Name ${String(Date.now())}`;
 
     let bindingId: string | undefined;
 
@@ -187,12 +170,9 @@ test.describe("Namespace management @requires-fake-gcs", () => {
     }
   });
 
-  test("operator can archive and then unarchive a namespace", async ({
-    page,
-    request,
-  }) => {
-    const bindingName = `e2e-binding-archive-${Date.now()}`;
-    const namespaceSlug = `e2e-ns-archive-${Date.now()}`;
+  test("operator can archive and then unarchive a namespace", async ({ page, request }) => {
+    const bindingName = `e2e-binding-archive-${String(Date.now())}`;
+    const namespaceSlug = `e2e-ns-archive-${String(Date.now())}`;
 
     let bindingId: string | undefined;
 
@@ -221,7 +201,7 @@ test.describe("Namespace management @requires-fake-gcs", () => {
       await page.getByRole("button", { name: /confirm/i }).click();
 
       // Assert the archived badge is gone
-      await expect(page.getByText(/archived/i)).not.toBeVisible();
+      await expect(page.getByText(/archived/i)).toBeHidden();
     } finally {
       // Namespace was unarchived; delete it (archive then clean up binding)
       await deleteNamespace(request, namespaceSlug);

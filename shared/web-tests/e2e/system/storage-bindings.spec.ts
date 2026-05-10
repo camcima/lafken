@@ -1,11 +1,10 @@
-import { type Page, expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 const REQUIRES_FAKE_GCS = process.env.LAFKEN_E2E_REQUIRES_FAKE_GCS === "true";
 
 /**
- * Drives the mock-auth login flow if the SPA redirected to /auth/login.
- * Under AUTH_PROVIDER=mock the welcome screen still requires an explicit
- * "Sign in" click; after that the mock provider authenticates immediately.
+ * Handles the login flow if the SPA redirected to /auth/login.
+ * Clicks "Sign in" on the login page to initiate the OIDC flow.
  */
 async function signInIfNeeded(page: Page): Promise<void> {
   if (/\/auth\/login/.test(page.url())) {
@@ -34,7 +33,7 @@ async function createBindingViaUi(
 }
 
 test.describe("Storage bindings @requires-fake-gcs", () => {
-  test.beforeEach(async () => {
+  test.beforeEach(() => {
     test.skip(
       !REQUIRES_FAKE_GCS,
       "Set LAFKEN_E2E_REQUIRES_FAKE_GCS=true with the backend + fake-gcs running.",
@@ -83,6 +82,6 @@ test.describe("Storage bindings @requires-fake-gcs", () => {
       .click();
     await page.getByRole("button", { name: /^delete$/i }).click();
 
-    await expect(page.getByText("e2e-to-delete")).not.toBeVisible();
+    await expect(page.getByText("e2e-to-delete")).toBeHidden();
   });
 });

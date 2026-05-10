@@ -10,8 +10,10 @@ import { AssetsProcessingWorkerModule } from "@/assets/assets-processing-worker.
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { NoopApplicationWithErrorLoggerMock } from "../../../../__mocks__/noop-app-logger.service";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 // This suite requires fake-gcs because it uploads bytes through a signed URL
 // and the processing use case reads those bytes back through the GCS adapter.
@@ -19,7 +21,9 @@ import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-fact
 const GATE = process.env["LAFKEN_E2E_REQUIRES_FAKE_GCS"] === "true";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
-const AUTH_HEADERS = { Authorization: "Bearer test-token" };
+const getAuthHeaders = async () => ({
+  Authorization: `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`,
+});
 const PNG_WIDTH = 4;
 const PNG_HEIGHT = 5;
 const VALID_DB_POLICY_VALUES = {
@@ -67,19 +71,7 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
 
     const [bindingRow] = await db.connection
       .insertInto("storage_bindings")
@@ -109,7 +101,7 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
 
     const uploadIntent = await request(app.getHttpServer())
       .post("/v1/assets/upload-intents")
-      .set(AUTH_HEADERS)
+      .set(await getAuthHeaders())
       .send({
         namespaceSlug: "aircraft-photos",
         declaredMimeType: "image/png",
@@ -126,7 +118,7 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
 
     await request(app.getHttpServer())
       .post(`/v1/assets/${uploadIntent.body.publicId}/confirm`)
-      .set(AUTH_HEADERS)
+      .set(await getAuthHeaders())
       .send({})
       .expect(200);
 
@@ -161,7 +153,7 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
 
     const asset = await request(app.getHttpServer())
       .get(`/v1/assets/${assetRow.id}`)
-      .set(AUTH_HEADERS)
+      .set(await getAuthHeaders())
       .expect(200);
 
     expect(asset.body.state).toBe("ready");
@@ -172,7 +164,7 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
 
     const transitions = await request(app.getHttpServer())
       .get(`/v1/assets/${assetRow.id}/state-transitions`)
-      .set(AUTH_HEADERS)
+      .set(await getAuthHeaders())
       .expect(200);
     const transitionBody = transitions.body as Array<{
       toState: string;
@@ -195,7 +187,7 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
 
     const analyses = await request(app.getHttpServer())
       .get(`/v1/assets/${assetRow.id}/analyses`)
-      .set(AUTH_HEADERS)
+      .set(await getAuthHeaders())
       .expect(200);
     const analysisBody = analyses.body as Array<{ analyzer: string }>;
 
@@ -226,7 +218,7 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
 
     const uploadIntent = await request(app.getHttpServer())
       .post("/v1/assets/upload-intents")
-      .set(AUTH_HEADERS)
+      .set(await getAuthHeaders())
       .send({
         namespaceSlug: "jpeg-only-namespace",
         declaredMimeType: "image/jpeg",
@@ -243,7 +235,7 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
 
     await request(app.getHttpServer())
       .post(`/v1/assets/${uploadIntent.body.publicId}/confirm`)
-      .set(AUTH_HEADERS)
+      .set(await getAuthHeaders())
       .send({})
       .expect(200);
 
@@ -278,7 +270,7 @@ describe.skipIf(!GATE)("[E2E] asset processing pipeline (fake-gcs gate)", () => 
 
     const asset = await request(app.getHttpServer())
       .get(`/v1/assets/${assetRow.id}`)
-      .set(AUTH_HEADERS)
+      .set(await getAuthHeaders())
       .expect(200);
 
     expect(asset.body.state).toBe("rejected");

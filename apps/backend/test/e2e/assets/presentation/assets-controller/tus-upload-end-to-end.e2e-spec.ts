@@ -23,7 +23,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 // eslint-disable-next-line no-process-env
 const GATE = process.env["LAFKEN_E2E_REQUIRES_TUSD"] === "true";
@@ -73,19 +75,7 @@ describe.skipIf(!GATE)("[E2E] tus upload end-to-end (real stack gate)", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
 
     const [bindingRow] = await db.connection
       .insertInto("storage_bindings")
@@ -143,7 +133,7 @@ describe.skipIf(!GATE)("[E2E] tus upload end-to-end (real stack gate)", () => {
     // Step 1: Create upload intent with protocol: "tus"
     const intentResponse = await request(app.getHttpServer())
       .post("/v1/assets/upload-intents")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({
         namespaceSlug: "tus-e2e-ns",
         declaredMimeType: "image/jpeg",
@@ -199,7 +189,7 @@ describe.skipIf(!GATE)("[E2E] tus upload end-to-end (real stack gate)", () => {
     // Step 4: Confirm the upload via the backend
     const confirmResponse = await request(app.getHttpServer())
       .post(`/v1/assets/${publicId}/confirm`)
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(confirmResponse.status).toBe(200);
     expect(confirmResponse.body).toMatchObject({

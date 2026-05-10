@@ -3,9 +3,10 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
-import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 // This suite requires fake-gcs to be running because confirm-upload must round-trip
 // a real PUT to the signed URL and then call objectExists against fake-gcs.
@@ -50,19 +51,7 @@ describe.skipIf(!GATE)("[E2E] POST /v1/assets/:publicId/confirm (fake-gcs gate)"
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
 
     const [bindingRow] = await db.connection
       .insertInto("storage_bindings")
@@ -119,7 +108,7 @@ describe.skipIf(!GATE)("[E2E] POST /v1/assets/:publicId/confirm (fake-gcs gate)"
   ): Promise<{ publicId: string; uploadUrl: string; uploadHeaders: Record<string, string> }> {
     const response = await request(app.getHttpServer())
       .post("/v1/assets/upload-intents")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({
         namespaceSlug,
         declaredMimeType: "image/jpeg",
@@ -150,7 +139,7 @@ describe.skipIf(!GATE)("[E2E] POST /v1/assets/:publicId/confirm (fake-gcs gate)"
     // Confirm the upload
     const confirmResponse = await request(app.getHttpServer())
       .post(`/v1/assets/${publicId}/confirm`)
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(confirmResponse.status).toBe(200);
     expect(confirmResponse.body).toMatchObject({
@@ -200,7 +189,7 @@ describe.skipIf(!GATE)("[E2E] POST /v1/assets/:publicId/confirm (fake-gcs gate)"
 
     const confirmResponse = await request(app.getHttpServer())
       .post(`/v1/assets/${publicId}/confirm`)
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({ width: 256, height: 256 });
 
     expect(confirmResponse.status).toBe(200);
@@ -221,7 +210,7 @@ describe.skipIf(!GATE)("[E2E] POST /v1/assets/:publicId/confirm (fake-gcs gate)"
   it("returns RFC 9457 404 when public ID does not match any upload intent", async () => {
     const response = await request(app.getHttpServer())
       .post("/v1/assets/ffffffff-ffff-ffff-ffff-ffffffffffff/confirm")
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(404);
     expect(response.headers["content-type"]).toMatch(/application\/problem\+json/);
@@ -239,7 +228,7 @@ describe.skipIf(!GATE)("[E2E] POST /v1/assets/:publicId/confirm (fake-gcs gate)"
 
     const confirmResponse = await request(app.getHttpServer())
       .post(`/v1/assets/${publicId}/confirm`)
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(confirmResponse.status).toBe(422);
     expect(confirmResponse.headers["content-type"]).toMatch(/application\/problem\+json/);
@@ -262,7 +251,7 @@ describe.skipIf(!GATE)("[E2E] POST /v1/assets/:publicId/confirm (fake-gcs gate)"
     // First confirm
     const first = await request(app.getHttpServer())
       .post(`/v1/assets/${publicId}/confirm`)
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(first.status).toBe(200);
     expect(first.body.publicId).toBe(publicId);
@@ -270,7 +259,7 @@ describe.skipIf(!GATE)("[E2E] POST /v1/assets/:publicId/confirm (fake-gcs gate)"
     // Second confirm
     const second = await request(app.getHttpServer())
       .post(`/v1/assets/${publicId}/confirm`)
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(second.status).toBe(200);
     expect(second.body.publicId).toBe(publicId);
@@ -288,8 +277,7 @@ describe.skipIf(!GATE)("[E2E] POST /v1/assets/:publicId/confirm (fake-gcs gate)"
   it("returns 403 when caller lacks PLATFORM_OPERATOR role", async () => {
     const response = await request(app.getHttpServer())
       .post("/v1/assets/some-public-id/confirm")
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.CONTENT_REVIEWER);
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "content-reviewer" })}`);
 
     expect(response.status).toBe(403);
   });

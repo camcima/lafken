@@ -102,6 +102,7 @@ export default defineConfig({
           bail: 1,
           fileParallelism: false,
           testTimeout: 60_000,
+          hookTimeout: 30_000,
           maxConcurrency: 10,
           sequence: {
             groupOrder: 3,

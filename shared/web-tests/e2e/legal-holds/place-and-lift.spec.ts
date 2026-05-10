@@ -14,9 +14,8 @@ const SAMPLE_JPEG_HEX =
 const SAMPLE_JPEG_BUFFER = Buffer.from(SAMPLE_JPEG_HEX, "hex");
 
 /**
- * Drives the mock-auth login flow if the SPA redirected to /auth/login.
- * Under AUTH_PROVIDER=mock the welcome screen still requires an explicit
- * "Sign in" click; after that the mock provider authenticates immediately.
+ * Handles the login flow if the SPA redirected to /auth/login.
+ * Clicks "Sign in" on the login page to initiate the OIDC flow.
  */
 async function signInIfNeeded(page: Page): Promise<void> {
   if (/\/auth\/login/.test(page.url())) {
@@ -105,7 +104,7 @@ async function uploadJpeg(request: APIRequestContext, namespaceSlug: string): Pr
       declaredSizeBytes: SAMPLE_JPEG_BUFFER.byteLength,
     },
   });
-  expect(intentRes.ok(), `createUploadIntent failed: ${intentRes.status()}`).toBeTruthy();
+  expect(intentRes.ok(), `createUploadIntent failed: ${String(intentRes.status())}`).toBeTruthy();
   const intent = (await intentRes.json()) as {
     publicId: string;
     uploadUrl: string;
@@ -120,13 +119,13 @@ async function uploadJpeg(request: APIRequestContext, namespaceSlug: string): Pr
       ...intent.uploadHeaders,
     },
   });
-  expect(putRes.ok(), `PUT to uploadUrl failed: ${putRes.status()}`).toBeTruthy();
+  expect(putRes.ok(), `PUT to uploadUrl failed: ${String(putRes.status())}`).toBeTruthy();
 
   // 3. Confirm upload
   const confirmRes = await request.post(`${BACKEND_URL}/v1/assets/${intent.publicId}/confirm`, {
     data: {},
   });
-  expect(confirmRes.ok(), `confirmUpload failed: ${confirmRes.status()}`).toBeTruthy();
+  expect(confirmRes.ok(), `confirmUpload failed: ${String(confirmRes.status())}`).toBeTruthy();
 
   return intent.publicId;
 }
@@ -174,23 +173,29 @@ test.describe("Slice 6: Legal holds place + lift", () => {
       await page.getByRole("combobox", { name: /namespace/i }).selectOption(namespaceSlug);
 
       // Wait for assets to load in the picker table
-      await expect(page.locator(`code:has-text("${asset1PublicId.slice(0, 8)}")`).first()).toBeVisible({
+      await expect(
+        page.locator(`code:has-text("${asset1PublicId.slice(0, 8)}")`).first(),
+      ).toBeVisible({
         timeout: 15_000,
       });
 
       // ── Step 6: Click the "+ Search" (add) button for each asset ────
       // The page renders a button per asset row with aria-pressed="false" when not picked.
       // We scope by the row that contains each publicId prefix.
-      const row1 = page.locator("tr").filter({ has: page.locator(`code:has-text("${asset1PublicId.slice(0, 8)}")`) });
+      const row1 = page
+        .locator("tr")
+        .filter({ has: page.locator(`code:has-text("${asset1PublicId.slice(0, 8)}")`) });
       await row1.getByRole("button", { name: /search/i }).click();
 
-      const row2 = page.locator("tr").filter({ has: page.locator(`code:has-text("${asset2PublicId.slice(0, 8)}")`) });
+      const row2 = page
+        .locator("tr")
+        .filter({ has: page.locator(`code:has-text("${asset2PublicId.slice(0, 8)}")`) });
       await row2.getByRole("button", { name: /search/i }).click();
 
       // ── Step 7: Fill the description (reason) ───────────────────────
-      await page.locator("#plh-description").fill(
-        "Investigation per DGAC requirement — e2e fixture run.",
-      );
+      await page
+        .locator("#plh-description")
+        .fill("Investigation per DGAC requirement — e2e fixture run.");
 
       // ── Step 8: Check acknowledgement ───────────────────────────────
       await page.locator("#plh-acknowledged").check();
@@ -217,10 +222,14 @@ test.describe("Slice 6: Legal holds place + lift", () => {
 
       // Exactly 2 assets should be listed
       // The asset rows contain the publicId codes; we assert at least 2 are visible.
-      await expect(page.locator(`code:has-text("${asset1PublicId.slice(0, 8)}")`).first()).toBeVisible({
+      await expect(
+        page.locator(`code:has-text("${asset1PublicId.slice(0, 8)}")`).first(),
+      ).toBeVisible({
         timeout: 15_000,
       });
-      await expect(page.locator(`code:has-text("${asset2PublicId.slice(0, 8)}")`).first()).toBeVisible({
+      await expect(
+        page.locator(`code:has-text("${asset2PublicId.slice(0, 8)}")`).first(),
+      ).toBeVisible({
         timeout: 15_000,
       });
 
@@ -238,7 +247,10 @@ test.describe("Slice 6: Legal holds place + lift", () => {
       await expect(page.getByRole("dialog")).toBeVisible();
 
       // Click "Lift hold" button in the drawer
-      await page.getByRole("dialog").getByRole("button", { name: /lift hold/i }).click();
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: /lift hold/i })
+        .click();
 
       // The lift dialog (a different [role=dialog] div) should appear on top
       // It has a textarea for the lift reason.

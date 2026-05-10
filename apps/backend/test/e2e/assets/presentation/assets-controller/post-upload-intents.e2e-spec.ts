@@ -3,9 +3,10 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
-import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 // Tests that call the GCS signing path require fake-gcs to be running.
 // eslint-disable-next-line no-process-env
@@ -47,18 +48,7 @@ describe("[E2E] POST /v1/assets/upload-intents", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
 
     const [bindingRow] = await db.connection
       .insertInto("storage_bindings")
@@ -119,7 +109,7 @@ describe("[E2E] POST /v1/assets/upload-intents", () => {
 
       const response = await request(app.getHttpServer())
         .post("/v1/assets/upload-intents")
-        .set("Authorization", "Bearer test-token")
+        .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
         .send({
           namespaceSlug: "photos-ns",
           declaredMimeType: "image/jpeg",
@@ -143,7 +133,7 @@ describe("[E2E] POST /v1/assets/upload-intents", () => {
 
     const response = await request(app.getHttpServer())
       .post("/v1/assets/upload-intents")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({
         namespaceSlug: "photos-ns",
         declaredMimeType: "image/jpeg",
@@ -169,7 +159,7 @@ describe("[E2E] POST /v1/assets/upload-intents", () => {
   it("returns RFC 9457 404 with type=namespace-not-found-error when namespace does not exist", async () => {
     const response = await request(app.getHttpServer())
       .post("/v1/assets/upload-intents")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({
         namespaceSlug: "ghost-ns",
         declaredMimeType: "image/jpeg",
@@ -189,7 +179,7 @@ describe("[E2E] POST /v1/assets/upload-intents", () => {
 
     const response = await request(app.getHttpServer())
       .post("/v1/assets/upload-intents")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({
         namespaceSlug: "archived-ns",
         declaredMimeType: "image/jpeg",
@@ -207,7 +197,7 @@ describe("[E2E] POST /v1/assets/upload-intents", () => {
 
     const response = await request(app.getHttpServer())
       .post("/v1/assets/upload-intents")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({
         namespaceSlug: "photos-ns",
         declaredMimeType: "application/pdf",
@@ -225,7 +215,7 @@ describe("[E2E] POST /v1/assets/upload-intents", () => {
 
     const response = await request(app.getHttpServer())
       .post("/v1/assets/upload-intents")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({
         namespaceSlug: "photos-ns",
         declaredMimeType: "image/jpeg",
@@ -242,7 +232,7 @@ describe("[E2E] POST /v1/assets/upload-intents", () => {
   it("returns 400 when request body is missing required fields", async () => {
     const response = await request(app.getHttpServer())
       .post("/v1/assets/upload-intents")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({});
 
     expect(response.status).toBe(400);
@@ -253,8 +243,7 @@ describe("[E2E] POST /v1/assets/upload-intents", () => {
 
     const response = await request(app.getHttpServer())
       .post("/v1/assets/upload-intents")
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.CONTENT_REVIEWER)
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "content-reviewer" })}`)
       .send({
         namespaceSlug: "photos-ns",
         declaredMimeType: "image/jpeg",

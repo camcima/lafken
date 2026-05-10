@@ -3,9 +3,10 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
-import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 
@@ -27,18 +28,7 @@ describe("[E2E] POST /v1/legal-holds", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
 
     await db.connection.transaction().execute(async (tx) => {
       const binding = await tx
@@ -126,10 +116,10 @@ describe("[E2E] POST /v1/legal-holds", () => {
   });
 
   it("returns 201 + LegalHoldResponseDTO on happy path", async () => {
+    const token = await mintDevOidcToken({ profileId: "legal-hold-admin" });
     const response = await request(app.getHttpServer())
       .post("/v1/legal-holds")
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.LEGAL_HOLD_ADMIN)
+      .set("Authorization", `Bearer ${token}`)
       .send({
         caseReference: "CHL-AVN-2026-001",
         description: "DGAC investigation — preserve responsive imagery.",
@@ -146,10 +136,10 @@ describe("[E2E] POST /v1/legal-holds", () => {
   });
 
   it("returns 400 when assetIds is empty (class-validator @ArrayMinSize)", async () => {
+    const token = await mintDevOidcToken({ profileId: "legal-hold-admin" });
     const response = await request(app.getHttpServer())
       .post("/v1/legal-holds")
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.LEGAL_HOLD_ADMIN)
+      .set("Authorization", `Bearer ${token}`)
       .send({
         caseReference: "CHL-AVN-2026-002",
         description: "DGAC investigation — preserve responsive imagery.",
@@ -161,10 +151,10 @@ describe("[E2E] POST /v1/legal-holds", () => {
 
   it("returns 422 + missingPublicIds in params for unknown publicIds", async () => {
     const unknown = "00000000-0000-0000-0000-000000000000";
+    const token = await mintDevOidcToken({ profileId: "legal-hold-admin" });
     const response = await request(app.getHttpServer())
       .post("/v1/legal-holds")
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.LEGAL_HOLD_ADMIN)
+      .set("Authorization", `Bearer ${token}`)
       .send({
         caseReference: "CHL-AVN-2026-003",
         description: "DGAC investigation — preserve responsive imagery.",
@@ -183,10 +173,10 @@ describe("[E2E] POST /v1/legal-holds", () => {
   });
 
   it("returns 403 when the caller lacks LEGAL_HOLD_ADMIN", async () => {
+    const token = await mintDevOidcToken({ profileId: "content-reviewer" });
     const response = await request(app.getHttpServer())
       .post("/v1/legal-holds")
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.CONTENT_REVIEWER)
+      .set("Authorization", `Bearer ${token}`)
       .send({
         caseReference: "CHL-AVN-2026-004",
         description: "DGAC investigation — preserve responsive imagery.",
@@ -197,7 +187,6 @@ describe("[E2E] POST /v1/legal-holds", () => {
   });
 
   // Note: a 401 unauthenticated case is not asserted here because the e2e suite
-  // wires the MockOidcBearerAuthnStrategy, which always authenticates the
-  // request even when no Authorization header is sent. The unauthenticated
-  // path is exercised by the OIDC strategy's own contract tests.
+  // requires a real dev-oidc token; missing/invalid tokens return 401. The
+  // unauthenticated path is exercised by the OIDC strategy's own contract tests.
 });
