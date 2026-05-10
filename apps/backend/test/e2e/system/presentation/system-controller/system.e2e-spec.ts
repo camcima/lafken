@@ -5,7 +5,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 import { NIL_UUID } from "@/shared/kernel/domain/nil-uuid.constant";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 describe("[E2E] System controller", () => {
   let app: INestApplication;
@@ -24,26 +26,14 @@ describe("[E2E] System controller", () => {
 
   beforeEach(async () => {
     // Clean storage_bindings and dependent tables before each test
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
   });
 
   describe("GET /v1/system/storage-bindings", () => {
     it("returns 200 with an empty array when no storage bindings exist", async () => {
       const response = await request(app.getHttpServer())
         .get("/v1/system/storage-bindings")
-        .set("Authorization", "Bearer test-token");
+        .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual([]);
@@ -54,7 +44,7 @@ describe("[E2E] System controller", () => {
     it("returns RFC 9457 404 for an unknown name", async () => {
       const response = await request(app.getHttpServer())
         .get("/v1/system/storage-bindings/missing-name")
-        .set("Authorization", "Bearer test-token");
+        .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
       expect(response.status).toBe(404);
       expect(response.headers["content-type"]).toContain("application/problem+json");
@@ -125,7 +115,7 @@ describe("[E2E] System controller", () => {
 
       const response = await request(app.getHttpServer())
         .delete("/v1/system/storage-bindings/bound-storage")
-        .set("Authorization", "Bearer test-token");
+        .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
       expect(response.status).toBe(409);
       expect(response.headers["content-type"]).toContain("application/problem+json");
@@ -141,7 +131,7 @@ describe("[E2E] System controller", () => {
     it("returns 200 with the 7 default not_configured integration statuses", async () => {
       const response = await request(app.getHttpServer())
         .get("/v1/system/integrations")
-        .set("Authorization", "Bearer test-token");
+        .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveLength(7);
@@ -167,7 +157,7 @@ describe("[E2E] System controller", () => {
     it("returns 200 with overall ok when the database is up", async () => {
       const response = await request(app.getHttpServer())
         .get("/v1/system/health")
-        .set("Authorization", "Bearer test-token");
+        .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({

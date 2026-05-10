@@ -5,12 +5,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 import { LAFKEN_METRIC_NAMES } from "@/shared/infrastructure/telemetry/metrics";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import {
   findCounterPoint,
   type IMetricReaderHandle,
   installInMemoryMetricReader,
 } from "../../../../__mocks__/in-memory-metric-reader";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 // eslint-disable-next-line no-process-env
@@ -55,19 +57,7 @@ describe.skipIf(!GATE)("[E2E] serving metrics", () => {
 
   beforeEach(async () => {
     metricsHandle.reset();
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
 
     const [bindingRow] = await db.connection
       .insertInto("storage_bindings")
@@ -143,7 +133,7 @@ describe.skipIf(!GATE)("[E2E] serving metrics", () => {
     const response = await request(app.getHttpServer())
       .get(`/v1/assets/${publicId}/preview-url`)
       .query({ preset: "lafken:thumbnail" })
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(200);
 
@@ -163,7 +153,7 @@ describe.skipIf(!GATE)("[E2E] serving metrics", () => {
 
     const response = await request(app.getHttpServer())
       .get(`/v1/assets/${publicId}/download-url`)
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(200);
 

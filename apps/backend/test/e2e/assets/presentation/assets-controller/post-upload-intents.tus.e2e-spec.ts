@@ -12,8 +12,10 @@ import { setupApp } from "@/setup-main-app";
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { NoopApplicationWithErrorLoggerMock } from "../../../../__mocks__/noop-app-logger.service";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 // --------------------------------------------------------------------------
 // Constants shared across both app fixtures
@@ -104,18 +106,7 @@ describe("[E2E] POST /v1/assets/upload-intents — tus protocol", () => {
 
   beforeEach(async () => {
     // Clean up using appWithTusDb (both apps share the same underlying DB)
-    await appWithTusDb.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(appWithTusDb);
 
     const [bindingRow] = await appWithTusDb.connection
       .insertInto("storage_bindings")
@@ -172,7 +163,7 @@ describe("[E2E] POST /v1/assets/upload-intents — tus protocol", () => {
 
     const res = await request(appWithTus.getHttpServer())
       .post("/v1/assets/upload-intents")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({
         namespaceSlug: "tus-ns",
         declaredMimeType: "image/jpeg",
@@ -195,7 +186,7 @@ describe("[E2E] POST /v1/assets/upload-intents — tus protocol", () => {
 
     const res = await request(appWithoutTus.getHttpServer())
       .post("/v1/assets/upload-intents")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({
         namespaceSlug: "tus-ns",
         declaredMimeType: "image/jpeg",

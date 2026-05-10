@@ -3,9 +3,10 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
-import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 describe("[E2E] POST /v1/system/storage-bindings", () => {
   let app: INestApplication;
@@ -23,25 +24,13 @@ describe("[E2E] POST /v1/system/storage-bindings", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
   });
 
   it("returns 201 + DTO when name is unique and bucket exists", async () => {
     const response = await request(app.getHttpServer())
       .post("/v1/system/storage-bindings")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({
         name: "my-binding",
         adapterType: "gcs",
@@ -60,7 +49,7 @@ describe("[E2E] POST /v1/system/storage-bindings", () => {
   it("returns RFC 9457 422 with type=bucket-not-found-error when bucket missing", async () => {
     const response = await request(app.getHttpServer())
       .post("/v1/system/storage-bindings")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({
         name: "missing-bucket",
         adapterType: "gcs",
@@ -84,13 +73,13 @@ describe("[E2E] POST /v1/system/storage-bindings", () => {
 
     const first = await request(app.getHttpServer())
       .post("/v1/system/storage-bindings")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send(body);
     expect(first.status).toBe(201);
 
     const second = await request(app.getHttpServer())
       .post("/v1/system/storage-bindings")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send(body);
 
     expect(second.status).toBe(409);
@@ -104,7 +93,7 @@ describe("[E2E] POST /v1/system/storage-bindings", () => {
   it("returns 400 when name fails the regex", async () => {
     const response = await request(app.getHttpServer())
       .post("/v1/system/storage-bindings")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({
         name: "BadName!",
         adapterType: "gcs",
@@ -117,8 +106,7 @@ describe("[E2E] POST /v1/system/storage-bindings", () => {
   it("returns 403 when caller lacks PLATFORM_OPERATOR role", async () => {
     const response = await request(app.getHttpServer())
       .post("/v1/system/storage-bindings")
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.CONTENT_REVIEWER)
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "content-reviewer" })}`)
       .send({
         name: "forbidden-name",
         adapterType: "gcs",

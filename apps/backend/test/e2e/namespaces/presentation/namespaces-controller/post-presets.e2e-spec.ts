@@ -3,9 +3,10 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
-import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 // case 7 (persistent preset-version-conflict → 409) is covered at the integration level.
 
@@ -54,19 +55,7 @@ describe("[E2E] POST /v1/namespaces/:slug/presets", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
 
     const [bindingRow] = await db.connection
       .insertInto("storage_bindings")
@@ -124,7 +113,7 @@ describe("[E2E] POST /v1/namespaces/:slug/presets", () => {
 
     const response = await request(app.getHttpServer())
       .post("/v1/namespaces/active-ns/presets")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({ name: "thumbnail", params: VALID_PARAMS });
 
     expect(response.status).toBe(201);
@@ -142,12 +131,12 @@ describe("[E2E] POST /v1/namespaces/:slug/presets", () => {
 
     await request(app.getHttpServer())
       .post("/v1/namespaces/dup-ns/presets")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({ name: "thumbnail", params: VALID_PARAMS });
 
     const response = await request(app.getHttpServer())
       .post("/v1/namespaces/dup-ns/presets")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({ name: "thumbnail", params: VALID_PARAMS });
 
     expect(response.status).toBe(422);
@@ -163,7 +152,7 @@ describe("[E2E] POST /v1/namespaces/:slug/presets", () => {
 
     const response = await request(app.getHttpServer())
       .post("/v1/namespaces/archived-ns/presets")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({ name: "thumbnail", params: VALID_PARAMS });
 
     expect(response.status).toBe(422);
@@ -177,7 +166,7 @@ describe("[E2E] POST /v1/namespaces/:slug/presets", () => {
   it("returns RFC 9457 404 with type=namespace-not-found-error when slug missing", async () => {
     const response = await request(app.getHttpServer())
       .post("/v1/namespaces/ghost-ns/presets")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({ name: "thumbnail", params: VALID_PARAMS });
 
     expect(response.status).toBe(404);
@@ -193,7 +182,7 @@ describe("[E2E] POST /v1/namespaces/:slug/presets", () => {
 
     const response = await request(app.getHttpServer())
       .post("/v1/namespaces/validate-ns/presets")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({ name: "thumbnail", params: { ...VALID_PARAMS, quality: 999 } });
 
     expect(response.status).toBe(400);
@@ -204,7 +193,7 @@ describe("[E2E] POST /v1/namespaces/:slug/presets", () => {
 
     const response = await request(app.getHttpServer())
       .post("/v1/namespaces/reserved-prefix-ns/presets")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({
         name: "lafken:thumbnail",
         params: { width: 100, height: 100, fit: "cover", format: "webp", quality: 80 },
@@ -224,8 +213,7 @@ describe("[E2E] POST /v1/namespaces/:slug/presets", () => {
 
     const response = await request(app.getHttpServer())
       .post("/v1/namespaces/some-ns/presets")
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.CONTENT_REVIEWER)
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "content-reviewer" })}`)
       .send({ name: "thumbnail", params: VALID_PARAMS });
 
     expect(response.status).toBe(403);

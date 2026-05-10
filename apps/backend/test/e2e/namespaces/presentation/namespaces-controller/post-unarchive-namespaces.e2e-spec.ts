@@ -3,9 +3,10 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
-import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 const VALID_POLICY_VALUES = {
   retention_days: null,
@@ -41,19 +42,7 @@ describe("[E2E] POST /v1/namespaces/:slug/unarchive", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
 
     const [bindingRow] = await db.connection
       .insertInto("storage_bindings")
@@ -109,7 +98,7 @@ describe("[E2E] POST /v1/namespaces/:slug/unarchive", () => {
 
     const response = await request(app.getHttpServer())
       .post("/v1/namespaces/archived-ns/unarchive")
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({ slug: "archived-ns" });
@@ -121,12 +110,12 @@ describe("[E2E] POST /v1/namespaces/:slug/unarchive", () => {
 
     const first = await request(app.getHttpServer())
       .post("/v1/namespaces/active-ns/unarchive")
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
     expect(first.status).toBe(200);
 
     const second = await request(app.getHttpServer())
       .post("/v1/namespaces/active-ns/unarchive")
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(second.status).toBe(200);
     expect(second.body.archivedAt).toBeUndefined();
@@ -137,8 +126,7 @@ describe("[E2E] POST /v1/namespaces/:slug/unarchive", () => {
 
     const response = await request(app.getHttpServer())
       .post("/v1/namespaces/forbidden-unarchive-ns/unarchive")
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.CONTENT_REVIEWER);
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "content-reviewer" })}`);
 
     expect(response.status).toBe(403);
   });
@@ -146,7 +134,7 @@ describe("[E2E] POST /v1/namespaces/:slug/unarchive", () => {
   it("returns RFC 9457 404 with type=namespace-not-found-error when slug does not exist", async () => {
     const response = await request(app.getHttpServer())
       .post("/v1/namespaces/ghost-namespace/unarchive")
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(404);
     expect(response.headers["content-type"]).toMatch(/application\/problem\+json/);

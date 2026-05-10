@@ -2,9 +2,26 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+const DEV_OIDC_BASE_URL = "http://localhost:8095";
+
+async function ensureDevOidcReachable(): Promise<void> {
+  const response = await fetch(`${DEV_OIDC_BASE_URL}/.well-known/openid-configuration`).catch(
+    (err: unknown) => {
+      throw new Error(
+        `dev-oidc unreachable at ${DEV_OIDC_BASE_URL}. Run \`docker compose -f apps/backend/docker-compose.test.yml up -d\` first. Cause: ${String(err)}`,
+      );
+    },
+  );
+  if (!response.ok) {
+    throw new Error(
+      `dev-oidc returned ${response.status}. Run \`docker compose -f apps/backend/docker-compose.test.yml up -d\` first.`,
+    );
+  }
+}
+
 function overrideEnvironmentVariables() {
-  // Use mock auth provider in tests (avoids requiring AUTH_TENANT_ID/AUTH_CLIENT_ID)
-  process.env["AUTH_PROVIDER"] = "mock";
+  // OIDC provider — dev-oidc container handles token issuance in tests
+  process.env["AUTH_PROVIDER"] = "oidc";
 
   // Configure imgproxy signer with deterministic dummy values so that the
   // GET /v1/assets/:publicId/preview-url endpoint can mint signed URLs in
@@ -33,6 +50,7 @@ function overrideEnvironmentVariables() {
 
 // ================================ Vitest hooks =============================== //
 
-export function setup() {
+export async function setup() {
+  await ensureDevOidcReachable();
   overrideEnvironmentVariables();
 }

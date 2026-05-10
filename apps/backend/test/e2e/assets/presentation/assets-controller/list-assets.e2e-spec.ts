@@ -4,7 +4,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 
@@ -41,25 +43,13 @@ describe("[E2E] GET /v1/assets", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
   });
 
   it("returns an empty paginated response when there are no assets", async () => {
     const response = await request(app.getHttpServer())
       .get("/v1/assets")
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({
@@ -74,7 +64,7 @@ describe("[E2E] GET /v1/assets", () => {
   it("returns RFC 9457 404 for an unknown public ID", async () => {
     const response = await request(app.getHttpServer())
       .get("/v1/assets/missing-public-id")
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(404);
     expect(response.headers["content-type"]).toContain("application/problem+json");
@@ -194,7 +184,7 @@ describe("[E2E] GET /v1/assets", () => {
     // Act
     const response = await request(app.getHttpServer())
       .get(`/v1/assets?legalHoldId=${holdId}`)
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     // Assert
     expect(response.status).toBe(200);

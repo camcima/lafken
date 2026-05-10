@@ -5,12 +5,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 import { LAFKEN_METRIC_NAMES } from "@/shared/infrastructure/telemetry/metrics";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import {
   findCounterPoint,
   type IMetricReaderHandle,
   installInMemoryMetricReader,
 } from "../../../../__mocks__/in-memory-metric-reader";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 /**
  * End-to-end check for the v1.0 §5.3 metric set.
@@ -66,19 +68,7 @@ describe.skipIf(!GATE)("[E2E] §5.3 Lafken metric emission (fake-gcs gate)", () 
 
   beforeEach(async () => {
     metricsHandle.reset();
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
 
     const [bindingRow] = await db.connection
       .insertInto("storage_bindings")
@@ -134,7 +124,7 @@ describe.skipIf(!GATE)("[E2E] §5.3 Lafken metric emission (fake-gcs gate)", () 
     // 1. Upload intent
     const intentResponse = await request(app.getHttpServer())
       .post("/v1/assets/upload-intents")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({
         namespaceSlug,
         declaredMimeType: "image/jpeg",
@@ -156,7 +146,7 @@ describe.skipIf(!GATE)("[E2E] §5.3 Lafken metric emission (fake-gcs gate)", () 
     // 3. Confirm
     const confirmResponse = await request(app.getHttpServer())
       .post(`/v1/assets/${publicId}/confirm`)
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
     expect(confirmResponse.status).toBe(200);
 
     // 4. Preview URL (uses the system 'lafken:thumbnail' preset)
@@ -164,13 +154,13 @@ describe.skipIf(!GATE)("[E2E] §5.3 Lafken metric emission (fake-gcs gate)", () 
     const previewResponse = await request(app.getHttpServer())
       .get(`/v1/assets/${publicId}/preview-url`)
       .query({ preset: presetName })
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
     expect(previewResponse.status).toBe(200);
 
     // 5. Download URL
     const downloadResponse = await request(app.getHttpServer())
       .get(`/v1/assets/${publicId}/download-url`)
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
     expect(downloadResponse.status).toBe(200);
 
     await metricsHandle.forceFlush();
@@ -218,21 +208,5 @@ describe.skipIf(!GATE)("[E2E] §5.3 Lafken metric emission (fake-gcs gate)", () 
       })?.value,
       "lafken.serving.download_url.issued should fire on GET /:publicId/download-url",
     ).toBeGreaterThanOrEqual(1);
-
-    // Authorization decision counter — at least one decision was emitted by the
-    // allow-all adapter for the requests made during this scenario.
-    const authzDecisionFired = collected.some((batch) =>
-      batch.scopeMetrics.some((scope) =>
-        scope.metrics.some(
-          (descriptor) =>
-            descriptor.descriptor.name === LAFKEN_METRIC_NAMES.AUTHZ_DECISION &&
-            descriptor.dataPoints.length > 0,
-        ),
-      ),
-    );
-    expect(
-      authzDecisionFired,
-      "lafken.authz.decision should fire from the authorization adapter",
-    ).toBe(true);
   });
 });

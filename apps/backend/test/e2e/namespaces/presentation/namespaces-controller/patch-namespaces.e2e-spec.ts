@@ -3,9 +3,10 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
-import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 const VALID_POLICY_VALUES = {
   retention_days: null,
@@ -41,19 +42,7 @@ describe("[E2E] PATCH /v1/namespaces/:slug", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
 
     const [bindingRow] = await db.connection
       .insertInto("storage_bindings")
@@ -108,7 +97,7 @@ describe("[E2E] PATCH /v1/namespaces/:slug", () => {
 
     const response = await request(app.getHttpServer())
       .patch("/v1/namespaces/update-me")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({ displayName: "New Name", description: "A fresh description" });
 
     expect(response.status).toBe(200);
@@ -122,7 +111,7 @@ describe("[E2E] PATCH /v1/namespaces/:slug", () => {
   it("returns RFC 9457 404 with type=namespace-not-found-error when slug does not exist", async () => {
     const response = await request(app.getHttpServer())
       .patch("/v1/namespaces/ghost-namespace")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({ displayName: "Whatever", description: null });
 
     expect(response.status).toBe(404);
@@ -139,8 +128,7 @@ describe("[E2E] PATCH /v1/namespaces/:slug", () => {
 
     const response = await request(app.getHttpServer())
       .patch("/v1/namespaces/forbidden-update")
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.CONTENT_REVIEWER)
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "content-reviewer" })}`)
       .send({ displayName: "New Name", description: null });
 
     expect(response.status).toBe(403);

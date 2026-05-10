@@ -3,9 +3,10 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
-import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 describe("[E2E] POST /v1/legal-holds/:id/lift", () => {
   let app: INestApplication;
@@ -24,10 +25,7 @@ describe("[E2E] POST /v1/legal-holds/:id/lift", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-    });
+    await truncateAllAssetTables(db);
 
     const [hold] = await db.connection
       .insertInto("legal_holds")
@@ -44,10 +42,10 @@ describe("[E2E] POST /v1/legal-holds/:id/lift", () => {
   });
 
   it("returns 200 on happy path", async () => {
+    const token = await mintDevOidcToken({ profileId: "legal-hold-admin" });
     const response = await request(app.getHttpServer())
       .post(`/v1/legal-holds/${activeHoldId}/lift`)
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.LEGAL_HOLD_ADMIN)
+      .set("Authorization", `Bearer ${token}`)
       .send({ liftReason: "Investigation closed; releasing." });
 
     expect(response.status).toBe(200);
@@ -59,16 +57,15 @@ describe("[E2E] POST /v1/legal-holds/:id/lift", () => {
   });
 
   it("returns 422 when the hold is already lifted", async () => {
+    const token = await mintDevOidcToken({ profileId: "legal-hold-admin" });
     await request(app.getHttpServer())
       .post(`/v1/legal-holds/${activeHoldId}/lift`)
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.LEGAL_HOLD_ADMIN)
+      .set("Authorization", `Bearer ${token}`)
       .send({ liftReason: "First lift, ten chars." });
 
     const second = await request(app.getHttpServer())
       .post(`/v1/legal-holds/${activeHoldId}/lift`)
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.LEGAL_HOLD_ADMIN)
+      .set("Authorization", `Bearer ${token}`)
       .send({ liftReason: "Second lift, ten chars." });
 
     expect(second.status).toBe(422);
@@ -80,10 +77,10 @@ describe("[E2E] POST /v1/legal-holds/:id/lift", () => {
   });
 
   it("returns 404 when the hold id does not exist", async () => {
+    const token = await mintDevOidcToken({ profileId: "legal-hold-admin" });
     const response = await request(app.getHttpServer())
       .post(`/v1/legal-holds/00000000-0000-0000-0000-000000000000/lift`)
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.LEGAL_HOLD_ADMIN)
+      .set("Authorization", `Bearer ${token}`)
       .send({ liftReason: "Closing unknown hold for test." });
 
     expect(response.status).toBe(404);
@@ -91,10 +88,10 @@ describe("[E2E] POST /v1/legal-holds/:id/lift", () => {
   });
 
   it("returns 403 without LEGAL_HOLD_ADMIN", async () => {
+    const token = await mintDevOidcToken({ profileId: "content-reviewer" });
     const response = await request(app.getHttpServer())
       .post(`/v1/legal-holds/${activeHoldId}/lift`)
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.CONTENT_REVIEWER)
+      .set("Authorization", `Bearer ${token}`)
       .send({ liftReason: "Investigation closed; releasing." });
 
     expect(response.status).toBe(403);

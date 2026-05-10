@@ -8,11 +8,10 @@
     {
       "clientId": "lafken-web",
       "redirectUris": [
-        "http://localhost:5173/auth/callback"
+        "http://localhost:5173/auth/callback",
+        "http://localhost:8095/test-callback"
       ],
-      "postLogoutRedirectUris": [
-        "http://localhost:5173/auth/login"
-      ],
+      "postLogoutRedirectUris": ["http://localhost:5173/auth/login"],
       "audience": "lafken-api"
     }
   ],
@@ -31,7 +30,37 @@
       "claims": {
         "name": "Carlos Cima",
         "preferred_username": "carlos.cima@latam.com",
-        "roles": ["platform_operator", "namespace_admin"]
+        "roles": ["lafken_platform_operator", "lafken_namespace_admin"]
+      }
+    },
+    {
+      "id": "legal-hold-admin",
+      "displayName": "Legal Hold Admin (test)",
+      "email": "legal-hold-admin@test.local",
+      "claims": {
+        "name": "Legal Hold Admin",
+        "preferred_username": "legal-hold-admin@test.local",
+        "roles": ["lafken_legal_hold_admin"]
+      }
+    },
+    {
+      "id": "content-reviewer",
+      "displayName": "Content Reviewer (test)",
+      "email": "content-reviewer@test.local",
+      "claims": {
+        "name": "Content Reviewer",
+        "preferred_username": "content-reviewer@test.local",
+        "roles": ["lafken_content_reviewer"]
+      }
+    },
+    {
+      "id": "asset-deleter",
+      "displayName": "Asset Deleter (test)",
+      "email": "asset-deleter@test.local",
+      "claims": {
+        "name": "Asset Deleter",
+        "preferred_username": "asset-deleter@test.local",
+        "roles": ["lafken_asset_deleter"]
       }
     },
     {
@@ -41,7 +70,7 @@
       "claims": {
         "name": "P. Estrada",
         "preferred_username": "p.estrada@latam.com",
-        "roles": ["operator"]
+        "roles": ["lafken_operator"]
       }
     },
     {
@@ -51,7 +80,7 @@
       "claims": {
         "name": "J. Almeida",
         "preferred_username": "j.almeida@latam.com",
-        "roles": ["viewer"]
+        "roles": ["lafken_viewer"]
       }
     }
   ]

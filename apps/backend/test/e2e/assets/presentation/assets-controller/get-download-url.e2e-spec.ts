@@ -4,7 +4,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 // eslint-disable-next-line no-process-env
@@ -44,19 +46,7 @@ describe.skipIf(!GATE)("[E2E] GET /v1/assets/:publicId/download-url", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
 
     const [bindingRow] = await db.connection
       .insertInto("storage_bindings")
@@ -141,7 +131,7 @@ describe.skipIf(!GATE)("[E2E] GET /v1/assets/:publicId/download-url", () => {
 
     const response = await request(app.getHttpServer())
       .get(`/v1/assets/${publicId}/download-url`)
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(200);
     expect(typeof response.body.url).toBe("string");
@@ -152,7 +142,7 @@ describe.skipIf(!GATE)("[E2E] GET /v1/assets/:publicId/download-url", () => {
   it("returns RFC 9457 404 when the public ID does not match any asset", async () => {
     const response = await request(app.getHttpServer())
       .get("/v1/assets/01900000-0000-7000-8000-000000000000/download-url")
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(404);
     expect(response.headers["content-type"]).toMatch(/application\/problem\+json/);

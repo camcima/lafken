@@ -3,9 +3,10 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
-import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 // Tests that call the GCS signing path require fake-gcs to be running.
 // eslint-disable-next-line no-process-env
@@ -47,20 +48,7 @@ describe("[E2E] POST /v1/assets/upload-intents/:publicId/refresh-url", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("configuration_audit_log").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
 
     const [bindingRow] = await db.connection
       .insertInto("storage_bindings")
@@ -116,7 +104,7 @@ describe("[E2E] POST /v1/assets/upload-intents/:publicId/refresh-url", () => {
     await insertNamespace("photos-ns");
     const response = await request(app.getHttpServer())
       .post("/v1/assets/upload-intents")
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .send({
         namespaceSlug: "photos-ns",
         declaredMimeType: "image/jpeg",
@@ -146,7 +134,7 @@ describe("[E2E] POST /v1/assets/upload-intents/:publicId/refresh-url", () => {
     const intent = await createIntent();
     const res = await request(app.getHttpServer())
       .post(`/v1/assets/upload-intents/${intent.publicId}/refresh-url`)
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .expect(200);
     expect(res.body.uploadUrl).toBeTruthy();
     expect(res.body.uploadHeaders["Content-Type"]).toBe("image/jpeg");
@@ -163,7 +151,7 @@ describe("[E2E] POST /v1/assets/upload-intents/:publicId/refresh-url", () => {
   it("returns 404 for unknown intent", async () => {
     await request(app.getHttpServer())
       .post(`/v1/assets/upload-intents/00000000-0000-0000-0000-000000000000/refresh-url`)
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .expect(404);
   });
 
@@ -172,7 +160,7 @@ describe("[E2E] POST /v1/assets/upload-intents/:publicId/refresh-url", () => {
     await markConsumed(intent.publicId);
     await request(app.getHttpServer())
       .post(`/v1/assets/upload-intents/${intent.publicId}/refresh-url`)
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .expect(422);
   });
 
@@ -181,15 +169,14 @@ describe("[E2E] POST /v1/assets/upload-intents/:publicId/refresh-url", () => {
     await markExpired(intent.publicId);
     await request(app.getHttpServer())
       .post(`/v1/assets/upload-intents/${intent.publicId}/refresh-url`)
-      .set("Authorization", "Bearer test-token")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
       .expect(422);
   });
 
   it("returns 403 when caller lacks PLATFORM_OPERATOR role", async () => {
     await request(app.getHttpServer())
       .post("/v1/assets/upload-intents/some-public-id/refresh-url")
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.CONTENT_REVIEWER)
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "content-reviewer" })}`)
       .expect(403);
   });
 });

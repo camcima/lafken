@@ -3,8 +3,8 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
-import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
@@ -134,8 +134,7 @@ describe.skip("[E2E] DELETE /v1/assets/:id", () => {
 
     const response = await request(app.getHttpServer())
       .delete(`/v1/assets/${assetId}`)
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.ASSET_DELETER);
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "asset-deleter" })}`);
 
     expect(response.status).toBe(204);
 
@@ -165,8 +164,7 @@ describe.skip("[E2E] DELETE /v1/assets/:id", () => {
 
     const response = await request(app.getHttpServer())
       .delete(`/v1/assets/${assetId}`)
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.ASSET_DELETER);
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "asset-deleter" })}`);
 
     expect(response.status).toBe(204);
 
@@ -183,8 +181,7 @@ describe.skip("[E2E] DELETE /v1/assets/:id", () => {
 
     const response = await request(app.getHttpServer())
       .delete(`/v1/assets/${assetId}`)
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.ASSET_DELETER);
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "asset-deleter" })}`);
 
     expect(response.status).toBe(409);
     expect(response.headers["content-type"]).toMatch(/application\/problem\+json/);
@@ -203,8 +200,7 @@ describe.skip("[E2E] DELETE /v1/assets/:id", () => {
   it("returns RFC 9457 404 when the publicId does not match any asset", async () => {
     const response = await request(app.getHttpServer())
       .delete("/v1/assets/ffffffff-ffff-ffff-ffff-ffffffffffff")
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.ASSET_DELETER);
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "asset-deleter" })}`);
 
     expect(response.status).toBe(404);
     expect(response.headers["content-type"]).toMatch(/application\/problem\+json/);
@@ -217,8 +213,7 @@ describe.skip("[E2E] DELETE /v1/assets/:id", () => {
 
     const response = await request(app.getHttpServer())
       .delete(`/v1/assets/${assetId}`)
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.PLATFORM_OPERATOR);
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(403);
   });

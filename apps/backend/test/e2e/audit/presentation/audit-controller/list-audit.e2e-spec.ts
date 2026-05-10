@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
 
 describe("[E2E] GET /v1/audit", () => {
@@ -30,7 +31,7 @@ describe("[E2E] GET /v1/audit", () => {
   it("returns an empty paginated response when there are no audit entries", async () => {
     const response = await request(app.getHttpServer())
       .get("/v1/audit")
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({

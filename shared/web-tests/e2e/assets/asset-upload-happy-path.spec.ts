@@ -14,9 +14,8 @@ const SAMPLE_JPEG_HEX =
 const SAMPLE_JPEG_BUFFER = Buffer.from(SAMPLE_JPEG_HEX, "hex");
 
 /**
- * Drives the mock-auth login flow if the SPA redirected to /auth/login.
- * Under AUTH_PROVIDER=mock the welcome screen still requires an explicit
- * "Sign in" click; after that the mock provider authenticates immediately.
+ * Handles the login flow if the SPA redirected to /auth/login.
+ * Clicks "Sign in" on the login page to initiate the OIDC flow.
  */
 async function signInIfNeeded(page: Page): Promise<void> {
   if (/\/auth\/login/.test(page.url())) {

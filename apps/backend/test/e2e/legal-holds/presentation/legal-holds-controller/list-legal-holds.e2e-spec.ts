@@ -4,7 +4,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 describe("[E2E] GET /v1/legal-holds", () => {
   let app: INestApplication;
@@ -22,16 +24,14 @@ describe("[E2E] GET /v1/legal-holds", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-    });
+    await truncateAllAssetTables(db);
   });
 
   it("returns an empty paginated response when there are no legal holds", async () => {
+    const token = await mintDevOidcToken({ profileId: "carlos.cima" });
     const response = await request(app.getHttpServer())
       .get("/v1/legal-holds")
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${token}`);
 
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({
@@ -45,9 +45,10 @@ describe("[E2E] GET /v1/legal-holds", () => {
 
   it("returns RFC 9457 404 for an unknown id", async () => {
     const unknownId = "00000000-0000-0000-0000-000000000000";
+    const token = await mintDevOidcToken({ profileId: "carlos.cima" });
     const response = await request(app.getHttpServer())
       .get(`/v1/legal-holds/${unknownId}`)
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${token}`);
 
     expect(response.status).toBe(404);
     expect(response.headers["content-type"]).toContain("application/problem+json");

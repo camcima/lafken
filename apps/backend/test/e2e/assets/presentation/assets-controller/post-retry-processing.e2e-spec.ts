@@ -3,9 +3,10 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
-import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 
+import { mintDevOidcToken } from "../../../../__fixtures__/dev-oidc-token";
 import { createAppModuleForE2ETest } from "../../../__fixtures__/app-module-factory";
+import { truncateAllAssetTables } from "../../../common/database-cleanup.helper";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 
@@ -50,19 +51,7 @@ describe("[E2E] POST /v1/assets/:id/retry-processing", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await truncateAllAssetTables(db);
 
     const bindingRow = await db.connection
       .insertInto("storage_bindings")
@@ -148,7 +137,7 @@ describe("[E2E] POST /v1/assets/:id/retry-processing", () => {
 
     const response = await request(app.getHttpServer())
       .post(`/v1/assets/${assetId}/retry-processing`)
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(200);
 
@@ -194,7 +183,7 @@ describe("[E2E] POST /v1/assets/:id/retry-processing", () => {
 
     const response = await request(app.getHttpServer())
       .post(`/v1/assets/${assetId}/retry-processing`)
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(422);
     expect(response.headers["content-type"]).toMatch(/application\/problem\+json/);
@@ -207,7 +196,7 @@ describe("[E2E] POST /v1/assets/:id/retry-processing", () => {
   it("returns RFC 9457 404 when the publicId does not match any asset", async () => {
     const response = await request(app.getHttpServer())
       .post("/v1/assets/ffffffff-ffff-ffff-ffff-ffffffffffff/retry-processing")
-      .set("Authorization", "Bearer test-token");
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
 
     expect(response.status).toBe(404);
     expect(response.headers["content-type"]).toMatch(/application\/problem\+json/);
@@ -220,8 +209,7 @@ describe("[E2E] POST /v1/assets/:id/retry-processing", () => {
 
     const response = await request(app.getHttpServer())
       .post(`/v1/assets/${assetId}/retry-processing`)
-      .set("Authorization", "Bearer test-token")
-      .set("x-test-roles", ApplicationRole.CONTENT_REVIEWER);
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "content-reviewer" })}`);
 
     expect(response.status).toBe(403);
   });
