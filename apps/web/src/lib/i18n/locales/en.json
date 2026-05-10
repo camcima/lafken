@@ -162,9 +162,7 @@
     "comingInSlice1": "Coming in a later slice"
   },
   "topBar": {
-    "refresh": "Refresh",
-    "notifications": "Notifications",
-    "notificationsComingSoon": "Notifications coming soon"
+    "refresh": "Refresh"
   },
   "user": {
     "noRole": "No role",
@@ -1491,66 +1489,6 @@
       "en": "United States",
       "es": "Latinoamérica",
       "pt": "Brasil"
-    }
-  },
-  "notifications": {
-    "title": "Notifications",
-    "newCountBadge": "{{count}} new",
-    "markAllRead": "Mark all read",
-    "close": "Close",
-    "tabs": {
-      "all": "All",
-      "unread": "Unread",
-      "review": "Review",
-      "system": "System",
-      "workspace": "Workspace"
-    },
-    "categories": {
-      "review": "Review",
-      "system": "System",
-      "workspace": "Workspace"
-    },
-    "empty": {
-      "title": "You're all caught up",
-      "subtitle": "Nothing in this view."
-    },
-    "footer": {
-      "viewAll": "View all in audit log",
-      "settings": "Notification settings"
-    },
-    "items": {
-      "n_01": {
-        "title": "Transform stage degraded",
-        "body": "p95 has been above 1.50s for 14 minutes. Queue depth 4,811 and growing."
-      },
-      "n_02": {
-        "title": "5 quarantined assets > 24h old",
-        "body": "Reviewer SLO is 4h. Oldest is 36h (cargo-damage / violence 0.78)."
-      },
-      "n_03": {
-        "title": "Legal hold placed on aircraft-photos",
-        "body": "lh_01HX7 · placed by a.bravo@latam.com · case CHL-2025-AVN-077"
-      },
-      "n_04": {
-        "title": "Your review was overridden",
-        "body": "01HXJ002KQZ · released by p.estrada@latam.com after your reject decision."
-      },
-      "n_05": {
-        "title": "Worker processor-12 unreachable",
-        "body": "Last seen 3m ago · Memphis pool · auto-restart attempt 2/3."
-      },
-      "n_06": {
-        "title": "Policy v8 published for ground-ops-incidents",
-        "body": "Retention 10y → 12y. New required field: incident_severity. Effective immediately."
-      },
-      "n_07": {
-        "title": "API key rotated · cargo-ingest-svc",
-        "body": "Rotated by m.fernandez@latam.com. Previous key deactivates in 24h."
-      },
-      "n_08": {
-        "title": "Escalation: medical category match",
-        "body": "01HXJ003UWQZ · score 0.72 (threshold 0.65) · awaiting reviewer with medical clearance."
-      }
     }
   }
 }
