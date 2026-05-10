@@ -36,12 +36,14 @@ import type {
 } from "@/assets/domain/services/virus-scan.service.port";
 import { VirusScanPort } from "@/assets/domain/services/virus-scan.service.port";
 import type { NamespacePolicy } from "@/namespaces/domain/entities/namespace-policy.entity";
+import { OpenTelemetryMetricsAdapter } from "@/shared/infrastructure/metrics/metrics.adapter";
 import { LAFKEN_METRIC_NAMES } from "@/shared/infrastructure/telemetry/metrics";
 import type { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 import { FakeAppLogger } from "../../../__fakes__/fake-app-logger";
 import { FakeAssetStorage } from "../../../__fakes__/fake-asset-storage";
+import { FakeWorkerRuntimeOptionsPort } from "../../../__fakes__/fake-worker-runtime-options.port";
 import {
   findCounterPoint,
   type IMetricReaderHandle,
@@ -201,6 +203,7 @@ describe("processing pipeline metrics", () => {
       new FakeMimeSniff(),
       new FakeStorageBindingRepository(),
       new FakeAppLogger(),
+      new OpenTelemetryMetricsAdapter(),
     );
 
     await useCase.execute({
@@ -252,8 +255,21 @@ describe("processing worker metrics", () => {
       retryPolicy,
       assetRepo,
       new FakeAppLogger(),
-      undefined,
-      { workflowTimeoutMs: 100 },
+      new OpenTelemetryMetricsAdapter(),
+      new FakeWorkerRuntimeOptionsPort({
+        workflowTimeoutMs: 100,
+        pollIntervalMs: 1000,
+        concurrency: 5,
+        heartbeatIntervalMs: 5000,
+        staleClaimMs: 60_000,
+        maxAttempts: 5,
+        initialBackoffMs: 1000,
+        backoffMultiplier: 3,
+        maxBackoffMs: 600_000,
+        shutdownGraceMs: 30_000,
+        orphanIntentSweepIntervalMs: 60_000,
+        orphanIntentGraceMs: 300_000,
+      }),
     );
 
     await service.tick();
@@ -284,8 +300,21 @@ describe("processing worker metrics", () => {
       retryPolicy,
       assetRepo,
       new FakeAppLogger(),
-      undefined,
-      { workflowTimeoutMs: 100 },
+      new OpenTelemetryMetricsAdapter(),
+      new FakeWorkerRuntimeOptionsPort({
+        workflowTimeoutMs: 100,
+        pollIntervalMs: 1000,
+        concurrency: 5,
+        heartbeatIntervalMs: 5000,
+        staleClaimMs: 60_000,
+        maxAttempts: 5,
+        initialBackoffMs: 1000,
+        backoffMultiplier: 3,
+        maxBackoffMs: 600_000,
+        shutdownGraceMs: 30_000,
+        orphanIntentSweepIntervalMs: 60_000,
+        orphanIntentGraceMs: 300_000,
+      }),
     );
 
     service.registerQueueDepthCallback();
@@ -326,8 +355,21 @@ describe("processing worker metrics", () => {
       retryPolicy,
       assetRepo,
       new FakeAppLogger(),
-      undefined,
-      { workflowTimeoutMs: 100 },
+      new OpenTelemetryMetricsAdapter(),
+      new FakeWorkerRuntimeOptionsPort({
+        workflowTimeoutMs: 100,
+        pollIntervalMs: 1000,
+        concurrency: 5,
+        heartbeatIntervalMs: 5000,
+        staleClaimMs: 60_000,
+        maxAttempts: 5,
+        initialBackoffMs: 1000,
+        backoffMultiplier: 3,
+        maxBackoffMs: 600_000,
+        shutdownGraceMs: 30_000,
+        orphanIntentSweepIntervalMs: 60_000,
+        orphanIntentGraceMs: 300_000,
+      }),
     );
 
     await service.tick();

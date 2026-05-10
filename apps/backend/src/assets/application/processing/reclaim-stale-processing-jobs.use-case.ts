@@ -4,13 +4,10 @@ import type { ProcessingJob } from "@/assets/domain/entities/processing-job.enti
 import { AssetProcessingRepositoryPort } from "@/assets/domain/repositories/asset-processing.repository.port";
 import { ProcessingJobRepositoryPort } from "@/assets/domain/repositories/processing-job.repository.port";
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
-import { environmentConfiguration } from "@/shared/infrastructure/environment.configuration";
-import {
-  processingStaleClaimReclaimedCounter,
-  processingTerminalStateCounter,
-} from "@/shared/infrastructure/telemetry/metrics";
+import { MetricsPort } from "@/shared/application/metrics.port";
 
 import { isTerminalAssetState, makeTransitionMetadata } from "./processing-evidence";
+import { WorkerRuntimeOptionsPort } from "./worker-runtime-options.port";
 
 const STALE_CLAIM_LIMIT = 25;
 const NEXT_ATTEMPT_INCREMENT = 1;
@@ -26,14 +23,15 @@ export class ReclaimStaleProcessingJobsUseCase {
     private readonly jobs: ProcessingJobRepositoryPort,
     private readonly assets: AssetProcessingRepositoryPort,
     private readonly logger: AppLoggerPort,
+    private readonly metrics: MetricsPort,
+    private readonly options: WorkerRuntimeOptionsPort,
   ) {
     this.logger.setContext(ReclaimStaleProcessingJobsUseCase.name);
   }
 
   async execute(input: IReclaimStaleProcessingJobsInput): Promise<void> {
-    const staleBefore: Date = new Date(
-      input.now.getTime() - environmentConfiguration.PROCESSING_WORKER_STALE_CLAIM_MS,
-    );
+    const opts = this.options.get();
+    const staleBefore: Date = new Date(input.now.getTime() - opts.staleClaimMs);
     const jobs: ProcessingJob[] = await this.jobs.findStaleClaims({
       staleBefore,
       limit: STALE_CLAIM_LIMIT,
@@ -72,7 +70,8 @@ export class ReclaimStaleProcessingJobsUseCase {
     }
 
     const nextAttemptNumber: number = job.props.attemptNumber + NEXT_ATTEMPT_INCREMENT;
-    if (nextAttemptNumber > environmentConfiguration.PROCESSING_WORKER_MAX_ATTEMPTS) {
+    const opts = this.options.get();
+    if (nextAttemptNumber > opts.maxAttempts) {
       this.logger.info(
         {
           assetId: job.props.assetId,
@@ -101,7 +100,7 @@ export class ReclaimStaleProcessingJobsUseCase {
           now,
         });
         if (transitioned) {
-          processingTerminalStateCounter.add(1, { state: "processing_failed" });
+          this.metrics.recordProcessingTerminalState({ state: "processing_failed" });
         } else {
           this.logger.warn(
             { assetId: job.props.assetId, currentState: loaded.asset.props.state },
@@ -139,7 +138,7 @@ export class ReclaimStaleProcessingJobsUseCase {
       now,
     });
     if (released) {
-      processingStaleClaimReclaimedCounter.add(1);
+      this.metrics.recordProcessingStaleClaimReclaimed({ count: 1 });
     } else {
       this.logger.warn(
         { assetId: job.props.assetId },

@@ -5,6 +5,7 @@ import { UploadIntentAlreadyConsumedError } from "@/assets/domain/errors/upload-
 import { UploadIntentExpiredError } from "@/assets/domain/errors/upload-intent-expired.error";
 import { UploadIntentNotFoundError } from "@/assets/domain/errors/upload-intent-not-found.error";
 
+import { FakeMetricsPort } from "../../../__fakes__/fake-metrics.port";
 import { InMemoryAssetQueryRepository } from "../__fakes__/in-memory-asset-query.repository";
 import {
   buildAuditWriteRepoStub,
@@ -28,6 +29,7 @@ describe("RefreshUploadUrlUseCase", () => {
       issuer,
       audit,
       new InMemoryAssetQueryRepository(),
+      new FakeMetricsPort(),
     );
 
     const result = await useCase.execute({
@@ -54,6 +56,7 @@ describe("RefreshUploadUrlUseCase", () => {
       buildIssuerStub(),
       buildAuditWriteRepoStub(),
       new InMemoryAssetQueryRepository(),
+      new FakeMetricsPort(),
     );
     await expect(useCase.execute({ publicId: "missing", requestedBy: "u" })).rejects.toBeInstanceOf(
       UploadIntentNotFoundError,
@@ -67,6 +70,7 @@ describe("RefreshUploadUrlUseCase", () => {
       buildIssuerStub(),
       buildAuditWriteRepoStub(),
       new InMemoryAssetQueryRepository(),
+      new FakeMetricsPort(),
     );
     await expect(useCase.execute({ publicId: "pid-1", requestedBy: "u" })).rejects.toBeInstanceOf(
       UploadIntentAlreadyConsumedError,
@@ -80,6 +84,7 @@ describe("RefreshUploadUrlUseCase", () => {
       buildIssuerStub(),
       buildAuditWriteRepoStub(),
       new InMemoryAssetQueryRepository(),
+      new FakeMetricsPort(),
     );
     await expect(useCase.execute({ publicId: "pid-1", requestedBy: "u" })).rejects.toBeInstanceOf(
       UploadIntentExpiredError,

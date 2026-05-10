@@ -17,10 +17,11 @@ import {
 } from "@/assets/domain/value-objects/asset-state.value-object";
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
 import {
-  processingStepDurationHistogram,
-  processingStepOutcomeCounter,
-  processingTerminalStateCounter,
-} from "@/shared/infrastructure/telemetry/metrics";
+  MetricsPort,
+  type ProcessingStep,
+  type ProcessingStepDecision,
+  type ProcessingTerminalState,
+} from "@/shared/application/metrics.port";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 import { assetProcessingMachine } from "./asset-processing-machine";
@@ -62,6 +63,7 @@ export class ProcessClaimedAssetUseCase {
     private readonly mimeSniff: MimeSniffPort,
     private readonly storageBindingRepo: StorageBindingQueryRepositoryPort,
     private readonly logger: AppLoggerPort,
+    private readonly metrics: MetricsPort,
   ) {
     this.logger.setContext(ProcessClaimedAssetUseCase.name);
   }
@@ -469,7 +471,7 @@ export class ProcessClaimedAssetUseCase {
       now: new Date(),
       newStorageKey: input.newStorageKey,
     });
-    processingTerminalStateCounter.add(1, { state: input.toState });
+    this.metrics.recordProcessingTerminalState({ state: input.toState as ProcessingTerminalState });
     await this.jobRepo.markCompleted({
       assetId: input.assetId,
       workerId: input.workerId,
@@ -537,7 +539,7 @@ export class ProcessClaimedAssetUseCase {
       occurredBy: this.workerActor(input.workerId),
       now: finishedAt,
     });
-    processingTerminalStateCounter.add(1, { state: "ready" });
+    this.metrics.recordProcessingTerminalState({ state: "ready" });
     await this.jobRepo.markCompleted({
       assetId: input.assetId,
       workerId: input.workerId,
@@ -608,7 +610,14 @@ export class ProcessClaimedAssetUseCase {
     decision: string;
     durationMs: number;
   }): void {
-    processingStepDurationHistogram.record(input.durationMs, { step: input.step });
-    processingStepOutcomeCounter.add(1, { step: input.step, decision: input.decision });
+    this.metrics.recordProcessingStepDuration({
+      step: input.step as ProcessingStep,
+      decision: input.decision as ProcessingStepDecision,
+      durationMs: input.durationMs,
+    });
+    this.metrics.recordProcessingStepOutcome({
+      step: input.step as ProcessingStep,
+      decision: input.decision as ProcessingStepDecision,
+    });
   }
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CreateUploadIntentUseCase } from "@/assets/application/use-cases/create-upload-intent.use-case";
 import { TusNotConfiguredError } from "@/assets/domain/errors/tus-not-configured.error";
 
+import { FakeMetricsPort } from "../../../__fakes__/fake-metrics.port";
 import {
   buildBindingRepoStub,
   buildIntentRepoStub,
@@ -18,6 +19,7 @@ describe("CreateUploadIntentUseCase protocol selection", () => {
       buildBindingRepoStub(),
       buildIntentRepoStub(),
       issuer,
+      new FakeMetricsPort(),
     );
     const result = await useCase.execute({
       namespaceSlug: "n",
@@ -37,6 +39,7 @@ describe("CreateUploadIntentUseCase protocol selection", () => {
       buildBindingRepoStub(),
       buildIntentRepoStub(),
       issuer,
+      new FakeMetricsPort(),
     );
     const result = await useCase.execute({
       namespaceSlug: "n",
@@ -56,6 +59,7 @@ describe("CreateUploadIntentUseCase protocol selection", () => {
       buildBindingRepoStub(),
       buildIntentRepoStub(),
       issuer,
+      new FakeMetricsPort(),
     );
     await expect(
       useCase.execute({

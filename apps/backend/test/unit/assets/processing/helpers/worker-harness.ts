@@ -21,6 +21,8 @@ import {
 } from "@/assets/domain/repositories/processing-job.repository.port";
 
 import { FakeAppLogger } from "../../../../__fakes__/fake-app-logger";
+import { FakeMetricsPort } from "../../../../__fakes__/fake-metrics.port";
+import { FakeWorkerRuntimeOptionsPort } from "../../../../__fakes__/fake-worker-runtime-options.port";
 import { makeAsset, makePolicy } from "../processing-test-fixtures";
 
 // ─────────────────────────────────────────────
@@ -133,8 +135,22 @@ export function buildWorkerHarness(opts: IWorkerHarnessOptions = {}): IWorkerHar
     retryPolicy,
     new NoopAssetProcessingRepository(),
     new FakeAppLogger(),
+    new FakeMetricsPort(),
+    new FakeWorkerRuntimeOptionsPort({
+      workflowTimeoutMs: 100,
+      pollIntervalMs: 1000,
+      concurrency: 5,
+      heartbeatIntervalMs: 5000,
+      staleClaimMs: 60_000,
+      maxAttempts: 5,
+      initialBackoffMs: 1000,
+      backoffMultiplier: 3,
+      maxBackoffMs: 600_000,
+      shutdownGraceMs: 30_000,
+      orphanIntentSweepIntervalMs: 60_000,
+      orphanIntentGraceMs: 300_000,
+    }),
     undefined,
-    { workflowTimeoutMs: 100 },
     opts.orphanSweeper,
   );
 

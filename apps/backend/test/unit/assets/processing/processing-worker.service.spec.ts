@@ -22,6 +22,8 @@ import {
 import type { NamespacePolicy } from "@/namespaces/domain/entities/namespace-policy.entity";
 
 import { FakeAppLogger } from "../../../__fakes__/fake-app-logger";
+import { FakeMetricsPort } from "../../../__fakes__/fake-metrics.port";
+import { FakeWorkerRuntimeOptionsPort } from "../../../__fakes__/fake-worker-runtime-options.port";
 import { makeAsset, makeJob, makePolicy, TEST_UUIDS } from "./processing-test-fixtures";
 
 describe("ProcessingWorkerService", () => {
@@ -48,8 +50,21 @@ describe("ProcessingWorkerService", () => {
       retryPolicy,
       assetRepo,
       new FakeAppLogger(),
-      undefined,
-      { workflowTimeoutMs: 100 },
+      new FakeMetricsPort(),
+      new FakeWorkerRuntimeOptionsPort({
+        workflowTimeoutMs: 100,
+        pollIntervalMs: 1000,
+        concurrency: 5,
+        heartbeatIntervalMs: 5000,
+        staleClaimMs: 60_000,
+        maxAttempts: 5,
+        initialBackoffMs: 1000,
+        backoffMultiplier: 3,
+        maxBackoffMs: 600_000,
+        shutdownGraceMs: 30_000,
+        orphanIntentSweepIntervalMs: 60_000,
+        orphanIntentGraceMs: 300_000,
+      }),
     );
   });
 

@@ -5,7 +5,7 @@ import { UploadIntentWriteRepositoryPort } from "@/assets/domain/repositories/up
 import { AssetStoragePort } from "@/assets/domain/services/asset-storage.service.port";
 import { AuditWriteRepositoryPort } from "@/audit/domain/repositories/audit-write.repository.port";
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
-import { uploadIntentExpiredSweptCounter } from "@/shared/infrastructure/telemetry/metrics";
+import { MetricsPort } from "@/shared/application/metrics.port";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 export interface IOrphanSweepInput {
@@ -24,6 +24,8 @@ export class OrphanUploadIntentSweeperUseCase {
     private readonly assetQueryRepo: AssetQueryRepositoryPort,
     @Optional()
     private readonly logger?: AppLoggerPort,
+    @Optional()
+    private readonly metrics?: MetricsPort,
   ) {
     this.logger?.setContext(OrphanUploadIntentSweeperUseCase.name);
   }
@@ -77,7 +79,7 @@ export class OrphanUploadIntentSweeperUseCase {
         slugByNamespaceId.set(intent.props.namespaceId, slug);
       }
       if (slug !== null) {
-        uploadIntentExpiredSweptCounter.add(1, { namespace_slug: slug });
+        this.metrics?.recordUploadIntentExpiredSwept({ namespaceSlug: slug });
       }
     }
   }

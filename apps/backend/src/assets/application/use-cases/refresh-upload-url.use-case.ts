@@ -10,7 +10,7 @@ import {
   UploadUrlIssuerPort,
 } from "@/assets/domain/services/upload-url-issuer.service.port";
 import { AuditWriteRepositoryPort } from "@/audit/domain/repositories/audit-write.repository.port";
-import { uploadIntentRefreshedCounter } from "@/shared/infrastructure/telemetry/metrics";
+import { MetricsPort } from "@/shared/application/metrics.port";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 const REFRESH_URL_TTL_SECONDS = 900;
@@ -38,6 +38,7 @@ export class RefreshUploadUrlUseCase {
     private readonly issuer: UploadUrlIssuerPort,
     private readonly auditWriteRepo: AuditWriteRepositoryPort,
     private readonly assetQueryRepo: AssetQueryRepositoryPort,
+    private readonly metrics: MetricsPort,
   ) {}
 
   async execute(input: IRefreshUploadUrlInput): Promise<IRefreshUploadUrlResult> {
@@ -115,10 +116,7 @@ export class RefreshUploadUrlUseCase {
       intent.props.namespaceId,
     );
     if (namespaceSlug !== null) {
-      uploadIntentRefreshedCounter.add(1, {
-        namespace_slug: namespaceSlug,
-        protocol,
-      });
+      this.metrics.recordUploadIntentRefreshed({ namespaceSlug });
     }
 
     return {

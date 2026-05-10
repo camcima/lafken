@@ -1,21 +1,12 @@
 import { randomUUID } from "node:crypto";
 
 import { Inject, Injectable, type OnModuleDestroy, Optional } from "@nestjs/common";
-import type { ObservableCallback } from "@opentelemetry/api";
 
 import type { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
 import { AssetProcessingRepositoryPort } from "@/assets/domain/repositories/asset-processing.repository.port";
 import { ProcessingJobRepositoryPort } from "@/assets/domain/repositories/processing-job.repository.port";
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
-import { environmentConfiguration } from "@/shared/infrastructure/environment.configuration";
-import {
-  processingJobClaimedCounter,
-  processingJobReleasedCounter,
-  processingQueueDepthGauge,
-  processingRetryCounter,
-  processingTerminalStateCounter,
-  processingWorkflowTimeoutCounter,
-} from "@/shared/infrastructure/telemetry/metrics";
+import { MetricsPort } from "@/shared/application/metrics.port";
 
 import { OrphanUploadIntentSweeperUseCase } from "./orphan-upload-intent-sweeper.use-case";
 import { ProcessClaimedAssetUseCase } from "./process-claimed-asset.use-case";
@@ -23,15 +14,15 @@ import { makeTransitionMetadata } from "./processing-evidence";
 import { ProcessingRetryPolicy, type RetryDecision } from "./processing-retry-policy";
 import { ReclaimStaleProcessingJobsUseCase } from "./reclaim-stale-processing-jobs.use-case";
 import { TransientProcessingError } from "./transient-processing.error";
+import {
+  type IWorkerRuntimeOptions,
+  WorkerRuntimeOptionsPort,
+} from "./worker-runtime-options.port";
 
 const ZERO_REMAINING_CAPACITY = 0;
 
 export interface IProcessClaimedAssetProcessor {
   execute(input: { assetId: string; workerId: string; attemptNumber: number }): Promise<unknown>;
-}
-
-export interface IProcessingWorkerOptions {
-  workflowTimeoutMs?: number;
 }
 
 interface IInFlightEntry {
@@ -48,8 +39,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private sweeperTimer: NodeJS.Timeout | null = null;
   private orphanSweepTimer: NodeJS.Timeout | null = null;
-  private queueDepthCallback: ObservableCallback | null = null;
-  private readonly workflowTimeoutMs: number;
+  private readonly opts: IWorkerRuntimeOptions;
 
   constructor(
     private readonly jobs: ProcessingJobRepositoryPort,
@@ -58,55 +48,40 @@ export class ProcessingWorkerService implements OnModuleDestroy {
     private readonly retryPolicy: ProcessingRetryPolicy,
     private readonly assets: AssetProcessingRepositoryPort,
     private readonly logger: AppLoggerPort,
+    private readonly metrics: MetricsPort,
+    private readonly workerOptions: WorkerRuntimeOptionsPort,
     @Optional()
     private readonly reclaimer?: ReclaimStaleProcessingJobsUseCase,
-    @Optional()
-    options?: IProcessingWorkerOptions,
     @Optional()
     private readonly orphanSweeper?: OrphanUploadIntentSweeperUseCase,
   ) {
     this.logger.setContext(ProcessingWorkerService.name);
-    this.workflowTimeoutMs =
-      options?.workflowTimeoutMs ?? environmentConfiguration.PROCESSING_WORKER_WORKFLOW_TIMEOUT_MS;
+    this.opts = this.workerOptions.get();
   }
 
   /**
-   * Wires the `lafken.processing.queue_depth` observable gauge to the
-   * `countDueJobs` repository call. The callback is registered exactly once
-   * across the lifetime of the worker, even if `start()` is invoked more than
-   * once, so we don't double-observe the gauge under restart paths.
+   * Registers the `lafken.processing.queue_depth` observable gauge sampler via
+   * `MetricsPort`. The sampler is registered exactly once across the lifetime of
+   * the worker, even if `start()` is invoked more than once, so we don't
+   * double-observe the gauge under restart paths.
    */
   registerQueueDepthCallback(): void {
-    if (this.queueDepthCallback !== null) {
-      return;
-    }
-    const callback: ObservableCallback = async (result): Promise<void> => {
-      try {
-        const depth: number = await this.jobs.countDueJobs({ now: new Date() });
-        result.observe(depth);
-      } catch (err) {
-        const message: string = err instanceof Error ? err.message : String(err);
-        this.logger.warn({ err: message }, "queue depth gauge observation failed");
-      }
-    };
-    this.queueDepthCallback = callback;
-    processingQueueDepthGauge.addCallback(callback);
+    this.metrics.registerQueueDepthSampler(async (): Promise<number> => {
+      return this.jobs.countDueJobs({ now: new Date() });
+    });
   }
 
   start(): void {
     this.registerQueueDepthCallback();
-    this.pollTimer = setInterval(
-      (): void => void this.tick(),
-      environmentConfiguration.PROCESSING_WORKER_POLL_INTERVAL_MS,
-    );
+    this.pollTimer = setInterval((): void => void this.tick(), this.opts.pollIntervalMs);
     this.heartbeatTimer = setInterval(
       (): void => void this.heartbeat(),
-      environmentConfiguration.PROCESSING_WORKER_HEARTBEAT_INTERVAL_MS,
+      this.opts.heartbeatIntervalMs,
     );
     if (this.reclaimer) {
       this.sweeperTimer = setInterval(
         (): void => void this.reclaimer?.execute({ now: new Date() }),
-        environmentConfiguration.PROCESSING_WORKER_STALE_CLAIM_MS,
+        this.opts.staleClaimMs,
       );
     }
     if (this.orphanSweeper) {
@@ -114,10 +89,10 @@ export class ProcessingWorkerService implements OnModuleDestroy {
         (): void =>
           void this.orphanSweeper?.execute({
             now: new Date(),
-            graceMs: environmentConfiguration.ORPHAN_INTENT_GRACE_MS,
+            graceMs: this.opts.orphanIntentGraceMs,
             batchSize: 100,
           }),
-        environmentConfiguration.ORPHAN_INTENT_SWEEP_INTERVAL_MS,
+        this.opts.orphanIntentSweepIntervalMs,
       );
     }
     void this.tick();
@@ -128,8 +103,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
       return;
     }
 
-    const remaining: number =
-      environmentConfiguration.PROCESSING_WORKER_CONCURRENCY - this.inFlight.size;
+    const remaining: number = this.opts.concurrency - this.inFlight.size;
     if (remaining <= ZERO_REMAINING_CAPACITY) {
       return;
     }
@@ -143,7 +117,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
     this.logger.debug({ claimed: jobs.length, inFlight: this.inFlight.size }, "tick claimed jobs");
 
     for (const job of jobs) {
-      processingJobClaimedCounter.add(1);
+      this.metrics.recordProcessingJobClaimed();
       const promise: Promise<void> = this.process(job.props.assetId, job.props.attemptNumber);
       this.inFlight.set(job.props.assetId, { promise, attemptNumber: job.props.attemptNumber });
       promise
@@ -192,10 +166,6 @@ export class ProcessingWorkerService implements OnModuleDestroy {
     if (this.orphanSweepTimer) {
       clearInterval(this.orphanSweepTimer);
     }
-    if (this.queueDepthCallback !== null) {
-      processingQueueDepthGauge.removeCallback(this.queueDepthCallback);
-      this.queueDepthCallback = null;
-    }
   }
 
   trackInFlight(assetId: string, attemptNumber = 1, promise?: Promise<void>): void {
@@ -219,7 +189,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
     await Promise.race([
       Promise.allSettled(inFlightPromises),
       new Promise<void>((resolve): void => {
-        setTimeout(resolve, environmentConfiguration.PROCESSING_WORKER_SHUTDOWN_GRACE_MS);
+        setTimeout(resolve, this.opts.shutdownGraceMs);
       }),
     ]);
     // After the grace race: any assets still in-flight got cut off. Release
@@ -245,7 +215,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
             now,
           });
           if (released) {
-            processingJobReleasedCounter.add(1, { reason: "worker_shutdown" });
+            this.metrics.recordProcessingJobReleased({ reason: "worker_shutdown" });
           } else {
             this.logger.warn(
               { assetId },
@@ -264,7 +234,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
       timeoutHandle = setTimeout((): void => {
         timedOut = true;
         resolve("timeout");
-      }, this.workflowTimeoutMs);
+      }, this.opts.workflowTimeoutMs);
     });
 
     try {
@@ -280,10 +250,10 @@ export class ProcessingWorkerService implements OnModuleDestroy {
 
       if (winner === "timeout") {
         this.logger.error(
-          { assetId, attemptNumber, timeoutMs: this.workflowTimeoutMs },
+          { assetId, attemptNumber, timeoutMs: this.opts.workflowTimeoutMs },
           "workflow timeout reached; marking processing_failed",
         );
-        processingWorkflowTimeoutCounter.add(1);
+        this.metrics.recordProcessingWorkflowTimeout();
         await this.markFailed(assetId, attemptNumber, "workflow_timeout", "workflow_timeout");
         return;
       }
@@ -298,12 +268,12 @@ export class ProcessingWorkerService implements OnModuleDestroy {
           { assetId, attemptNumber, err: lastError },
           "permanent processing error; marking failed without retry",
         );
-        processingRetryCounter.add(1, { error_class: "permanent" });
+        this.metrics.recordProcessingRetry({ errorClass: "permanent" });
         await this.markFailed(assetId, attemptNumber, "permanent_error", lastError);
         return;
       }
 
-      processingRetryCounter.add(1, { error_class: "transient" });
+      this.metrics.recordProcessingRetry({ errorClass: "transient" });
       const decision: RetryDecision = this.retryPolicy.nextRetry({ attemptNumber });
       if (decision.kind === "exhausted") {
         this.logger.error(
@@ -324,7 +294,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
         now: new Date(),
       });
       if (released) {
-        processingJobReleasedCounter.add(1, { reason: "transient_error" });
+        this.metrics.recordProcessingJobReleased({ reason: "transient_error" });
       } else {
         this.logger.warn(
           { assetId, attemptNumber },
@@ -359,7 +329,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
       now,
     });
     if (transitioned) {
-      processingTerminalStateCounter.add(1, { state: "processing_failed" });
+      this.metrics.recordProcessingTerminalState({ state: "processing_failed" });
     } else {
       this.logger.warn(
         { assetId, attemptNumber, reason },
