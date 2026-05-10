@@ -6,6 +6,7 @@ import { EmptyAssetSelectionError } from "@/legal-holds/domain/errors/empty-asse
 
 import { FakeAssetPublicIdResolver } from "../../../__fakes__/fake-asset-public-id-resolver";
 import { FakeLegalHoldWriteRepository } from "../../../__fakes__/fake-legal-hold-write.repository";
+import { FakeUnitOfWork } from "../../../__fakes__/fake-unit-of-work";
 import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 
 describe("PlaceLegalHoldUseCase", () => {
@@ -18,7 +19,12 @@ describe("PlaceLegalHoldUseCase", () => {
     resolver = new FakeAssetPublicIdResolver();
     writeRepo = new FakeLegalHoldWriteRepository();
     auditRepo = new InMemoryAuditWriteRepository();
-    useCase = new PlaceLegalHoldUseCase(resolver as never, writeRepo, auditRepo);
+    useCase = new PlaceLegalHoldUseCase(
+      resolver as never,
+      writeRepo,
+      auditRepo,
+      new FakeUnitOfWork(),
+    );
   });
 
   it("places a hold over the resolved internal ids and computes a single-namespace scopeSummary", async () => {

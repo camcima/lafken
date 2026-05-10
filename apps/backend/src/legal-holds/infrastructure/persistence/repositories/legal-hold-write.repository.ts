@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { Kysely, Transaction } from "kysely";
 import { sql } from "kysely";
 
 import { LegalHold } from "@/legal-holds/domain/entities/legal-hold.entity";
@@ -7,18 +8,26 @@ import {
   type IPlaceLegalHoldInput,
   LegalHoldWriteRepositoryPort,
 } from "@/legal-holds/domain/repositories/legal-hold-write.repository.port";
+import { ConnectionResolver } from "@/shared/infrastructure/persistence/connection-resolver";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import type { DB } from "@/shared/infrastructure/persistence/db.types";
 
 import { LegalHoldDbMapper } from "../mappers/legal-hold.db-mapper";
 
 @Injectable()
 export class LegalHoldWriteRepository extends LegalHoldWriteRepositoryPort {
-  constructor(private readonly db: DatabaseClient) {
+  constructor(
+    private readonly db: DatabaseClient,
+    private readonly resolver: ConnectionResolver,
+  ) {
     super();
   }
 
   async placeHold(input: IPlaceLegalHoldInput): Promise<LegalHold> {
-    return this.db.connection.transaction().execute(async (tx) => {
+    const conn = this.resolver.resolve();
+    const isAlreadyInTx = conn !== this.db.connection;
+
+    const work = async (tx: Kysely<DB> | Transaction<DB>): Promise<LegalHold> => {
       const [row] = await tx
         .insertInto("legal_holds")
         .values({
@@ -54,11 +63,19 @@ export class LegalHoldWriteRepository extends LegalHoldWriteRepositoryPort {
       }
 
       return LegalHoldDbMapper.toDomain(row as Record<string, unknown>);
-    });
+    };
+
+    if (isAlreadyInTx) {
+      return work(conn);
+    }
+    return this.db.connection.transaction().execute(work);
   }
 
   async liftHold(input: ILiftLegalHoldInput): Promise<LegalHold> {
-    return this.db.connection.transaction().execute(async (tx) => {
+    const conn = this.resolver.resolve();
+    const isAlreadyInTx = conn !== this.db.connection;
+
+    const work = async (tx: Kysely<DB> | Transaction<DB>): Promise<LegalHold> => {
       const [row] = await tx
         .updateTable("legal_holds")
         .set({
@@ -106,6 +123,11 @@ export class LegalHoldWriteRepository extends LegalHoldWriteRepositoryPort {
       }
 
       return LegalHoldDbMapper.toDomain(row as Record<string, unknown>);
-    });
+    };
+
+    if (isAlreadyInTx) {
+      return work(conn);
+    }
+    return this.db.connection.transaction().execute(work);
   }
 }

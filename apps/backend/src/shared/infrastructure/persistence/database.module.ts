@@ -3,9 +3,11 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { Module, OnModuleDestroy } from "@nestjs/common";
 
 import { AppLoggerPort } from "@/shared/application/app-logger.port";
+import { UnitOfWorkPort } from "@/shared/application/unit-of-work.port";
 
 import { environmentConfiguration } from "../environment.configuration";
 import { LoggerModule } from "../logger/logger.module";
+import { ConnectionResolver } from "./connection-resolver";
 import { DatabaseAsyncLocalStorage } from "./database-async-local-storage";
 import { DatabaseClient } from "./database-client";
 import { DatabaseLogger } from "./database-logger";
@@ -59,11 +61,24 @@ import { DatabaseUnitOfWork } from "./database-unit-of-work";
     },
 
     {
+      provide: UnitOfWorkPort,
+      useExisting: DatabaseUnitOfWork,
+    },
+
+    {
       provide: DatabaseAsyncLocalStorage,
       useFactory: () => new DatabaseAsyncLocalStorage(new AsyncLocalStorage()),
     },
+
+    ConnectionResolver,
   ],
-  exports: [DatabaseClient, DatabaseUnitOfWork, DatabaseAsyncLocalStorage],
+  exports: [
+    DatabaseClient,
+    DatabaseUnitOfWork,
+    UnitOfWorkPort,
+    DatabaseAsyncLocalStorage,
+    ConnectionResolver,
+  ],
 })
 export class DatabaseModule implements OnModuleDestroy {
   constructor(private readonly databaseClient: DatabaseClient) {}

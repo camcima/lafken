@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { AssetWriteRepository } from "@/assets/infrastructure/persistence/repositories/asset-write.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { createConnectionResolver } from "../../helpers/create-connection-resolver";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
@@ -18,7 +19,7 @@ describe("AssetWriteRepository", () => {
 
   beforeAll(async () => {
     db = await createTestDatabaseClient();
-    repository = new AssetWriteRepository(db);
+    repository = new AssetWriteRepository(db, createConnectionResolver(db));
   });
 
   afterAll(async () => {

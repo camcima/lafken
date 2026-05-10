@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { Kysely, Transaction } from "kysely";
 
 import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
 import { NamespaceAlreadyExistsError } from "@/namespaces/domain/errors/namespace-already-exists.error";
@@ -13,7 +14,9 @@ import {
   IUpdateNamespaceMetadataInput,
   NamespaceWriteRepositoryPort,
 } from "@/namespaces/domain/repositories/namespace-write.repository.port";
+import { ConnectionResolver } from "@/shared/infrastructure/persistence/connection-resolver";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import type { DB } from "@/shared/infrastructure/persistence/db.types";
 import { NIL_UUID } from "@/shared/kernel/domain/nil-uuid.constant";
 
 import { NamespaceDbMapper } from "../mappers/namespace.db-mapper";
@@ -24,10 +27,16 @@ const PG_UNIQUE_VIOLATION = "23505";
 
 @Injectable()
 export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
-  constructor(private readonly db: DatabaseClient) {}
+  constructor(
+    private readonly db: DatabaseClient,
+    private readonly resolver: ConnectionResolver,
+  ) {}
 
   async createWithInitialPolicy(input: ICreateNamespaceInput): Promise<Namespace> {
-    return this.db.connection.transaction().execute(async (tx) => {
+    const conn = this.resolver.resolve();
+    const isAlreadyInTx = conn !== this.db.connection;
+
+    const work = async (tx: Kysely<DB> | Transaction<DB>): Promise<Namespace> => {
       try {
         // namespaces.current_policy_id FK is DEFERRABLE INITIALLY DEFERRED —
         // the check is deferred to commit, so we can insert the namespace first
@@ -89,11 +98,17 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
         }
         throw err;
       }
-    });
+    };
+
+    if (isAlreadyInTx) {
+      return work(conn);
+    }
+    return this.db.connection.transaction().execute(work);
   }
 
   async updateMetadata(input: IUpdateNamespaceMetadataInput): Promise<Namespace> {
-    const row = await this.db.connection
+    const row = await this.resolver
+      .resolve()
       .updateTable("namespaces")
       .set({
         display_name: input.displayName,
@@ -107,7 +122,8 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
   }
 
   async archive(slug: string): Promise<Namespace> {
-    const row = await this.db.connection
+    const row = await this.resolver
+      .resolve()
       .updateTable("namespaces")
       .set({ archived_at: new Date() })
       .where("slug", "=", slug)
@@ -118,7 +134,8 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
   }
 
   async unarchive(slug: string): Promise<Namespace> {
-    const row = await this.db.connection
+    const row = await this.resolver
+      .resolve()
       .updateTable("namespaces")
       .set({ archived_at: null })
       .where("slug", "=", slug)
@@ -136,9 +153,14 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
     input: ICreatePolicyVersionInput,
     attempt: number,
   ): Promise<ICreatePolicyVersionResult> {
+    const conn = this.resolver.resolve();
+    const isAlreadyInTx = conn !== this.db.connection;
+
     let nextVersion: number = 0;
     try {
-      return await this.db.connection.transaction().execute(async (tx) => {
+      const work = async (
+        tx: Kysely<DB> | Transaction<DB>,
+      ): Promise<ICreatePolicyVersionResult> => {
         const maxRow = await tx
           .selectFrom("namespace_policies")
           .select((eb) => eb.fn.max<number>("version").as("max"))
@@ -182,7 +204,12 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
           namespace: NamespaceDbMapper.toDomain(nsRow),
           newPolicyVersion: nextVersion,
         };
-      });
+      };
+
+      if (isAlreadyInTx) {
+        return await work(conn);
+      }
+      return await this.db.connection.transaction().execute(work);
     } catch (err) {
       if (this.isPolicyVersionUniqueViolation(err)) {
         if (attempt < 1) {

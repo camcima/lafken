@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { NamespaceWriteRepository } from "@/namespaces/infrastructure/persistence/repositories/namespace-write.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { createConnectionResolver } from "../../helpers/create-connection-resolver";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 describe("NamespaceWriteRepository.createPolicyVersion", () => {
@@ -11,7 +12,7 @@ describe("NamespaceWriteRepository.createPolicyVersion", () => {
 
   beforeAll(async () => {
     db = await createTestDatabaseClient();
-    repository = new NamespaceWriteRepository(db);
+    repository = new NamespaceWriteRepository(db, createConnectionResolver(db));
   });
 
   beforeEach(async () => {

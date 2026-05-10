@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { Kysely, Transaction } from "kysely";
 
 import { Asset } from "@/assets/domain/entities/asset.entity";
 import {
@@ -6,13 +7,18 @@ import {
   type ICreateUploadedAssetInput,
   type ITransitionStateInput,
 } from "@/assets/domain/repositories/asset-write.repository.port";
+import { ConnectionResolver } from "@/shared/infrastructure/persistence/connection-resolver";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import type { DB } from "@/shared/infrastructure/persistence/db.types";
 
 import { AssetDbMapper } from "../mappers/asset.db-mapper";
 
 @Injectable()
 export class AssetWriteRepository implements AssetWriteRepositoryPort {
-  constructor(private readonly db: DatabaseClient) {}
+  constructor(
+    private readonly db: DatabaseClient,
+    private readonly resolver: ConnectionResolver,
+  ) {}
 
   async createUploadedAsset(input: ICreateUploadedAssetInput): Promise<Asset> {
     const initialState: string = input.initialState ?? "uploaded";
@@ -20,7 +26,10 @@ export class AssetWriteRepository implements AssetWriteRepositoryPort {
       input.initialStateReason ??
       (initialState === "uploaded" ? "upload_confirmed" : "upload_quarantined");
 
-    return this.db.connection.transaction().execute(async (tx) => {
+    const conn = this.resolver.resolve();
+    const isAlreadyInTx = conn !== this.db.connection;
+
+    const work = async (tx: Kysely<DB> | Transaction<DB>): Promise<Asset> => {
       // 1. Mark intent consumed (idempotent — guarded by consumed_at IS NULL).
       await tx
         .updateTable("upload_intents")
@@ -105,11 +114,19 @@ export class AssetWriteRepository implements AssetWriteRepositoryPort {
       }
 
       return AssetDbMapper.toDomain(assetRow as Record<string, any>);
-    });
+    };
+
+    if (isAlreadyInTx) {
+      return work(conn);
+    }
+    return this.db.connection.transaction().execute(work);
   }
 
   async transitionState(input: ITransitionStateInput): Promise<Asset | null> {
-    return this.db.connection.transaction().execute(async (tx) => {
+    const conn = this.resolver.resolve();
+    const isAlreadyInTx = conn !== this.db.connection;
+
+    const work = async (tx: Kysely<DB> | Transaction<DB>): Promise<Asset | null> => {
       const existing = await tx
         .selectFrom("assets")
         .select(["id", "state"])
@@ -149,6 +166,11 @@ export class AssetWriteRepository implements AssetWriteRepositoryPort {
         .execute();
 
       return AssetDbMapper.toDomain(updated as Record<string, any>);
-    });
+    };
+
+    if (isAlreadyInTx) {
+      return work(conn);
+    }
+    return this.db.connection.transaction().execute(work);
   }
 }

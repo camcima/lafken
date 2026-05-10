@@ -8,4 +8,13 @@ export class DatabaseAsyncLocalStorage {
       databaseTransaction: Transaction<any> | undefined;
     }>,
   ) {}
+
+  /**
+   * Returns the active Kysely transaction handle if one is bound to the
+   * current async context, otherwise undefined. Repositories use this to
+   * opt into the transaction owned by the surrounding UnitOfWork.
+   */
+  currentTransaction(): Transaction<any> | undefined {
+    return this.als.getStore()?.databaseTransaction;
+  }
 }

@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { AuditInfrastructureModule } from "@/audit/infrastructure/audit-infrastructure.module";
+import { DatabaseModule } from "@/shared/infrastructure/persistence/database.module";
 
 import { ArchiveNamespaceUseCase } from "./application/use-cases/archive-namespace.use-case";
 import { CreateNamespaceUseCase } from "./application/use-cases/create-namespace.use-case";
@@ -18,7 +19,7 @@ import { NamespacesInfrastructureModule } from "./infrastructure/namespaces-infr
 import { NamespacesController } from "./presentation/controllers/namespaces.controller";
 
 @Module({
-  imports: [NamespacesInfrastructureModule, AuditInfrastructureModule],
+  imports: [DatabaseModule, NamespacesInfrastructureModule, AuditInfrastructureModule],
   controllers: [NamespacesController],
   providers: [
     ListNamespacesUseCase,

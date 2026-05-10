@@ -5,6 +5,7 @@ import { StorageBindingMissingError } from "@/namespaces/domain/errors/storage-b
 import { NamespaceWriteRepository } from "@/namespaces/infrastructure/persistence/repositories/namespace-write.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { createConnectionResolver } from "../../helpers/create-connection-resolver";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 describe("NamespaceWriteRepository", () => {
@@ -13,7 +14,7 @@ describe("NamespaceWriteRepository", () => {
 
   beforeAll(async () => {
     db = await createTestDatabaseClient();
-    repository = new NamespaceWriteRepository(db);
+    repository = new NamespaceWriteRepository(db, createConnectionResolver(db));
   });
 
   beforeEach(async () => {

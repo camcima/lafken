@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ProcessingJobRepository } from "@/assets/infrastructure/persistence/repositories/processing-job.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { createConnectionResolver } from "../../helpers/create-connection-resolver";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
@@ -14,7 +15,7 @@ describe("ProcessingJobRepository", () => {
 
   beforeAll(async () => {
     db = await createTestDatabaseClient();
-    repository = new ProcessingJobRepository(db);
+    repository = new ProcessingJobRepository(db, createConnectionResolver(db));
   });
 
   afterAll(async () => {

@@ -9,6 +9,7 @@ import {
   NamespaceWriteRepositoryPort,
 } from "@/namespaces/domain/repositories/namespace-write.repository.port";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
+import { UnitOfWorkPort } from "@/shared/application/unit-of-work.port";
 
 const AUDIT_FALLBACK_PRINCIPAL = "system";
 
@@ -22,6 +23,7 @@ export class CreateNamespaceUseCase {
     private readonly queryRepository: NamespaceQueryRepositoryPort,
     private readonly writeRepository: NamespaceWriteRepositoryPort,
     private readonly auditWriteRepo: AuditWriteRepositoryPort,
+    private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
   async execute(input: ICreateNamespaceUseCaseInput): Promise<NamespaceWithMetadata> {
@@ -32,31 +34,33 @@ export class CreateNamespaceUseCase {
       throw new NamespaceAlreadyExistsError({ slug: input.slug });
     }
 
-    const namespace = await this.writeRepository.createWithInitialPolicy(input);
+    return this.unitOfWork.execute(async () => {
+      const namespace = await this.writeRepository.createWithInitialPolicy(input);
 
-    const [storageBindingName, currentPolicyVersion] = await Promise.all([
-      this.queryRepository.findStorageBindingName(namespace.props.storageBindingId),
-      this.queryRepository.findCurrentPolicyVersion(namespace.props.id),
-    ]);
+      const [storageBindingName, currentPolicyVersion] = await Promise.all([
+        this.queryRepository.findStorageBindingName(namespace.props.storageBindingId),
+        this.queryRepository.findCurrentPolicyVersion(namespace.props.id),
+      ]);
 
-    await this.auditWriteRepo.record({
-      entityType: "namespace",
-      entityId: namespace.props.slug.value,
-      action: "create",
-      occurredBy: input.createdBy ?? AUDIT_FALLBACK_PRINCIPAL,
-      requestIp: input.requestIp,
-      afterState: {
-        slug: namespace.props.slug.value,
-        displayName: namespace.props.displayName,
-        description: namespace.props.description,
-        storageBinding: storageBindingName ?? null,
-      },
+      await this.auditWriteRepo.record({
+        entityType: "namespace",
+        entityId: namespace.props.slug.value,
+        action: "create",
+        occurredBy: input.createdBy ?? AUDIT_FALLBACK_PRINCIPAL,
+        requestIp: input.requestIp,
+        afterState: {
+          slug: namespace.props.slug.value,
+          displayName: namespace.props.displayName,
+          description: namespace.props.description,
+          storageBinding: storageBindingName ?? null,
+        },
+      });
+
+      return {
+        namespace,
+        storageBindingName: storageBindingName ?? "unknown",
+        currentPolicyVersion: currentPolicyVersion ?? 0,
+      };
     });
-
-    return {
-      namespace,
-      storageBindingName: storageBindingName ?? "unknown",
-      currentPolicyVersion: currentPolicyVersion ?? 0,
-    };
   }
 }

@@ -11,6 +11,8 @@ import { StorageBinding } from "@/system/domain/entities/storage-binding.entity"
 
 import { FakeAssetStorage } from "../../../__fakes__/fake-asset-storage";
 import { FakeAssetWriteRepository } from "../../../__fakes__/fake-asset-write.repository";
+import { FakeMetricsPort } from "../../../__fakes__/fake-metrics.port";
+import { FakeUnitOfWork } from "../../../__fakes__/fake-unit-of-work";
 import { FakeUploadIntentWriteRepository } from "../../../__fakes__/fake-upload-intent-write.repository";
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryAssetQueryRepository } from "../../assets/__fakes__/in-memory-asset-query.repository";
@@ -140,6 +142,8 @@ describe("ConfirmUploadUseCase", () => {
       storageBindingQueryRepo,
       assetQueryRepo,
       auditRepo,
+      new FakeMetricsPort(),
+      new FakeUnitOfWork(),
     );
   });
 

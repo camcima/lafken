@@ -7,6 +7,7 @@ import { NamespaceAlreadyExistsError } from "@/namespaces/domain/errors/namespac
 import { StorageBindingMissingError } from "@/namespaces/domain/errors/storage-binding-missing.error";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
+import { FakeUnitOfWork } from "../../../__fakes__/fake-unit-of-work";
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
@@ -46,7 +47,7 @@ describe("CreateNamespaceUseCase", () => {
     queryRepo = new InMemoryNamespaceQueryRepository();
     writeRepo = new InMemoryNamespaceWriteRepository();
     auditRepo = new InMemoryAuditWriteRepository();
-    useCase = new CreateNamespaceUseCase(queryRepo, writeRepo, auditRepo);
+    useCase = new CreateNamespaceUseCase(queryRepo, writeRepo, auditRepo, new FakeUnitOfWork());
   });
 
   it("creates a namespace and returns it when the slug is unique and binding exists", async () => {
