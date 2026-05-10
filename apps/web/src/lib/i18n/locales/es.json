@@ -162,9 +162,7 @@
     "comingInSlice1": ""
   },
   "topBar": {
-    "refresh": "",
-    "notifications": "",
-    "notificationsComingSoon": ""
+    "refresh": ""
   },
   "user": {
     "noRole": "",
@@ -1490,66 +1488,6 @@
       "en": "Estados Unidos",
       "es": "Latinoamérica",
       "pt": "Brasil"
-    }
-  },
-  "notifications": {
-    "title": "Notificaciones",
-    "newCountBadge": "{{count}} nuevas",
-    "markAllRead": "Marcar todas como leídas",
-    "close": "Cerrar",
-    "tabs": {
-      "all": "Todas",
-      "unread": "No leídas",
-      "review": "Revisión",
-      "system": "Sistema",
-      "workspace": "Workspace"
-    },
-    "categories": {
-      "review": "Revisión",
-      "system": "Sistema",
-      "workspace": "Workspace"
-    },
-    "empty": {
-      "title": "Estás al día",
-      "subtitle": "Nada en esta vista."
-    },
-    "footer": {
-      "viewAll": "Ver todo en el log de auditoría",
-      "settings": "Configuración de notificaciones"
-    },
-    "items": {
-      "n_01": {
-        "title": "Etapa de transformación degradada",
-        "body": "p95 ha estado por encima de 1,50s durante 14 minutos. Profundidad de cola: 4.811 y creciendo."
-      },
-      "n_02": {
-        "title": "5 activos en cuarentena con más de 24h",
-        "body": "El SLO del revisor es 4h. El más antiguo tiene 36h (cargo-damage / violencia 0,78)."
-      },
-      "n_03": {
-        "title": "Retención legal aplicada a aircraft-photos",
-        "body": "lh_01HX7 · aplicado por a.bravo@latam.com · caso CHL-2025-AVN-077"
-      },
-      "n_04": {
-        "title": "Tu revisión fue reemplazada",
-        "body": "01HXJ002KQZ · liberado por p.estrada@latam.com después de tu decisión de rechazo."
-      },
-      "n_05": {
-        "title": "Worker processor-12 inaccesible",
-        "body": "Visto por última vez hace 3m · pool Memphis · intento de reinicio automático 2/3."
-      },
-      "n_06": {
-        "title": "Policy v8 publicada para ground-ops-incidents",
-        "body": "Retención 10a → 12a. Nuevo campo requerido: incident_severity. Vigencia inmediata."
-      },
-      "n_07": {
-        "title": "Clave de API rotada · cargo-ingest-svc",
-        "body": "Rotada por m.fernandez@latam.com. La clave anterior se desactiva en 24h."
-      },
-      "n_08": {
-        "title": "Escalación: coincidencia de categoría médica",
-        "body": "01HXJ003UWQZ · puntuación 0,72 (umbral 0,65) · esperando revisor con habilitación médica."
-      }
     }
   }
 }
