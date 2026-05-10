@@ -13,7 +13,3 @@ export function fmtBytes(bytes: number): string {
   if (bytes < BYTES_IN_MB) return `${(bytes / BYTES_IN_KB).toFixed(1)} KB`;
   return `${(bytes / BYTES_IN_MB).toFixed(2)} MB`;
 }
-
-export function fmtNum(num: number): string {
-  return num.toLocaleString();
-}
