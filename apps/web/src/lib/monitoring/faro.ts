@@ -28,7 +28,7 @@ export function initFaro(user: AuthUser) {
       new TracingInstrumentation(),
     ],
     app: {
-      name: "eMantto Template",
+      name: "Lafken",
       version: "1.0.0",
       environment: getRuntimeValue("ENVIRONMENT"),
     },

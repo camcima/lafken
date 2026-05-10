@@ -80,7 +80,7 @@ output "port_io_dns_values" {
     environment     = var.environment
     region          = var.region
     # Note: Domain and Zone fields must be filled manually based on DNS team validation
-    # Example domain: app-emx-tmpl-intg.latam.com
+    # Example domain: app-lafken-intg.latam.com
     # Example zone: AKAMAI
   }
 }

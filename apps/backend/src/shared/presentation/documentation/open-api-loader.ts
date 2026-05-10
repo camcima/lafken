@@ -20,7 +20,7 @@ export function loadSwaggerForNestjsApp(app: INestApplication): void {
       .addBearerAuth({
         type: "http",
         scheme: "bearer",
-        description: "Azure AD Bearer token authorization",
+        description: "OIDC Bearer token authorization",
       });
 
     if (IS_CLOUD_ENDPOINT_DEFINITION) {
@@ -79,7 +79,7 @@ export function loadSwaggerForNestjsApp(app: INestApplication): void {
           disable_auth: true,
         })
         // Global security (applies to all operations unless overridden)
-        // Note: Using only Azure AD JWT. API key authentication is defined in securitySchemes
+        // Note: Using only OIDC JWT. API key authentication is defined in securitySchemes
         // but not enforced globally to avoid OR logical combination which is not supported.
         .addSecurityRequirements("azure_ad_jwt", []);
     }

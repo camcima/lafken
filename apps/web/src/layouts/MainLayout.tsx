@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import React from "react";
 
-import logoEmanttoAvif from "@/assets/logo-emantto.avif";
-import logoEmantto from "@/assets/logo-emantto.png";
+import logoLafkenAvif from "@/assets/logo-lafken.avif";
+import logoLafken from "@/assets/logo-lafken.png";
 import { Toaster } from "@/components/feedback/Success/Sonner";
 import { LanguageSwitcher } from "@/components/navigation/LanguageSwitcher";
 
@@ -23,13 +23,13 @@ export function MainLayout({ children }: Readonly<MainLayoutProps>) {
             <div className="flex items-center space-x-8">
               <Link to="/" className="flex items-center space-x-2">
                 <picture>
-                  <source srcSet={logoEmanttoAvif} type="image/avif" />
+                  <source srcSet={logoLafkenAvif} type="image/avif" />
                   <img
-                    src={logoEmantto}
+                    src={logoLafken}
                     width={507}
                     height={75}
                     className="h-6 w-auto"
-                    alt="eMantto - Latam"
+                    alt="Lafken"
                     loading="eager"
                     decoding="async"
                     fetchPriority="high"
