@@ -1,4 +1,4 @@
-export const PROBLEM_TYPE_PREFIX = "https://lafken.dev/problems/";
+const PROBLEM_TYPE_PREFIX = "https://lafken.dev/problems/";
 
 export function extractProblemTypeSuffix(typeUri: string | undefined | null): string | null {
   if (!typeUri) return null;

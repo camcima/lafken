@@ -33,7 +33,7 @@ export function getAutoPageSize(view: ViewMode): number {
 
 // Size display thresholds and units
 const BYTES_PER_KIB = 1024;
-export const BYTES_PER_MIB = 1_048_576;
+const BYTES_PER_MIB = 1_048_576;
 const KB_DISPLAY_THRESHOLD = BYTES_PER_MIB;
 
 function formatSize(bytes: number): string {

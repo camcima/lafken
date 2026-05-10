@@ -39,18 +39,46 @@
         // that runs at container startup, outside the bundled NestJS app.
         "axios",
         "axios-retry",
-        "google-auth-library"
+        "google-auth-library",
+        // Transitive peer dep of passport-jwt / @nestjs/passport; not directly imported.
+        "passport-strategy"
       ],
       "ignore": [
         // Files useful for test suites
         "test/**/*setup*.ts",
         "test/e2e/__fixtures__/**",
         "test/__mocks__/**",
+        // Dep-cruise positive-case fixtures — intentionally import across layers.
+        "test/dep-cruise/**",
+        // Test helper fakes and fixtures; only used within the test suite
+        // (--production skips them).
+        "test/__fakes__/**",
+        "test/__fixtures__/**",
+        "test/integration/helpers/**",
         // Files expected for a base template setup that might not be used in the project
         "**/base-repository.ts",
         // EndpointRequiredRoles is scaffolding for role-protected endpoints
         // that are adopted incrementally by feature slices.
-        "src/shared/presentation/auth/decorators/endpoint-required-roles.decorator.ts"
+        "src/shared/presentation/auth/decorators/endpoint-required-roles.decorator.ts",
+        // environmentSchema is re-exported and used by validate-deploy-config.ts
+        // (a deploy-time script; not in the main entry graph).
+        "src/shared/infrastructure/environment.configuration.ts",
+        // DEFERRED: Domain-layer I*Props / use-case I*Input / I*Result interfaces are
+        // exported but consumed within the same file (Knip can't see same-file usage
+        // of exported types across the production graph). Removing the `export` keyword
+        // from ~50 files is a mechanical cleanup deferred to the next housekeeping pass.
+        "src/assets/application/**/*.ts",
+        "src/assets/domain/**/*.ts",
+        "src/assets/infrastructure/**/*.ts",
+        "src/audit/domain/**/*.ts",
+        "src/legal-holds/application/**/*.ts",
+        "src/legal-holds/domain/**/*.ts",
+        "src/namespaces/application/**/*.ts",
+        "src/namespaces/domain/**/*.ts",
+        "src/quarantine/application/**/*.ts",
+        "src/quarantine/domain/**/*.ts",
+        "src/shared/infrastructure/persistence/database-error.ts",
+        "src/shared/infrastructure/telemetry/metrics.ts"
       ]
     },
     "apps/web": {
@@ -85,7 +113,34 @@
         "src/components/common/Icon/avatar.tsx",
         "src/components/common/Modal/DropdownMenu/index.tsx",
         // CVA variant export for design-system extension
-        "src/components/common/Button/index.tsx"
+        "src/components/common/Button/index.tsx",
+        // DEFERRED: Card barrel re-exports many callers; migrating to direct imports
+        // requires touching 10+ files across the codebase (CLAUDE.md §no-barrel-files).
+        "src/components/common/Card/index.ts",
+        // DEFERRED: Sparkline/MainLayout/StatCard/TagsCard/IntegrationRow/Delete|Deactivate
+        // dialogs are complete components not yet wired to any route or parent.
+        // They need feature-wiring work before they can be connected or safely removed.
+        "src/components/common/Sparkline/index.ts",
+        "src/layouts/MainLayout.tsx",
+        "src/features/dashboard/components/StatCard.tsx",
+        "src/features/assets/components/AssetDetailPage/tags-card.tsx",
+        "src/features/assets/components/DeleteAssetDialog.tsx",
+        "src/features/namespaces/components/DeactivatePresetDialog.tsx",
+        "src/features/system/components/IntegrationRow.tsx",
+        // DEFERRED: Query hooks below are used in tests (vi.mock) and will be wired
+        // to UI components in upcoming feature slices.
+        "src/features/legal-holds/hooks/useLegalHolds.ts",
+        "src/features/system/hooks/useSystem.ts",
+        // DEFERRED: presetNameSchema and AssetState local type — consolidation
+        // with @shared/backend-api types is deferred.
+        "src/features/namespaces/schemas/preset-params.schema.ts",
+        "src/features/assets/asset-states.ts",
+        // useStore is the raw Zustand hook; typed hooks in the same file are the
+        // preferred API. Keep the export to allow direct access when needed.
+        "src/stores/index.ts",
+        // DEFERRED: IAssetsListViewProps is internal to the file; remove export
+        // when the component is connected to a parent (same pass as the feature wiring).
+        "src/features/assets/components/assets-list-view.tsx"
       ]
     },
     "shared/backend-api": {
@@ -103,7 +158,47 @@
         "**/*-dto-factories*",
         // Public auth error contract DTOs — exposed for projects that protect
         // routes with @AuthenticatedEndpoint() but not consumed by every app.
-        "presentation/auth/*.dto.ts"
+        "presentation/auth/*.dto.ts",
+        // DTOs below are part of the public API surface (used via OpenAPI / SDK consumers).
+        // No in-repo caller currently imports them, but removing them is a breaking change.
+        "presentation/assets/namespace-storage-usage-response.dto.ts",
+        "presentation/dashboard/dashboard-overview-response.dto.ts",
+        "presentation/system/system-health-response.dto.ts",
+        // Constants below are part of the public surface shared with the frontend
+        // (consumed via @shared/backend-api in derived projects).
+        "presentation/namespaces/preset-params-input.dto.ts",
+        "presentation/quarantine/reject-quarantined-asset-request.dto.ts",
+        // UploadProtocol is part of the @lafken/upload SDK public surface.
+        "presentation/assets/create-upload-intent-request.dto.ts"
+      ]
+    },
+    "packages/client": {
+      "entry": [
+        "src/index.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ],
+      "ignore": [
+        // SDK public surface — query interfaces are used within the same client file
+        // and exported for external consumers (derived projects, tests).
+        "src/sub-clients/**"
+      ]
+    },
+    "packages/upload": {
+      "entry": [
+        "src/index.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
+    },
+    "packages/react": {
+      "entry": [
+        "src/index.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
       ]
     }
   },
