@@ -58,6 +58,15 @@ export default defineConfig({
           include: ["**/*.{test,spec}.{ts,tsx}"],
         },
       },
+      {
+        extends: true,
+        test: {
+          name: "scripts",
+          dir: "test/scripts",
+          include: ["**/*.{test,spec}.{ts,tsx}"],
+          environment: "node",
+        },
+      },
     ],
   },
   resolve: {

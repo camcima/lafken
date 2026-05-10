@@ -9,9 +9,9 @@
 # -----------------------------------------------------------------------------
 
 ## Environment variables for the Web as defined in the `public/config.js.template` file
-set-env-vars: ENVIRONMENT=prod,AUTH_PROVIDER=msal,API_URL=https://REPLACE_ME_PROD_HOST/be,AZURE_CLIENT_ID=REPLACE_ME_PROD_AZURE_CLIENT_ID,AZURE_TENANT_ID=REPLACE_ME_PROD_AZURE_TENANT_ID,AZURE_REDIRECT_URI=https://REPLACE_ME_PROD_HOST,AZURE_POST_LOGOUT_REDIRECT_URI=https://REPLACE_ME_PROD_HOST
+set-env-vars: ENVIRONMENT=prod,AUTH_PROVIDER=oidc,API_URL=https://REPLACE_ME_PROD_HOST/be,OIDC_AUTHORITY=REPLACE_ME_PROD_OIDC_AUTHORITY,OIDC_CLIENT_ID=REPLACE_ME_PROD_OIDC_CLIENT_ID,OIDC_AUDIENCE=REPLACE_ME_PROD_OIDC_AUDIENCE,OIDC_REDIRECT_URI=REPLACE_ME_PROD_OIDC_REDIRECT_URI,OIDC_POST_LOGOUT_REDIRECT_URI=REPLACE_ME_PROD_OIDC_POST_LOGOUT_REDIRECT_URI,OIDC_SCOPES=openid profile email
 port: 8080
-service-account: emx-tmpl-web-sa@emx-prod-63eb.iam.gserviceaccount.com
+service-account: lafken-web-sa@emx-prod-63eb.iam.gserviceaccount.com
 project: emx-prod-63eb
 region: us-east1
 cpu-boost:
@@ -23,4 +23,4 @@ execution-environment: gen2
 allow-unauthenticated:
 ingress: internal-and-cloud-load-balancing
 no-default-url:
-labels: cmdb-emx_tmpl=emx_tmpl,iac=false
+labels: cmdb-lafken=lafken,iac=false

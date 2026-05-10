@@ -36,6 +36,10 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "validate:deploy": {
+      "cache": false,
+      "outputs": []
     }
   }
 }

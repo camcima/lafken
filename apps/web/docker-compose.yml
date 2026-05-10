@@ -15,13 +15,18 @@ services:
     environment:
       # ── App ──────────────────────────────────────────────────────────────────
       ENVIRONMENT: intg
-      AUTH_PROVIDER: mock
+      AUTH_PROVIDER: oidc
 
-      # ── Azure AD / MSAL (leave blank when AUTH_PROVIDER=mock) ────────────────
-      AZURE_CLIENT_ID: ""
-      AZURE_REDIRECT_URI: ""
-      AZURE_TENANT_ID: ""
-      AZURE_POST_LOGOUT_REDIRECT_URI: ""
+      # ── OIDC ─────────────────────────────────────────────────────────────────
+      # dev-oidc runs in apps/backend/docker-compose.yml and is reached via the
+      # host network bridge (host.docker.internal → host port 8095).
+      # Start it first: docker compose -f apps/backend/docker-compose.yml up -d dev-oidc
+      OIDC_AUTHORITY: http://host.docker.internal:8095
+      OIDC_CLIENT_ID: lafken-web
+      OIDC_AUDIENCE: lafken-api
+      OIDC_REDIRECT_URI: http://localhost:8080/auth/callback
+      OIDC_POST_LOGOUT_REDIRECT_URI: http://localhost:8080/auth/login
+      OIDC_SCOPES: "openid profile email"
 
       # ── API ───────────────────────────────────────────────────────────────────
       # The browser makes requests to this URL directly, so it must be reachable

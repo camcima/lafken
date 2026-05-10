@@ -73,15 +73,6 @@ const config = defineConfig({
             return "vendor-query";
           }
 
-          // Azure auth stack split to keep auth chunks below warning limits
-          if (id.includes("@azure/msal-browser")) {
-            return "vendor-msal-browser";
-          }
-
-          if (id.includes("@azure/msal")) {
-            return "vendor-msal-core";
-          }
-
           // i18n stack
           if (id.includes("i18next")) {
             return "vendor-i18n";

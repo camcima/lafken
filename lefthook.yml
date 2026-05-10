@@ -39,6 +39,8 @@ pre-push:
     type-check:
       glob: '*.{js,ts,jsx,tsx}'
       run: pnpx turbo run type-check
+    validate-deploy:
+      run: pnpm validate:deploy
     syncpack:
       run: pnpx syncpack lint --dependency-types prod,dev
 

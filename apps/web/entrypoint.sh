@@ -34,18 +34,6 @@ validate_url() {
   fi
 }
 
-# Function to validate UUID format (for Azure IDs)
-validate_uuid() {
-  local value="$1"
-  local name="$2"
-
-  if [ -n "$value" ]; then
-    if ! echo "$value" | grep -qE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
-      echo "ERROR: $name must be a valid UUID format: $value" >&2
-      exit 1
-    fi
-  fi
-}
 
 # Function to validate enum values (prevents injection)
 validate_enum() {
@@ -96,19 +84,15 @@ validate_required "$AUTH_PROVIDER" "AUTH_PROVIDER"
 validate_enum "$ENVIRONMENT" "ENVIRONMENT" "intg" "prod"
 
 # Validate AUTH_PROVIDER (enum)
-validate_enum "$AUTH_PROVIDER" "AUTH_PROVIDER" "mock" "msal"
+validate_enum "$AUTH_PROVIDER" "AUTH_PROVIDER" "oidc"
 
 # Validate URLs (if provided)
 [ -n "$API_URL" ] && validate_url "$API_URL" "API_URL"
-[ -n "$AZURE_REDIRECT_URI" ] && validate_url "$AZURE_REDIRECT_URI" "AZURE_REDIRECT_URI"
-[ -n "$AZURE_POST_LOGOUT_REDIRECT_URI" ] && validate_url "$AZURE_POST_LOGOUT_REDIRECT_URI" "AZURE_POST_LOGOUT_REDIRECT_URI"
+[ -n "$OIDC_AUTHORITY" ] && validate_url "$OIDC_AUTHORITY" "OIDC_AUTHORITY"
+[ -n "$OIDC_REDIRECT_URI" ] && validate_url "$OIDC_REDIRECT_URI" "OIDC_REDIRECT_URI"
+[ -n "$OIDC_POST_LOGOUT_REDIRECT_URI" ] && validate_url "$OIDC_POST_LOGOUT_REDIRECT_URI" "OIDC_POST_LOGOUT_REDIRECT_URI"
 [ -n "$MONITORING_URL" ] && validate_url "$MONITORING_URL" "MONITORING_URL"
 
-# Validate UUIDs (if provided and AUTH_PROVIDER is azure-ad)
-if [ "$AUTH_PROVIDER" = "msal" ]; then
-  [ -n "$AZURE_CLIENT_ID" ] && validate_uuid "$AZURE_CLIENT_ID" "AZURE_CLIENT_ID"
-  [ -n "$AZURE_TENANT_ID" ] && validate_uuid "$AZURE_TENANT_ID" "AZURE_TENANT_ID"
-fi
 
 # ============================================================================
 # Sanitize Values (escape for JavaScript)
@@ -116,10 +100,12 @@ fi
 
 ENVIRONMENT_SANITIZED=$(sanitize_js_string "${ENVIRONMENT}")
 AUTH_PROVIDER_SANITIZED=$(sanitize_js_string "${AUTH_PROVIDER}")
-AZURE_CLIENT_ID_SANITIZED=$(sanitize_js_string "${AZURE_CLIENT_ID:-}")
-AZURE_REDIRECT_URI_SANITIZED=$(sanitize_js_string "${AZURE_REDIRECT_URI:-}")
-AZURE_TENANT_ID_SANITIZED=$(sanitize_js_string "${AZURE_TENANT_ID:-}")
-AZURE_POST_LOGOUT_REDIRECT_URI_SANITIZED=$(sanitize_js_string "${AZURE_POST_LOGOUT_REDIRECT_URI:-}")
+OIDC_AUTHORITY_SANITIZED=$(sanitize_js_string "${OIDC_AUTHORITY:-}")
+OIDC_CLIENT_ID_SANITIZED=$(sanitize_js_string "${OIDC_CLIENT_ID:-}")
+OIDC_AUDIENCE_SANITIZED=$(sanitize_js_string "${OIDC_AUDIENCE:-}")
+OIDC_REDIRECT_URI_SANITIZED=$(sanitize_js_string "${OIDC_REDIRECT_URI:-}")
+OIDC_POST_LOGOUT_REDIRECT_URI_SANITIZED=$(sanitize_js_string "${OIDC_POST_LOGOUT_REDIRECT_URI:-}")
+OIDC_SCOPES_SANITIZED=$(sanitize_js_string "${OIDC_SCOPES:-openid profile email}")
 MONITORING_URL_SANITIZED=$(sanitize_js_string "${MONITORING_URL:-}")
 API_URL_SANITIZED=$(sanitize_js_string "${API_URL:-}")
 
@@ -130,34 +116,40 @@ API_URL_SANITIZED=$(sanitize_js_string "${API_URL:-}")
 # envsubst doesn't support ${VAR:-default} syntax, so we need to handle defaults manually
 # Replace ${VAR:-default} patterns with just ${VAR} and set defaults if variables are empty
 ENVIRONMENT_VALUE="${ENVIRONMENT_SANITIZED:-intg}"
-AUTH_PROVIDER_VALUE="${AUTH_PROVIDER_SANITIZED:-mock}"
-AZURE_CLIENT_ID_VALUE="${AZURE_CLIENT_ID_SANITIZED:-}"
-AZURE_REDIRECT_URI_VALUE="${AZURE_REDIRECT_URI_SANITIZED:-}"
-AZURE_TENANT_ID_VALUE="${AZURE_TENANT_ID_SANITIZED:-}"
-AZURE_POST_LOGOUT_REDIRECT_URI_VALUE="${AZURE_POST_LOGOUT_REDIRECT_URI_SANITIZED:-}"
+AUTH_PROVIDER_VALUE="${AUTH_PROVIDER_SANITIZED:-oidc}"
+OIDC_AUTHORITY_VALUE="${OIDC_AUTHORITY_SANITIZED:-}"
+OIDC_CLIENT_ID_VALUE="${OIDC_CLIENT_ID_SANITIZED:-}"
+OIDC_AUDIENCE_VALUE="${OIDC_AUDIENCE_SANITIZED:-}"
+OIDC_REDIRECT_URI_VALUE="${OIDC_REDIRECT_URI_SANITIZED:-}"
+OIDC_POST_LOGOUT_REDIRECT_URI_VALUE="${OIDC_POST_LOGOUT_REDIRECT_URI_SANITIZED:-}"
+OIDC_SCOPES_VALUE="${OIDC_SCOPES_SANITIZED:-openid profile email}"
 MONITORING_URL_VALUE="${MONITORING_URL_SANITIZED:-}"
 API_URL_VALUE="${API_URL_SANITIZED:-}"
 
 # First, replace ${VAR:-default} patterns with ${VAR} in the template
 # Then use envsubst to substitute the actual values
 sed -e 's/\${ENVIRONMENT:-intg}/\${ENVIRONMENT}/g' \
-    -e 's/\${AUTH_PROVIDER:-mock}/\${AUTH_PROVIDER}/g' \
-    -e 's/\${AZURE_CLIENT_ID:-}/\${AZURE_CLIENT_ID}/g' \
-    -e 's/\${AZURE_REDIRECT_URI:-}/\${AZURE_REDIRECT_URI}/g' \
-    -e 's/\${AZURE_TENANT_ID:-}/\${AZURE_TENANT_ID}/g' \
-    -e 's/\${AZURE_POST_LOGOUT_REDIRECT_URI:-}/\${AZURE_POST_LOGOUT_REDIRECT_URI}/g' \
+    -e 's/\${AUTH_PROVIDER:-oidc}/\${AUTH_PROVIDER}/g' \
+    -e 's/\${OIDC_AUTHORITY:-}/\${OIDC_AUTHORITY}/g' \
+    -e 's/\${OIDC_CLIENT_ID:-}/\${OIDC_CLIENT_ID}/g' \
+    -e 's/\${OIDC_AUDIENCE:-}/\${OIDC_AUDIENCE}/g' \
+    -e 's/\${OIDC_REDIRECT_URI:-}/\${OIDC_REDIRECT_URI}/g' \
+    -e 's/\${OIDC_POST_LOGOUT_REDIRECT_URI:-}/\${OIDC_POST_LOGOUT_REDIRECT_URI}/g' \
+    -e 's/\${OIDC_SCOPES:-openid profile email}/\${OIDC_SCOPES}/g' \
     -e 's/\${MONITORING_URL:-}/\${MONITORING_URL}/g' \
     -e 's/\${API_URL:-}/\${API_URL}/g' \
     ./config.js.template | \
 ENVIRONMENT="$ENVIRONMENT_VALUE" \
 AUTH_PROVIDER="$AUTH_PROVIDER_VALUE" \
-AZURE_CLIENT_ID="$AZURE_CLIENT_ID_VALUE" \
-AZURE_REDIRECT_URI="$AZURE_REDIRECT_URI_VALUE" \
-AZURE_TENANT_ID="$AZURE_TENANT_ID_VALUE" \
-AZURE_POST_LOGOUT_REDIRECT_URI="$AZURE_POST_LOGOUT_REDIRECT_URI_VALUE" \
+OIDC_AUTHORITY="$OIDC_AUTHORITY_VALUE" \
+OIDC_CLIENT_ID="$OIDC_CLIENT_ID_VALUE" \
+OIDC_AUDIENCE="$OIDC_AUDIENCE_VALUE" \
+OIDC_REDIRECT_URI="$OIDC_REDIRECT_URI_VALUE" \
+OIDC_POST_LOGOUT_REDIRECT_URI="$OIDC_POST_LOGOUT_REDIRECT_URI_VALUE" \
+OIDC_SCOPES="$OIDC_SCOPES_VALUE" \
 MONITORING_URL="$MONITORING_URL_VALUE" \
 API_URL="$API_URL_VALUE" \
-envsubst '${ENVIRONMENT} ${AUTH_PROVIDER} ${AZURE_CLIENT_ID} ${AZURE_REDIRECT_URI} ${AZURE_TENANT_ID} ${AZURE_POST_LOGOUT_REDIRECT_URI} ${MONITORING_URL} ${API_URL}' \
+envsubst '${ENVIRONMENT} ${AUTH_PROVIDER} ${OIDC_AUTHORITY} ${OIDC_CLIENT_ID} ${OIDC_AUDIENCE} ${OIDC_REDIRECT_URI} ${OIDC_POST_LOGOUT_REDIRECT_URI} ${OIDC_SCOPES} ${MONITORING_URL} ${API_URL}' \
   > config.js
 
 # ============================================================================

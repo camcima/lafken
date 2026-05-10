@@ -76,8 +76,11 @@ function getWebServerConfig(timeout = 60000) {
   // Preview mode serves dist/, which needs a generated config.js to
   // bootstrap getRuntimeValue(). The dev server uses the
   // vite-dev-runtime-config plugin instead.
+  //
+  // Prerequisite: dev-oidc must already be running before invoking Playwright.
+  //   docker compose -f apps/backend/docker-compose.yml up -d dev-oidc
   const previewCommand =
-    "cd ../../apps/web && AUTH_PROVIDER=mock node scripts/generate-test-config.js && pnpm preview";
+    "cd ../../apps/web && AUTH_PROVIDER=oidc OIDC_AUTHORITY=http://localhost:8095 OIDC_CLIENT_ID=lafken-web OIDC_AUDIENCE=lafken-api OIDC_REDIRECT_URI=http://localhost:5173/auth/callback OIDC_POST_LOGOUT_REDIRECT_URI=http://localhost:5173/auth/login OIDC_SCOPES='openid profile email' ENVIRONMENT=intg API_URL=http://localhost:3000 node scripts/generate-test-config.js && pnpm preview";
   const command = IS_DEV ? "cd ../../apps/web && pnpm dev" : previewCommand;
   const url = `http://localhost:${SERVICE_PORT}`;
   const reuseExistingServer = !CI;
