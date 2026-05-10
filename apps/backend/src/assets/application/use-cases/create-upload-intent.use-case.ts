@@ -12,7 +12,7 @@ import {
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
-import { uploadIntentCreatedCounter } from "@/shared/infrastructure/telemetry/metrics";
+import { MetricsPort } from "@/shared/application/metrics.port";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 const UPLOAD_URL_TTL_SECONDS = 900;
@@ -40,6 +40,7 @@ export class CreateUploadIntentUseCase {
     private readonly storageBindingQueryRepository: StorageBindingQueryRepositoryPort,
     private readonly uploadIntentWriteRepository: UploadIntentWriteRepositoryPort,
     private readonly uploadUrlIssuer: UploadUrlIssuerPort,
+    private readonly metrics: MetricsPort,
   ) {}
 
   async execute(input: ICreateUploadIntentInput): Promise<ICreateUploadIntentResult> {
@@ -108,8 +109,8 @@ export class CreateUploadIntentUseCase {
       createdBy: input.createdBy,
     });
 
-    uploadIntentCreatedCounter.add(1, {
-      namespace_slug: input.namespaceSlug,
+    this.metrics.recordUploadIntentCreated({
+      namespaceSlug: input.namespaceSlug,
       protocol: issued.protocol,
     });
 

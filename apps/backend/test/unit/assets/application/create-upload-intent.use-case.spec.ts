@@ -10,6 +10,7 @@ import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 
+import { FakeMetricsPort } from "../../../__fakes__/fake-metrics.port";
 import { FakeUploadIntentWriteRepository } from "../../../__fakes__/fake-upload-intent-write.repository";
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryNamespaceQueryRepository } from "../../namespaces/__fakes__/in-memory-namespace-query.repository";
@@ -81,6 +82,7 @@ describe("CreateUploadIntentUseCase", () => {
       storageBindingQueryRepo,
       intentWriteRepo,
       buildIssuerStub({ simpleUrl: "https://fake-gcs.local/upload/stub" }),
+      new FakeMetricsPort(),
     );
   });
 

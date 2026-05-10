@@ -8,11 +8,13 @@ import { UploadIntent } from "@/assets/domain/entities/upload-intent.entity";
 import { NamespacePolicy } from "@/namespaces/domain/entities/namespace-policy.entity";
 import { Namespace } from "@/namespaces/domain/entities/namespace.entity";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
+import { OpenTelemetryMetricsAdapter } from "@/shared/infrastructure/metrics/metrics.adapter";
 import { LAFKEN_METRIC_NAMES } from "@/shared/infrastructure/telemetry/metrics";
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 
 import { FakeAssetStorage } from "../../../__fakes__/fake-asset-storage";
 import { FakeAssetWriteRepository } from "../../../__fakes__/fake-asset-write.repository";
+import { FakeUnitOfWork } from "../../../__fakes__/fake-unit-of-work";
 import { FakeUploadIntentWriteRepository } from "../../../__fakes__/fake-upload-intent-write.repository";
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import {
@@ -108,6 +110,7 @@ describe("upload metrics emissions", () => {
       bindingRepo,
       intentRepo,
       buildCreateIssuerStub({ simpleUrl: "https://fake-gcs.local/upload/stub" }),
+      new OpenTelemetryMetricsAdapter(),
     );
 
     await useCase.execute({
@@ -165,6 +168,8 @@ describe("upload metrics emissions", () => {
       bindingRepo,
       assetQueryRepo,
       auditRepo,
+      new OpenTelemetryMetricsAdapter(),
+      new FakeUnitOfWork(),
     );
 
     await useCase.execute({
@@ -178,7 +183,7 @@ describe("upload metrics emissions", () => {
     expect(
       findCounterPoint(handle.exporter, LAFKEN_METRIC_NAMES.UPLOAD_CONFIRMED, {
         namespace_slug: NAMESPACE_SLUG,
-        protocol: "simple",
+        state: "uploaded",
       })?.value,
     ).toBe(1);
   });
@@ -195,6 +200,7 @@ describe("upload metrics emissions", () => {
       issuer,
       audit,
       assetQueryRepo,
+      new OpenTelemetryMetricsAdapter(),
     );
 
     await useCase.execute({ publicId: "pid-1", requestedBy: "ops@latam.com" });
@@ -204,7 +210,6 @@ describe("upload metrics emissions", () => {
     expect(
       findCounterPoint(handle.exporter, LAFKEN_METRIC_NAMES.UPLOAD_INTENT_REFRESHED, {
         namespace_slug: NAMESPACE_SLUG,
-        protocol: "simple",
       })?.value,
     ).toBe(1);
   });
@@ -228,6 +233,8 @@ describe("upload metrics emissions", () => {
       storage,
       audit,
       assetQueryRepo,
+      undefined,
+      new OpenTelemetryMetricsAdapter(),
     );
 
     await useCase.execute({ now: new Date(), graceMs: 300_000, batchSize: 50 });

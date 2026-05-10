@@ -1,6 +1,9 @@
 import { Module } from "@nestjs/common";
 import { OpenTelemetryModule } from "nestjs-otel";
 
+import { MetricsPort } from "@/shared/application/metrics.port";
+import { OpenTelemetryMetricsAdapter } from "@/shared/infrastructure/metrics/metrics.adapter";
+
 /**
  * Wires nestjs-otel into the Nest container. `hostMetrics: true` enables host
  * resource metrics (CPU/memory/event loop) via `@opentelemetry/host-metrics`.
@@ -22,6 +25,10 @@ import { OpenTelemetryModule } from "nestjs-otel";
       },
     }),
   ],
-  providers: [],
+  providers: [
+    OpenTelemetryMetricsAdapter,
+    { provide: MetricsPort, useExisting: OpenTelemetryMetricsAdapter },
+  ],
+  exports: [MetricsPort],
 })
 export class TelemetryModule {}

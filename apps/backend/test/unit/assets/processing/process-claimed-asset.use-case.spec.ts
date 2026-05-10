@@ -35,6 +35,7 @@ import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/
 
 import { FakeAppLogger } from "../../../__fakes__/fake-app-logger";
 import { FakeAssetStorage } from "../../../__fakes__/fake-asset-storage";
+import { FakeMetricsPort } from "../../../__fakes__/fake-metrics.port";
 import {
   FakeMimeSniff,
   makeAsset,
@@ -74,6 +75,7 @@ describe("ProcessClaimedAssetUseCase", () => {
       mimeSniff,
       storageBindings,
       new FakeAppLogger(),
+      new FakeMetricsPort(),
     );
   });
 
