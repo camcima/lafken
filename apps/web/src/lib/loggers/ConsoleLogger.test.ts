@@ -125,7 +125,7 @@ describe("ConsoleLogger", () => {
     });
 
     it("logs auth event with details", () => {
-      const details = { method: "oauth", provider: "msal" };
+      const details = { method: "oauth", provider: "oidc" };
       logger.auth("User login attempt", details);
 
       expect(consoleSpy.log).toHaveBeenCalledWith("[AUTH] User login attempt", null, details);

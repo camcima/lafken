@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   ALLOWED_METRIC_ATTRIBUTE_KEYS,
   apiRequestDurationHistogram,
-  authzDecisionCounter,
   downloadUrlIssuedCounter,
   LAFKEN_METRIC_NAMES,
   previewUrlDurationHistogram,
@@ -69,7 +68,6 @@ describe("lafken §5.3 instruments", () => {
       SERVING_PREVIEW_URL_ISSUED: "lafken.serving.preview_url.issued",
       SERVING_PREVIEW_URL_DURATION: "lafken.serving.preview_url.duration",
       SERVING_DOWNLOAD_URL_ISSUED: "lafken.serving.download_url.issued",
-      AUTHZ_DECISION: "lafken.authz.decision",
       API_REQUEST_DURATION: "lafken.api.request.duration",
     });
 
@@ -88,7 +86,6 @@ describe("lafken §5.3 instruments", () => {
     expect(typeof previewUrlIssuedCounter.add).toBe("function");
     expect(typeof previewUrlDurationHistogram.record).toBe("function");
     expect(typeof downloadUrlIssuedCounter.add).toBe("function");
-    expect(typeof authzDecisionCounter.add).toBe("function");
     expect(typeof apiRequestDurationHistogram.record).toBe("function");
   });
 

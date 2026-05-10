@@ -11,7 +11,7 @@ import { z } from "zod";
  */
 const AppConfigSchema = z.object({
   ENVIRONMENT: z.enum(["intg", "prod"]),
-  AUTH_PROVIDER: z.enum(["mock", "oidc"]),
+  AUTH_PROVIDER: z.literal("oidc"),
   OIDC_AUTHORITY: z.union([z.url(), z.literal("")]),
   OIDC_CLIENT_ID: z.union([z.string(), z.literal("")]),
   OIDC_AUDIENCE: z.union([z.string(), z.literal("")]),
