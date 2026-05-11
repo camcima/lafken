@@ -1573,19 +1573,18 @@ components:
       scheme: bearer
       bearerFormat: JWT
       type: http
-      description: Azure AD Bearer token authorization
-    azure_ad_jwt:
+      description: OIDC Bearer token authorization
+    oidc_jwt:
       type: oauth2
       flows:
         implicit:
           authorizationUrl: ''
           scopes: {}
       x-google-auth:
-        issuer: https://login.microsoftonline.com/<%=azure_tenant_id%>/v2.0
-        jwksUri: >-
-          https://login.microsoftonline.com/<%=azure_tenant_id%>/discovery/v2.0/keys
+        issuer: <%=oidc_issuer%>
+        jwksUri: <%=oidc_issuer%>/.well-known/jwks.json
         audiences:
-          - <%=azure_client_id%>
+          - <%=oidc_audience%>
         jwtLocations:
           - header: Authorization
             valuePrefix: 'Bearer '
@@ -2718,4 +2717,4 @@ x-google-backend:
   path_translation: APPEND_PATH_TO_ADDRESS
   disable_auth: true
 security:
-  - azure_ad_jwt: []
+  - oidc_jwt: []
