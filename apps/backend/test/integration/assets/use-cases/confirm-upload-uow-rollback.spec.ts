@@ -16,7 +16,6 @@ import { StorageBindingQueryRepository } from "@/system/infrastructure/persisten
 
 import { FakeAssetStorage } from "../../../__fakes__/fake-asset-storage";
 import { FakeMetricsPort } from "../../../__fakes__/fake-metrics.port";
-import { NoopApplicationWithErrorLoggerMock } from "../../../__mocks__/noop-app-logger.service";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
@@ -39,8 +38,6 @@ describe("[Integration] ConfirmUploadUseCase — UoW rollback", () => {
     resolver = new ConnectionResolver(db, als);
     unitOfWork = new DatabaseUnitOfWork(als, db);
 
-    const logger = new NoopApplicationWithErrorLoggerMock();
-
     const intentRepo = new UploadIntentWriteRepository(db);
     const assetWriteRepo = new AssetWriteRepository(db, resolver);
     const assetQueryRepo = new AssetQueryRepository(db);
@@ -49,7 +46,7 @@ describe("[Integration] ConfirmUploadUseCase — UoW rollback", () => {
     const fakeStorage = new FakeAssetStorage();
     fakeStorage.existsResult = true; // object always exists for this test
 
-    auditWriteRepo = new AuditWriteRepository(resolver, logger);
+    auditWriteRepo = new AuditWriteRepository(resolver);
 
     useCase = new ConfirmUploadUseCase(
       intentRepo,

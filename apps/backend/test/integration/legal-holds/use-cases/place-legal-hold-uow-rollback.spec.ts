@@ -11,7 +11,6 @@ import { DatabaseAsyncLocalStorage } from "@/shared/infrastructure/persistence/d
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 import { DatabaseUnitOfWork } from "@/shared/infrastructure/persistence/database-unit-of-work";
 
-import { NoopApplicationWithErrorLoggerMock } from "../../../__mocks__/noop-app-logger.service";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
@@ -37,11 +36,9 @@ describe("[Integration] PlaceLegalHoldUseCase — UoW rollback", () => {
     resolver = new ConnectionResolver(db, als);
     unitOfWork = new DatabaseUnitOfWork(als, db);
 
-    const logger = new NoopApplicationWithErrorLoggerMock();
-
     const assetQueryRepo = new AssetQueryRepository(db);
     const legalHoldWriteRepo = new LegalHoldWriteRepository(db, resolver);
-    auditWriteRepo = new AuditWriteRepository(resolver, logger);
+    auditWriteRepo = new AuditWriteRepository(resolver);
 
     useCase = new PlaceLegalHoldUseCase(
       assetQueryRepo,

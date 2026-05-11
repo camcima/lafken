@@ -26,7 +26,7 @@ export function loadSwaggerForNestjsApp(app: INestApplication): void {
     if (IS_CLOUD_ENDPOINT_DEFINITION) {
       optionsBuilder
         .addServer("https://<%= service_name %>", "Cloud Endpoints service URL")
-        .addSecurity("azure_ad_jwt", {
+        .addSecurity("oidc_jwt", {
           type: "oauth2",
           flows: {
             implicit: {
@@ -36,9 +36,9 @@ export function loadSwaggerForNestjsApp(app: INestApplication): void {
           },
 
           ["x-google-auth"]: {
-            issuer: "https://login.microsoftonline.com/<%=azure_tenant_id%>/v2.0",
-            jwksUri: "https://login.microsoftonline.com/<%=azure_tenant_id%>/discovery/v2.0/keys",
-            audiences: ["<%=azure_client_id%>"],
+            issuer: "<%=oidc_issuer%>",
+            jwksUri: "<%=oidc_issuer%>/.well-known/jwks.json",
+            audiences: ["<%=oidc_audience%>"],
             jwtLocations: [
               {
                 header: "Authorization",
@@ -81,7 +81,7 @@ export function loadSwaggerForNestjsApp(app: INestApplication): void {
         // Global security (applies to all operations unless overridden)
         // Note: Using only OIDC JWT. API key authentication is defined in securitySchemes
         // but not enforced globally to avoid OR logical combination which is not supported.
-        .addSecurityRequirements("azure_ad_jwt", []);
+        .addSecurityRequirements("oidc_jwt", []);
     }
 
     const options = optionsBuilder.build();
