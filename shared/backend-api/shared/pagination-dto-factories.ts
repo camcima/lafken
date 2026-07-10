@@ -3,7 +3,7 @@
 import { Type as Constructor, mixin } from "@nestjs/common";
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform, Type } from "class-transformer";
-import { IsArray, IsIn, IsInt, IsOptional, Min } from "class-validator";
+import { IsArray, IsIn, IsInt, IsOptional, Max, Min } from "class-validator";
 
 import type { PaginatedResult } from "./paginated-result.interface";
 
@@ -39,7 +39,9 @@ export function makePaginatedResponseDto<T extends Constructor>(ResourceCls: T) 
  * @returns A DTO class that expects `page`, `limit`, `order`, `orderBy`
  * properties as input. Where:
  * - `page` defaults to 1
- * - `limit` defaults to 20
+ * - `limit` defaults to 20 and is bounded to 1..100 (F-D3: prevents
+ *   whole-table dumps via `?limit=10000000` and the `limit=0` division
+ *   producing `lastPage: Infinity`)
  * - `order` defaults to `"desc"`
  */
 export function makePaginatedRequestInputDto() {
@@ -55,10 +57,13 @@ export function makePaginatedRequestInputDto() {
 
     @Type(() => Number)
     @IsInt()
-    @Min(0)
+    @Min(1)
+    @Max(100)
     @ApiProperty({
       default: 20,
       required: false,
+      minimum: 1,
+      maximum: 100,
     })
     limit: number = 20;
 

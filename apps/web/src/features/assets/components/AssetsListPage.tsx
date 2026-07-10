@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 // Page-size options for the rows-per-page selector
 /* eslint-disable no-magic-numbers */
-const PAGE_SIZE_OPTIONS = [18, 24, 50, 100, 200] as const;
+const PAGE_SIZE_OPTIONS = [18, 24, 50, 100] as const;
 /* eslint-enable no-magic-numbers */
 
 const NAMESPACE_FILTER_LIMIT = 100;

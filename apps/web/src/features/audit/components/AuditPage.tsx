@@ -191,7 +191,7 @@ function AuditDrawer({ entry, onClose }: IAuditDrawerProps): React.JSX.Element {
 }
 
 /* eslint-disable no-magic-numbers */
-const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const;
+const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 50;
 /* eslint-enable no-magic-numbers */
 

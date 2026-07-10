@@ -42,4 +42,24 @@ describe("[E2E] GET /v1/audit", () => {
       lastPage: 1,
     });
   });
+
+  it("rejects limit above the cap with RFC 9457 400", async () => {
+    const response = await request(app.getHttpServer())
+      .get("/v1/audit")
+      .query({ limit: 101 })
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
+
+    expect(response.status).toBe(400);
+    expect(response.headers["content-type"]).toContain("application/problem+json");
+  });
+
+  it("rejects limit=0 with RFC 9457 400", async () => {
+    const response = await request(app.getHttpServer())
+      .get("/v1/audit")
+      .query({ limit: 0 })
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
+
+    expect(response.status).toBe(400);
+    expect(response.headers["content-type"]).toContain("application/problem+json");
+  });
 });
