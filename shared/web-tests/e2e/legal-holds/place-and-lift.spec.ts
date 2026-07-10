@@ -1,6 +1,5 @@
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 
-const REQUIRES_FAKE_GCS = process.env.LAFKEN_E2E_REQUIRES_FAKE_GCS === "true";
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:3000";
 
 /**
@@ -131,13 +130,6 @@ async function uploadJpeg(request: APIRequestContext, namespaceSlug: string): Pr
 }
 
 test.describe("Slice 6: Legal holds place + lift", () => {
-  test.beforeEach(() => {
-    test.skip(
-      !REQUIRES_FAKE_GCS,
-      "Set LAFKEN_E2E_REQUIRES_FAKE_GCS=true with the backend + fake-gcs running.",
-    );
-  });
-
   test("places a hold on two assets and lifts it; the asset banner appears and disappears", async ({
     page,
     request,
