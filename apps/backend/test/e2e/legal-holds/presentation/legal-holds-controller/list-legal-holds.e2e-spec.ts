@@ -59,4 +59,31 @@ describe("[E2E] GET /v1/legal-holds", () => {
       detail: expect.stringContaining(unknownId),
     });
   });
+
+  it("returns 403 on list for an authenticated caller without a legal-holds read role", async () => {
+    const token = await mintDevOidcToken({ profileId: "asset-deleter" });
+    const response = await request(app.getHttpServer())
+      .get("/v1/legal-holds")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(403);
+  });
+
+  it("returns 403 on get-by-id for an authenticated caller without a legal-holds read role", async () => {
+    const token = await mintDevOidcToken({ profileId: "asset-deleter" });
+    const response = await request(app.getHttpServer())
+      .get("/v1/legal-holds/00000000-0000-0000-0000-000000000000")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(403);
+  });
+
+  it("allows a content reviewer to list legal holds", async () => {
+    const token = await mintDevOidcToken({ profileId: "content-reviewer" });
+    const response = await request(app.getHttpServer())
+      .get("/v1/legal-holds")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+  });
 });

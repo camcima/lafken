@@ -53,7 +53,11 @@ export class LegalHoldsController {
   ) {}
 
   @Get()
-  @AuthenticatedEndpoint()
+  @EndpointRequiredRoles([
+    ApplicationRole.LEGAL_HOLD_ADMIN,
+    ApplicationRole.PLATFORM_OPERATOR,
+    ApplicationRole.CONTENT_REVIEWER,
+  ])
   @ApiOperation({ summary: "List legal holds" })
   @ApiOkResponse({ type: PaginatedLegalHoldResponseDTO })
   async list(@Query() query: ListLegalHoldsQueryDTO): Promise<PaginatedLegalHoldResponseDTO> {
@@ -73,7 +77,11 @@ export class LegalHoldsController {
   }
 
   @Get(":id")
-  @AuthenticatedEndpoint()
+  @EndpointRequiredRoles([
+    ApplicationRole.LEGAL_HOLD_ADMIN,
+    ApplicationRole.PLATFORM_OPERATOR,
+    ApplicationRole.CONTENT_REVIEWER,
+  ])
   @ApiOperation({ summary: "Get legal hold by id" })
   @ApiOkResponse({ type: LegalHoldResponseDTO })
   @ApiNotFoundResponse()
