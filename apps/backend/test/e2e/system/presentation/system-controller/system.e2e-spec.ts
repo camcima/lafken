@@ -172,4 +172,50 @@ describe("[E2E] System controller", () => {
       expect(response.body.integrations).toHaveLength(7);
     });
   });
+
+  describe("role gating on system reads", () => {
+    it("returns 403 on GET /v1/system/storage-bindings without the platform operator role", async () => {
+      const response = await request(app.getHttpServer())
+        .get("/v1/system/storage-bindings")
+        .set(
+          "Authorization",
+          `Bearer ${await mintDevOidcToken({ profileId: "content-reviewer" })}`,
+        );
+
+      expect(response.status).toBe(403);
+    });
+
+    it("returns 403 on GET /v1/system/storage-bindings/:name without the platform operator role", async () => {
+      const response = await request(app.getHttpServer())
+        .get("/v1/system/storage-bindings/some-name")
+        .set(
+          "Authorization",
+          `Bearer ${await mintDevOidcToken({ profileId: "content-reviewer" })}`,
+        );
+
+      expect(response.status).toBe(403);
+    });
+
+    it("returns 403 on GET /v1/system/integrations without the platform operator role", async () => {
+      const response = await request(app.getHttpServer())
+        .get("/v1/system/integrations")
+        .set(
+          "Authorization",
+          `Bearer ${await mintDevOidcToken({ profileId: "content-reviewer" })}`,
+        );
+
+      expect(response.status).toBe(403);
+    });
+
+    it("returns 403 on GET /v1/system/health without the platform operator role", async () => {
+      const response = await request(app.getHttpServer())
+        .get("/v1/system/health")
+        .set(
+          "Authorization",
+          `Bearer ${await mintDevOidcToken({ profileId: "content-reviewer" })}`,
+        );
+
+      expect(response.status).toBe(403);
+    });
+  });
 });

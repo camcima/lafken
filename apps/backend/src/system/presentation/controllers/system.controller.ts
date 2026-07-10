@@ -32,7 +32,6 @@ import {
 } from "@shared/backend-api";
 
 import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
-import { AuthenticatedEndpoint } from "@/shared/presentation/auth/decorators/authenticated-endpoint.decorator";
 import { AuthenticatedUser } from "@/shared/presentation/auth/decorators/authenticated-user.decorator";
 import { EndpointRequiredRoles } from "@/shared/presentation/auth/decorators/endpoint-required-roles.decorator";
 import type { CurrentAuthenticatedUserDTO } from "@/shared/presentation/auth/dto/current-authenticated-user.dto";
@@ -65,7 +64,7 @@ export class SystemController {
   ) {}
 
   @Get("storage-bindings")
-  @AuthenticatedEndpoint()
+  @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
   @ApiOperation({ summary: "List storage bindings" })
   @ApiOkResponse({ type: StorageBindingResponseDTO, isArray: true })
   async listStorageBindings(): Promise<StorageBindingResponseDTO[]> {
@@ -74,7 +73,7 @@ export class SystemController {
   }
 
   @Get("storage-bindings/:name")
-  @AuthenticatedEndpoint()
+  @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
   @ApiOperation({ summary: "Get a storage binding by name" })
   @ApiOkResponse({ type: StorageBindingResponseDTO })
   @ApiNotFoundResponse()
@@ -179,7 +178,7 @@ export class SystemController {
   }
 
   @Get("integrations")
-  @AuthenticatedEndpoint()
+  @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
   @ApiOperation({ summary: "List integration adapter statuses" })
   @ApiOkResponse({ type: IntegrationStatusResponseDTO, isArray: true })
   async listIntegrations(): Promise<IntegrationStatusResponseDTO[]> {
@@ -188,7 +187,7 @@ export class SystemController {
   }
 
   @Get("health")
-  @AuthenticatedEndpoint()
+  @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
   @ApiOperation({ summary: "System health snapshot" })
   @ApiOkResponse({ type: SystemHealthResponseDTO })
   async health(): Promise<SystemHealthResponseDTO> {
