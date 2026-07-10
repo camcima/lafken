@@ -1,8 +1,10 @@
 import { Injectable } from "@nestjs/common";
 
+import { AssetNotDownloadableError } from "@/assets/domain/errors/asset-not-downloadable.error";
 import { AssetNotFoundError } from "@/assets/domain/errors/asset-not-found.error";
 import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-query.repository.port";
 import { AssetStoragePort } from "@/assets/domain/services/asset-storage.service.port";
+import { isAssetDownloadable } from "@/assets/domain/value-objects/asset-state.value-object";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 const DOWNLOAD_URL_TTL_SECONDS = 300;
@@ -33,6 +35,16 @@ export class GetAssetDownloadUrlUseCase {
     const asset = await this.assetQueryRepository.findByPublicId(input.publicId);
     if (!asset) {
       throw new AssetNotFoundError({ publicId: input.publicId });
+    }
+
+    // F-S1: quarantine moves the bytes to `_quarantined/<key>` and updates
+    // `storage_key` in the same UPDATE, so signing `asset.props.storageKey`
+    // without this gate would hand out working URLs to quarantined bytes.
+    if (!isAssetDownloadable(asset.props.state)) {
+      throw new AssetNotDownloadableError({
+        publicId: input.publicId,
+        currentState: asset.props.state,
+      });
     }
 
     const binding = await this.storageBindingQueryRepository.findById(asset.props.storageBindingId);

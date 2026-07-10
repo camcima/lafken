@@ -49,3 +49,23 @@ const PREVIEWABLE_ASSET_STATES: ReadonlySet<AssetState> = new Set([
 export function isAssetPreviewable(state: AssetState): boolean {
   return PREVIEWABLE_ASSET_STATES.has(state);
 }
+
+/**
+ * States where an asset's original bytes may be handed out through a signed
+ * download URL. Mirrors the preview allowlist today, but download and preview
+ * are distinct capabilities kept as separate predicates so they can diverge
+ * (e.g. a compliance flow could someday allow downloading rejected originals
+ * that must never be previewable). Quarantine physically moves the bytes to
+ * `_quarantined/<key>` and updates `storage_key` in the same UPDATE, so an
+ * unguarded signed URL would point at the quarantined bytes and *work* —
+ * this predicate is the gate that prevents that (implementation review F-S1).
+ */
+const DOWNLOADABLE_ASSET_STATES: ReadonlySet<AssetState> = new Set([
+  "uploaded",
+  "processing",
+  "ready",
+]);
+
+export function isAssetDownloadable(state: AssetState): boolean {
+  return DOWNLOADABLE_ASSET_STATES.has(state);
+}
