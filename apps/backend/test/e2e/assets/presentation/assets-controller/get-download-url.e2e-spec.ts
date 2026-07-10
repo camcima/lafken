@@ -102,6 +102,7 @@ describe.skipIf(!GATE)("[E2E] GET /v1/assets/:publicId/download-url", () => {
     namespaceId: string;
     policyVersionId: string;
     storageKey?: string;
+    state?: string;
   }): Promise<{ publicId: string }> {
     const [assetRow] = await db.connection
       .insertInto("assets")
@@ -110,7 +111,7 @@ describe.skipIf(!GATE)("[E2E] GET /v1/assets/:publicId/download-url", () => {
         policy_version_id: input.policyVersionId,
         storage_binding_id: storageBindingId,
         storage_key: input.storageKey ?? "ns/asset-key.jpg",
-        state: "uploaded",
+        state: input.state ?? "uploaded",
         mime_type: "image/jpeg",
         size_bytes: BigInt(1024),
         effective_max_size_bytes: BigInt(52_428_800),
@@ -150,4 +151,29 @@ describe.skipIf(!GATE)("[E2E] GET /v1/assets/:publicId/download-url", () => {
     expect(typeof response.body.detail).toBe("string");
     expect(response.body.detail.length).toBeGreaterThan(0);
   });
+
+  it.each(["quarantined_virus", "quarantined_moderation", "rejected", "deleted"])(
+    "returns RFC 9457 404 and mints no URL for a %s asset",
+    async (state) => {
+      const { namespaceId, policyId } = await insertNamespace(
+        `download-ns-${state.replaceAll("_", "-")}`,
+      );
+      const { publicId } = await insertAsset({
+        namespaceId,
+        policyVersionId: policyId,
+        state,
+        storageKey: state.startsWith("quarantined_")
+          ? "_quarantined/ns/asset-key.jpg"
+          : "ns/asset-key.jpg",
+      });
+
+      const response = await request(app.getHttpServer())
+        .get(`/v1/assets/${publicId}/download-url`)
+        .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`);
+
+      expect(response.status).toBe(404);
+      expect(response.headers["content-type"]).toMatch(/application\/problem\+json/);
+      expect(response.body).not.toHaveProperty("url");
+    },
+  );
 });

@@ -47,6 +47,7 @@ import { ListAssetsUseCase } from "@/assets/application/use-cases/list-assets.us
 import { RefreshUploadUrlUseCase } from "@/assets/application/use-cases/refresh-upload-url.use-case";
 import { RetryAssetProcessingUseCase } from "@/assets/application/use-cases/retry-asset-processing.use-case";
 import type { Asset } from "@/assets/domain/entities/asset.entity";
+import { AssetNotDownloadableError } from "@/assets/domain/errors/asset-not-downloadable.error";
 import { AssetNotFoundError } from "@/assets/domain/errors/asset-not-found.error";
 import { AssetNotInProcessingFailedStateError } from "@/assets/domain/errors/asset-not-in-processing-failed-state.error";
 import { FileSizeExceedsPolicyError } from "@/assets/domain/errors/file-size-exceeds-policy.error";
@@ -314,7 +315,7 @@ export class AssetsController {
       }
       return { url: result.url };
     } catch (err) {
-      if (err instanceof AssetNotFoundError) {
+      if (err instanceof AssetNotFoundError || err instanceof AssetNotDownloadableError) {
         throw new NotFoundException(err.message, { cause: err });
       }
       throw err;
