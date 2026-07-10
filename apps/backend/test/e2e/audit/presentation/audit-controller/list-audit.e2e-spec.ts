@@ -62,4 +62,12 @@ describe("[E2E] GET /v1/audit", () => {
     expect(response.status).toBe(400);
     expect(response.headers["content-type"]).toContain("application/problem+json");
   });
+
+  it("returns 403 for an authenticated caller without the platform operator role", async () => {
+    const response = await request(app.getHttpServer())
+      .get("/v1/audit")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "content-reviewer" })}`);
+
+    expect(response.status).toBe(403);
+  });
 });

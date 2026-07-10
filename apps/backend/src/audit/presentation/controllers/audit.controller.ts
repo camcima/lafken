@@ -3,7 +3,8 @@ import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ListAuditQueryDTO } from "@shared/backend-api";
 
 import { ListAuditEntriesUseCase } from "@/audit/application/use-cases/list-audit-entries.use-case";
-import { AuthenticatedEndpoint } from "@/shared/presentation/auth/decorators/authenticated-endpoint.decorator";
+import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
+import { EndpointRequiredRoles } from "@/shared/presentation/auth/decorators/endpoint-required-roles.decorator";
 
 import { PaginatedAuditEntryResponseDTO } from "../dto/list-audit-paginated-response.dto";
 import { AuditEntryResponseMapper } from "../mappers/audit-entry.response-mapper";
@@ -14,7 +15,7 @@ export class AuditController {
   constructor(private readonly listAuditEntriesUseCase: ListAuditEntriesUseCase) {}
 
   @Get()
-  @AuthenticatedEndpoint()
+  @EndpointRequiredRoles([ApplicationRole.PLATFORM_OPERATOR])
   @ApiOperation({ summary: "List audit log entries" })
   @ApiOkResponse({ type: PaginatedAuditEntryResponseDTO })
   async list(@Query() query: ListAuditQueryDTO): Promise<PaginatedAuditEntryResponseDTO> {
