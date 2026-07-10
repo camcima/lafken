@@ -18,5 +18,7 @@ describe("dependency-cruiser global rules", () => {
     }
     expect(exitCode).toBeGreaterThan(0);
     expect(output).toMatch(/no-application-into-shared-infrastructure/u);
-  });
+    // Spawns `npx depcruise`, which cruises the whole module graph; under a
+    // loaded parallel suite this can exceed Vitest's 5s default. Give it room.
+  }, 30_000);
 });
