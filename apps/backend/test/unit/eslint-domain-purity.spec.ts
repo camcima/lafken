@@ -26,7 +26,11 @@ const FORBIDDEN_SAMPLES = [
 
 describe("ESLint domain-purity rule", () => {
   for (const sample of FORBIDDEN_SAMPLES) {
-    it(`rejects ${sample.name} inside src/**/domain/**`, { timeout: 30_000 }, () => {
+    // Each case spawns `pnpx eslint`, which resolves the binary and loads the
+    // type-aware flat config (~16s in isolation). Under the loaded parallel
+    // unit suite these spawns are CPU-starved and can reach ~60s, so give them
+    // ample headroom to keep the pre-push hook deterministic on slower boxes.
+    it(`rejects ${sample.name} inside src/**/domain/**`, { timeout: 120_000 }, () => {
       // Place the sample in a path the rule will scan.
       mkdirSync(FIXTURE_DIR, { recursive: true });
       writeFileSync(FIXTURE_FILE, sample.code);
