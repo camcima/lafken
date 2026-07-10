@@ -6,6 +6,7 @@ import {
   QuarantineQueryRepositoryPort,
 } from "@/quarantine/domain/repositories/quarantine-query.repository.port";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import { computeLastPage } from "@/shared/kernel/domain/pagination";
 
 import { QuarantinedAssetViewDbMapper } from "../mappers/quarantined-asset-view.db-mapper";
 
@@ -84,7 +85,7 @@ export class QuarantineQueryRepository implements QuarantineQueryRepositoryPort 
       total,
       page: input.page,
       limit: input.limit,
-      lastPage: Math.max(1, Math.ceil(total / input.limit)),
+      lastPage: computeLastPage(total, input.limit),
     };
   }
 }

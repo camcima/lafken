@@ -7,6 +7,7 @@ import {
   ListLegalHoldsInput,
 } from "@/legal-holds/domain/repositories/legal-hold-query.repository.port";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import { computeLastPage } from "@/shared/kernel/domain/pagination";
 
 import { LegalHoldDbMapper } from "../mappers/legal-hold.db-mapper";
 
@@ -36,7 +37,7 @@ export class LegalHoldQueryRepository implements LegalHoldQueryRepositoryPort {
       total,
       page: input.page,
       limit: input.limit,
-      lastPage: Math.max(1, Math.ceil(total / input.limit)),
+      lastPage: computeLastPage(total, input.limit),
     };
   }
 

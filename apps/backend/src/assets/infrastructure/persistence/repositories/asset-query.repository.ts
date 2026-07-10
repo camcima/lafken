@@ -13,6 +13,7 @@ import {
   NamespaceStorageUsage,
 } from "@/assets/domain/repositories/asset-query.repository.port";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import { computeLastPage } from "@/shared/kernel/domain/pagination";
 
 import { AssetAnalysisDbMapper } from "../mappers/asset-analysis.db-mapper";
 import { AssetStateTransitionDbMapper } from "../mappers/asset-state-transition.db-mapper";
@@ -129,7 +130,7 @@ export class AssetQueryRepository implements AssetQueryRepositoryPort {
       total,
       page: input.page,
       limit: input.limit,
-      lastPage: Math.max(1, Math.ceil(total / input.limit)),
+      lastPage: computeLastPage(total, input.limit),
     };
   }
 

@@ -6,6 +6,7 @@ import {
   ListAuditInput,
 } from "@/audit/domain/repositories/audit-query.repository.port";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import { computeLastPage } from "@/shared/kernel/domain/pagination";
 
 import { AuditEntryDbMapper } from "../mappers/audit-entry.db-mapper";
 
@@ -85,7 +86,7 @@ export class AuditQueryRepository implements AuditQueryRepositoryPort {
       total,
       page: input.page,
       limit: input.limit,
-      lastPage: Math.max(1, Math.ceil(total / input.limit)),
+      lastPage: computeLastPage(total, input.limit),
     };
   }
 }

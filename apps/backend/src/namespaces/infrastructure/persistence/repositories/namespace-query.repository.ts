@@ -10,6 +10,7 @@ import {
 } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import { ConnectionResolver } from "@/shared/infrastructure/persistence/connection-resolver";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import { computeLastPage } from "@/shared/kernel/domain/pagination";
 
 import { NamespacePolicyDbMapper } from "../mappers/namespace-policy.db-mapper";
 import { NamespacePresetDbMapper } from "../mappers/namespace-preset.db-mapper";
@@ -44,7 +45,7 @@ export class NamespaceQueryRepository implements NamespaceQueryRepositoryPort {
       total,
       page: input.page,
       limit: input.limit,
-      lastPage: Math.max(1, Math.ceil(total / input.limit)),
+      lastPage: computeLastPage(total, input.limit),
     };
   }
 
