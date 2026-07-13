@@ -48,6 +48,11 @@ export class FakeAssetStorage extends AssetStoragePort {
     if (!bytes) {
       return Promise.reject(new Error(`Object "${input.storageKey}" does not exist`));
     }
+    // Honor the port's maxBytes contract: the real adapter issues a ranged
+    // download and returns at most the first maxBytes.
+    if (input.maxBytes !== undefined && bytes.length > input.maxBytes) {
+      return Promise.resolve(bytes.subarray(0, input.maxBytes));
+    }
     return Promise.resolve(bytes);
   }
 
