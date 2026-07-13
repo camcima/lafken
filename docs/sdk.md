@@ -4,11 +4,11 @@ Lafken ships three NPM packages that together form the official
 client surface. The web admin console in this repo uses these same
 packages — there is no private fast path.
 
-| Package | Purpose | Peer dependencies |
-| ------- | ------- | ----------------- |
-| `@lafken/client` | Typed REST client. One method per public endpoint, grouped by bounded context. | `@shared/backend-api` (DTOs only). |
-| `@lafken/upload` | Browser-side upload manager. Wraps Uppy with the simple/tus protocol switch and signed-URL refresh. | `@lafken/client`. |
-| `@lafken/react` | React hooks and components. | `react ^19`, `@tanstack/react-query ^5`. |
+| Package          | Purpose                                                                                | Peer dependencies                        |
+| ---------------- | -------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `@lafken/client` | Typed REST client. One method per public endpoint, grouped by bounded context.         | `@shared/backend-api` (DTOs only).       |
+| `@lafken/upload` | Browser-side upload manager. Wraps Uppy for signed-URL uploads with automatic refresh. | `@lafken/client`.                        |
+| `@lafken/react`  | React hooks and components.                                                            | `react ^19`, `@tanstack/react-query ^5`. |
 
 DTO shapes come from `@shared/backend-api` and are imported with
 `import type`. The SDK does not redefine them.
@@ -94,16 +94,28 @@ import { LafkenUploadManager } from "@lafken/upload";
 const manager = new LafkenUploadManager({
   client,
   namespaceSlug: "marketing",
-  protocol: "simple",            // or "tus"
+  protocol: "simple",
   refreshSafetyMarginMs: 30_000, // refresh if URL expires within 30 s
 });
 
-manager.addEventListener("file-processing", (e) => { /* ... */ });
-manager.addEventListener("file-ready", (e) => { /* ... */ });
-manager.addEventListener("file-quarantined", (e) => { /* ... */ });
-manager.addEventListener("file-rejected-terminal", (e) => { /* ... */ });
-manager.addEventListener("file-failed", (e) => { /* ... */ });
-manager.addEventListener("file-restriction-rejected", (e) => { /* ... */ });
+manager.addEventListener("file-processing", (e) => {
+  /* ... */
+});
+manager.addEventListener("file-ready", (e) => {
+  /* ... */
+});
+manager.addEventListener("file-quarantined", (e) => {
+  /* ... */
+});
+manager.addEventListener("file-rejected-terminal", (e) => {
+  /* ... */
+});
+manager.addEventListener("file-failed", (e) => {
+  /* ... */
+});
+manager.addEventListener("file-restriction-rejected", (e) => {
+  /* ... */
+});
 
 manager.addFiles([file]);
 await manager.start();
@@ -112,21 +124,20 @@ await manager.start();
 `LafkenUploadManager` extends `EventTarget`; lifecycle events arrive
 as `CustomEvent` instances.
 
-| Event | When |
-| ----- | ---- |
-| `file-processing` | Confirm returned with `state: processing`. Manager begins polling. |
-| `file-ready` | Asset reached `ready`. |
-| `file-quarantined` | Asset reached `quarantined_virus`, `quarantined_moderation`, or `quarantined_invalid_format`. |
-| `file-rejected-terminal` | Asset reached `rejected`. |
-| `file-failed` | `processing_failed`, polling timed out, intent or confirm errored. |
-| `file-restriction-rejected` | Uppy refused the file at drop time (wrong type, too large, etc.). |
-| `file-confirmed` | Confirm returned with a non-terminal, non-`processing` state (back-compat). |
+| Event                       | When                                                                                          |
+| --------------------------- | --------------------------------------------------------------------------------------------- |
+| `file-processing`           | Confirm returned with `state: processing`. Manager begins polling.                            |
+| `file-ready`                | Asset reached `ready`.                                                                        |
+| `file-quarantined`          | Asset reached `quarantined_virus`, `quarantined_moderation`, or `quarantined_invalid_format`. |
+| `file-rejected-terminal`    | Asset reached `rejected`.                                                                     |
+| `file-failed`               | `processing_failed`, polling timed out, intent or confirm errored.                            |
+| `file-restriction-rejected` | Uppy refused the file at drop time (wrong type, too large, etc.).                             |
+| `file-confirmed`            | Confirm returned with a non-terminal, non-`processing` state (back-compat).                   |
 
-Switching to tus is one line: pass `protocol: "tus"` and ensure
-`TUSD_ENDPOINT_URL` is configured on the backend. The manager swaps
-`@uppy/xhr-upload` for `@uppy/tus` internally. Polling backoff is
-configurable via `pollingIntervalMs`, `pollingMaxIntervalMs`,
-`pollingTimeoutMs` (default 600 000 ms).
+> tus (resumable) uploads are descoped from v1.0. The API still accepts `protocol: "tus"` for forward compatibility but always responds `422 TusNotConfiguredError`.
+
+Polling backoff is configurable via `pollingIntervalMs`,
+`pollingMaxIntervalMs`, `pollingTimeoutMs` (default 600 000 ms).
 
 ## `@lafken/react`
 
@@ -139,7 +150,7 @@ import { LafkenProvider } from "@lafken/react";
 
 <LafkenProvider client={client}>
   <App />
-</LafkenProvider>
+</LafkenProvider>;
 ```
 
 The provider exposes the `LafkenClient` to descendants via context.

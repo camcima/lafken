@@ -46,7 +46,6 @@ This starts:
 - PostgreSQL 18 on `localhost:5433`.
 - fake-gcs-server on `localhost:4443`.
 - imgproxy on `localhost:8081`.
-- tusd on `localhost:1080` (when configured).
 - ClamAV on `localhost:3310` (when `PROCESSING_VIRUS_SCAN_ADAPTER=clamav`).
 - A local OIDC provider on `localhost:8095` (when `AUTH_PROVIDER=oidc`).
 

@@ -252,4 +252,21 @@ describe("[E2E] POST /v1/assets/upload-intents", () => {
 
     expect(response.status).toBe(403);
   });
+
+  it("returns 422 problem+json when protocol 'tus' is requested (descoped from v1.0)", async () => {
+    await insertNamespace("tus-descoped-ns");
+
+    const res = await request(app.getHttpServer())
+      .post("/v1/assets/upload-intents")
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
+      .send({
+        namespaceSlug: "tus-descoped-ns",
+        declaredMimeType: "image/jpeg",
+        declaredSizeBytes: 1024,
+        protocol: "tus",
+      });
+
+    expect(res.status).toBe(422);
+    expect(res.headers["content-type"]).toMatch(/problem\+json/);
+  });
 });

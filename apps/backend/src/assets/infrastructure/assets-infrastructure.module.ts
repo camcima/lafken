@@ -30,7 +30,6 @@ import { LocalContentModerationAdapter } from "./services/local-content-moderati
 import { LocalVirusScanAdapter } from "./services/local-virus-scan.adapter";
 import { NoopPreviewUrlSigner } from "./services/noop-preview-url-signer.adapter";
 import { SharpImageInspectionAdapter } from "./services/sharp-image-inspection.adapter";
-import { TusdUploadUrlIssuer } from "./services/tusd-upload-url-issuer.adapter";
 
 @Module({
   imports: [DatabaseModule],
@@ -56,13 +55,8 @@ import { TusdUploadUrlIssuer } from "./services/tusd-upload-url-issuer.adapter";
     },
     {
       provide: UploadUrlIssuerPort,
-      useFactory: (storage: AssetStoragePort): UploadUrlIssuerPort => {
-        const gcs = new GcsSignedUploadUrlIssuer(storage);
-        const tusd = environmentConfiguration.TUSD_ENDPOINT_URL
-          ? new TusdUploadUrlIssuer({ endpointUrl: environmentConfiguration.TUSD_ENDPOINT_URL })
-          : null;
-        return new CompositeUploadUrlIssuer({ gcs, tusd });
-      },
+      useFactory: (storage: AssetStoragePort): UploadUrlIssuerPort =>
+        new CompositeUploadUrlIssuer({ gcs: new GcsSignedUploadUrlIssuer(storage) }),
       inject: [AssetStoragePort],
     },
     { provide: ImageInspectionPort, useClass: SharpImageInspectionAdapter },

@@ -32,26 +32,6 @@ describe("CreateUploadIntentUseCase protocol selection", () => {
     expect(issuer.calls[0]?.protocol).toBe("simple");
   });
 
-  it("issues a tus URL when protocol='tus' and tusd is configured", async () => {
-    const issuer = buildIssuerStub({ tusUrl: "http://tusd:1080/files/abc" });
-    const useCase = new CreateUploadIntentUseCase(
-      buildNamespaceRepoStub(),
-      buildBindingRepoStub(),
-      buildIntentRepoStub(),
-      issuer,
-      new FakeMetricsPort(),
-    );
-    const result = await useCase.execute({
-      namespaceSlug: "n",
-      declaredMimeType: "image/jpeg",
-      declaredSizeBytes: BigInt(1),
-      createdBy: "u@latam.com",
-      protocol: "tus",
-    });
-    expect(result.protocol).toBe("tus");
-    expect(result.uploadUrl).toBe("http://tusd:1080/files/abc");
-  });
-
   it("propagates TusNotConfiguredError from the issuer", async () => {
     const issuer = buildIssuerStub({ throwTusUnconfigured: true });
     const useCase = new CreateUploadIntentUseCase(
