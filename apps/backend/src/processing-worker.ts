@@ -27,6 +27,14 @@ async function bootstrap(): Promise<void> {
   process.once("SIGINT", (): void => void shutdown());
 }
 
+// Last-resort crash guard (F-P2): if the worker process dies mid-claim, its
+// claimed jobs strand until a (worker-hosted) stale sweeper runs — in a
+// single-worker deployment that means forever. Log and keep running.
+process.on("unhandledRejection", (reason: unknown): void => {
+  const logger = new NestLogger("processing-worker:unhandledRejection");
+  logger.error(new Error("Unhandled promise rejection", { cause: reason }));
+});
+
 bootstrap().catch((err: unknown): never => {
   const logger = new NestLogger("processing-worker");
   logger.fatal(new Error("Failed to start processing worker", { cause: err }));

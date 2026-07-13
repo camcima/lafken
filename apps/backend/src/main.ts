@@ -20,6 +20,13 @@ async function bootstrap() {
   await app.listen(environmentConfiguration.APP_PORT);
 }
 
+// Last-resort crash guard: a floating promise anywhere in the API process
+// must be logged, not allowed to terminate the process (Node ≥15 default).
+process.on("unhandledRejection", (reason: unknown): void => {
+  const logger = new NestLogger("unhandledRejection");
+  logger.error(new Error("Unhandled promise rejection", { cause: reason }));
+});
+
 bootstrap().catch((err) => {
   const logger = new NestLogger("bootstrap");
   const errorToDisplay = new Error("Failed to start application", {
