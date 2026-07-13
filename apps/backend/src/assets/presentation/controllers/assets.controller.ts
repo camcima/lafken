@@ -136,18 +136,17 @@ export class AssetsController {
       let presets: Array<{ name: string; spec: IPreviewSpec }> | undefined =
         presetsCache.get(namespaceId);
       if (!presets) {
-        // listPresets returns every active row ordered by (name asc, version
-        // desc); collapse to the highest active version per name so a stale
-        // older version can't clobber the latest one in the resulting URL map.
+        // listPresets returns exactly one row per preset name (the latest
+        // version, F-D5) — filter to active ones. System presets are seeded
+        // first; namespace presets can never collide with them thanks to the
+        // reserved-prefix validation.
         const list = await namespaceRepo.listPresets(namespaceId);
         const latestByName: Map<string, IPreviewSpec> = new Map();
-        // System presets first; namespace can never collide due to prefix
-        // validation, but the dedupe pass remains as defense-in-depth.
         for (const sys of SYSTEM_PRESETS) {
           latestByName.set(sys.name, sys.spec);
         }
         for (const preset of list) {
-          if (!latestByName.has(preset.props.name)) {
+          if (preset.props.active && !latestByName.has(preset.props.name)) {
             latestByName.set(preset.props.name, preset.props.params.props);
           }
         }

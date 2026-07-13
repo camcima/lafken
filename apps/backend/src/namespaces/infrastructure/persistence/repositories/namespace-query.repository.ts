@@ -69,13 +69,23 @@ export class NamespaceQueryRepository implements NamespaceQueryRepositoryPort {
   }
 
   async listPresets(namespaceId: string): Promise<NamespacePreset[]> {
+    // DISTINCT ON (name) ordered by (name, version DESC) picks exactly the
+    // latest version row per preset name — the row that carries the preset's
+    // authoritative `active` flag. Inactive presets are included (flagged);
+    // callers that only serve active presets filter on `props.active`.
     const rows = await this.db.connection
-      .selectFrom("namespace_presets")
+      .selectFrom((eb) =>
+        eb
+          .selectFrom("namespace_presets")
+          .selectAll()
+          .distinctOn("name")
+          .where("namespace_id", "=", namespaceId)
+          .orderBy("name", "asc")
+          .orderBy("version", "desc")
+          .as("latest"),
+      )
       .selectAll()
-      .where("namespace_id", "=", namespaceId)
-      .where("active", "=", true)
       .orderBy("name", "asc")
-      .orderBy("version", "desc")
       .execute();
     return rows.map((row) => NamespacePresetDbMapper.toDomain(row));
   }

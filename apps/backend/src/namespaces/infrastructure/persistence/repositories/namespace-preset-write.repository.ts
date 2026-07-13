@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { Kysely, Transaction } from "kysely";
+import { sql } from "kysely";
 
 import { NamespacePreset } from "@/namespaces/domain/entities/namespace-preset.entity";
 import { PresetNameAlreadyExistsError } from "@/namespaces/domain/errors/preset-name-already-exists.error";
@@ -65,6 +66,7 @@ export class NamespacePresetWriteRepository implements NamespacePresetWriteRepos
     let nextVersion: number = 0;
     try {
       const work = async (tx: Kysely<DB> | Transaction<DB>): Promise<NamespacePreset> => {
+        await this.acquirePresetLock(tx, input.namespaceId, input.name);
         const latest = await tx
           .selectFrom("namespace_presets")
           .select(["version", "active"])
@@ -122,30 +124,42 @@ export class NamespacePresetWriteRepository implements NamespacePresetWriteRepos
     const isAlreadyInTx = conn !== this.db.connection;
 
     const work = async (tx: Kysely<DB> | Transaction<DB>): Promise<NamespacePreset> => {
-      const latest = await tx
-        .selectFrom("namespace_presets")
-        .select(["id", "version"])
-        .where("namespace_id", "=", input.namespaceId)
-        .where("name", "=", input.name)
-        .orderBy("version", "desc")
-        .limit(1)
-        .executeTakeFirst();
-      if (!latest) {
-        throw new PresetNotFoundError({ slug: "<unknown>", name: input.name });
-      }
-      const row = await tx
+      await this.acquirePresetLock(tx, input.namespaceId, input.name);
+      // The active flag means "is this preset enabled" — per preset, not per
+      // version. Flip every version row so all rows always agree and no
+      // older row can resurrect a deactivated preset.
+      const rows = await tx
         .updateTable("namespace_presets")
         .set({ active: input.active })
-        .where("id", "=", latest.id)
+        .where("namespace_id", "=", input.namespaceId)
+        .where("name", "=", input.name)
         .returningAll()
-        .executeTakeFirstOrThrow();
-      return NamespacePresetDbMapper.toDomain(row);
+        .execute();
+      if (rows.length === 0) {
+        throw new PresetNotFoundError({ slug: "<unknown>", name: input.name });
+      }
+      const latest = rows.reduce((acc, cur) => (acc.version >= cur.version ? acc : cur));
+      return NamespacePresetDbMapper.toDomain(latest);
     };
 
     if (isAlreadyInTx) {
       return work(conn);
     }
     return this.db.connection.transaction().execute(work);
+  }
+
+  /**
+   * Serializes concurrent setActive / createVersion for one preset name.
+   * pg_advisory_xact_lock is released automatically at tx commit/rollback.
+   */
+  private async acquirePresetLock(
+    tx: Kysely<DB> | Transaction<DB>,
+    namespaceId: string,
+    name: string,
+  ): Promise<void> {
+    await sql`SELECT pg_advisory_xact_lock(hashtextextended(${namespaceId}::text || '/' || ${name}, 0))`.execute(
+      tx,
+    );
   }
 
   private isPresetVersionUniqueViolation(err: unknown): boolean {
