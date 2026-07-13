@@ -13,8 +13,12 @@ export interface ILiftLegalHoldInput {
   id: string;
   liftedBy: string;
   liftReason: string;
-  /** Asset internal ids covered by this hold; provided by the use case from the M2M. */
-  assetInternalIds: string[];
+}
+
+export interface ILiftLegalHoldResult {
+  hold: LegalHold;
+  /** Number of asset rows whose legal_hold flag/reference were recomputed. */
+  affectedAssetCount: number;
 }
 
 export abstract class LegalHoldWriteRepositoryPort {
@@ -26,9 +30,14 @@ export abstract class LegalHoldWriteRepositoryPort {
   abstract placeHold(input: IPlaceLegalHoldInput): Promise<LegalHold>;
 
   /**
-   * Atomically marks the hold inactive (filling `lifted_*`) and recomputes
-   * `assets.legal_hold` + `assets.legal_hold_reference` for the covered assets,
-   * leaving any asset still covered by another active hold flagged as held.
+   * Atomically marks the hold inactive (filling `lifted_*`) — guarded by
+   * `WHERE active = true`, so a concurrent lift loses and gets
+   * `LegalHoldAlreadyLiftedError` instead of silently overwriting the first
+   * lift's metadata — and recomputes `assets.legal_hold` +
+   * `assets.legal_hold_reference` for every covered asset in a single SQL
+   * statement keyed on `legal_hold_id` (stacking-aware: assets still under
+   * another active hold stay flagged). Throws `LegalHoldNotFoundError` when
+   * the id doesn't exist.
    */
-  abstract liftHold(input: ILiftLegalHoldInput): Promise<LegalHold>;
+  abstract liftHold(input: ILiftLegalHoldInput): Promise<ILiftLegalHoldResult>;
 }
