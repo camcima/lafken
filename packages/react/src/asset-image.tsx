@@ -6,6 +6,7 @@ import {
   _getCachedPresetUrl,
   _resetPresetUrlCache,
   cacheUpdateBus,
+  type ICacheUpdatedDetail,
 } from "./_url-cache";
 import { _LafkenClientContext } from "./lafken-provider";
 
@@ -62,8 +63,9 @@ export function AssetImage(props: IAssetImageProps): React.JSX.Element | null {
   const visibleState: IFetchState =
     state.key === key ? state : { key, url: null, errored: false, retried: false };
 
-  // clientRef lets the cache-update effect read the latest client without
-  // being in its dependency array (the effect should only run once per key).
+  // clientRef lets the img-error retry (below) reach the latest client without
+  // putting `client` in the useCallback deps, which would rebuild the handler —
+  // and re-attach the img's onError — on every render that passes a new client.
   const clientRef = useRef<LafkenClient>(client);
   useEffect(() => {
     clientRef.current = client;
@@ -74,7 +76,16 @@ export function AssetImage(props: IAssetImageProps): React.JSX.Element | null {
     const promise: Promise<string> = _getCachedPresetUrl(client, publicId, preset);
     promise.then(
       (resolved: string) => {
-        if (!cancelled) setState({ key, url: resolved, errored: false, retried: false });
+        if (cancelled) return;
+        // This read can resolve with a stale-but-valid URL *after* a refresh it
+        // itself triggered has already been delivered over the bus. Any URL
+        // already present for this key came from a later cache write, so never
+        // move backwards.
+        setState((prev) =>
+          prev.key === key && prev.url !== null
+            ? prev
+            : { key, url: resolved, errored: false, retried: false },
+        );
       },
       () => {
         if (!cancelled) setState({ key, url: null, errored: true, retried: false });
@@ -85,24 +96,30 @@ export function AssetImage(props: IAssetImageProps): React.JSX.Element | null {
     };
   }, [client, publicId, preset, key]);
 
-  // Subscribe to background-refresh completions and update the displayed URL.
+  // Subscribe to refresh completions and swap the displayed URL.
+  //
+  // The event carries the resolved URL, so this listener never reads the cache
+  // back. Re-entering _getCachedPresetUrl() here would close a feedback loop
+  // (fetch -> dispatch -> re-read -> fetch -> ...) that never terminates for an
+  // unparseable expiresAt or a sub-minute TTL. It also keeps the listener free
+  // of promises, so there is no rejection to leak.
+  //
+  // `key` is the only dependency: publicId/preset are its components, and no
+  // client is needed now that we don't call into the cache.
   useEffect(() => {
     function onCacheUpdated(ev: Event): void {
-      const eventKey = (ev as CustomEvent<{ key: string }>).detail.key;
-      if (eventKey !== key) return;
-      // Re-read from the cache (synchronous resolve for a fresh entry)
-      void _getCachedPresetUrl(clientRef.current, publicId, preset).then((resolved: string) => {
-        setState((prev) => {
-          if (prev.key !== key) return prev;
-          return { ...prev, url: resolved, errored: false };
-        });
+      const detail: ICacheUpdatedDetail = (ev as CustomEvent<ICacheUpdatedDetail>).detail;
+      if (detail.key !== key) return;
+      setState((prev) => {
+        if (prev.key !== key) return prev;
+        return { ...prev, url: detail.url, errored: false };
       });
     }
     cacheUpdateBus.addEventListener("cache-updated", onCacheUpdated);
     return () => {
       cacheUpdateBus.removeEventListener("cache-updated", onCacheUpdated);
     };
-  }, [key, publicId, preset]);
+  }, [key]);
 
   const handleError = useCallback(
     (event: React.SyntheticEvent<HTMLImageElement, Event>) => {

@@ -166,6 +166,58 @@ describe("_getCachedPresetUrl TTL cache", () => {
     expect(getPreviewUrl).toHaveBeenCalledTimes(2);
   });
 
+  it("does not evict an expired entry whose refresh is still in flight", async () => {
+    vi.useFakeTimers();
+    const now = Date.now();
+    let resolveRefresh: (dto: { url: string; expiresAt: string }) => void = () => {};
+
+    const getPreviewUrl = vi
+      .fn()
+      // "a|thumb" — inside the 60s refresh threshold, so the next access
+      // kicks off a background refresh.
+      .mockResolvedValueOnce({
+        url: "https://cdn/a1.webp",
+        expiresAt: new Date(now + 30_000).toISOString(),
+      })
+      // The background refresh — deliberately never settles on its own.
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ url: string; expiresAt: string }>((resolve) => {
+            resolveRefresh = resolve;
+          }),
+      )
+      .mockResolvedValue({
+        url: "https://cdn/b.webp",
+        expiresAt: new Date(now + 3_600_000).toISOString(),
+      });
+
+    const client = makeClient({ getPreviewUrl });
+
+    await _getCachedPresetUrl(client, "a", "thumb");
+    // Second access: within threshold -> background refresh starts, stale URL returned.
+    expect(await _getCachedPresetUrl(client, "a", "thumb")).toBe("https://cdn/a1.webp");
+    expect(getPreviewUrl).toHaveBeenCalledTimes(2);
+
+    // "a|thumb" is now past its expiry, but its refresh is still in flight.
+    vi.setSystemTime(now + 60_000);
+
+    // Any access runs the sweep. The in-flight refresh must protect the entry —
+    // dropping it would orphan the pending request and let a duplicate fetch fire.
+    await _getCachedPresetUrl(client, "b", "thumb");
+    expect(_presetUrlCacheSize()).toBe(2);
+
+    // The protected entry still shares its in-flight promise instead of
+    // issuing a fourth request.
+    const shared = _getCachedPresetUrl(client, "a", "thumb");
+    expect(getPreviewUrl).toHaveBeenCalledTimes(3);
+
+    resolveRefresh({
+      url: "https://cdn/a2.webp",
+      expiresAt: new Date(now + 3_600_000).toISOString(),
+    });
+    await expect(shared).resolves.toBe("https://cdn/a2.webp");
+  });
+
   it("evicts expired entries on access", async () => {
     vi.useFakeTimers();
     const getPreviewUrl = vi.fn().mockImplementation(({ publicId }: { publicId: string }) =>

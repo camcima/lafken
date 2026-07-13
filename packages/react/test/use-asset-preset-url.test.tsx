@@ -103,20 +103,18 @@ describe("useAssetPresetUrl", () => {
   });
 
   it("updates to the refreshed URL after a background refresh completes", async () => {
-    // NOTE: expiresAt is deliberately far in the future for the *initial*
-    // fetch. `doFetch` dispatches "cache-updated" unconditionally, even for
-    // the very first fetch — so if the initial expiresAt already fell inside
-    // the 60s refresh threshold, the hook's own subscription would react to
-    // its own initial-fetch dispatch and immediately self-trigger the
-    // background refresh, racing ahead of this test's explicit trigger below
-    // (confirmed by isolated repro of the promise/dispatch ordering). Keeping
-    // the initial entry outside the threshold avoids that self-cascade so the
+    // The initial entry deliberately sits *inside* the 60s refresh threshold.
+    // The hook subscribes to "cache-updated", which `doFetch` dispatches for
+    // every fetch — including the initial one. A listener that reacted by
+    // re-reading the cache would find this near-expiry entry, trigger another
+    // fetch, dispatch again, and storm the API. Because the listener now takes
+    // the URL straight from the event, the initial dispatch is inert and this
     // test deterministically observes "stale" before the explicit refresh.
     const getPreviewUrl = vi
       .fn()
       .mockResolvedValueOnce({
         url: "https://cdn/stale.webp",
-        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+        expiresAt: new Date(Date.now() + 30_000).toISOString(),
       })
       .mockResolvedValueOnce({
         url: "https://cdn/fresh.webp",
