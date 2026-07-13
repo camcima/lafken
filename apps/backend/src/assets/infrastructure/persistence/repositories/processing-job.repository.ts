@@ -182,6 +182,14 @@ export class ProcessingJobRepository extends ProcessingJobRepositoryPort {
       })
       .where("asset_id", "=", input.assetId)
       .where("state", "=", "claimed")
+      // F-P6 fences: never yank a claim that heartbeated after we sampled it,
+      // and never yank a claim that changed hands since we read the row.
+      .where("heartbeat_at", "<", input.staleBefore)
+      .where((eb) =>
+        input.expectedWorkerId === null
+          ? eb("worker_id", "is", null)
+          : eb("worker_id", "=", input.expectedWorkerId),
+      )
       .executeTakeFirst();
     return this.hasUpdatedRows(result);
   }

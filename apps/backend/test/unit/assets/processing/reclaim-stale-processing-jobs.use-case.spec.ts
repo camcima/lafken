@@ -56,7 +56,12 @@ describe("ReclaimStaleProcessingJobsUseCase", () => {
 
     await useCase.execute({ now: new Date("2026-05-06T12:00:00.000Z") });
 
-    expect(jobRepo.releasedStale).toEqual({ assetId: TEST_UUIDS.asset1, nextAttemptNumber: 3 });
+    expect(jobRepo.releasedStale).toMatchObject({
+      assetId: TEST_UUIDS.asset1,
+      nextAttemptNumber: 3,
+      expectedWorkerId: "worker-a",
+    });
+    expect(jobRepo.releasedStale?.staleBefore).toBeInstanceOf(Date);
   });
 
   it("transitions to processing_failed when stale attempts are exhausted", async () => {
@@ -129,7 +134,12 @@ class StaleJobRepository extends ProcessingJobRepositoryPort {
   staleJobs: ProcessingJob[] = [];
   completed = false;
   failed = false;
-  releasedStale: { assetId: string; nextAttemptNumber: number } | null = null;
+  releasedStale: {
+    assetId: string;
+    nextAttemptNumber: number;
+    staleBefore: Date;
+    expectedWorkerId: string | null;
+  } | null = null;
 
   claimAvailable(): never {
     throw new Error("claimAvailable is not used by stale reclaim tests");
@@ -168,6 +178,8 @@ class StaleJobRepository extends ProcessingJobRepositoryPort {
     this.releasedStale = {
       assetId: input.assetId,
       nextAttemptNumber: input.nextAttemptNumber,
+      staleBefore: input.staleBefore,
+      expectedWorkerId: input.expectedWorkerId,
     };
     return Promise.resolve(true);
   }

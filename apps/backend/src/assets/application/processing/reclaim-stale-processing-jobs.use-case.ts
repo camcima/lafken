@@ -38,11 +38,11 @@ export class ReclaimStaleProcessingJobsUseCase {
     });
 
     for (const job of jobs) {
-      await this.reclaimJob(job, input.now);
+      await this.reclaimJob(job, input.now, staleBefore);
     }
   }
 
-  private async reclaimJob(job: ProcessingJob, now: Date): Promise<void> {
+  private async reclaimJob(job: ProcessingJob, now: Date, staleBefore: Date): Promise<void> {
     const loaded = await this.assets.findAssetWithPolicy(job.props.assetId);
     const workerId: string = job.props.workerId ?? STALE_SWEEPER_WORKER_ID;
 
@@ -135,6 +135,8 @@ export class ReclaimStaleProcessingJobsUseCase {
     const released: boolean = await this.jobs.releaseStaleClaim({
       assetId: job.props.assetId,
       nextAttemptNumber,
+      staleBefore,
+      expectedWorkerId: job.props.workerId,
       now,
     });
     if (released) {

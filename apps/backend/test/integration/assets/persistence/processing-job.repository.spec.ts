@@ -208,6 +208,70 @@ describe("ProcessingJobRepository", () => {
 
     expect(cancelled).toBe(false);
   });
+
+  describe("releaseStaleClaim fences", () => {
+    it("releases a stale claim still owned by the expected worker", async () => {
+      await repository.claimAvailable({
+        workerId: "worker-a",
+        limit: 1,
+        now: new Date("2026-05-06T12:00:00.000Z"),
+      });
+
+      const released = await repository.releaseStaleClaim({
+        assetId,
+        nextAttemptNumber: 2,
+        staleBefore: new Date("2026-05-06T12:05:00.000Z"), // heartbeat (12:00) is older
+        expectedWorkerId: "worker-a",
+        now: new Date("2026-05-06T12:06:00.000Z"),
+      });
+
+      expect(released).toBe(true);
+      const row = await db.connection
+        .selectFrom("processing_jobs")
+        .select(["state", "worker_id", "attempt_number"])
+        .where("asset_id", "=", assetId)
+        .executeTakeFirstOrThrow();
+      expect(row.state).toBe("released");
+      expect(row.worker_id).toBeNull();
+      expect(row.attempt_number).toBe(2);
+    });
+
+    it("refuses to release when the heartbeat is fresh", async () => {
+      await repository.claimAvailable({
+        workerId: "worker-a",
+        limit: 1,
+        now: new Date("2026-05-06T12:00:00.000Z"),
+      });
+
+      const released = await repository.releaseStaleClaim({
+        assetId,
+        nextAttemptNumber: 2,
+        staleBefore: new Date("2026-05-06T11:55:00.000Z"), // heartbeat (12:00) is NEWER
+        expectedWorkerId: "worker-a",
+        now: new Date("2026-05-06T12:00:30.000Z"),
+      });
+
+      expect(released).toBe(false);
+    });
+
+    it("refuses to release when another worker owns the claim", async () => {
+      await repository.claimAvailable({
+        workerId: "worker-a",
+        limit: 1,
+        now: new Date("2026-05-06T12:00:00.000Z"),
+      });
+
+      const released = await repository.releaseStaleClaim({
+        assetId,
+        nextAttemptNumber: 2,
+        staleBefore: new Date("2026-05-06T12:05:00.000Z"),
+        expectedWorkerId: "worker-b",
+        now: new Date("2026-05-06T12:06:00.000Z"),
+      });
+
+      expect(released).toBe(false);
+    });
+  });
 });
 
 async function cleanDatabase(db: DatabaseClient): Promise<void> {

@@ -36,6 +36,10 @@ export interface IFindStaleClaimsInput {
 export interface IReleaseStaleClaimInput {
   assetId: string;
   nextAttemptNumber: number;
+  /** Fence: only release when heartbeat_at is strictly older than this. */
+  staleBefore: Date;
+  /** Fence: only release when the row is still owned by this worker (null → ownerless row). */
+  expectedWorkerId: string | null;
   now: Date;
 }
 
