@@ -34,10 +34,10 @@ const LIFTED_HOLD: LegalHoldResponseDTO = {
 
 const PAGE: PaginatedResult<LegalHoldResponseDTO> = {
   data: [ACTIVE_HOLD, LIFTED_HOLD],
-  total: 2,
+  total: 60,
   page: 1,
   limit: 25,
-  lastPage: 1,
+  lastPage: 3,
 };
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
@@ -45,6 +45,25 @@ const PAGE: PaginatedResult<LegalHoldResponseDTO> = {
 vi.mock("@/features/legal-holds/hooks/useLegalHolds", () => ({
   useLegalHolds: () => ({ data: PAGE, isLoading: false }),
   useLegalHold: () => ({ data: undefined, isLoading: false }),
+}));
+
+vi.mock("@/features/dashboard/hooks/useDashboardOverview", () => ({
+  useDashboardOverview: () => ({
+    data: {
+      counts: {
+        totalAssets: 0,
+        inFlight: 0,
+        queueDepth: 0,
+        quarantine: 0,
+        legalHolds: 7,
+        assetsUnderLegalHold: 1234,
+        failedProcessing: 0,
+        namespaces: 0,
+      },
+      health: { overall: "ok", checks: [] },
+    },
+    isLoading: false,
+  }),
 }));
 
 vi.mock("@/features/legal-holds/hooks/useLegalHoldMutations", () => ({
@@ -117,5 +136,23 @@ describe("LegalHoldsListPage", () => {
   it("renders Place hold link", () => {
     renderPage();
     expect(screen.getByRole("link", { name: /place hold/i })).toBeInTheDocument();
+  });
+
+  it("shows the server total of active holds in the stat tile, not the visible page count", () => {
+    renderPage();
+    // Dashboard reports 7 active holds; only 1 active hold is on the visible page.
+    expect(screen.getByText("7")).toBeInTheDocument();
+  });
+
+  it("shows the server total of assets under hold in the stat tile", () => {
+    renderPage();
+    expect(screen.getByText("1,234")).toBeInTheDocument();
+  });
+
+  it("derives pagination from the response lastPage so page 2+ is reachable", () => {
+    renderPage();
+    // 60 rows at 25/page => 3 pages; the paginator must render page button "3".
+    expect(screen.getByRole("button", { name: /next page/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "3" })).toBeInTheDocument();
   });
 });

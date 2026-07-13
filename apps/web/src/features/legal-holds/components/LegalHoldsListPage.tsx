@@ -23,6 +23,7 @@ import { Label } from "@/components/common/Label";
 import { Paginator } from "@/components/common/Paginator";
 import { RightDrawer } from "@/components/common/RightDrawer";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
+import { useDashboardOverview } from "@/features/dashboard/hooks/useDashboardOverview";
 import { LiftLegalHoldDialog } from "@/features/legal-holds/components/LiftLegalHoldDialog";
 import { useLegalHolds } from "@/features/legal-holds/hooks/useLegalHolds";
 import { cn } from "@/lib/utils";
@@ -263,9 +264,12 @@ export function LegalHoldsListPage(): React.JSX.Element {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const realQuery = useLegalHolds({ page: page + 1, limit: pageSize });
+  const overviewQuery = useDashboardOverview();
 
   const allRows: IHoldRow[] = (realQuery.data?.data ?? []).map(apiToRow);
 
+  // Client-side refinement of the *visible page only* — the API has no
+  // q/status filters yet. Server totals below are unaffected by this.
   const filtered: IHoldRow[] = allRows.filter((row) => {
     if (statusFilter === "active" && !row.active) return false;
     if (statusFilter === "lifted" && row.active) return false;
@@ -281,14 +285,18 @@ export function LegalHoldsListPage(): React.JSX.Element {
     return true;
   });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const pageRows = filtered;
+  // Server totals (F-W1): pagination and stats come from the paginated
+  // response and the dashboard counts — never from the visible page.
+  const holdsTotal: number = realQuery.data?.total ?? 0;
+  const totalPages: number = Math.max(1, realQuery.data?.lastPage ?? 1);
+  const activeCount: number = overviewQuery.data?.counts.legalHolds ?? 0;
+  const assetsUnderHold: number = overviewQuery.data?.counts.assetsUnderLegalHold ?? 0;
 
-  const totalAssets: number = filtered.reduce((sum, row) => sum + row.assets, 0);
+  const pageRows = filtered;
   const openHold: IHoldRow | undefined = allRows.find((row) => row.id === openId);
 
-  const rangeFrom = filtered.length === 0 ? 0 : page * pageSize + 1;
-  const rangeTo = Math.min((page + 1) * pageSize, filtered.length);
+  const rangeFrom = holdsTotal === 0 ? 0 : page * pageSize + 1;
+  const rangeTo = Math.min((page + 1) * pageSize, holdsTotal);
 
   const scopeLabels: Record<string, string> = {
     asset: t("pages.legalHolds.scopes.asset"),
@@ -296,10 +304,6 @@ export function LegalHoldsListPage(): React.JSX.Element {
     namespace: t("pages.legalHolds.scopes.namespace"),
     uploader_window: t("pages.legalHolds.scopes.uploaderWindow"),
   };
-
-  // Stats derived from allRows (not filtered)
-  const activeCount = allRows.filter((row) => row.active).length;
-  const totalAssetsAll = allRows.reduce((sum, row) => sum + row.assets, 0);
 
   return (
     <div className="space-y-4">
@@ -311,8 +315,8 @@ export function LegalHoldsListPage(): React.JSX.Element {
           </h1>
           <div className="text-muted-foreground mt-1 text-[12.5px]">
             {t("pages.legalHolds.subtitle", {
-              filtered: filtered.length,
-              assets: totalAssets.toLocaleString(),
+              filtered: holdsTotal,
+              assets: assetsUnderHold.toLocaleString(),
             })}
           </div>
         </div>
@@ -344,7 +348,7 @@ export function LegalHoldsListPage(): React.JSX.Element {
             {t("pages.legalHolds.stats.assetsUnderHold.label")}
           </div>
           <div className="mt-0.5 font-mono text-[24px] leading-tight tabular-nums">
-            {totalAssetsAll.toLocaleString()}
+            {assetsUnderHold.toLocaleString()}
           </div>
           <div className="text-muted-foreground text-[11px]">
             {t("pages.legalHolds.stats.assetsUnderHold.sub")}
@@ -491,14 +495,14 @@ export function LegalHoldsListPage(): React.JSX.Element {
               </option>
             ))}
           </select>
-          {filtered.length > 0 && (
+          {holdsTotal > 0 && (
             <>
               <span className="hidden sm:inline">·</span>
               <span className="hidden font-mono tabular-nums sm:inline">
                 {t("paginator.range", {
                   from: rangeFrom.toLocaleString(),
                   to: rangeTo.toLocaleString(),
-                  total: filtered.length.toLocaleString(),
+                  total: holdsTotal.toLocaleString(),
                 })}
               </span>
             </>

@@ -1050,7 +1050,7 @@
     },
     "legalHolds": {
       "title": "Legal holds",
-      "subtitle": "{{filtered}} holds covering {{assets}} assets · 1 pending lift",
+      "subtitle": "{{filtered}} holds covering {{assets}} assets",
       "place": "Place hold",
       "searchPlaceholder": "Search by case reference, scope, or hold ID…",
       "actions": {

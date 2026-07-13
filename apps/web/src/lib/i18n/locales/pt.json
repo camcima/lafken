@@ -1049,7 +1049,7 @@
     },
     "legalHolds": {
       "title": "Retenções legais",
-      "subtitle": "{{filtered}} retenções cobrindo {{assets}} ativos · 1 liberação pendente",
+      "subtitle": "{{filtered}} retenções cobrindo {{assets}} assets",
       "place": "Aplicar retenção",
       "searchPlaceholder": "Buscar por referência do caso, escopo ou ID da retenção…",
       "actions": {
