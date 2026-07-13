@@ -280,7 +280,15 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
     }
     function onUploadStart(): void {
       setIsUploading(true);
-      setFiles((prev) => prev.map((f) => ({ ...f, state: "uploading" })));
+      // Only files still waiting to upload transition to "uploading".
+      // allowMultipleUploadBatches means terminal tiles from earlier batches
+      // (ready / quarantined / rejected / failed / error) stay in the list —
+      // they must never regress to a spinner (F-K3).
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.state === "idle" || f.state === "preview" ? { ...f, state: "uploading" } : f,
+        ),
+      );
     }
     function onComplete(): void {
       setIsUploading(false);

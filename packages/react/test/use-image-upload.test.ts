@@ -1,3 +1,4 @@
+import type { LafkenUploadManager } from "@lafken/upload";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -170,5 +171,75 @@ describe("useImageUpload", () => {
       pollingMaxIntervalMs: 5_000,
       pollingTimeoutMs: 60_000,
     });
+  });
+
+  it("does not regress terminal tiles to 'uploading' when a second batch starts", () => {
+    const { result } = renderHook(() =>
+      useImageUpload({
+        client: stubClient as unknown as Parameters<typeof useImageUpload>[0]["client"],
+        namespaceSlug: "ns",
+      }),
+    );
+
+    act(() => {
+      result.current.addFiles([
+        new File([new Uint8Array([1])], "first.jpg", { type: "image/jpeg" }),
+      ]);
+    });
+    const firstId = result.current.files[0].id;
+    const manager = capturedManagers[capturedManagers.length - 1] as LafkenUploadManager;
+
+    // First batch reaches a terminal state.
+    act(() => {
+      manager.dispatchEvent(
+        new CustomEvent("file-ready", {
+          detail: {
+            fileId: firstId,
+            publicId: "pub-1",
+            asset: { state: "ready", publicId: "pub-1" },
+          },
+        }),
+      );
+    });
+    expect(result.current.files[0].state).toBe("ready");
+
+    // Second batch starts.
+    act(() => {
+      result.current.addFiles([
+        new File([new Uint8Array([2])], "second.jpg", { type: "image/jpeg" }),
+      ]);
+    });
+    const uppy = manager.getUppy();
+    act(() => {
+      uppy.emit("upload", "batch-2", uppy.getFiles());
+    });
+
+    const first = result.current.files.find((f) => f.id === firstId);
+    const second = result.current.files.find((f) => f.id !== firstId);
+    expect(first?.state).toBe("ready");
+    expect(second?.state).toBe("uploading");
+  });
+
+  it("maps a file to state 'error' when Uppy reports upload-error", () => {
+    const { result } = renderHook(() =>
+      useImageUpload({
+        client: stubClient as unknown as Parameters<typeof useImageUpload>[0]["client"],
+        namespaceSlug: "ns",
+      }),
+    );
+
+    act(() => {
+      result.current.addFiles([new File([new Uint8Array([1])], "err.jpg", { type: "image/jpeg" })]);
+    });
+    const manager = capturedManagers[capturedManagers.length - 1] as LafkenUploadManager;
+    const uppy = manager.getUppy();
+    const [uppyFile] = uppy.getFiles();
+
+    act(() => {
+      uppy.emit("upload-error", uppyFile, { name: "HTTPError", message: "403 Forbidden" });
+    });
+
+    expect(result.current.files[0].state).toBe("error");
+    expect(result.current.files[0].error?.message).toBe("403 Forbidden");
   });
 });
