@@ -10,6 +10,7 @@ import { ReservedPresetNameError } from "@/namespaces/domain/errors/reserved-pre
 import { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
+import { FakeUnitOfWork } from "../../../__fakes__/fake-unit-of-work";
 import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 import { InMemoryNamespacePresetWriteRepository } from "../__fakes__/in-memory-namespace-preset-write.repository";
 import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
@@ -47,7 +48,7 @@ describe("CreatePresetUseCase", () => {
     queryRepo = new InMemoryNamespaceQueryRepository();
     writeRepo = new InMemoryNamespacePresetWriteRepository();
     auditRepo = new InMemoryAuditWriteRepository();
-    useCase = new CreatePresetUseCase(queryRepo, writeRepo, auditRepo);
+    useCase = new CreatePresetUseCase(queryRepo, writeRepo, auditRepo, new FakeUnitOfWork());
   });
 
   it("creates v1 with active=true on an active namespace", async () => {
