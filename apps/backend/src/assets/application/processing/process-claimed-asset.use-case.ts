@@ -23,6 +23,7 @@ import {
 } from "@/shared/application/metrics.port";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
+import { ProcessingAbortedError } from "./processing-aborted.error";
 import {
   calculateDurationMs,
   type IStepTiming,
@@ -39,6 +40,8 @@ export interface IProcessClaimedAssetInput {
   assetId: string;
   workerId: string;
   attemptNumber: number;
+  /** Aborted by the worker when the workflow timeout fires (F-P5). */
+  signal?: AbortSignal;
 }
 
 export type ProcessClaimedAssetResult =
@@ -71,8 +74,10 @@ export class ProcessClaimedAssetUseCase {
       { assetId: input.assetId, attemptNumber: input.attemptNumber, workerId: input.workerId },
       "processing started",
     );
-    const loaded = await this.runStep("load_asset", () =>
-      this.assetRepo.findAssetWithPolicy(input.assetId),
+    const loaded = await this.runStep(
+      "load_asset",
+      () => this.assetRepo.findAssetWithPolicy(input.assetId),
+      input.signal,
     );
     if (!loaded) {
       this.logger.warn(
@@ -111,20 +116,23 @@ export class ProcessClaimedAssetUseCase {
     const stepTimings: IStepTiming[] = [];
     let currentState: AssetState = asset.props.state;
     if (currentState === "uploaded") {
-      const started: boolean = await this.runStep("transition_state", () =>
-        this.assetRepo.transitionAsset({
-          assetId: asset.props.id,
-          fromState: "uploaded",
-          toState: "processing",
-          reason: "processing_started",
-          metadata: makeTransitionMetadata({
-            workerId: input.workerId,
-            attemptNumber: input.attemptNumber,
-            reasonCode: "processing_started",
+      const started: boolean = await this.runStep(
+        "transition_state",
+        () =>
+          this.assetRepo.transitionAsset({
+            assetId: asset.props.id,
+            fromState: "uploaded",
+            toState: "processing",
+            reason: "processing_started",
+            metadata: makeTransitionMetadata({
+              workerId: input.workerId,
+              attemptNumber: input.attemptNumber,
+              reasonCode: "processing_started",
+            }),
+            occurredBy: this.workerActor(input.workerId),
+            now: new Date(),
           }),
-          occurredBy: this.workerActor(input.workerId),
-          now: new Date(),
-        }),
+        input.signal,
       );
       if (!started) {
         // We own the claim, so no other worker can race us — this means an
@@ -143,8 +151,10 @@ export class ProcessClaimedAssetUseCase {
       currentState = "processing";
     }
 
-    const binding = await this.runStep("load_binding", () =>
-      this.storageBindingRepo.findById(asset.props.storageBindingId),
+    const binding = await this.runStep(
+      "load_binding",
+      () => this.storageBindingRepo.findById(asset.props.storageBindingId),
+      input.signal,
     );
     if (!binding) {
       this.logger.warn(
@@ -153,20 +163,23 @@ export class ProcessClaimedAssetUseCase {
       );
       // F-P10: without this transition the asset strands in 'processing'
       // forever — the retry endpoint requires 'processing_failed'.
-      const transitioned: boolean = await this.runStep("transition_state", () =>
-        this.assetRepo.transitionAsset({
-          assetId: asset.props.id,
-          fromState: currentState,
-          toState: "processing_failed",
-          reason: "storage_binding_not_found",
-          metadata: makeTransitionMetadata({
-            workerId: input.workerId,
-            attemptNumber: input.attemptNumber,
-            reasonCode: "storage_binding_not_found",
+      const transitioned: boolean = await this.runStep(
+        "transition_state",
+        () =>
+          this.assetRepo.transitionAsset({
+            assetId: asset.props.id,
+            fromState: currentState,
+            toState: "processing_failed",
+            reason: "storage_binding_not_found",
+            metadata: makeTransitionMetadata({
+              workerId: input.workerId,
+              attemptNumber: input.attemptNumber,
+              reasonCode: "storage_binding_not_found",
+            }),
+            occurredBy: this.workerActor(input.workerId),
+            now: new Date(),
           }),
-          occurredBy: this.workerActor(input.workerId),
-          now: new Date(),
-        }),
+        input.signal,
       );
       if (transitioned) {
         this.metrics.recordProcessingTerminalState({ state: "processing_failed" });
@@ -186,12 +199,15 @@ export class ProcessClaimedAssetUseCase {
     }
 
     const gcs = binding.getGcsConfig();
-    const bytes: Buffer = await this.runStep("read_object", () =>
-      this.assetStorage.readObjectBytes({
-        binding: { bucket: gcs.bucket, projectId: gcs.projectId },
-        storageKey: asset.props.storageKey,
-        maxBytes: Number(policy.props.maxFileSizeBytes),
-      }),
+    const bytes: Buffer = await this.runStep(
+      "read_object",
+      () =>
+        this.readSourceBytes({
+          binding: { bucket: gcs.bucket, projectId: gcs.projectId },
+          storageKey: asset.props.storageKey,
+          maxBytes: Number(policy.props.maxFileSizeBytes),
+        }),
+      input.signal,
     );
     // Pre-computed for virus_scan evidence so we don't have to wait for
     // image_inspection (which runs after virus_scan and would otherwise be
@@ -205,8 +221,10 @@ export class ProcessClaimedAssetUseCase {
       currentStep: "virus_scan",
     });
     const scanStartedAt: Date = new Date();
-    const scan = await this.runStep("virus_scan", () =>
-      this.virusScan.scan({ bytes, contentHash }),
+    const scan = await this.runStep(
+      "virus_scan",
+      () => this.virusScan.scan({ bytes, contentHash }),
+      input.signal,
     );
     const scanFinishedAt: Date = new Date();
     stepTimings.push(
@@ -231,15 +249,18 @@ export class ProcessClaimedAssetUseCase {
       decision: scan.decision,
       durationMs: calculateDurationMs(scanStartedAt, scanFinishedAt),
     });
-    await this.runStep("record_analysis", () =>
-      this.assetRepo.recordAnalysis({
-        assetId: asset.props.id,
-        analyzer: scan.analyzer,
-        analyzerVersion: scan.analyzerVersion,
-        decision: scan.decision,
-        findings: scan.findings,
-        occurredAt: new Date(),
-      }),
+    await this.runStep(
+      "record_analysis",
+      () =>
+        this.assetRepo.recordAnalysis({
+          assetId: asset.props.id,
+          analyzer: scan.analyzer,
+          analyzerVersion: scan.analyzerVersion,
+          decision: scan.decision,
+          findings: scan.findings,
+          occurredAt: new Date(),
+        }),
+      input.signal,
     );
 
     if (scan.decision === "quarantine") {
@@ -247,6 +268,7 @@ export class ProcessClaimedAssetUseCase {
       const newStorageKey: string | undefined = await this.moveBytesToQuarantine({
         binding: { bucket: gcs.bucket, projectId: gcs.projectId },
         storageKey: asset.props.storageKey,
+        signal: input.signal,
       });
       this.logger.info(
         { assetId: asset.props.id, toState: "quarantined_virus", reason },
@@ -262,6 +284,7 @@ export class ProcessClaimedAssetUseCase {
         step: "virus_scan",
         durationMs: this.durationFromFindings(scan.findings),
         newStorageKey,
+        signal: input.signal,
       });
       return { kind: "completed" };
     }
@@ -272,8 +295,10 @@ export class ProcessClaimedAssetUseCase {
       currentStep: "magic_byte_detection",
     });
     const sniffStartedAt: Date = new Date();
-    const sniffedMimeType: string | null = await this.runStep("magic_byte_detection", () =>
-      this.mimeSniff.sniff(bytes),
+    const sniffedMimeType: string | null = await this.runStep(
+      "magic_byte_detection",
+      () => this.mimeSniff.sniff(bytes),
+      input.signal,
     );
     const sniffFinishedAt: Date = new Date();
     const sniffDecision: "pass" | "error" = sniffedMimeType === null ? "error" : "pass";
@@ -306,6 +331,7 @@ export class ProcessClaimedAssetUseCase {
         attemptNumber: input.attemptNumber,
         step: "magic_byte_detection",
         durationMs: calculateDurationMs(sniffStartedAt, sniffFinishedAt),
+        signal: input.signal,
       });
       return { kind: "completed" };
     }
@@ -324,6 +350,7 @@ export class ProcessClaimedAssetUseCase {
         attemptNumber: input.attemptNumber,
         step: "magic_byte_detection",
         durationMs: calculateDurationMs(sniffStartedAt, sniffFinishedAt),
+        signal: input.signal,
       });
       return { kind: "completed" };
     }
@@ -333,13 +360,16 @@ export class ProcessClaimedAssetUseCase {
       currentStep: "image_inspection",
     });
     const inspectionStartedAt: Date = new Date();
-    const inspection = await this.runStep("image_inspection", () =>
-      this.imageInspection.inspect({
-        bytes,
-        declaredMimeType: asset.props.declaredMimeType,
-        sniffedMimeType,
-        allowedMimeTypes: policy.props.allowedMimeTypes,
-      }),
+    const inspection = await this.runStep(
+      "image_inspection",
+      () =>
+        this.imageInspection.inspect({
+          bytes,
+          declaredMimeType: asset.props.declaredMimeType,
+          sniffedMimeType,
+          allowedMimeTypes: policy.props.allowedMimeTypes,
+        }),
+      input.signal,
     );
     const inspectionFinishedAt: Date = new Date();
     stepTimings.push(
@@ -364,15 +394,18 @@ export class ProcessClaimedAssetUseCase {
       decision: inspection.decision,
       durationMs: calculateDurationMs(inspectionStartedAt, inspectionFinishedAt),
     });
-    await this.runStep("record_analysis", () =>
-      this.assetRepo.recordAnalysis({
-        assetId: asset.props.id,
-        analyzer: inspection.analyzer,
-        analyzerVersion: inspection.analyzerVersion,
-        decision: inspection.decision,
-        findings: inspection.findings,
-        occurredAt: new Date(),
-      }),
+    await this.runStep(
+      "record_analysis",
+      () =>
+        this.assetRepo.recordAnalysis({
+          assetId: asset.props.id,
+          analyzer: inspection.analyzer,
+          analyzerVersion: inspection.analyzerVersion,
+          decision: inspection.decision,
+          findings: inspection.findings,
+          occurredAt: new Date(),
+        }),
+      input.signal,
     );
 
     if (inspection.decision === "error") {
@@ -390,20 +423,24 @@ export class ProcessClaimedAssetUseCase {
         attemptNumber: input.attemptNumber,
         step: "image_inspection",
         durationMs: this.durationFromFindings(inspection.findings),
+        signal: input.signal,
       });
       return { kind: "completed" };
     }
 
-    await this.runStep("update_derived_metadata", () =>
-      this.assetRepo.updateDerivedMetadata({
-        assetId: asset.props.id,
-        mimeType: inspection.actualMimeType ?? asset.props.declaredMimeType ?? FALLBACK_MIME_TYPE,
-        sizeBytes: inspection.sizeBytes,
-        width: inspection.width,
-        height: inspection.height,
-        contentHash: inspection.contentHash,
-        captureContext: inspection.captureContext,
-      }),
+    await this.runStep(
+      "update_derived_metadata",
+      () =>
+        this.assetRepo.updateDerivedMetadata({
+          assetId: asset.props.id,
+          mimeType: inspection.actualMimeType ?? asset.props.declaredMimeType ?? FALLBACK_MIME_TYPE,
+          sizeBytes: inspection.sizeBytes,
+          width: inspection.width,
+          height: inspection.height,
+          contentHash: inspection.contentHash,
+          captureContext: inspection.captureContext,
+        }),
+      input.signal,
     );
 
     const moderationConfig = policy.props.contentModeration;
@@ -414,11 +451,14 @@ export class ProcessClaimedAssetUseCase {
         currentStep: "content_moderation",
       });
       const moderationStartedAt: Date = new Date();
-      const moderation = await this.runStep("content_moderation", () =>
-        this.moderation.analyze({
-          bytes,
-          policyConfig: moderationConfig,
-        }),
+      const moderation = await this.runStep(
+        "content_moderation",
+        () =>
+          this.moderation.analyze({
+            bytes,
+            policyConfig: moderationConfig,
+          }),
+        input.signal,
       );
       const moderationFinishedAt: Date = new Date();
       stepTimings.push(
@@ -443,21 +483,25 @@ export class ProcessClaimedAssetUseCase {
         decision: moderation.decision,
         durationMs: calculateDurationMs(moderationStartedAt, moderationFinishedAt),
       });
-      await this.runStep("record_analysis", () =>
-        this.assetRepo.recordAnalysis({
-          assetId: asset.props.id,
-          analyzer: moderation.analyzer,
-          analyzerVersion: moderation.analyzerVersion,
-          decision: moderation.decision,
-          findings: moderation.findings,
-          occurredAt: new Date(),
-        }),
+      await this.runStep(
+        "record_analysis",
+        () =>
+          this.assetRepo.recordAnalysis({
+            assetId: asset.props.id,
+            analyzer: moderation.analyzer,
+            analyzerVersion: moderation.analyzerVersion,
+            decision: moderation.decision,
+            findings: moderation.findings,
+            occurredAt: new Date(),
+          }),
+        input.signal,
       );
       if (moderation.decision === "quarantine") {
         const reason: string = moderation.reason ?? "moderation_quarantined";
         const newStorageKey: string | undefined = await this.moveBytesToQuarantine({
           binding: { bucket: gcs.bucket, projectId: gcs.projectId },
           storageKey: asset.props.storageKey,
+          signal: input.signal,
         });
         this.logger.info(
           { assetId: asset.props.id, toState: "quarantined_moderation", reason },
@@ -473,6 +517,7 @@ export class ProcessClaimedAssetUseCase {
           step: "content_moderation",
           durationMs: this.durationFromFindings(moderation.findings),
           newStorageKey,
+          signal: input.signal,
         });
         return { kind: "completed" };
       }
@@ -489,6 +534,7 @@ export class ProcessClaimedAssetUseCase {
       attemptNumber: input.attemptNumber,
       processingStartedAt,
       stepTimings,
+      signal: input.signal,
     });
     return { kind: "completed" };
   }
@@ -503,24 +549,28 @@ export class ProcessClaimedAssetUseCase {
     step?: ProcessingStepName;
     durationMs?: number;
     newStorageKey?: string;
+    signal?: AbortSignal;
   }): Promise<void> {
-    const transitioned: boolean = await this.runStep("transition_state", () =>
-      this.assetRepo.transitionAsset({
-        assetId: input.assetId,
-        fromState: input.fromState,
-        toState: input.toState,
-        reason: input.reason,
-        metadata: makeTransitionMetadata({
-          workerId: input.workerId,
-          attemptNumber: input.attemptNumber,
-          step: input.step,
-          reasonCode: input.reason,
-          durationMs: input.durationMs,
+    const transitioned: boolean = await this.runStep(
+      "transition_state",
+      () =>
+        this.assetRepo.transitionAsset({
+          assetId: input.assetId,
+          fromState: input.fromState,
+          toState: input.toState,
+          reason: input.reason,
+          metadata: makeTransitionMetadata({
+            workerId: input.workerId,
+            attemptNumber: input.attemptNumber,
+            step: input.step,
+            reasonCode: input.reason,
+            durationMs: input.durationMs,
+          }),
+          occurredBy: this.workerActor(input.workerId),
+          now: new Date(),
+          newStorageKey: input.newStorageKey,
         }),
-        occurredBy: this.workerActor(input.workerId),
-        now: new Date(),
-        newStorageKey: input.newStorageKey,
-      }),
+      input.signal,
     );
     if (!transitioned) {
       // F-A4: a lost race means another actor already moved the asset. Do
@@ -533,12 +583,15 @@ export class ProcessClaimedAssetUseCase {
       return;
     }
     this.metrics.recordProcessingTerminalState({ state: input.toState as ProcessingTerminalState });
-    await this.runStep("finalize_job", () =>
-      this.jobRepo.markCompleted({
-        assetId: input.assetId,
-        workerId: input.workerId,
-        now: new Date(),
-      }),
+    await this.runStep(
+      "finalize_job",
+      () =>
+        this.jobRepo.markCompleted({
+          assetId: input.assetId,
+          workerId: input.workerId,
+          now: new Date(),
+        }),
+      input.signal,
     );
   }
 
@@ -557,17 +610,21 @@ export class ProcessClaimedAssetUseCase {
   private async moveBytesToQuarantine(input: {
     binding: { bucket: string; projectId: string };
     storageKey: string;
+    signal?: AbortSignal;
   }): Promise<string | undefined> {
     if (input.storageKey.startsWith(QUARANTINE_KEY_PREFIX)) {
       return undefined;
     }
     const newStorageKey: string = toQuarantinedStorageKey(input.storageKey);
-    await this.runStep("move_to_quarantine", () =>
-      this.assetStorage.moveObject({
-        binding: input.binding,
-        fromKey: input.storageKey,
-        toKey: newStorageKey,
-      }),
+    await this.runStep(
+      "move_to_quarantine",
+      () =>
+        this.assetStorage.moveObject({
+          binding: input.binding,
+          fromKey: input.storageKey,
+          toKey: newStorageKey,
+        }),
+      input.signal,
     );
     return newStorageKey;
   }
@@ -584,25 +641,29 @@ export class ProcessClaimedAssetUseCase {
     attemptNumber: number;
     processingStartedAt: Date;
     stepTimings: IStepTiming[];
+    signal?: AbortSignal;
   }): Promise<void> {
     const reason: string = "processing_completed";
     const finishedAt: Date = new Date();
-    const transitioned: boolean = await this.runStep("transition_state", () =>
-      this.assetRepo.transitionAsset({
-        assetId: input.assetId,
-        fromState: input.fromState,
-        toState: "ready",
-        reason,
-        metadata: makeTransitionMetadata({
-          workerId: input.workerId,
-          attemptNumber: input.attemptNumber,
-          reasonCode: reason,
-          totalDurationMs: calculateDurationMs(input.processingStartedAt, finishedAt),
-          steps: input.stepTimings,
+    const transitioned: boolean = await this.runStep(
+      "transition_state",
+      () =>
+        this.assetRepo.transitionAsset({
+          assetId: input.assetId,
+          fromState: input.fromState,
+          toState: "ready",
+          reason,
+          metadata: makeTransitionMetadata({
+            workerId: input.workerId,
+            attemptNumber: input.attemptNumber,
+            reasonCode: reason,
+            totalDurationMs: calculateDurationMs(input.processingStartedAt, finishedAt),
+            steps: input.stepTimings,
+          }),
+          occurredBy: this.workerActor(input.workerId),
+          now: finishedAt,
         }),
-        occurredBy: this.workerActor(input.workerId),
-        now: finishedAt,
-      }),
+      input.signal,
     );
     if (!transitioned) {
       this.logger.warn(
@@ -612,13 +673,45 @@ export class ProcessClaimedAssetUseCase {
       return;
     }
     this.metrics.recordProcessingTerminalState({ state: "ready" });
-    await this.runStep("finalize_job", () =>
-      this.jobRepo.markCompleted({
-        assetId: input.assetId,
-        workerId: input.workerId,
-        now: finishedAt,
-      }),
+    await this.runStep(
+      "finalize_job",
+      () =>
+        this.jobRepo.markCompleted({
+          assetId: input.assetId,
+          workerId: input.workerId,
+          now: finishedAt,
+        }),
+      input.signal,
     );
+  }
+
+  /**
+   * Reads the source object, falling back to the quarantined key when the
+   * primary key is gone (F-P5): a previous attempt may have completed the
+   * quarantine byte-move but died before its DB transition committed, so the
+   * DB still points at the original key. Without the fallback every retry
+   * burns its budget on read_object and the asset wedges permanently.
+   */
+  private async readSourceBytes(input: {
+    binding: { bucket: string; projectId: string };
+    storageKey: string;
+    maxBytes: number;
+  }): Promise<Buffer> {
+    try {
+      return await this.assetStorage.readObjectBytes(input);
+    } catch (err) {
+      if (input.storageKey.startsWith(QUARANTINE_KEY_PREFIX)) {
+        throw err;
+      }
+      try {
+        return await this.assetStorage.readObjectBytes({
+          ...input,
+          storageKey: toQuarantinedStorageKey(input.storageKey),
+        });
+      } catch {
+        throw err; // surface the original failure, not the fallback's
+      }
+    }
   }
 
   private durationFromFindings(findings: Record<string, unknown>): number {
@@ -671,7 +764,14 @@ export class ProcessClaimedAssetUseCase {
    * write is idempotent or CAS-fenced, so retrying after a DB blip is always
    * safe — and blanket wrapping avoids coupling this layer to pg error codes.
    */
-  private async runStep<T>(step: TransientProcessingStep, fn: () => Promise<T>): Promise<T> {
+  private async runStep<T>(
+    step: TransientProcessingStep,
+    fn: () => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    if (signal?.aborted) {
+      throw new ProcessingAbortedError(step);
+    }
     try {
       return await fn();
     } catch (err) {

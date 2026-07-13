@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { ProcessClaimedAssetUseCase } from "@/assets/application/processing/process-claimed-asset.use-case";
+import { ProcessingAbortedError } from "@/assets/application/processing/processing-aborted.error";
 import type { Asset } from "@/assets/domain/entities/asset.entity";
 import {
   AssetProcessingRepositoryPort,
@@ -364,6 +365,60 @@ describe("ProcessClaimedAssetUseCase", () => {
     ).rejects.toMatchObject({ name: "TransientProcessingError", step: "transition_state" });
   });
 
+  it("throws ProcessingAbortedError before any work when the signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      useCase.execute({
+        assetId: TEST_UUIDS.asset1,
+        workerId: "worker-a",
+        attemptNumber: 1,
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(ProcessingAbortedError);
+    expect(assetRepo.transitions).toEqual([]);
+  });
+
+  it("stops before recording analysis when the signal aborts mid-pipeline", async () => {
+    const controller = new AbortController();
+    virusScan.onScan = () => controller.abort();
+
+    await expect(
+      useCase.execute({
+        assetId: TEST_UUIDS.asset1,
+        workerId: "worker-a",
+        attemptNumber: 1,
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(ProcessingAbortedError);
+    expect(assetRepo.analyses).toEqual([]);
+  });
+
+  it("falls back to the quarantined storage key when the primary object is missing on retry", async () => {
+    // Simulates a previous attempt that moved the bytes but crashed before the
+    // DB transition committed: DB key unchanged, bytes at _quarantined/<key>.
+    storage.objects.delete("uploads/test.png");
+    storage.objects.set("_quarantined/uploads/test.png", Buffer.from("image-bytes"));
+    virusScan.result = {
+      decision: "quarantine",
+      reason: "virus_detected",
+      analyzer: "virus_scan",
+      analyzerVersion: "test",
+      findings: { duration_ms: 4 },
+    };
+
+    const result = await useCase.execute({
+      assetId: TEST_UUIDS.asset1,
+      workerId: "worker-a",
+      attemptNumber: 2,
+    });
+
+    expect(result.kind).toBe("completed");
+    expect(assetRepo.transitions.at(-1)?.toState).toBe("quarantined_virus");
+    expect(assetRepo.transitions.at(-1)?.newStorageKey).toBe("_quarantined/uploads/test.png");
+  });
+
   it("transitions the asset to processing_failed when the storage binding is missing", async () => {
     // FakeStorageBindingRepository.findById matches on id — give it a binding
     // whose id differs from the asset's storageBindingId.
@@ -524,9 +579,11 @@ class FakeVirusScan extends VirusScanPort {
     analyzerVersion: "test",
     findings: { duration_ms: 4 },
   };
+  onScan: (() => void) | null = null;
 
   scan(input: IVirusScanInput): Promise<IVirusScanResult> {
     void input;
+    this.onScan?.();
     return Promise.resolve(this.result);
   }
 }

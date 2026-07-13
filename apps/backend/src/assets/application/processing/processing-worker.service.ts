@@ -22,7 +22,12 @@ import {
 const ZERO_REMAINING_CAPACITY = 0;
 
 export interface IProcessClaimedAssetProcessor {
-  execute(input: { assetId: string; workerId: string; attemptNumber: number }): Promise<unknown>;
+  execute(input: {
+    assetId: string;
+    workerId: string;
+    attemptNumber: number;
+    signal?: AbortSignal;
+  }): Promise<unknown>;
 }
 
 interface IInFlightEntry {
@@ -267,6 +272,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
   private async process(assetId: string, attemptNumber: number): Promise<void> {
     let timeoutHandle: NodeJS.Timeout | null = null;
     let timedOut = false;
+    const controller: AbortController = new AbortController();
     const timeoutPromise: Promise<"timeout"> = new Promise((resolve): void => {
       timeoutHandle = setTimeout((): void => {
         timedOut = true;
@@ -274,18 +280,25 @@ export class ProcessingWorkerService implements OnModuleDestroy {
       }, this.opts.workflowTimeoutMs);
     });
 
+    const execPromise: Promise<"completed"> = this.processor
+      .execute({ assetId, workerId: this.workerId, attemptNumber, signal: controller.signal })
+      .then((): "completed" => "completed");
+
     try {
-      const winner: "completed" | "timeout" = await Promise.race([
-        this.processor
-          .execute({ assetId, workerId: this.workerId, attemptNumber })
-          .then((): "completed" => "completed"),
-        timeoutPromise,
-      ]).catch((err: unknown): never => {
-        // Re-throw; caught below to drive retry classification.
-        throw err;
-      });
+      const winner: "completed" | "timeout" = await Promise.race([execPromise, timeoutPromise]);
 
       if (winner === "timeout") {
+        // F-P5: actually cancel the losing pipeline — it must stop writing
+        // analyses / transitions and must not move bytes it can't commit.
+        controller.abort();
+        // Swallow the pipeline's eventual ProcessingAbortedError so it can't
+        // become an unhandled rejection after this race already resolved.
+        execPromise.catch((err: unknown): void => {
+          this.logger.debug(
+            { assetId, err: this.errorMessage(err) },
+            "aborted pipeline settled after timeout",
+          );
+        });
         this.logger.error(
           { assetId, attemptNumber, timeoutMs: this.opts.workflowTimeoutMs },
           "workflow timeout reached; marking processing_failed",

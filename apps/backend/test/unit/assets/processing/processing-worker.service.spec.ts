@@ -162,6 +162,22 @@ describe("ProcessingWorkerService", () => {
     }
   });
 
+  it("aborts the pipeline signal when the workflow timeout fires", async () => {
+    vi.useFakeTimers();
+    try {
+      jobRepo.claimedJobs = [makeJob(TEST_UUIDS.asset1)];
+      processor.neverResolve = true;
+
+      const tickPromise: Promise<void> = service.tick();
+      await vi.advanceTimersByTimeAsync(150);
+      await tickPromise;
+
+      expect(processor.lastSignal?.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("survives a claimAvailable failure without throwing and claims nothing", async () => {
     jobRepo.claimShouldReject = true;
 
@@ -315,12 +331,23 @@ class FakeAssetProcessingRepository extends AssetProcessingRepositoryPort {
 
 class FakeProcessClaimedAssetUseCase {
   readonly calls: Array<{ assetId: string; workerId: string; attemptNumber: number }> = [];
+  lastSignal: AbortSignal | undefined;
   failures = 0;
   neverResolve = false;
   errorFactory: () => Error = () => new Error("processor failure");
 
-  execute(input: { assetId: string; workerId: string; attemptNumber: number }): Promise<unknown> {
-    this.calls.push(input);
+  execute(input: {
+    assetId: string;
+    workerId: string;
+    attemptNumber: number;
+    signal?: AbortSignal;
+  }): Promise<unknown> {
+    this.calls.push({
+      assetId: input.assetId,
+      workerId: input.workerId,
+      attemptNumber: input.attemptNumber,
+    });
+    this.lastSignal = input.signal;
     if (this.neverResolve) {
       return new Promise<unknown>((): void => {});
     }
