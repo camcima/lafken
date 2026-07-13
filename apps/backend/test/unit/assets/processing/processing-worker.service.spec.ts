@@ -162,6 +162,35 @@ describe("ProcessingWorkerService", () => {
     }
   });
 
+  it("survives a claimAvailable failure without throwing and claims nothing", async () => {
+    jobRepo.claimShouldReject = true;
+
+    await expect(service.tick()).resolves.toBeUndefined();
+
+    expect(processor.calls).toEqual([]);
+  });
+
+  it("does not issue a second claim query while the first is still in flight", async () => {
+    let resolveClaim: (jobs: ProcessingJob[]) => void = () => {};
+    jobRepo.claimBlocker = new Promise<ProcessingJob[]>((resolve) => {
+      resolveClaim = resolve;
+    });
+
+    const first = service.tick();
+    const second = service.tick();
+    resolveClaim([]);
+    await Promise.all([first, second]);
+
+    expect(jobRepo.claimCalls).toHaveLength(1);
+  });
+
+  it("heartbeat survives an individual heartbeat write failure", async () => {
+    service.trackInFlight(TEST_UUIDS.asset1);
+    jobRepo.heartbeatShouldReject = true;
+
+    await expect(service.heartbeat()).resolves.toBeUndefined();
+  });
+
   describe("shutdown release", () => {
     afterEach(() => {
       vi.useRealTimers();
@@ -190,6 +219,9 @@ describe("ProcessingWorkerService", () => {
 
 class FakeProcessingJobRepository extends ProcessingJobRepositoryPort {
   claimedJobs: ProcessingJob[] = [];
+  claimShouldReject = false;
+  claimBlocker: Promise<ProcessingJob[]> | null = null;
+  heartbeatShouldReject = false;
   readonly claimCalls: IClaimJobsInput[] = [];
   readonly heartbeatCalls: Array<{ assetId: string; workerId: string }> = [];
   readonly releaseCalls: IReleaseForRetryInput[] = [];
@@ -197,11 +229,20 @@ class FakeProcessingJobRepository extends ProcessingJobRepositoryPort {
 
   claimAvailable(input: IClaimJobsInput): Promise<ProcessingJob[]> {
     this.claimCalls.push(input);
+    if (this.claimShouldReject) {
+      return Promise.reject(new Error("db connection lost"));
+    }
+    if (this.claimBlocker) {
+      return this.claimBlocker;
+    }
     return Promise.resolve(this.claimedJobs);
   }
 
   heartbeat(input: IHeartbeatInput): Promise<boolean> {
     this.heartbeatCalls.push({ assetId: input.assetId, workerId: input.workerId });
+    if (this.heartbeatShouldReject) {
+      return Promise.reject(new Error("db connection lost"));
+    }
     return Promise.resolve(true);
   }
 

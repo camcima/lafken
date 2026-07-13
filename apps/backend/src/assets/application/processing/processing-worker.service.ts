@@ -35,6 +35,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
   readonly workerId: string = `worker-${randomUUID()}`;
   private readonly inFlight: Map<string, IInFlightEntry> = new Map();
   private shutdownStarted = false;
+  private isClaiming = false;
   private pollTimer: NodeJS.Timeout | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private sweeperTimer: NodeJS.Timeout | null = null;
@@ -79,21 +80,30 @@ export class ProcessingWorkerService implements OnModuleDestroy {
       this.opts.heartbeatIntervalMs,
     );
     if (this.reclaimer) {
-      this.sweeperTimer = setInterval(
-        (): void => void this.reclaimer?.execute({ now: new Date() }),
-        this.opts.staleClaimMs,
-      );
+      this.sweeperTimer = setInterval((): void => {
+        this.reclaimer?.execute({ now: new Date() }).catch((err: unknown): void => {
+          this.logger.error(
+            { loop: "stale-claim-sweeper", err: this.errorMessage(err) },
+            "stale-claim sweep iteration failed; retrying on next interval",
+          );
+        });
+      }, this.opts.staleClaimMs);
     }
     if (this.orphanSweeper) {
-      this.orphanSweepTimer = setInterval(
-        (): void =>
-          void this.orphanSweeper?.execute({
+      this.orphanSweepTimer = setInterval((): void => {
+        this.orphanSweeper
+          ?.execute({
             now: new Date(),
             graceMs: this.opts.orphanIntentGraceMs,
             batchSize: 100,
-          }),
-        this.opts.orphanIntentSweepIntervalMs,
-      );
+          })
+          .catch((err: unknown): void => {
+            this.logger.error(
+              { loop: "orphan-intent-sweeper", err: this.errorMessage(err) },
+              "orphan-intent sweep iteration failed; retrying on next interval",
+            );
+          });
+      }, this.opts.orphanIntentSweepIntervalMs);
     }
     void this.tick();
   }
@@ -102,17 +112,36 @@ export class ProcessingWorkerService implements OnModuleDestroy {
     if (this.shutdownStarted) {
       return;
     }
+    // Re-entrancy guard: if the previous tick's claim query outlives the poll
+    // interval, a second overlapping tick could exceed the concurrency cap.
+    if (this.isClaiming) {
+      return;
+    }
 
     const remaining: number = this.opts.concurrency - this.inFlight.size;
     if (remaining <= ZERO_REMAINING_CAPACITY) {
       return;
     }
 
-    const jobs: ProcessingJob[] = await this.jobs.claimAvailable({
-      workerId: this.workerId,
-      limit: remaining,
-      now: new Date(),
-    });
+    this.isClaiming = true;
+    let jobs: ProcessingJob[];
+    try {
+      jobs = await this.jobs.claimAvailable({
+        workerId: this.workerId,
+        limit: remaining,
+        now: new Date(),
+      });
+    } catch (err) {
+      // Crash guard (F-P2): a transient DB error in the poll loop must never
+      // become an unhandled rejection that kills the worker process.
+      this.logger.error(
+        { loop: "tick", err: this.errorMessage(err) },
+        "tick failed to claim jobs; retrying on next poll",
+      );
+      return;
+    } finally {
+      this.isClaiming = false;
+    }
 
     this.logger.debug({ claimed: jobs.length, inFlight: this.inFlight.size }, "tick claimed jobs");
 
@@ -125,9 +154,8 @@ export class ProcessingWorkerService implements OnModuleDestroy {
           // Defensive net: process() handles its own retries and terminal
           // marking, so this branch should be unreachable in practice. If we
           // do land here, surface it loudly so the bug doesn't get lost.
-          const message: string = err instanceof Error ? err.message : String(err);
           this.logger.error(
-            { assetId: job.props.assetId, err: message },
+            { assetId: job.props.assetId, err: this.errorMessage(err) },
             "processing crashed without graceful retry handling",
           );
         })
@@ -138,8 +166,9 @@ export class ProcessingWorkerService implements OnModuleDestroy {
   }
 
   async heartbeat(): Promise<void> {
-    await Promise.all(
-      Array.from(this.inFlight.keys()).map(async (assetId: string): Promise<void> => {
+    const assetIds: string[] = Array.from(this.inFlight.keys());
+    const results: PromiseSettledResult<void>[] = await Promise.allSettled(
+      assetIds.map(async (assetId: string): Promise<void> => {
         const ok: boolean = await this.jobs.heartbeat({
           assetId,
           workerId: this.workerId,
@@ -150,6 +179,14 @@ export class ProcessingWorkerService implements OnModuleDestroy {
         }
       }),
     );
+    results.forEach((result: PromiseSettledResult<void>, index: number): void => {
+      if (result.status === "rejected") {
+        this.logger.error(
+          { loop: "heartbeat", assetId: assetIds[index], err: this.errorMessage(result.reason) },
+          "heartbeat write failed; job may be reclaimed by the stale sweeper",
+        );
+      }
+    });
   }
 
   beginShutdown(): void {
@@ -261,7 +298,7 @@ export class ProcessingWorkerService implements OnModuleDestroy {
       if (timedOut) {
         return; // already handled above
       }
-      const lastError: string = err instanceof Error ? err.message : String(err);
+      const lastError: string = this.errorMessage(err);
 
       if (!(err instanceof TransientProcessingError)) {
         this.logger.error(
@@ -337,5 +374,9 @@ export class ProcessingWorkerService implements OnModuleDestroy {
       );
     }
     await this.jobs.markFailed({ assetId, workerId: this.workerId, lastError, now });
+  }
+
+  private errorMessage(err: unknown): string {
+    return err instanceof Error ? err.message : String(err);
   }
 }
