@@ -132,7 +132,13 @@ export function AssetsListPage(): React.JSX.Element {
   }
 
   function handleClearFilters(): void {
-    void navigate({ to: "/assets", search: {} });
+    // Clear the user-toggled filters (state, namespace) and reset to page 1,
+    // but preserve `legalHoldId` — it is navigational scope (set by linking
+    // in from a legal hold), not a filter the user can set from this page.
+    void navigate({
+      to: "/assets",
+      search: (prev) => ({ legalHoldId: prev.legalHoldId, page: 1 }),
+    });
     setQuery("");
     setSelected(new Set());
   }

@@ -110,6 +110,19 @@ describe("AssetsListPage", () => {
     expect(screen.getByRole("combobox", { name: /namespace/i })).toBeInTheDocument();
   });
 
+  it("renders view toggle buttons for Rows, Hybrid, and Grid", async () => {
+    await renderPage();
+    expect(await screen.findByRole("button", { name: /rows/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /hybrid/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /grid/i })).toBeInTheDocument();
+  });
+
+  it("renders quick filter pills", async () => {
+    await renderPage();
+    expect(await screen.findByRole("button", { name: /last 24h/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /has legal hold/i })).toBeInTheDocument();
+  });
+
   it("renders a row from the BE response", async () => {
     await renderPage();
     await waitFor(() => {
@@ -131,6 +144,18 @@ describe("AssetsListPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/no assets match these filters/i)).toBeInTheDocument();
+    });
+  });
+
+  it("populates the namespace filter dropdown from the BE response", async () => {
+    listAssetsMock.mockResolvedValue({ data: [], total: 0, page: 1, limit: 18, lastPage: 1 });
+
+    await renderPage();
+
+    await waitFor(() => {
+      const nsSelect = screen.getByRole("combobox", { name: /namespace/i });
+      const options = Array.from(nsSelect.querySelectorAll("option")).map((opt) => opt.value);
+      expect(options).toContain("fleet-photos");
     });
   });
 
@@ -162,6 +187,43 @@ describe("AssetsListPage", () => {
     });
   });
 
+  it("resets page to 1 when the namespace filter changes", async () => {
+    const { router } = await renderPage("/assets?page=3");
+
+    const namespaceSelect = await screen.findByRole("combobox", { name: /namespace/i });
+    await userEvent.selectOptions(namespaceSelect, "fleet-photos");
+
+    await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({
+        namespaceSlug: "fleet-photos",
+        page: 1,
+      });
+    });
+  });
+
+  it("resets page to 1 when the rows-per-page selector changes", async () => {
+    const { router } = await renderPage("/assets?page=3");
+
+    const rowsPerPageSelect = await screen.findByRole("combobox", { name: /rows per page/i });
+    await userEvent.selectOptions(rowsPerPageSelect, "50");
+
+    await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({ page: 1 });
+    });
+  });
+
+  it("resets page to 1 when clearing filters", async () => {
+    const { router } = await renderPage("/assets?page=3&state=ready");
+
+    const clearButton = await screen.findByRole("button", { name: /clear filters/i });
+    await userEvent.click(clearButton);
+
+    await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({ page: 1 });
+    });
+    expect(router.state.location.search).not.toHaveProperty("state");
+  });
+
   it("writes page changes to the URL", async () => {
     const { router } = await renderPage("/assets");
 
@@ -170,6 +232,42 @@ describe("AssetsListPage", () => {
 
     await waitFor(() => {
       expect(router.state.location.search).toMatchObject({ page: 2 });
+    });
+  });
+
+  it("clears state and namespace filters but preserves the legal-hold scope", async () => {
+    const holdId = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+    const { router } = await renderPage(
+      `/assets?page=3&state=ready&namespaceSlug=fleet-photos&legalHoldId=${holdId}`,
+    );
+
+    const clearButton = await screen.findByRole("button", { name: /clear filters/i });
+    await userEvent.click(clearButton);
+
+    await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({ legalHoldId: holdId, page: 1 });
+    });
+    expect(router.state.location.search).not.toHaveProperty("state");
+    expect(router.state.location.search).not.toHaveProperty("namespaceSlug");
+  });
+
+  // ── URL is Truth: malformed search params degrade gracefully ─────────
+
+  it("renders page 1 without crashing when `page` is not a number", async () => {
+    await renderPage("/assets?page=abc");
+
+    expect(await screen.findByRole("heading", { level: 1, name: /^Assets$/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(listAssetsMock).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }));
+    });
+  });
+
+  it("renders unfiltered without crashing when `state` is not a known state", async () => {
+    await renderPage("/assets?state=not-a-real-state");
+
+    expect(await screen.findByRole("heading", { level: 1, name: /^Assets$/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(listAssetsMock).toHaveBeenCalledWith(expect.objectContaining({ states: undefined }));
     });
   });
 });
