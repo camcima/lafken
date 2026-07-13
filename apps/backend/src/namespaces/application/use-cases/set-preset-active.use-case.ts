@@ -7,6 +7,7 @@ import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not
 import { PresetNotFoundError } from "@/namespaces/domain/errors/preset-not-found.error";
 import { NamespacePresetWriteRepositoryPort } from "@/namespaces/domain/repositories/namespace-preset-write.repository.port";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
+import { UnitOfWorkPort } from "@/shared/application/unit-of-work.port";
 
 const AUDIT_FALLBACK_PRINCIPAL = "system";
 
@@ -24,6 +25,7 @@ export class SetPresetActiveUseCase {
     private readonly queryRepository: NamespaceQueryRepositoryPort,
     private readonly writeRepository: NamespacePresetWriteRepositoryPort,
     private readonly auditWriteRepo: AuditWriteRepositoryPort,
+    private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
   async execute(input: ISetPresetActiveInput): Promise<NamespacePreset> {
@@ -38,24 +40,26 @@ export class SetPresetActiveUseCase {
     if (!existing) {
       throw new PresetNotFoundError({ slug: input.slug, name: input.name });
     }
-    const updated = await this.writeRepository.setActive({
-      namespaceId: namespace.props.id,
-      name: input.name,
-      active: input.active,
-    });
-
-    if (existing.props.active !== updated.props.active) {
-      await this.auditWriteRepo.record({
-        entityType: "namespace_preset",
-        entityId: `${namespace.props.slug.value}/${updated.props.name}`,
-        action: "update",
-        occurredBy: input.occurredBy ?? AUDIT_FALLBACK_PRINCIPAL,
-        requestIp: input.requestIp,
-        beforeState: { active: existing.props.active },
-        afterState: { active: updated.props.active },
+    return this.unitOfWork.execute(async () => {
+      const updated = await this.writeRepository.setActive({
+        namespaceId: namespace.props.id,
+        name: input.name,
+        active: input.active,
       });
-    }
 
-    return updated;
+      if (existing.props.active !== updated.props.active) {
+        await this.auditWriteRepo.record({
+          entityType: "namespace_preset",
+          entityId: `${namespace.props.slug.value}/${updated.props.name}`,
+          action: "update",
+          occurredBy: input.occurredBy ?? AUDIT_FALLBACK_PRINCIPAL,
+          requestIp: input.requestIp,
+          beforeState: { active: existing.props.active },
+          afterState: { active: updated.props.active },
+        });
+      }
+
+      return updated;
+    });
   }
 }

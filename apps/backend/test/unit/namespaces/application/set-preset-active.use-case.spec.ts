@@ -9,6 +9,7 @@ import { PresetNotFoundError } from "@/namespaces/domain/errors/preset-not-found
 import { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
 import { Slug } from "@/namespaces/domain/value-objects/slug.value-object";
 
+import { FakeUnitOfWork } from "../../../__fakes__/fake-unit-of-work";
 import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 import { InMemoryNamespacePresetWriteRepository } from "../__fakes__/in-memory-namespace-preset-write.repository";
 import { InMemoryNamespaceQueryRepository } from "../__fakes__/in-memory-namespace-query.repository";
@@ -63,7 +64,7 @@ describe("SetPresetActiveUseCase", () => {
     queryRepo = new InMemoryNamespaceQueryRepository();
     writeRepo = new InMemoryNamespacePresetWriteRepository();
     auditRepo = new InMemoryAuditWriteRepository();
-    useCase = new SetPresetActiveUseCase(queryRepo, writeRepo, auditRepo);
+    useCase = new SetPresetActiveUseCase(queryRepo, writeRepo, auditRepo, new FakeUnitOfWork());
   });
 
   it("activates an inactive preset and writes an audit record", async () => {
