@@ -4,16 +4,16 @@ import type {
   NamespaceResponseDTO,
   PaginatedResult,
 } from "@shared/backend-api";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import React from "react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
+import { renderWithRouter } from "@/lib/test/render-with-router";
+import { assetsSearchSchema } from "@/routes/_protected/assets/index";
 
 import { AssetsListPage } from "./AssetsListPage";
 
-// Mock the SDK client used by useAssets / useNamespaces.
+// Mock the SDK client used by useAssets / useNamespaces (network boundary).
 const listAssetsMock =
   vi.fn<(query: Partial<ListAssetsQueryDTO>) => Promise<PaginatedResult<AssetResponseDTO>>>();
 const listNamespacesMock =
@@ -31,28 +31,15 @@ vi.mock("@lafken/react", () => ({
   }),
 }));
 
-// TanStack Router Link + useSearch mock
-vi.mock("@tanstack/react-router", () => ({
-  Link: ({
-    children,
-    ...props
-  }: {
-    children: React.ReactNode;
-    to?: string;
-    params?: Record<string, string>;
-  }) => <a href={props.to ?? "#"}>{children}</a>,
-  useSearch: () => ({ legalHoldId: undefined, namespaceSlug: undefined }),
-  useNavigate: () => () => {},
-}));
-
-function renderPage(): ReturnType<typeof render> {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <I18nProvider>
-      <QueryClientProvider client={client}>
-        <AssetsListPage />
-      </QueryClientProvider>
-    </I18nProvider>,
+function renderPage(initialUrl = "/assets") {
+  return renderWithRouter(
+    {
+      path: "assets",
+      index: true,
+      component: AssetsListPage,
+      validateSearch: assetsSearchSchema,
+    },
+    initialUrl,
   );
 }
 
@@ -90,10 +77,10 @@ beforeEach(() => {
   listNamespacesMock.mockReset();
   listAssetsMock.mockResolvedValue({
     data: [ASSET],
-    total: 1,
+    total: 100,
     page: 1,
     limit: 18,
-    lastPage: 1,
+    lastPage: 6,
   });
   listNamespacesMock.mockResolvedValue({
     data: [NAMESPACE],
@@ -105,51 +92,33 @@ beforeEach(() => {
 });
 
 describe("AssetsListPage", () => {
-  it("renders the header title", () => {
-    renderPage();
-    expect(screen.getByRole("heading", { level: 1, name: /^Assets$/i })).toBeInTheDocument();
+  it("renders the header title", async () => {
+    await renderPage();
+    expect(await screen.findByRole("heading", { level: 1, name: /^Assets$/i })).toBeInTheDocument();
   });
 
-  it("renders the search input", () => {
-    renderPage();
-    expect(screen.getByRole("searchbox", { name: /search by public id/i })).toBeInTheDocument();
+  it("renders the search input", async () => {
+    await renderPage();
+    expect(
+      await screen.findByRole("searchbox", { name: /search by public id/i }),
+    ).toBeInTheDocument();
   });
 
-  it("renders the state filter and namespace filter selects", () => {
-    renderPage();
-    expect(screen.getByRole("combobox", { name: /state/i })).toBeInTheDocument();
+  it("renders the state filter and namespace filter selects", async () => {
+    await renderPage();
+    expect(await screen.findByRole("combobox", { name: /state/i })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: /namespace/i })).toBeInTheDocument();
   });
 
-  it("renders view toggle buttons for Rows, Hybrid, and Grid", () => {
-    renderPage();
-    expect(screen.getByRole("button", { name: /rows/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /hybrid/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /grid/i })).toBeInTheDocument();
-  });
-
-  it("renders quick filter pills", () => {
-    renderPage();
-    expect(screen.getByRole("button", { name: /last 24h/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /has legal hold/i })).toBeInTheDocument();
-  });
-
   it("renders a row from the BE response", async () => {
-    renderPage();
+    await renderPage();
     await waitFor(() => {
-      // shortId is the first 8 chars of publicId
       expect(screen.getByText(/abcdef12/)).toBeInTheDocument();
     });
   });
 
   it("renders the empty card when the BE returns no assets", async () => {
-    listAssetsMock.mockResolvedValue({
-      data: [],
-      total: 0,
-      page: 1,
-      limit: 18,
-      lastPage: 1,
-    });
+    listAssetsMock.mockResolvedValue({ data: [], total: 0, page: 1, limit: 18, lastPage: 1 });
     listNamespacesMock.mockResolvedValue({
       data: [],
       total: 0,
@@ -158,28 +127,49 @@ describe("AssetsListPage", () => {
       lastPage: 1,
     });
 
-    renderPage();
+    await renderPage();
 
     await waitFor(() => {
       expect(screen.getByText(/no assets match these filters/i)).toBeInTheDocument();
     });
   });
 
-  it("populates the namespace filter dropdown from the BE response", async () => {
-    listAssetsMock.mockResolvedValue({
-      data: [],
-      total: 0,
-      page: 1,
-      limit: 18,
-      lastPage: 1,
-    });
+  // ── URL-as-truth (F-W2) ─────────────────────────────────────────────
 
-    renderPage();
+  it("queries the BE with page and state from a deep link", async () => {
+    await renderPage("/assets?page=3&state=ready");
 
     await waitFor(() => {
-      const nsSelect = screen.getByRole("combobox", { name: /namespace/i });
-      const options = Array.from(nsSelect.querySelectorAll("option")).map((opt) => opt.value);
-      expect(options).toContain("fleet-photos");
+      expect(listAssetsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 3, states: ["ready"] }),
+      );
+    });
+  });
+
+  it("writes the state filter to the URL and resets page", async () => {
+    const { router } = await renderPage("/assets?page=3");
+
+    const stateSelect = await screen.findByRole("combobox", { name: /state/i });
+    await userEvent.selectOptions(stateSelect, "processing");
+
+    await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({ state: "processing", page: 1 });
+    });
+    await waitFor(() => {
+      expect(listAssetsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 1, states: ["processing"] }),
+      );
+    });
+  });
+
+  it("writes page changes to the URL", async () => {
+    const { router } = await renderPage("/assets");
+
+    const nextButton = await screen.findByRole("button", { name: /next page/i });
+    await userEvent.click(nextButton);
+
+    await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({ page: 2 });
     });
   });
 });

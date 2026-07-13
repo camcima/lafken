@@ -44,23 +44,24 @@ interface INamespaceOption {
 
 export function AssetsListPage(): React.JSX.Element {
   const { t } = useTranslation();
-  const { legalHoldId, namespaceSlug } = useSearch({ from: "/_protected/assets/" });
+  const { page, state, legalHoldId, namespaceSlug } = useSearch({ from: "/_protected/assets/" });
   const navigate = useNavigate();
 
   const [view, setView] = useState<ViewMode>("rows");
-  const [stateFilter, setStateFilter] = useState("all");
+  const stateFilter: string = state ?? "all";
   const namespaceFilter: string = namespaceSlug ?? "all";
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(() => new Set<string>());
-  const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(0); // 0 => use AUTO_PAGE_SIZE
+
+  const pageIndex: number = page - 1; // URL is 1-indexed; Paginator is 0-indexed
 
   const autoPageSize = getAutoPageSize(view);
   const PAGE_SIZE = pageSize || autoPageSize;
 
   // ── Real-API queries ────────────────────────────────────────────────────
   const listQuery = {
-    page: page + 1,
+    page,
     limit: PAGE_SIZE,
     namespaceSlug: namespaceFilter !== "all" ? namespaceFilter : undefined,
     states: stateFilter !== "all" ? [stateFilter as AssetState] : undefined,
@@ -102,34 +103,37 @@ export function AssetsListPage(): React.JSX.Element {
   const hasActiveFilters = stateFilter !== "all" || namespaceFilter !== "all" || query !== "";
 
   function handleStateFilter(value: string): void {
-    setStateFilter(value);
-    setPage(0);
+    void navigate({
+      to: "/assets",
+      search: (prev) => ({
+        ...prev,
+        state: value === "all" ? undefined : (value as AssetState),
+        page: 1,
+      }),
+    });
     setSelected(new Set());
   }
 
   function handleNamespaceFilter(value: string): void {
     void navigate({
       to: "/assets",
-      search: (prev) => ({ ...prev, namespaceSlug: value === "all" ? undefined : value }),
+      search: (prev) => ({
+        ...prev,
+        namespaceSlug: value === "all" ? undefined : value,
+        page: 1,
+      }),
     });
-    setPage(0);
     setSelected(new Set());
   }
 
   function handleQuery(value: string): void {
     setQuery(value);
-    setPage(0);
     setSelected(new Set());
   }
 
   function handleClearFilters(): void {
-    setStateFilter("all");
-    void navigate({
-      to: "/assets",
-      search: (prev) => ({ ...prev, namespaceSlug: undefined }),
-    });
+    void navigate({ to: "/assets", search: {} });
     setQuery("");
-    setPage(0);
     setSelected(new Set());
   }
 
@@ -161,13 +165,13 @@ export function AssetsListPage(): React.JSX.Element {
   }
 
   function handlePageChange(newPage: number): void {
-    setPage(newPage);
+    void navigate({ to: "/assets", search: (prev) => ({ ...prev, page: newPage + 1 }) });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // Range display values (1-indexed)
-  const rangeFrom: number = totalItems === 0 ? 0 : page * PAGE_SIZE + 1;
-  const rangeTo: number = Math.min((page + 1) * PAGE_SIZE, totalItems);
+  const rangeFrom: number = totalItems === 0 ? 0 : pageIndex * PAGE_SIZE + 1;
+  const rangeTo: number = Math.min((pageIndex + 1) * PAGE_SIZE, totalItems);
 
   // Header subtitle counters
   const headerTotal: number = totalItems;
@@ -397,7 +401,7 @@ export function AssetsListPage(): React.JSX.Element {
                 value={PAGE_SIZE}
                 onChange={(e) => {
                   setPageSize(Number(e.target.value));
-                  setPage(0);
+                  void navigate({ to: "/assets", search: (prev) => ({ ...prev, page: 1 }) });
                 }}
                 className={SELECT_CLASS_SM}
                 aria-label={t("paginator.rowsPerPage")}
@@ -417,7 +421,7 @@ export function AssetsListPage(): React.JSX.Element {
                 })}
               </span>
             </div>
-            <Paginator page={page} totalPages={totalPages} onChange={handlePageChange} />
+            <Paginator page={pageIndex} totalPages={totalPages} onChange={handlePageChange} />
           </div>
         </>
       )}
