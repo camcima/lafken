@@ -270,11 +270,89 @@ describe("ProcessClaimedAssetUseCase", () => {
       }),
     ]);
   });
+
+  it("completes the job without processing when the asset is already deleted", async () => {
+    assetRepo.asset = makeAsset({ state: "deleted" });
+
+    const result = await useCase.execute({
+      assetId: TEST_UUIDS.asset1,
+      workerId: "worker-a",
+      attemptNumber: 1,
+    });
+
+    expect(result.kind).toBe("completed");
+    expect(assetRepo.transitions).toEqual([]);
+    expect(storage.readCalls).toEqual([]);
+    expect(jobRepo.completed).toBe(true);
+  });
+
+  it("completes the job without reprocessing when the asset is already ready", async () => {
+    assetRepo.asset = makeAsset({ state: "ready" });
+
+    const result = await useCase.execute({
+      assetId: TEST_UUIDS.asset1,
+      workerId: "worker-a",
+      attemptNumber: 1,
+    });
+
+    expect(result.kind).toBe("completed");
+    expect(assetRepo.transitions).toEqual([]);
+    expect(jobRepo.completed).toBe(true);
+  });
+
+  it("resumes a retry attempt when the asset is already in processing", async () => {
+    assetRepo.asset = makeAsset({ state: "processing" });
+
+    const result = await useCase.execute({
+      assetId: TEST_UUIDS.asset1,
+      workerId: "worker-a",
+      attemptNumber: 2,
+    });
+
+    expect(result.kind).toBe("completed");
+    expect(assetRepo.transitions.map((item) => item.toState)).toEqual(["ready"]);
+  });
+
+  it("completes the job without processing when the uploaded->processing transition loses its race", async () => {
+    assetRepo.transitionResult = false;
+
+    const result = await useCase.execute({
+      assetId: TEST_UUIDS.asset1,
+      workerId: "worker-a",
+      attemptNumber: 1,
+    });
+
+    expect(result.kind).toBe("completed");
+    expect(assetRepo.transitions).toHaveLength(1);
+    expect(storage.readCalls).toEqual([]);
+    expect(jobRepo.completed).toBe(true);
+  });
+
+  it("skips markCompleted when the terminal transition loses its race", async () => {
+    assetRepo.asset = makeAsset({ state: "processing" });
+    assetRepo.transitionResult = false; // the only transition attempted is the terminal one
+
+    const result = await useCase.execute({
+      assetId: TEST_UUIDS.asset1,
+      workerId: "worker-a",
+      attemptNumber: 1,
+    });
+
+    expect(result.kind).toBe("completed");
+    expect(jobRepo.completed).toBe(false);
+  });
+
+  it("caps read_object at the policy's max file size", async () => {
+    await useCase.execute({ assetId: TEST_UUIDS.asset1, workerId: "worker-a", attemptNumber: 1 });
+
+    expect(storage.readCalls[0]?.maxBytes).toBe(52_428_800);
+  });
 });
 
 class InMemoryAssetProcessingRepository extends AssetProcessingRepositoryPort {
   asset: Asset = makeAsset();
   policy: NamespacePolicy = makePolicy();
+  transitionResult = true;
   readonly transitions: ITransitionAssetInput[] = [];
   readonly analyses: IRecordAnalysisInput[] = [];
   readonly derivedMetadata: IUpdateDerivedMetadataInput[] = [];
@@ -288,6 +366,9 @@ class InMemoryAssetProcessingRepository extends AssetProcessingRepositoryPort {
 
   transitionAsset(input: ITransitionAssetInput): Promise<boolean> {
     this.transitions.push(input);
+    if (!this.transitionResult) {
+      return Promise.resolve(false);
+    }
     this.asset = makeAsset({
       state: input.toState,
       stateReason: input.reason,

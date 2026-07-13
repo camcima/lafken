@@ -93,11 +93,29 @@ export class ProcessClaimedAssetUseCase {
     }
 
     const { asset, policy } = loaded;
+
+    // F-P1: a released job can outlive an operator action (delete, quarantine
+    // release, retry exhaustion). Only 'uploaded' and 'processing' are
+    // processable; anything else means another actor moved the asset — the
+    // job is stale and must be closed, never resurrected.
+    if (asset.props.state !== "uploaded" && asset.props.state !== "processing") {
+      this.logger.warn(
+        { assetId: asset.props.id, state: asset.props.state },
+        "asset is not in a processable state; completing job without processing",
+      );
+      await this.jobRepo.markCompleted({
+        assetId: asset.props.id,
+        workerId: input.workerId,
+        now: new Date(),
+      });
+      return { kind: "completed" };
+    }
+
     const processingStartedAt: Date = new Date();
     const stepTimings: IStepTiming[] = [];
     let currentState: AssetState = asset.props.state;
     if (currentState === "uploaded") {
-      await this.assetRepo.transitionAsset({
+      const started: boolean = await this.assetRepo.transitionAsset({
         assetId: asset.props.id,
         fromState: "uploaded",
         toState: "processing",
@@ -110,6 +128,20 @@ export class ProcessClaimedAssetUseCase {
         occurredBy: this.workerActor(input.workerId),
         now: new Date(),
       });
+      if (!started) {
+        // We own the claim, so no other worker can race us — this means an
+        // out-of-band actor (e.g. delete) moved the asset. Close the job.
+        this.logger.warn(
+          { assetId: asset.props.id },
+          "uploaded->processing transition lost race; completing job without processing",
+        );
+        await this.jobRepo.markCompleted({
+          assetId: asset.props.id,
+          workerId: input.workerId,
+          now: new Date(),
+        });
+        return { kind: "completed" };
+      }
       currentState = "processing";
     }
 
@@ -136,6 +168,7 @@ export class ProcessClaimedAssetUseCase {
       this.assetStorage.readObjectBytes({
         binding: { bucket: gcs.bucket, projectId: gcs.projectId },
         storageKey: asset.props.storageKey,
+        maxBytes: Number(policy.props.maxFileSizeBytes),
       }),
     );
     // Pre-computed for virus_scan evidence so we don't have to wait for
@@ -455,7 +488,7 @@ export class ProcessClaimedAssetUseCase {
     durationMs?: number;
     newStorageKey?: string;
   }): Promise<void> {
-    await this.assetRepo.transitionAsset({
+    const transitioned: boolean = await this.assetRepo.transitionAsset({
       assetId: input.assetId,
       fromState: input.fromState,
       toState: input.toState,
@@ -471,6 +504,16 @@ export class ProcessClaimedAssetUseCase {
       now: new Date(),
       newStorageKey: input.newStorageKey,
     });
+    if (!transitioned) {
+      // F-A4: a lost race means another actor already moved the asset. Do
+      // NOT record the terminal metric or complete the job — the stale
+      // sweeper will mark the job completed once it sees the terminal state.
+      this.logger.warn(
+        { assetId: input.assetId, toState: input.toState },
+        "terminal transition lost race; leaving job for the stale sweeper",
+      );
+      return;
+    }
     this.metrics.recordProcessingTerminalState({ state: input.toState as ProcessingTerminalState });
     await this.jobRepo.markCompleted({
       assetId: input.assetId,
@@ -524,7 +567,7 @@ export class ProcessClaimedAssetUseCase {
   }): Promise<void> {
     const reason: string = "processing_completed";
     const finishedAt: Date = new Date();
-    await this.assetRepo.transitionAsset({
+    const transitioned: boolean = await this.assetRepo.transitionAsset({
       assetId: input.assetId,
       fromState: input.fromState,
       toState: "ready",
@@ -539,6 +582,13 @@ export class ProcessClaimedAssetUseCase {
       occurredBy: this.workerActor(input.workerId),
       now: finishedAt,
     });
+    if (!transitioned) {
+      this.logger.warn(
+        { assetId: input.assetId, toState: "ready" },
+        "ready transition lost race; leaving job for the stale sweeper",
+      );
+      return;
+    }
     this.metrics.recordProcessingTerminalState({ state: "ready" });
     await this.jobRepo.markCompleted({
       assetId: input.assetId,
