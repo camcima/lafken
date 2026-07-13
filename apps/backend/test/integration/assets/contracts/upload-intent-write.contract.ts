@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { beforeEach, expect, it } from "vitest";
+import { beforeEach, expect, it, vi } from "vitest";
 
 import type {
   IInsertUploadIntentInput,
@@ -25,6 +25,17 @@ const SWEEP_OLDEST_MINUTES = 60;
 const SWEEP_OLDER_MINUTES = 30;
 const SWEEP_WITHIN_GRACE_MINUTES = 2;
 const SWEEP_CONSUMED_MINUTES = 45;
+const SWEEP_EXPIRED_MINUTES = 90;
+/** Fixed instant used as the faked system clock's starting point for the
+ *  re-consume test — arbitrary, just needs to be a valid Date. */
+const FIRST_CONSUME_INSTANT = new Date("2026-01-01T00:00:00.000Z");
+/** How far the faked clock is advanced between the two markConsumed calls so
+ *  a buggy re-consume (one that blindly rewrites consumedAt) produces a
+ *  timestamp that visibly differs from the first call's. */
+const CLOCK_ADVANCE_MS = HOUR_MS;
+/** Fixed instant used for the markExpired boundary case — arbitrary, just
+ *  needs to be a valid Date shared by uploadUrlExpiresAt/now/expiresBefore. */
+const BOUNDARY_INSTANT = new Date("2026-02-01T00:00:00.000Z");
 
 /**
  * Contract suite for UploadIntentWriteRepositoryPort. Runs identically against
@@ -60,15 +71,34 @@ export function runUploadIntentWriteContract(
     expect(await ctx.repo.findByPublicId(randomUUID())).toBeNull();
   });
 
-  it("markConsumed sets consumedAt and stays a no-op on repeat calls", async () => {
+  it("markConsumed preserves the original consumedAt on a repeated call", async () => {
     const input = ctx.makeInsertInput();
     await ctx.repo.insert(input);
 
-    await ctx.repo.markConsumed(input.publicId);
-    const afterFirst = await ctx.repo.findByPublicId(input.publicId);
-    expect(afterFirst!.props.consumedAt).not.toBeNull();
+    // Neither implementation's markConsumed takes a `now`/Clock argument, so
+    // this case can't inject one. Per CLAUDE.md's adapter-test rule, fake the
+    // system clock instead and advance it between the two calls — a buggy
+    // re-consume that blindly rewrites consumedAt with a fresh timestamp
+    // would then produce a visibly different value, instead of only
+    // coincidentally matching the first call's timestamp.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(FIRST_CONSUME_INSTANT);
+      await ctx.repo.markConsumed(input.publicId);
+      const afterFirst = await ctx.repo.findByPublicId(input.publicId);
+      expect(afterFirst!.props.consumedAt).not.toBeNull();
 
-    await expect(ctx.repo.markConsumed(input.publicId)).resolves.toBeUndefined();
+      vi.setSystemTime(new Date(FIRST_CONSUME_INSTANT.getTime() + CLOCK_ADVANCE_MS));
+      await ctx.repo.markConsumed(input.publicId);
+      const afterSecond = await ctx.repo.findByPublicId(input.publicId);
+
+      expect(afterSecond!.props.consumedAt).not.toBeNull();
+      expect(afterSecond!.props.consumedAt!.getTime()).toBe(
+        afterFirst!.props.consumedAt!.getTime(),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("markExpired expires a wall-clock-expired intent once and returns false on repeat", async () => {
@@ -127,6 +157,23 @@ export function runUploadIntentWriteContract(
     expect(found!.props.expiredAt).toBeNull();
   });
 
+  it("markExpired does not expire an intent whose uploadUrlExpiresAt exactly equals expiresBefore", async () => {
+    // Both implementations use a strict `<` cutoff comparison: an intent
+    // expiring at exactly the cutoff is not yet past it.
+    const input = ctx.makeInsertInput({ uploadUrlExpiresAt: BOUNDARY_INSTANT });
+    await ctx.repo.insert(input);
+
+    const transitioned = await ctx.repo.markExpired({
+      publicId: input.publicId,
+      now: BOUNDARY_INSTANT,
+      expiresBefore: BOUNDARY_INSTANT,
+    });
+
+    expect(transitioned).toBe(false);
+    const found = await ctx.repo.findByPublicId(input.publicId);
+    expect(found!.props.expiredAt).toBeNull();
+  });
+
   it("refreshUploadUrl rewrites URL and expiry on a live intent and returns true", async () => {
     const input = ctx.makeInsertInput();
     await ctx.repo.insert(input);
@@ -160,6 +207,29 @@ export function runUploadIntentWriteContract(
     expect(refreshed).toBe(false);
   });
 
+  it("refreshUploadUrl returns false for an expired (not consumed) intent", async () => {
+    const now = new Date();
+    const input = ctx.makeInsertInput({
+      uploadUrlExpiresAt: new Date(now.getTime() - HOUR_MS),
+    });
+    await ctx.repo.insert(input);
+    const wasExpired = await ctx.repo.markExpired({
+      publicId: input.publicId,
+      now,
+      expiresBefore: new Date(now.getTime() - GRACE_CUTOFF_MINUTES * MINUTE_MS),
+    });
+    expect(wasExpired).toBe(true);
+
+    const refreshed = await ctx.repo.refreshUploadUrl({
+      publicId: input.publicId,
+      uploadUrl: "https://storage.example.com/refreshed",
+      uploadUrlExpiresAt: new Date(now.getTime() + HOUR_MS),
+      now: new Date(),
+    });
+
+    expect(refreshed).toBe(false);
+  });
+
   it("findOrphanedForSweep returns only unconsumed/unexpired intents past the grace cutoff, oldest expiry first, capped at limit", async () => {
     const now = new Date();
     const graceMs = GRACE_CUTOFF_MINUTES * MINUTE_MS;
@@ -184,5 +254,23 @@ export function runUploadIntentWriteContract(
 
     const limited = await ctx.repo.findOrphanedForSweep({ now, graceMs, limit: 1 });
     expect(limited.map((i) => i.props.publicId)).toEqual([oldest.publicId]);
+  });
+
+  it("findOrphanedForSweep excludes an already-expired intent", async () => {
+    const now = new Date();
+    const graceMs = GRACE_CUTOFF_MINUTES * MINUTE_MS;
+    const input = ctx.makeInsertInput({
+      uploadUrlExpiresAt: new Date(now.getTime() - SWEEP_EXPIRED_MINUTES * MINUTE_MS),
+    });
+    await ctx.repo.insert(input);
+    const wasExpired = await ctx.repo.markExpired({
+      publicId: input.publicId,
+      now,
+      expiresBefore: new Date(now.getTime() - graceMs),
+    });
+    expect(wasExpired).toBe(true);
+
+    const sweep = await ctx.repo.findOrphanedForSweep({ now, graceMs, limit: 10 });
+    expect(sweep.map((i) => i.props.publicId)).not.toContain(input.publicId);
   });
 }

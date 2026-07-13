@@ -51,7 +51,12 @@ export class FakeUploadIntentWriteRepository extends UploadIntentWriteRepository
   }
 
   markConsumed(publicId: string): Promise<void> {
-    const intent = this.intents.find((i) => i.props.publicId === publicId);
+    // Mirrors the Postgres adapter's `WHERE consumed_at IS NULL` guard: once
+    // consumed, a repeat call is a true no-op that preserves the original
+    // consumedAt instead of overwriting it with a fresh timestamp.
+    const intent = this.intents.find(
+      (i) => i.props.publicId === publicId && i.props.consumedAt === null,
+    );
     if (intent) {
       const idx = this.intents.indexOf(intent);
       this.intents[idx] = UploadIntent.fromProps({
