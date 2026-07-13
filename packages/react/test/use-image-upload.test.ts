@@ -290,7 +290,9 @@ describe("useImageUpload", () => {
 
     // StrictMode: mount → cleanup → mount ⇒ two managers; the first was torn down.
     expect(capturedManagers.length - before).toBe(2);
-    const first = capturedManagers[before] as { cancelAllCalls: number };
+    const first = capturedManagers[before] as InstanceType<typeof LafkenUploadManager> & {
+      cancelAllCalls: number;
+    };
     expect(first.cancelAllCalls).toBe(1);
 
     act(() => {
