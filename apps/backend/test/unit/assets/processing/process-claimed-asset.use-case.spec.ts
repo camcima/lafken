@@ -347,12 +347,30 @@ describe("ProcessClaimedAssetUseCase", () => {
 
     expect(storage.readCalls[0]?.maxBytes).toBe(52_428_800);
   });
+
+  it("classifies a recordAnalysis DB failure as a transient error tagged record_analysis", async () => {
+    assetRepo.recordAnalysisError = new Error("connection terminated unexpectedly");
+
+    await expect(
+      useCase.execute({ assetId: TEST_UUIDS.asset1, workerId: "worker-a", attemptNumber: 1 }),
+    ).rejects.toMatchObject({ name: "TransientProcessingError", step: "record_analysis" });
+  });
+
+  it("classifies a transition DB failure as a transient error tagged transition_state", async () => {
+    assetRepo.transitionError = new Error("connection terminated unexpectedly");
+
+    await expect(
+      useCase.execute({ assetId: TEST_UUIDS.asset1, workerId: "worker-a", attemptNumber: 1 }),
+    ).rejects.toMatchObject({ name: "TransientProcessingError", step: "transition_state" });
+  });
 });
 
 class InMemoryAssetProcessingRepository extends AssetProcessingRepositoryPort {
   asset: Asset = makeAsset();
   policy: NamespacePolicy = makePolicy();
   transitionResult = true;
+  recordAnalysisError: Error | null = null;
+  transitionError: Error | null = null;
   readonly transitions: ITransitionAssetInput[] = [];
   readonly analyses: IRecordAnalysisInput[] = [];
   readonly derivedMetadata: IUpdateDerivedMetadataInput[] = [];
@@ -365,6 +383,9 @@ class InMemoryAssetProcessingRepository extends AssetProcessingRepositoryPort {
   }
 
   transitionAsset(input: ITransitionAssetInput): Promise<boolean> {
+    if (this.transitionError) {
+      return Promise.reject(this.transitionError);
+    }
     this.transitions.push(input);
     if (!this.transitionResult) {
       return Promise.resolve(false);
@@ -383,6 +404,9 @@ class InMemoryAssetProcessingRepository extends AssetProcessingRepositoryPort {
   }
 
   recordAnalysis(input: IRecordAnalysisInput): Promise<void> {
+    if (this.recordAnalysisError) {
+      return Promise.reject(this.recordAnalysisError);
+    }
     this.analyses.push(input);
     return Promise.resolve();
   }

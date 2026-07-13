@@ -111,19 +111,21 @@ export class ProcessClaimedAssetUseCase {
     const stepTimings: IStepTiming[] = [];
     let currentState: AssetState = asset.props.state;
     if (currentState === "uploaded") {
-      const started: boolean = await this.assetRepo.transitionAsset({
-        assetId: asset.props.id,
-        fromState: "uploaded",
-        toState: "processing",
-        reason: "processing_started",
-        metadata: makeTransitionMetadata({
-          workerId: input.workerId,
-          attemptNumber: input.attemptNumber,
-          reasonCode: "processing_started",
+      const started: boolean = await this.runStep("transition_state", () =>
+        this.assetRepo.transitionAsset({
+          assetId: asset.props.id,
+          fromState: "uploaded",
+          toState: "processing",
+          reason: "processing_started",
+          metadata: makeTransitionMetadata({
+            workerId: input.workerId,
+            attemptNumber: input.attemptNumber,
+            reasonCode: "processing_started",
+          }),
+          occurredBy: this.workerActor(input.workerId),
+          now: new Date(),
         }),
-        occurredBy: this.workerActor(input.workerId),
-        now: new Date(),
-      });
+      );
       if (!started) {
         // We own the claim, so no other worker can race us — this means an
         // out-of-band actor (e.g. delete) moved the asset. Close the job.
@@ -204,14 +206,16 @@ export class ProcessClaimedAssetUseCase {
       decision: scan.decision,
       durationMs: calculateDurationMs(scanStartedAt, scanFinishedAt),
     });
-    await this.assetRepo.recordAnalysis({
-      assetId: asset.props.id,
-      analyzer: scan.analyzer,
-      analyzerVersion: scan.analyzerVersion,
-      decision: scan.decision,
-      findings: scan.findings,
-      occurredAt: new Date(),
-    });
+    await this.runStep("record_analysis", () =>
+      this.assetRepo.recordAnalysis({
+        assetId: asset.props.id,
+        analyzer: scan.analyzer,
+        analyzerVersion: scan.analyzerVersion,
+        decision: scan.decision,
+        findings: scan.findings,
+        occurredAt: new Date(),
+      }),
+    );
 
     if (scan.decision === "quarantine") {
       const reason: string = scan.reason ?? "virus_detected";
@@ -335,14 +339,16 @@ export class ProcessClaimedAssetUseCase {
       decision: inspection.decision,
       durationMs: calculateDurationMs(inspectionStartedAt, inspectionFinishedAt),
     });
-    await this.assetRepo.recordAnalysis({
-      assetId: asset.props.id,
-      analyzer: inspection.analyzer,
-      analyzerVersion: inspection.analyzerVersion,
-      decision: inspection.decision,
-      findings: inspection.findings,
-      occurredAt: new Date(),
-    });
+    await this.runStep("record_analysis", () =>
+      this.assetRepo.recordAnalysis({
+        assetId: asset.props.id,
+        analyzer: inspection.analyzer,
+        analyzerVersion: inspection.analyzerVersion,
+        decision: inspection.decision,
+        findings: inspection.findings,
+        occurredAt: new Date(),
+      }),
+    );
 
     if (inspection.decision === "error") {
       const reason: string = inspection.reason ?? "invalid_image_format";
@@ -363,15 +369,17 @@ export class ProcessClaimedAssetUseCase {
       return { kind: "completed" };
     }
 
-    await this.assetRepo.updateDerivedMetadata({
-      assetId: asset.props.id,
-      mimeType: inspection.actualMimeType ?? asset.props.declaredMimeType ?? FALLBACK_MIME_TYPE,
-      sizeBytes: inspection.sizeBytes,
-      width: inspection.width,
-      height: inspection.height,
-      contentHash: inspection.contentHash,
-      captureContext: inspection.captureContext,
-    });
+    await this.runStep("update_derived_metadata", () =>
+      this.assetRepo.updateDerivedMetadata({
+        assetId: asset.props.id,
+        mimeType: inspection.actualMimeType ?? asset.props.declaredMimeType ?? FALLBACK_MIME_TYPE,
+        sizeBytes: inspection.sizeBytes,
+        width: inspection.width,
+        height: inspection.height,
+        contentHash: inspection.contentHash,
+        captureContext: inspection.captureContext,
+      }),
+    );
 
     const moderationConfig = policy.props.contentModeration;
     if (moderationConfig) {
@@ -410,14 +418,16 @@ export class ProcessClaimedAssetUseCase {
         decision: moderation.decision,
         durationMs: calculateDurationMs(moderationStartedAt, moderationFinishedAt),
       });
-      await this.assetRepo.recordAnalysis({
-        assetId: asset.props.id,
-        analyzer: moderation.analyzer,
-        analyzerVersion: moderation.analyzerVersion,
-        decision: moderation.decision,
-        findings: moderation.findings,
-        occurredAt: new Date(),
-      });
+      await this.runStep("record_analysis", () =>
+        this.assetRepo.recordAnalysis({
+          assetId: asset.props.id,
+          analyzer: moderation.analyzer,
+          analyzerVersion: moderation.analyzerVersion,
+          decision: moderation.decision,
+          findings: moderation.findings,
+          occurredAt: new Date(),
+        }),
+      );
       if (moderation.decision === "quarantine") {
         const reason: string = moderation.reason ?? "moderation_quarantined";
         const newStorageKey: string | undefined = await this.moveBytesToQuarantine({
@@ -469,22 +479,24 @@ export class ProcessClaimedAssetUseCase {
     durationMs?: number;
     newStorageKey?: string;
   }): Promise<void> {
-    const transitioned: boolean = await this.assetRepo.transitionAsset({
-      assetId: input.assetId,
-      fromState: input.fromState,
-      toState: input.toState,
-      reason: input.reason,
-      metadata: makeTransitionMetadata({
-        workerId: input.workerId,
-        attemptNumber: input.attemptNumber,
-        step: input.step,
-        reasonCode: input.reason,
-        durationMs: input.durationMs,
+    const transitioned: boolean = await this.runStep("transition_state", () =>
+      this.assetRepo.transitionAsset({
+        assetId: input.assetId,
+        fromState: input.fromState,
+        toState: input.toState,
+        reason: input.reason,
+        metadata: makeTransitionMetadata({
+          workerId: input.workerId,
+          attemptNumber: input.attemptNumber,
+          step: input.step,
+          reasonCode: input.reason,
+          durationMs: input.durationMs,
+        }),
+        occurredBy: this.workerActor(input.workerId),
+        now: new Date(),
+        newStorageKey: input.newStorageKey,
       }),
-      occurredBy: this.workerActor(input.workerId),
-      now: new Date(),
-      newStorageKey: input.newStorageKey,
-    });
+    );
     if (!transitioned) {
       // F-A4: a lost race means another actor already moved the asset. Do
       // NOT record the terminal metric or complete the job — the stale
@@ -496,11 +508,13 @@ export class ProcessClaimedAssetUseCase {
       return;
     }
     this.metrics.recordProcessingTerminalState({ state: input.toState as ProcessingTerminalState });
-    await this.jobRepo.markCompleted({
-      assetId: input.assetId,
-      workerId: input.workerId,
-      now: new Date(),
-    });
+    await this.runStep("finalize_job", () =>
+      this.jobRepo.markCompleted({
+        assetId: input.assetId,
+        workerId: input.workerId,
+        now: new Date(),
+      }),
+    );
   }
 
   /**
@@ -548,21 +562,23 @@ export class ProcessClaimedAssetUseCase {
   }): Promise<void> {
     const reason: string = "processing_completed";
     const finishedAt: Date = new Date();
-    const transitioned: boolean = await this.assetRepo.transitionAsset({
-      assetId: input.assetId,
-      fromState: input.fromState,
-      toState: "ready",
-      reason,
-      metadata: makeTransitionMetadata({
-        workerId: input.workerId,
-        attemptNumber: input.attemptNumber,
-        reasonCode: reason,
-        totalDurationMs: calculateDurationMs(input.processingStartedAt, finishedAt),
-        steps: input.stepTimings,
+    const transitioned: boolean = await this.runStep("transition_state", () =>
+      this.assetRepo.transitionAsset({
+        assetId: input.assetId,
+        fromState: input.fromState,
+        toState: "ready",
+        reason,
+        metadata: makeTransitionMetadata({
+          workerId: input.workerId,
+          attemptNumber: input.attemptNumber,
+          reasonCode: reason,
+          totalDurationMs: calculateDurationMs(input.processingStartedAt, finishedAt),
+          steps: input.stepTimings,
+        }),
+        occurredBy: this.workerActor(input.workerId),
+        now: finishedAt,
       }),
-      occurredBy: this.workerActor(input.workerId),
-      now: finishedAt,
-    });
+    );
     if (!transitioned) {
       this.logger.warn(
         { assetId: input.assetId, toState: "ready" },
@@ -571,11 +587,13 @@ export class ProcessClaimedAssetUseCase {
       return;
     }
     this.metrics.recordProcessingTerminalState({ state: "ready" });
-    await this.jobRepo.markCompleted({
-      assetId: input.assetId,
-      workerId: input.workerId,
-      now: finishedAt,
-    });
+    await this.runStep("finalize_job", () =>
+      this.jobRepo.markCompleted({
+        assetId: input.assetId,
+        workerId: input.workerId,
+        now: finishedAt,
+      }),
+    );
   }
 
   private durationFromFindings(findings: Record<string, unknown>): number {
@@ -622,6 +640,11 @@ export class ProcessClaimedAssetUseCase {
    * tagged with the step that failed. The worker catches this and consults the
    * retry policy. Business decisions (e.g. inspection.decision === "error",
    * scan.decision === "quarantine") are NOT wrapped — they return normally.
+   *
+   * Bookkeeping DB writes (transition_state / record_analysis /
+   * update_derived_metadata / finalize_job) are wrapped too (F-P9): every such
+   * write is idempotent or CAS-fenced, so retrying after a DB blip is always
+   * safe — and blanket wrapping avoids coupling this layer to pg error codes.
    */
   private async runStep<T>(step: TransientProcessingStep, fn: () => Promise<T>): Promise<T> {
     try {
