@@ -23,15 +23,10 @@ export class AssetsClient {
   }
 
   get(publicId: string): Promise<AssetResponseDTO> {
-    return this.t.request<AssetResponseDTO>(
-      "GET",
-      `/v1/assets/${encodeURIComponent(publicId)}`,
-    );
+    return this.t.request<AssetResponseDTO>("GET", `/v1/assets/${encodeURIComponent(publicId)}`);
   }
 
-  createUploadIntent(
-    input: CreateUploadIntentRequestDTO,
-  ): Promise<CreateUploadIntentResponseDTO> {
+  createUploadIntent(input: CreateUploadIntentRequestDTO): Promise<CreateUploadIntentResponseDTO> {
     return this.t.request<CreateUploadIntentResponseDTO>(
       "POST",
       "/v1/assets/upload-intents",
@@ -47,10 +42,7 @@ export class AssetsClient {
     );
   }
 
-  confirmUpload(
-    publicId: string,
-    options?: ConfirmUploadRequestDTO,
-  ): Promise<AssetResponseDTO> {
+  confirmUpload(publicId: string, options?: ConfirmUploadRequestDTO): Promise<AssetResponseDTO> {
     return this.t.request<AssetResponseDTO>(
       "POST",
       `/v1/assets/${encodeURIComponent(publicId)}/confirm`,
@@ -58,13 +50,8 @@ export class AssetsClient {
     );
   }
 
-  async getPreviewUrl(input: {
-    publicId: string;
-    preset: string;
-  }): Promise<PreviewUrlResponseDTO> {
-    const url = this.t.buildUrl(
-      `/v1/assets/${encodeURIComponent(input.publicId)}/preview-url`,
-    );
+  async getPreviewUrl(input: { publicId: string; preset: string }): Promise<PreviewUrlResponseDTO> {
+    const url = this.t.buildUrl(`/v1/assets/${encodeURIComponent(input.publicId)}/preview-url`);
     url.searchParams.set("preset", input.preset);
     return this.t.request<PreviewUrlResponseDTO>("GET", url.toString());
   }
@@ -103,6 +90,15 @@ export class AssetsClient {
       `/v1/assets/${encodeURIComponent(publicId)}/retry-processing`,
       {},
     );
+  }
+
+  /**
+   * Soft-deletes an asset by **internal id** — the same admin identifier used
+   * by `get()`/`retryProcessing()`. Resolves on 204. Server-side idempotent;
+   * rejects with a 409 `LafkenApiError` when the asset is under a legal hold.
+   */
+  delete(id: string): Promise<void> {
+    return this.t.request<void>("DELETE", `/v1/assets/${encodeURIComponent(id)}`);
   }
 
   private buildListUrl(q: Partial<ListAssetsQueryDTO>): string {
