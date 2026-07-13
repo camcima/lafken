@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 
 import { Injectable } from "@nestjs/common";
-import { createActor } from "xstate";
 
 import { AssetProcessingRepositoryPort } from "@/assets/domain/repositories/asset-processing.repository.port";
 import { ProcessingJobRepositoryPort } from "@/assets/domain/repositories/processing-job.repository.port";
@@ -24,7 +23,6 @@ import {
 } from "@/shared/application/metrics.port";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
-import { assetProcessingMachine } from "./asset-processing-machine";
 import {
   calculateDurationMs,
   type IStepTiming,
@@ -73,7 +71,6 @@ export class ProcessClaimedAssetUseCase {
       { assetId: input.assetId, attemptNumber: input.attemptNumber, workerId: input.workerId },
       "processing started",
     );
-    const machine = createActor(assetProcessingMachine).start();
     const loaded = await this.runStep("load_asset", () =>
       this.assetRepo.findAssetWithPolicy(input.assetId),
     );
@@ -82,7 +79,6 @@ export class ProcessClaimedAssetUseCase {
         { assetId: input.assetId },
         "asset not found while processing; marking job failed",
       );
-      machine.send({ type: "FAILED" });
       await this.jobRepo.markFailed({
         assetId: input.assetId,
         workerId: input.workerId,
@@ -153,7 +149,6 @@ export class ProcessClaimedAssetUseCase {
         { assetId: asset.props.id, storageBindingId: asset.props.storageBindingId },
         "storage binding not found; marking job failed",
       );
-      machine.send({ type: "FAILED" });
       await this.jobRepo.markFailed({
         assetId: asset.props.id,
         workerId: input.workerId,
@@ -219,7 +214,6 @@ export class ProcessClaimedAssetUseCase {
     });
 
     if (scan.decision === "quarantine") {
-      machine.send({ type: "VIRUS_INFECTED" });
       const reason: string = scan.reason ?? "virus_detected";
       const newStorageKey: string | undefined = await this.moveBytesToQuarantine({
         binding: { bucket: gcs.bucket, projectId: gcs.projectId },
@@ -242,8 +236,6 @@ export class ProcessClaimedAssetUseCase {
       });
       return { kind: "completed" };
     }
-
-    machine.send({ type: "VIRUS_CLEAN" });
 
     await this.recordCurrentStep({
       assetId: asset.props.id,
@@ -271,7 +263,6 @@ export class ProcessClaimedAssetUseCase {
     });
 
     if (sniffedMimeType === null) {
-      machine.send({ type: "MIME_INVALID" });
       const reason: string = "unrecognized_format";
       this.logger.info(
         { assetId: asset.props.id, toState: "rejected", reason },
@@ -290,7 +281,6 @@ export class ProcessClaimedAssetUseCase {
       return { kind: "completed" };
     }
     if (!policy.props.allowedMimeTypes.includes(sniffedMimeType)) {
-      machine.send({ type: "MIME_INVALID" });
       const reason: string = "mime_type_not_allowed";
       this.logger.info(
         { assetId: asset.props.id, toState: "rejected", reason, sniffedMimeType },
@@ -308,8 +298,6 @@ export class ProcessClaimedAssetUseCase {
       });
       return { kind: "completed" };
     }
-    machine.send({ type: "MIME_VALID" });
-
     await this.recordCurrentStep({
       assetId: asset.props.id,
       workerId: input.workerId,
@@ -357,7 +345,6 @@ export class ProcessClaimedAssetUseCase {
     });
 
     if (inspection.decision === "error") {
-      machine.send({ type: "IMAGE_INVALID" });
       const reason: string = inspection.reason ?? "invalid_image_format";
       this.logger.info(
         { assetId: asset.props.id, toState: "rejected", reason },
@@ -376,7 +363,6 @@ export class ProcessClaimedAssetUseCase {
       return { kind: "completed" };
     }
 
-    machine.send({ type: "IMAGE_VALID" });
     await this.assetRepo.updateDerivedMetadata({
       assetId: asset.props.id,
       mimeType: inspection.actualMimeType ?? asset.props.declaredMimeType ?? FALLBACK_MIME_TYPE,
@@ -389,7 +375,6 @@ export class ProcessClaimedAssetUseCase {
 
     const moderationConfig = policy.props.contentModeration;
     if (moderationConfig) {
-      machine.send({ type: "MODERATION_REQUIRED" });
       await this.recordCurrentStep({
         assetId: asset.props.id,
         workerId: input.workerId,
@@ -434,7 +419,6 @@ export class ProcessClaimedAssetUseCase {
         occurredAt: new Date(),
       });
       if (moderation.decision === "quarantine") {
-        machine.send({ type: "MODERATION_QUARANTINE" });
         const reason: string = moderation.reason ?? "moderation_quarantined";
         const newStorageKey: string | undefined = await this.moveBytesToQuarantine({
           binding: { bucket: gcs.bucket, projectId: gcs.projectId },
@@ -457,9 +441,6 @@ export class ProcessClaimedAssetUseCase {
         });
         return { kind: "completed" };
       }
-      machine.send({ type: "MODERATION_PASS" });
-    } else {
-      machine.send({ type: "MODERATION_PASS" });
     }
 
     this.logger.info(
