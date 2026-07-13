@@ -471,6 +471,10 @@ export class AssetsController {
         uploadedBy: user.emailAddress,
         width: body.width,
         height: body.height,
+        externalRefType: body.externalRefType,
+        externalRefId: body.externalRefId,
+        note: body.note,
+        tags: body.tags,
         requestIp,
       });
       const namespaceSlug =

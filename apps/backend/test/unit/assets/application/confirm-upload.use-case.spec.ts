@@ -263,4 +263,44 @@ describe("ConfirmUploadUseCase", () => {
       useCase.execute({ publicId: TEST_UUIDS.asset1, uploadedBy: null, requestIp: null }),
     ).rejects.toBeInstanceOf(UploadIntentExpiredError);
   });
+
+  it("forwards shared upload metadata to the write repository", async () => {
+    const intent = makeIntent();
+    intentRepo.seed([intent]);
+    storageBindingQueryRepo.seed([makeBinding()]);
+    namespaceQueryRepo.seedPolicies(TEST_UUIDS.namespace1, [makePolicy()]);
+
+    await useCase.execute({
+      publicId: TEST_UUIDS.asset1,
+      uploadedBy: "user@example.com",
+      requestIp: null,
+      externalRefType: "work_order",
+      externalRefId: "wo-2026-018",
+      note: "left wing panel",
+      tags: ["inspection", "wing"],
+    });
+
+    expect(assetWriteRepo.createdAssets).toHaveLength(1);
+    expect(assetWriteRepo.createdAssets[0]).toMatchObject({
+      externalRefType: "work_order",
+      externalRefId: "wo-2026-018",
+      customMetadata: { note: "left wing panel" },
+      tags: ["inspection", "wing"],
+    });
+  });
+
+  it("omits customMetadata when no note is provided so the DB default applies", async () => {
+    const intent = makeIntent();
+    intentRepo.seed([intent]);
+    storageBindingQueryRepo.seed([makeBinding()]);
+    namespaceQueryRepo.seedPolicies(TEST_UUIDS.namespace1, [makePolicy()]);
+
+    await useCase.execute({
+      publicId: TEST_UUIDS.asset1,
+      uploadedBy: "user@example.com",
+      requestIp: null,
+    });
+
+    expect(assetWriteRepo.createdAssets[0].customMetadata).toBeUndefined();
+  });
 });

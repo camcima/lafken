@@ -23,6 +23,11 @@ export interface IConfirmUploadInput {
   uploadedBy: string | null;
   width?: number;
   height?: number;
+  externalRefType?: string;
+  externalRefId?: string;
+  /** Free-text uploader note — persisted under `custom_metadata.note`. */
+  note?: string;
+  tags?: string[];
   requestIp: string | null;
 }
 
@@ -112,6 +117,10 @@ export class ConfirmUploadUseCase {
           intentId: intent.props.id,
           width: input.width ?? null,
           height: input.height ?? null,
+          externalRefType: input.externalRefType ?? null,
+          externalRefId: input.externalRefId ?? null,
+          tags: input.tags,
+          customMetadata: input.note !== undefined ? { note: input.note } : undefined,
         });
 
         await this.auditWriteRepo.record({
