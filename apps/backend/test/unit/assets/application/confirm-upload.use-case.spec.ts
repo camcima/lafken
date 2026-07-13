@@ -232,4 +232,35 @@ describe("ConfirmUploadUseCase", () => {
       useCase.execute({ publicId: TEST_UUIDS.asset1, uploadedBy: null, requestIp: null }),
     ).rejects.toBeInstanceOf(UploadedObjectMissingError);
   });
+
+  it("returns the already-created asset when a concurrent confirm consumed the intent first", async () => {
+    intentRepo.seed([makeIntent()]);
+    namespaceQueryRepo.seedPolicies(TEST_UUIDS.namespace1, [makePolicy()]);
+    storageBindingQueryRepo.seed([makeBinding()]);
+    assetWriteRepo.consumeConflict = true;
+    const existing = makeAsset(TEST_UUIDS.asset1);
+    assetQueryRepo.seed([existing]);
+
+    const result = await useCase.execute({
+      publicId: TEST_UUIDS.asset1,
+      uploadedBy: "user@latam.com",
+      requestIp: null,
+    });
+
+    expect(result).toBe(existing);
+  });
+
+  it("throws UploadIntentExpiredError when the sweeper expired the intent mid-confirm", async () => {
+    const expiredAt = new Date("2026-05-06T12:00:00.000Z");
+    intentRepo.seed([makeIntent()]);
+    namespaceQueryRepo.seedPolicies(TEST_UUIDS.namespace1, [makePolicy()]);
+    storageBindingQueryRepo.seed([makeBinding()]);
+    assetWriteRepo.consumeConflict = true;
+    // no asset exists; the fresh intent read reports expiredAt set
+    intentRepo.expireSeeded(TEST_UUIDS.asset1, expiredAt);
+
+    await expect(
+      useCase.execute({ publicId: TEST_UUIDS.asset1, uploadedBy: null, requestIp: null }),
+    ).rejects.toBeInstanceOf(UploadIntentExpiredError);
+  });
 });

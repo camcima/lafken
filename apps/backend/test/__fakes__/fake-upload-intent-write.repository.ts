@@ -16,6 +16,13 @@ export class FakeUploadIntentWriteRepository extends UploadIntentWriteRepository
     this.intents = [...intents];
   }
 
+  expireSeeded(publicId: string, expiredAt: Date): void {
+    const idx = this.intents.findIndex((i) => i.props.publicId === publicId);
+    if (idx >= 0) {
+      this.intents[idx] = UploadIntent.fromProps({ ...this.intents[idx].props, expiredAt });
+    }
+  }
+
   insert(input: IInsertUploadIntentInput): Promise<UploadIntent> {
     const intent = UploadIntent.fromProps({
       id: `fake-intent-id-${String(this.nextId++)}`,

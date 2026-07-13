@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import type { Asset } from "@/assets/domain/entities/asset.entity";
+import { UploadIntentConsumeConflictError } from "@/assets/domain/errors/upload-intent-consume-conflict.error";
 import { UploadIntentExpiredError } from "@/assets/domain/errors/upload-intent-expired.error";
 import { UploadIntentNotFoundError } from "@/assets/domain/errors/upload-intent-not-found.error";
 import { UploadedObjectMissingError } from "@/assets/domain/errors/uploaded-object-missing.error";
@@ -94,39 +95,64 @@ export class ConfirmUploadUseCase {
     const namespaceSlug =
       (await this.assetQueryRepo.findNamespaceSlug(intent.props.namespaceId)) ?? null;
 
-    const asset: Asset = await this.unitOfWork.execute(async () => {
-      const created: Asset = await this.assetWriteRepo.createUploadedAsset({
-        publicId: intent.props.publicId,
-        namespaceId: intent.props.namespaceId,
-        policyVersionId: intent.props.policyVersionId,
-        storageBindingId: intent.props.storageBindingId,
-        storageKey: intent.props.storageKey,
-        declaredMimeType: intent.props.declaredMimeType,
-        declaredSizeBytes: intent.props.declaredSizeBytes,
-        uploadedBy: input.uploadedBy,
-        effectiveMaxSizeBytes: policy.props.maxFileSizeBytes,
-        effectiveUrlTtl: policy.props.signedUrlTtlSeconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS,
-        intentId: intent.props.id,
-        width: input.width ?? null,
-        height: input.height ?? null,
-      });
+    let asset: Asset;
+    try {
+      asset = await this.unitOfWork.execute(async () => {
+        const created: Asset = await this.assetWriteRepo.createUploadedAsset({
+          publicId: intent.props.publicId,
+          namespaceId: intent.props.namespaceId,
+          policyVersionId: intent.props.policyVersionId,
+          storageBindingId: intent.props.storageBindingId,
+          storageKey: intent.props.storageKey,
+          declaredMimeType: intent.props.declaredMimeType,
+          declaredSizeBytes: intent.props.declaredSizeBytes,
+          uploadedBy: input.uploadedBy,
+          effectiveMaxSizeBytes: policy.props.maxFileSizeBytes,
+          effectiveUrlTtl: policy.props.signedUrlTtlSeconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS,
+          intentId: intent.props.id,
+          width: input.width ?? null,
+          height: input.height ?? null,
+        });
 
-      await this.auditWriteRepo.record({
-        entityType: "asset",
-        entityId: created.props.publicId,
-        action: "create",
-        occurredBy: input.uploadedBy ?? AUDIT_FALLBACK_PRINCIPAL,
-        requestIp: input.requestIp,
-        afterState: {
-          namespace: namespaceSlug,
-          storageKey: created.props.storageKey,
-          declaredMimeType: created.props.declaredMimeType,
-          sizeBytes: created.props.sizeBytes !== null ? String(created.props.sizeBytes) : null,
-        },
-      });
+        await this.auditWriteRepo.record({
+          entityType: "asset",
+          entityId: created.props.publicId,
+          action: "create",
+          occurredBy: input.uploadedBy ?? AUDIT_FALLBACK_PRINCIPAL,
+          requestIp: input.requestIp,
+          afterState: {
+            namespace: namespaceSlug,
+            storageKey: created.props.storageKey,
+            declaredMimeType: created.props.declaredMimeType,
+            sizeBytes: created.props.sizeBytes !== null ? String(created.props.sizeBytes) : null,
+          },
+        });
 
-      return created;
-    });
+        return created;
+      });
+    } catch (err) {
+      if (err instanceof UploadIntentConsumeConflictError) {
+        // F-P8: a concurrent confirm won the consume race (its transaction
+        // committed the asset), or the sweeper expired the intent. Fall back
+        // to the idempotent already-consumed lookup instead of surfacing a
+        // unique-constraint 500.
+        const existing = await this.assetQueryRepo.findByPublicId(input.publicId);
+        if (existing) {
+          return existing;
+        }
+        const freshIntent = await this.intentRepo.findByPublicId(input.publicId);
+        if (freshIntent?.props.expiredAt) {
+          throw new UploadIntentExpiredError({
+            publicId: input.publicId,
+            expiredAt: freshIntent.props.expiredAt,
+          });
+        }
+        // Winner's transaction not yet visible — rethrow (422); the client's
+        // retry lands on the idempotent already-consumed path.
+        throw err;
+      }
+      throw err;
+    }
 
     if (namespaceSlug !== null) {
       this.metrics.recordUploadConfirmed({
