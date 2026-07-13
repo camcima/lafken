@@ -1,3 +1,4 @@
+import { QUARANTINED_ASSET_STATES } from "@/assets/domain/value-objects/asset-state.value-object";
 import type { AssetState } from "@/assets/domain/value-objects/asset-state.value-object";
 import { calculateDurationMs } from "@/shared/kernel/domain/duration";
 
@@ -47,8 +48,7 @@ export interface ITransitionMetadata {
 const TERMINAL_ASSET_STATES: readonly AssetState[] = [
   "ready",
   "rejected",
-  "quarantined_virus",
-  "quarantined_moderation",
+  ...QUARANTINED_ASSET_STATES,
   "processing_failed",
   "expired",
   "deleted",
