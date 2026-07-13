@@ -1,3 +1,4 @@
+/* eslint-disable no-process-env */
 import { createHash, randomBytes } from "node:crypto";
 
 /**
@@ -16,7 +17,7 @@ import { createHash, randomBytes } from "node:crypto";
  * `apps/backend/dev-oidc.config.json` so dev-oidc accepts it during the flow.
  */
 
-const DEV_OIDC_BASE_URL = "http://localhost:8095";
+const DEV_OIDC_BASE_URL = process.env["DEV_OIDC_BASE_URL"] ?? "http://localhost:8095";
 const DEV_OIDC_CLIENT_ID = "lafken-web";
 /**
  * Redirect URI registered in dev-oidc.config.json for headless test flows.

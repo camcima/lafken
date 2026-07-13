@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const DEV_OIDC_BASE_URL = "http://localhost:8095";
+const DEV_OIDC_BASE_URL = process.env["DEV_OIDC_BASE_URL"] ?? "http://localhost:8095";
 
 async function ensureDevOidcReachable(): Promise<void> {
   const response = await fetch(`${DEV_OIDC_BASE_URL}/.well-known/openid-configuration`).catch(
