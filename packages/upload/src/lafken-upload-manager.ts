@@ -190,8 +190,11 @@ export class LafkenUploadManager extends EventTarget {
   private readonly pollingIntervalMs: number;
   private readonly pollingMaxIntervalMs: number;
   private readonly pollingTimeoutMs: number;
-  /** Active polling timeouts keyed by fileId, cleared on cancelAll(). */
-  private readonly activePollingTimers = new Set<ReturnType<typeof setTimeout>>();
+  /** Pending cancellable sleeps keyed by timer; resolvers fire with `false` on cancelAll(). */
+  private readonly pendingSleeps = new Map<
+    ReturnType<typeof setTimeout>,
+    (slept: boolean) => void
+  >();
   private cancelled = false;
 
   constructor(private readonly opts: ILafkenUploadManagerOptions) {
@@ -312,11 +315,14 @@ export class LafkenUploadManager extends EventTarget {
 
   cancelAll(): void {
     this.cancelled = true;
-    // Clear all active polling timers.
-    for (const timer of this.activePollingTimers) {
+    // Clear all pending polling sleeps and resolve them with `false` so
+    // pollUntilTerminal loops exit promptly instead of leaking forever-pending
+    // promises (F-K5).
+    for (const [timer, resolve] of this.pendingSleeps) {
       clearTimeout(timer);
+      resolve(false);
     }
-    this.activePollingTimers.clear();
+    this.pendingSleeps.clear();
     this.uppy.cancelAll();
     this.publicIdByFileId.clear();
     this.dimProbesByFileId.clear();
@@ -340,6 +346,10 @@ export class LafkenUploadManager extends EventTarget {
             declaredMimeType: (file.type as string | undefined) ?? "application/octet-stream",
             declaredSizeBytes: (file.size as number | undefined) ?? 0,
           });
+          // cancelAll() (and a subsequent uppy.destroy()) may have run while
+          // the request above was in flight — treat a late resolution as a
+          // safe no-op instead of touching a torn-down Uppy instance (F-U2).
+          if (this.cancelled) return;
 
           let uploadUrl: string = result.uploadUrl;
           let uploadHeaders: Record<string, string> = result.uploadHeaders;
@@ -351,6 +361,8 @@ export class LafkenUploadManager extends EventTarget {
           if (expiresAt.getTime() - Date.now() < this.refreshSafetyMarginMs) {
             try {
               const refreshed = await this.opts.client.assets.refreshUploadUrl(result.publicId);
+              // Same guard as above, after the second awaitable in this path.
+              if (this.cancelled) return;
               uploadUrl = refreshed.uploadUrl;
               uploadHeaders = refreshed.uploadHeaders;
               this.expiresAtByFileId.set(fileId, new Date(refreshed.expiresAt));
@@ -618,10 +630,10 @@ export class LafkenUploadManager extends EventTarget {
   private cancellableSleep(ms: number): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
       const timer = setTimeout(() => {
-        this.activePollingTimers.delete(timer);
+        this.pendingSleeps.delete(timer);
         resolve(true);
       }, ms);
-      this.activePollingTimers.add(timer);
+      this.pendingSleeps.set(timer, resolve);
     });
   }
 }

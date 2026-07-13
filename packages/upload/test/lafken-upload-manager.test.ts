@@ -700,6 +700,104 @@ describe("LafkenUploadManager", () => {
     });
   });
 
+  describe("cancellableSleep", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("cancellableSleep resolves false when cancelAll runs during the sleep", async () => {
+      const manager = new LafkenUploadManager({
+        client: makeClientMock() as never,
+        namespaceSlug: "ns",
+      });
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+      const sleep: Promise<boolean> = (manager as any).cancellableSleep(5_000);
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+
+      manager.cancelAll();
+
+      await expect(sleep).resolves.toBe(false);
+    });
+
+    it("cancellableSleep resolves true when the timer fires normally", async () => {
+      const manager = new LafkenUploadManager({
+        client: makeClientMock() as never,
+        namespaceSlug: "ns",
+      });
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+      const sleep: Promise<boolean> = (manager as any).cancellableSleep(1_000);
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      await expect(sleep).resolves.toBe(true);
+    });
+  });
+
+  it("runPreProcessing is a safe no-op when createUploadIntent resolves after cancelAll tears down the file (F-U2)", async () => {
+    // Mirrors the React hook's unmount teardown: cancelAll() runs (clearing
+    // Uppy's file list) while createUploadIntent is still in flight. When the
+    // promise settles afterward, runPreProcessing must not touch Uppy.
+    let resolveIntent!: (value: {
+      publicId: string;
+      uploadUrl: string;
+      uploadHeaders: Record<string, string>;
+      expiresAt: string;
+    }) => void;
+    const intentPromise = new Promise<{
+      publicId: string;
+      uploadUrl: string;
+      uploadHeaders: Record<string, string>;
+      expiresAt: string;
+    }>((resolve) => {
+      resolveIntent = resolve;
+    });
+    const client = {
+      assets: {
+        createUploadIntent: vi.fn().mockReturnValue(intentPromise),
+        confirmUpload: vi.fn(),
+      },
+    };
+    const manager = new LafkenUploadManager({
+      client: client as never,
+      namespaceSlug: "ns",
+    });
+
+    const file = new File(["data"], "late.png", { type: "image/png" });
+    manager.addFiles([file]);
+    const uppy = manager.getUppy();
+    const [uppyFile] = uppy.getFiles();
+    expect(uppyFile).toBeDefined();
+
+    const setFileStateSpy = vi.spyOn(uppy, "setFileState");
+    const failedEvents: IFileFailedEventDetail[] = [];
+    manager.addEventListener("file-failed", (evt) => {
+      failedEvents.push((evt as CustomEvent<IFileFailedEventDetail>).detail);
+    });
+
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+    const preProcessing: Promise<void> = (manager as any).runPreProcessing([uppyFile.id]);
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+
+    manager.cancelAll();
+
+    resolveIntent({
+      publicId: "pub-late",
+      uploadUrl: "https://storage.example.com/upload/late",
+      uploadHeaders: {},
+      expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+    });
+
+    await preProcessing;
+
+    expect(setFileStateSpy).not.toHaveBeenCalled();
+    expect(failedEvents).toHaveLength(0);
+  });
+
   it("dispatches file-failed when Uppy reports upload-error for a file", async () => {
     const client = makeClientMock();
     const manager = new LafkenUploadManager({

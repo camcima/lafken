@@ -304,8 +304,12 @@ describe("useImageUpload", () => {
   it("stops polling after unmount (fake timers)", async () => {
     vi.stubGlobal("Image", FakeImage);
     vi.useFakeTimers();
-    const get = vi.fn().mockResolvedValue({ state: "processing", publicId: "pub-poll" });
-    const confirmUpload = vi.fn().mockResolvedValue({ publicId: "pub-poll", state: "processing" });
+    const get = vi
+      .fn()
+      .mockResolvedValue({ id: "internal-poll-id", state: "processing", publicId: "pub-poll" });
+    const confirmUpload = vi
+      .fn()
+      .mockResolvedValue({ id: "internal-poll-id", publicId: "pub-poll", state: "processing" });
     const client = { assets: { createUploadIntent: vi.fn(), confirmUpload, get } };
 
     const { result, unmount } = renderHook(() =>
@@ -334,6 +338,10 @@ describe("useImageUpload", () => {
       await vi.advanceTimersByTimeAsync(1_000); // first poll tick
     });
     expect(get).toHaveBeenCalledTimes(1);
+    // Polling must key off the confirmed asset's internal id, not the
+    // publicId — a stale test double without `id` would silently thread
+    // `undefined` into client.assets.get(), masking a real regression.
+    expect(get).toHaveBeenCalledWith("internal-poll-id");
 
     unmount();
 
