@@ -115,6 +115,9 @@ class InMemoryProcessingJobRepository extends ProcessingJobRepositoryPort {
   countDueJobs(): never {
     throw new Error("not used");
   }
+  cancelForAsset(): never {
+    throw new Error("not used");
+  }
 }
 
 class FakeImageInspection extends ImageInspectionPort {
@@ -422,6 +425,9 @@ class SpyJobRepository extends ProcessingJobRepositoryPort {
   }
   countDueJobs(): Promise<number> {
     return Promise.resolve(this.dueJobsCount);
+  }
+  cancelForAsset(): never {
+    throw new Error("not used");
   }
 }
 

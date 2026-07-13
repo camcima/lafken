@@ -3,6 +3,7 @@ import type { Kysely, Transaction } from "kysely";
 
 import type { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
 import {
+  type ICancelJobForAssetInput,
   type IClaimJobsInput,
   type ICountDueJobsInput,
   type IFindStaleClaimsInput,
@@ -181,6 +182,26 @@ export class ProcessingJobRepository extends ProcessingJobRepositoryPort {
       })
       .where("asset_id", "=", input.assetId)
       .where("state", "=", "claimed")
+      .executeTakeFirst();
+    return this.hasUpdatedRows(result);
+  }
+
+  async cancelForAsset(input: ICancelJobForAssetInput): Promise<boolean> {
+    const result = await this.resolver
+      .resolve()
+      .updateTable("processing_jobs")
+      .set({
+        state: "completed",
+        worker_id: null,
+        claimed_at: null,
+        heartbeat_at: input.now,
+        current_step: null,
+        not_before: null,
+        last_error: input.reason,
+        last_error_at: input.now,
+      })
+      .where("asset_id", "=", input.assetId)
+      .where("state", "in", ["released", "claimed"])
       .executeTakeFirst();
     return this.hasUpdatedRows(result);
   }

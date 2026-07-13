@@ -57,6 +57,9 @@ class NoopProcessingJobRepository extends ProcessingJobRepositoryPort {
   countDueJobs() {
     return Promise.resolve(0);
   }
+  cancelForAsset() {
+    return Promise.resolve(true);
+  }
 }
 
 class NoopAssetProcessingRepository extends AssetProcessingRepositoryPort {

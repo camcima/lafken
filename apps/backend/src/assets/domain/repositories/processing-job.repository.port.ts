@@ -43,6 +43,12 @@ export interface ICountDueJobsInput {
   now: Date;
 }
 
+export interface ICancelJobForAssetInput {
+  assetId: string;
+  reason: string;
+  now: Date;
+}
+
 export abstract class ProcessingJobRepositoryPort {
   abstract claimAvailable(input: IClaimJobsInput): Promise<ProcessingJob[]>;
   abstract heartbeat(input: IHeartbeatInput): Promise<boolean>;
@@ -53,4 +59,11 @@ export abstract class ProcessingJobRepositoryPort {
   abstract findStaleClaims(input: IFindStaleClaimsInput): Promise<ProcessingJob[]>;
   abstract releaseStaleClaim(input: IReleaseStaleClaimInput): Promise<boolean>;
   abstract countDueJobs(input: ICountDueJobsInput): Promise<number>;
+  /**
+   * Cancels any live (released or claimed) job row for the asset by marking
+   * it completed, regardless of owner. Used when an out-of-band actor moves
+   * the asset to a terminal state (operator delete) so a pending retry cannot
+   * resurrect it (F-P1). Idempotent: returns false when no live row exists.
+   */
+  abstract cancelForAsset(input: ICancelJobForAssetInput): Promise<boolean>;
 }

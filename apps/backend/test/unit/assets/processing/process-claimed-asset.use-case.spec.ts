@@ -446,6 +446,10 @@ class InMemoryProcessingJobRepository extends ProcessingJobRepositoryPort {
   countDueJobs(): never {
     throw new Error("countDueJobs is not used by ProcessClaimedAssetUseCase tests");
   }
+
+  cancelForAsset(): never {
+    throw new Error("cancelForAsset is not used by ProcessClaimedAssetUseCase tests");
+  }
 }
 
 class FakeImageInspection extends ImageInspectionPort {

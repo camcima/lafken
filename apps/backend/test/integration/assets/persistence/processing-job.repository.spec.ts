@@ -158,6 +158,56 @@ describe("ProcessingJobRepository", () => {
     expect(row.attempt_number).toBe(2);
     expect(row.last_error).toBe("storage timeout");
   });
+
+  it("cancelForAsset completes a released job and records the cancel reason", async () => {
+    const cancelled = await repository.cancelForAsset({
+      assetId,
+      reason: "asset_deleted",
+      now: new Date("2026-05-06T12:00:00.000Z"),
+    });
+
+    expect(cancelled).toBe(true);
+    const row = await db.connection
+      .selectFrom("processing_jobs")
+      .select(["state", "worker_id", "last_error"])
+      .where("asset_id", "=", assetId)
+      .executeTakeFirstOrThrow();
+    expect(row.state).toBe("completed");
+    expect(row.worker_id).toBeNull();
+    expect(row.last_error).toBe("asset_deleted");
+  });
+
+  it("cancelForAsset also cancels a claimed job owned by a live worker", async () => {
+    await repository.claimAvailable({
+      workerId: "worker-a",
+      limit: 1,
+      now: new Date("2026-05-06T12:00:00.000Z"),
+    });
+
+    const cancelled = await repository.cancelForAsset({
+      assetId,
+      reason: "asset_deleted",
+      now: new Date("2026-05-06T12:00:10.000Z"),
+    });
+
+    expect(cancelled).toBe(true);
+  });
+
+  it("cancelForAsset returns false when the job is already terminal", async () => {
+    await db.connection
+      .updateTable("processing_jobs")
+      .set({ state: "completed" })
+      .where("asset_id", "=", assetId)
+      .execute();
+
+    const cancelled = await repository.cancelForAsset({
+      assetId,
+      reason: "asset_deleted",
+      now: new Date("2026-05-06T12:00:00.000Z"),
+    });
+
+    expect(cancelled).toBe(false);
+  });
 });
 
 async function cleanDatabase(db: DatabaseClient): Promise<void> {

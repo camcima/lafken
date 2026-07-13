@@ -278,6 +278,10 @@ class FakeProcessingJobRepository extends ProcessingJobRepositoryPort {
   countDueJobs(): Promise<number> {
     return Promise.resolve(this.dueJobsCount);
   }
+
+  cancelForAsset(): never {
+    throw new Error("cancelForAsset is not used by ProcessingWorkerService tests");
+  }
 }
 
 class FakeAssetProcessingRepository extends AssetProcessingRepositoryPort {
