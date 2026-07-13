@@ -1,6 +1,7 @@
 import { UploadIntent } from "@/assets/domain/entities/upload-intent.entity";
 import {
   IFindOrphanedForSweepInput,
+  IMarkExpiredInput,
   UploadIntentWriteRepositoryPort,
 } from "@/assets/domain/repositories/upload-intent-write.repository.port";
 import {
@@ -76,8 +77,8 @@ export function buildIntentRepoStub(opts: IIntentRepoStubOptions = {}): IIntentR
         return Promise.resolve(orphanIntents);
       },
 
-      markExpired(publicId: string, _now: Date): Promise<boolean> {
-        markExpiredCalls.push({ publicId });
+      markExpired(input: IMarkExpiredInput): Promise<boolean> {
+        markExpiredCalls.push({ publicId: input.publicId });
         return Promise.resolve(markExpiredReturns);
       },
 

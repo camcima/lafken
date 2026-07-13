@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type { Kysely, Transaction } from "kysely";
 
 import { Asset } from "@/assets/domain/entities/asset.entity";
+import { UploadIntentConsumeConflictError } from "@/assets/domain/errors/upload-intent-consume-conflict.error";
 import {
   AssetWriteRepositoryPort,
   type ICreateUploadedAssetInput,
@@ -30,13 +31,20 @@ export class AssetWriteRepository implements AssetWriteRepositoryPort {
     const isAlreadyInTx = conn !== this.db.connection;
 
     const work = async (tx: Kysely<DB> | Transaction<DB>): Promise<Asset> => {
-      // 1. Mark intent consumed (idempotent — guarded by consumed_at IS NULL).
-      await tx
+      // 1. Atomically consume the intent. The fences guarantee exactly one
+      //    confirm wins and that a sweeper-expired intent (bytes already
+      //    deleted) can never become an asset. rowcount must be 1 — anything
+      //    else throws so the surrounding transaction rolls back (F-P7/F-P8).
+      const consumed = await tx
         .updateTable("upload_intents")
         .set({ consumed_at: new Date() })
         .where("public_id", "=", input.publicId)
         .where("consumed_at", "is", null)
-        .execute();
+        .where("expired_at", "is", null)
+        .executeTakeFirst();
+      if (Number(consumed.numUpdatedRows) !== 1) {
+        throw new UploadIntentConsumeConflictError({ publicId: input.publicId });
+      }
 
       // 2. Insert asset row (DB defaults populate id, created_at, updated_at,
       //    state_changed_at, custom_metadata={}, client_overrides={}, legal_hold=false).

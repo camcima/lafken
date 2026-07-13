@@ -2,6 +2,7 @@ import { UploadIntent } from "@/assets/domain/entities/upload-intent.entity";
 import {
   IFindOrphanedForSweepInput,
   IInsertUploadIntentInput,
+  IMarkExpiredInput,
   IRefreshUploadUrlInput,
   UploadIntentWriteRepositoryPort,
 } from "@/assets/domain/repositories/upload-intent-write.repository.port";
@@ -68,14 +69,17 @@ export class FakeUploadIntentWriteRepository extends UploadIntentWriteRepository
     return Promise.resolve(results);
   }
 
-  markExpired(publicId: string, now: Date): Promise<boolean> {
+  markExpired(input: IMarkExpiredInput): Promise<boolean> {
     const intent = this.intents.find(
       (i) =>
-        i.props.publicId === publicId && i.props.consumedAt === null && i.props.expiredAt === null,
+        i.props.publicId === input.publicId &&
+        i.props.consumedAt === null &&
+        i.props.expiredAt === null &&
+        i.props.uploadUrlExpiresAt < input.expiresBefore,
     );
     if (!intent) return Promise.resolve(false);
     const idx = this.intents.indexOf(intent);
-    this.intents[idx] = UploadIntent.fromProps({ ...intent.props, expiredAt: now });
+    this.intents[idx] = UploadIntent.fromProps({ ...intent.props, expiredAt: input.now });
     return Promise.resolve(true);
   }
 

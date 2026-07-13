@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { UploadIntentConsumeConflictError } from "@/assets/domain/errors/upload-intent-consume-conflict.error";
 import { AssetWriteRepository } from "@/assets/infrastructure/persistence/repositories/asset-write.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
@@ -249,5 +250,47 @@ describe("AssetWriteRepository", () => {
       .where("public_id", "=", intentPublicId)
       .execute();
     expect(assetRows).toHaveLength(0);
+  });
+
+  function baseCreateInput() {
+    return {
+      publicId: intentPublicId,
+      namespaceId,
+      policyVersionId,
+      storageBindingId: bindingId,
+      storageKey: "uploads/test-asset.jpg",
+      declaredMimeType: "image/jpeg",
+      declaredSizeBytes: 4096n,
+      uploadedBy: null,
+      effectiveMaxSizeBytes: 52_428_800n,
+      effectiveUrlTtl: 3600,
+      intentId: intentPublicId,
+    };
+  }
+
+  it("createUploadedAsset throws UploadIntentConsumeConflictError when the intent is already consumed", async () => {
+    await db.connection
+      .updateTable("upload_intents")
+      .set({ consumed_at: new Date() })
+      .where("public_id", "=", intentPublicId)
+      .execute();
+
+    await expect(repository.createUploadedAsset(baseCreateInput())).rejects.toBeInstanceOf(
+      UploadIntentConsumeConflictError,
+    );
+  });
+
+  it("createUploadedAsset rolls back the asset insert when the intent was expired by the sweeper", async () => {
+    await db.connection
+      .updateTable("upload_intents")
+      .set({ expired_at: new Date() })
+      .where("public_id", "=", intentPublicId)
+      .execute();
+
+    await expect(repository.createUploadedAsset(baseCreateInput())).rejects.toBeInstanceOf(
+      UploadIntentConsumeConflictError,
+    );
+    const assets = await db.connection.selectFrom("assets").selectAll().execute();
+    expect(assets).toHaveLength(0);
   });
 });
