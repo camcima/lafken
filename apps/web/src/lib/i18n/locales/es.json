@@ -1049,7 +1049,7 @@
     },
     "legalHolds": {
       "title": "Retenciones legales",
-      "subtitle": "{{filtered}} retenciones cubriendo {{assets}} assets",
+      "subtitle": "{{filtered}} retenciones cubriendo {{assets}} activos",
       "place": "Aplicar retención",
       "searchPlaceholder": "Buscar por referencia del caso, alcance o ID de retención…",
       "actions": {
