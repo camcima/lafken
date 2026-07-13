@@ -207,6 +207,49 @@ describe.skipIf(!GATE)("[E2E] POST /v1/assets/:publicId/confirm (fake-gcs gate)"
     expect((assetRow as { height: number | null }).height).toBe(256);
   });
 
+  it("persists shared metadata (externalRef, note, tags) provided in the confirm body", async () => {
+    await insertNamespace("photos-ns");
+
+    const { publicId, uploadUrl, uploadHeaders } = await createUploadIntent("photos-ns");
+
+    const putResponse = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { ...uploadHeaders, "Content-Type": "image/jpeg" },
+      body: TINY_JPEG,
+    });
+    expect(putResponse.ok).toBe(true);
+
+    const confirmResponse = await request(app.getHttpServer())
+      .post(`/v1/assets/${publicId}/confirm`)
+      .set("Authorization", `Bearer ${await mintDevOidcToken({ profileId: "carlos.cima" })}`)
+      .send({
+        width: 256,
+        height: 256,
+        externalRefType: "work_order",
+        externalRefId: "wo-2026-018",
+        note: "left wing panel",
+        tags: ["inspection", "wing"],
+      });
+
+    // Regression: before the DTO accepted these fields, forbidNonWhitelisted
+    // turned this exact request into a 400 and stranded the upload (F-K1).
+    expect(confirmResponse.status).toBe(200);
+    expect(confirmResponse.body.externalRefType).toBe("work_order");
+    expect(confirmResponse.body.externalRefId).toBe("wo-2026-018");
+    expect(confirmResponse.body.tags).toEqual(["inspection", "wing"]);
+    expect(confirmResponse.body.customMetadata).toEqual({ note: "left wing panel" });
+
+    const assetRow = await db.connection
+      .selectFrom("assets")
+      .where("public_id", "=", publicId)
+      .selectAll()
+      .executeTakeFirstOrThrow();
+    expect(assetRow.external_ref_type).toBe("work_order");
+    expect(assetRow.external_ref_id).toBe("wo-2026-018");
+    expect(assetRow.tags).toEqual(["inspection", "wing"]);
+    expect(assetRow.custom_metadata).toEqual({ note: "left wing panel" });
+  });
+
   it("returns RFC 9457 404 when public ID does not match any upload intent", async () => {
     const response = await request(app.getHttpServer())
       .post("/v1/assets/ffffffff-ffff-ffff-ffff-ffffffffffff/confirm")
