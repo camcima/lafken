@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { Kysely, Transaction } from "kysely";
 
 import { NamespacePreset } from "@/namespaces/domain/entities/namespace-preset.entity";
 import { PresetNameAlreadyExistsError } from "@/namespaces/domain/errors/preset-name-already-exists.error";
@@ -10,7 +11,9 @@ import type {
   ISetPresetActiveInput,
 } from "@/namespaces/domain/repositories/namespace-preset-write.repository.port";
 import { NamespacePresetWriteRepositoryPort } from "@/namespaces/domain/repositories/namespace-preset-write.repository.port";
+import { ConnectionResolver } from "@/shared/infrastructure/persistence/connection-resolver";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import type { DB } from "@/shared/infrastructure/persistence/db.types";
 
 import { NamespacePresetDbMapper } from "../mappers/namespace-preset.db-mapper";
 
@@ -18,12 +21,16 @@ const PG_UNIQUE_VIOLATION = "23505";
 
 @Injectable()
 export class NamespacePresetWriteRepository implements NamespacePresetWriteRepositoryPort {
-  constructor(private readonly db: DatabaseClient) {}
+  constructor(
+    private readonly db: DatabaseClient,
+    private readonly resolver: ConnectionResolver,
+  ) {}
 
   async createPreset(input: ICreatePresetInput): Promise<NamespacePreset> {
     let row: Record<string, unknown>;
     try {
-      row = await this.db.connection
+      row = await this.resolver
+        .resolve()
         .insertInto("namespace_presets")
         .values({
           namespace_id: input.namespaceId,
@@ -52,9 +59,12 @@ export class NamespacePresetWriteRepository implements NamespacePresetWriteRepos
     input: ICreatePresetVersionInput,
     attempt: number,
   ): Promise<NamespacePreset> {
+    const conn = this.resolver.resolve();
+    const isAlreadyInTx = conn !== this.db.connection;
+
     let nextVersion: number = 0;
     try {
-      return await this.db.connection.transaction().execute(async (tx) => {
+      const work = async (tx: Kysely<DB> | Transaction<DB>): Promise<NamespacePreset> => {
         const latest = await tx
           .selectFrom("namespace_presets")
           .select(["version", "active"])
@@ -82,11 +92,19 @@ export class NamespacePresetWriteRepository implements NamespacePresetWriteRepos
           .returningAll()
           .executeTakeFirstOrThrow();
         return NamespacePresetDbMapper.toDomain(row);
-      });
+      };
+
+      if (isAlreadyInTx) {
+        return await work(conn);
+      }
+      return await this.db.connection.transaction().execute(work);
     } catch (err) {
       if (err instanceof PresetNotFoundError) throw err;
       if (this.isPresetVersionUniqueViolation(err)) {
-        if (attempt < 1) {
+        // Same rule as NamespaceWriteRepository (F-D1): never retry inside an
+        // ambient transaction — it is already aborted. The use-case retry
+        // loop re-runs in a fresh transaction.
+        if (!isAlreadyInTx && attempt < 1) {
           return this.attemptCreateVersion(input, attempt + 1);
         }
         throw new PresetVersionConflictError({
@@ -100,7 +118,10 @@ export class NamespacePresetWriteRepository implements NamespacePresetWriteRepos
   }
 
   async setActive(input: ISetPresetActiveInput): Promise<NamespacePreset> {
-    return this.db.connection.transaction().execute(async (tx) => {
+    const conn = this.resolver.resolve();
+    const isAlreadyInTx = conn !== this.db.connection;
+
+    const work = async (tx: Kysely<DB> | Transaction<DB>): Promise<NamespacePreset> => {
       const latest = await tx
         .selectFrom("namespace_presets")
         .select(["id", "version"])
@@ -119,7 +140,12 @@ export class NamespacePresetWriteRepository implements NamespacePresetWriteRepos
         .returningAll()
         .executeTakeFirstOrThrow();
       return NamespacePresetDbMapper.toDomain(row);
-    });
+    };
+
+    if (isAlreadyInTx) {
+      return work(conn);
+    }
+    return this.db.connection.transaction().execute(work);
   }
 
   private isPresetVersionUniqueViolation(err: unknown): boolean {

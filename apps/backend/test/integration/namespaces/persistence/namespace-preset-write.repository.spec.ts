@@ -6,6 +6,7 @@ import { PresetParams } from "@/namespaces/domain/value-objects/preset-params.va
 import { NamespacePresetWriteRepository } from "@/namespaces/infrastructure/persistence/repositories/namespace-preset-write.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { createConnectionResolver } from "../../helpers/create-connection-resolver";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 describe("NamespacePresetWriteRepository", () => {
@@ -14,7 +15,7 @@ describe("NamespacePresetWriteRepository", () => {
 
   beforeAll(async () => {
     db = await createTestDatabaseClient();
-    repository = new NamespacePresetWriteRepository(db);
+    repository = new NamespacePresetWriteRepository(db, createConnectionResolver(db));
   });
 
   afterAll(async () => {
