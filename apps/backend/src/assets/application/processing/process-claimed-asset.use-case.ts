@@ -203,6 +203,7 @@ export class ProcessClaimedAssetUseCase {
       "read_object",
       () =>
         this.readSourceBytes({
+          assetId: asset.props.id,
           binding: { bucket: gcs.bucket, projectId: gcs.projectId },
           storageKey: asset.props.storageKey,
           maxBytes: Number(policy.props.maxFileSizeBytes),
@@ -687,12 +688,21 @@ export class ProcessClaimedAssetUseCase {
 
   /**
    * Reads the source object, falling back to the quarantined key when the
-   * primary key is gone (F-P5): a previous attempt may have completed the
-   * quarantine byte-move but died before its DB transition committed, so the
-   * DB still points at the original key. Without the fallback every retry
-   * burns its budget on read_object and the asset wedges permanently.
+   * primary key is confirmed NOT FOUND (F-P5): a previous attempt may have
+   * completed the quarantine byte-move but died before its DB transition
+   * committed, so the DB still points at the original key. Without the
+   * fallback every retry burns its budget on read_object and the asset
+   * wedges permanently.
+   *
+   * The fallback is deliberately narrowed to the not-found case: we confirm
+   * absence via `objectExists` before ever touching the quarantined key. If
+   * the primary object is still there, the read failed for some other reason
+   * (auth/quota/network) and we must rethrow the original error unchanged —
+   * otherwise we'd silently mask a real failure by reading unrelated bytes
+   * from `_quarantined/<key>`.
    */
   private async readSourceBytes(input: {
+    assetId: string;
     binding: { bucket: string; projectId: string };
     storageKey: string;
     maxBytes: number;
@@ -703,10 +713,27 @@ export class ProcessClaimedAssetUseCase {
       if (input.storageKey.startsWith(QUARANTINE_KEY_PREFIX)) {
         throw err;
       }
+      const primaryExists: boolean = await this.assetStorage.objectExists({
+        binding: input.binding,
+        storageKey: input.storageKey,
+      });
+      if (primaryExists) {
+        // Not a "not found" — rethrow the original failure unchanged.
+        throw err;
+      }
+      const quarantinedStorageKey: string = toQuarantinedStorageKey(input.storageKey);
+      this.logger.warn(
+        {
+          assetId: input.assetId,
+          storageKey: input.storageKey,
+          quarantinedStorageKey,
+        },
+        "primary object not found; falling back to quarantined storage key",
+      );
       try {
         return await this.assetStorage.readObjectBytes({
           ...input,
-          storageKey: toQuarantinedStorageKey(input.storageKey),
+          storageKey: quarantinedStorageKey,
         });
       } catch {
         throw err; // surface the original failure, not the fallback's

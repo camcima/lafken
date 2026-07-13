@@ -395,11 +395,43 @@ describe("ProcessClaimedAssetUseCase", () => {
     expect(assetRepo.analyses).toEqual([]);
   });
 
+  it("does not move bytes to quarantine when the signal aborts after record_analysis but before the move", async () => {
+    // The crux of the abort behavior: aborting after record_analysis (so the
+    // quarantine decision has already been persisted) must still stop the
+    // pipeline before it moves bytes to _quarantined/. Hooking
+    // recordAnalysis lets the abort land exactly between those two steps.
+    const controller = new AbortController();
+    assetRepo.onRecordAnalysis = () => controller.abort();
+    virusScan.result = {
+      decision: "quarantine",
+      reason: "virus_detected",
+      analyzer: "virus_scan",
+      analyzerVersion: "test",
+      findings: { duration_ms: 4 },
+    };
+
+    await expect(
+      useCase.execute({
+        assetId: TEST_UUIDS.asset1,
+        workerId: "worker-a",
+        attemptNumber: 1,
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(ProcessingAbortedError);
+
+    expect(assetRepo.analyses).toHaveLength(1); // record_analysis did commit
+    expect(storage.moveCalls).toEqual([]); // but the byte-move never ran
+    expect(assetRepo.transitions.some((item) => item.toState === "quarantined_virus")).toBe(false);
+  });
+
   it("falls back to the quarantined storage key when the primary object is missing on retry", async () => {
     // Simulates a previous attempt that moved the bytes but crashed before the
     // DB transition committed: DB key unchanged, bytes at _quarantined/<key>.
     storage.objects.delete("uploads/test.png");
     storage.objects.set("_quarantined/uploads/test.png", Buffer.from("image-bytes"));
+    // The primary object is genuinely gone — objectExists must confirm that
+    // before the fallback is allowed to trigger (Fix 1: not-found only).
+    storage.existsResult = false;
     virusScan.result = {
       decision: "quarantine",
       reason: "virus_detected",
@@ -417,6 +449,40 @@ describe("ProcessClaimedAssetUseCase", () => {
     expect(result.kind).toBe("completed");
     expect(assetRepo.transitions.at(-1)?.toState).toBe("quarantined_virus");
     expect(assetRepo.transitions.at(-1)?.newStorageKey).toBe("_quarantined/uploads/test.png");
+    expect(storage.existsCalls).toEqual([
+      expect.objectContaining({ storageKey: "uploads/test.png" }),
+    ]);
+    expect(storage.readCalls.map((call) => call.storageKey)).toEqual([
+      "uploads/test.png",
+      "_quarantined/uploads/test.png",
+    ]);
+  });
+
+  it("rethrows the original read_object error unchanged when the primary object still exists", async () => {
+    // Primary bytes are absent from the fake's store (so readObjectBytes
+    // rejects), but existsResult simulates a real object that IS present in
+    // storage and failed to read for another reason (auth/quota/network).
+    // The fallback must NOT trigger — masking a non-404 failure by reading
+    // unrelated bytes from the quarantined key would be worse than surfacing
+    // the original error.
+    storage.objects.delete("uploads/test.png");
+    storage.objects.set("_quarantined/uploads/test.png", Buffer.from("unrelated-bytes"));
+    storage.existsResult = true;
+
+    await expect(
+      useCase.execute({ assetId: TEST_UUIDS.asset1, workerId: "worker-a", attemptNumber: 1 }),
+    ).rejects.toMatchObject({
+      name: "TransientProcessingError",
+      step: "read_object",
+      cause: expect.objectContaining({
+        message: expect.stringContaining('"uploads/test.png"'),
+      }),
+    });
+
+    // Only the primary key was ever read — no fallback attempt.
+    expect(storage.readCalls.map((call) => call.storageKey)).toEqual(["uploads/test.png"]);
+    // Only the uploaded->processing transition happened; nothing terminal.
+    expect(assetRepo.transitions.map((item) => item.toState)).toEqual(["processing"]);
   });
 
   it("transitions the asset to processing_failed when the storage binding is missing", async () => {
@@ -444,6 +510,7 @@ class InMemoryAssetProcessingRepository extends AssetProcessingRepositoryPort {
   transitionResult = true;
   recordAnalysisError: Error | null = null;
   transitionError: Error | null = null;
+  onRecordAnalysis: (() => void) | null = null;
   readonly transitions: ITransitionAssetInput[] = [];
   readonly analyses: IRecordAnalysisInput[] = [];
   readonly derivedMetadata: IUpdateDerivedMetadataInput[] = [];
@@ -481,6 +548,7 @@ class InMemoryAssetProcessingRepository extends AssetProcessingRepositoryPort {
       return Promise.reject(this.recordAnalysisError);
     }
     this.analyses.push(input);
+    this.onRecordAnalysis?.();
     return Promise.resolve();
   }
 
