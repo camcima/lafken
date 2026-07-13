@@ -7,6 +7,7 @@ import { PresetParams } from "@/namespaces/domain/value-objects/preset-params.va
 import { NamespacePresetWriteRepository } from "@/namespaces/infrastructure/persistence/repositories/namespace-preset-write.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { cleanDatabase } from "../../helpers/clean-database";
 import { createConnectionResolver } from "../../helpers/create-connection-resolver";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
@@ -66,18 +67,7 @@ describe("NamespacePresetWriteRepository", () => {
   let namespaceId: string;
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await cleanDatabase(db);
 
     const sb = await db.connection
       .insertInto("storage_bindings")

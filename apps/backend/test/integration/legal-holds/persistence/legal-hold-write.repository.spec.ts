@@ -7,6 +7,7 @@ import { LegalHoldQueryRepository } from "@/legal-holds/infrastructure/persisten
 import { LegalHoldWriteRepository } from "@/legal-holds/infrastructure/persistence/repositories/legal-hold-write.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { cleanDatabase } from "../../helpers/clean-database";
 import { createConnectionResolver } from "../../helpers/create-connection-resolver";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
@@ -33,18 +34,7 @@ describe("LegalHoldWriteRepository", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await cleanDatabase(db);
 
     const sb = await db.connection
       .insertInto("storage_bindings")

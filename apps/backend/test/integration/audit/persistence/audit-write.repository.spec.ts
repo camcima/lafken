@@ -8,6 +8,7 @@ import { DatabaseAsyncLocalStorage } from "@/shared/infrastructure/persistence/d
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 import { DatabaseUnitOfWork } from "@/shared/infrastructure/persistence/database-unit-of-work";
 
+import { cleanDatabase } from "../../helpers/clean-database";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 describe("AuditWriteRepository", () => {
@@ -26,9 +27,7 @@ describe("AuditWriteRepository", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("configuration_audit_log").execute();
-    });
+    await cleanDatabase(db);
   });
 
   afterAll(async () => {

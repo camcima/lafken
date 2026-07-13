@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { NamespaceQueryRepository } from "@/namespaces/infrastructure/persistence/repositories/namespace-query.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { cleanDatabase } from "../../helpers/clean-database";
 import { createConnectionResolver } from "../../helpers/create-connection-resolver";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
@@ -16,24 +17,7 @@ describe("NamespaceQueryRepository", () => {
   });
 
   beforeEach(async () => {
-    // Clean up in a transaction. The FK namespaces.current_policy_id →
-    // namespace_policies is DEFERRABLE INITIALLY DEFERRED — inside a
-    // transaction the check is deferred to COMMIT, so we can delete
-    // namespaces before their referenced policies.
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      // Delete policies before namespaces (deferred FK namespaces.current_policy_id
-      // checked at commit; RESTRICT FK namespace_policies.namespace_id requires
-      // policies deleted before namespaces).
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await cleanDatabase(db);
   });
 
   afterAll(async () => {

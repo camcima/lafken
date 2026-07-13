@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { LegalHoldQueryRepository } from "@/legal-holds/infrastructure/persistence/repositories/legal-hold-query.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { cleanDatabase } from "../../helpers/clean-database";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 describe("LegalHoldQueryRepository", () => {
@@ -15,10 +16,7 @@ describe("LegalHoldQueryRepository", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-    });
+    await cleanDatabase(db);
   });
 
   afterAll(async () => {

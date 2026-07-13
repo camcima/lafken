@@ -2,6 +2,7 @@ import { afterAll, beforeAll } from "vitest";
 
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { cleanDatabase } from "./clean-database";
 import { createTestDatabaseClient } from "./create-test-database-client";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
@@ -63,18 +64,7 @@ export function setupIntegrationDb(): IIntegrationDbContext {
   });
 
   async function cleanCommonTables(): Promise<void> {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await cleanDatabase(db);
   }
 
   async function seedNamespaceWithPolicyAndBinding(): Promise<{
