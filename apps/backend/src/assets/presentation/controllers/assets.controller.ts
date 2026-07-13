@@ -1,6 +1,8 @@
 import {
   Body,
+  ConflictException,
   Controller,
+  Delete,
   Get,
   Header,
   HttpCode,
@@ -14,7 +16,9 @@ import {
 } from "@nestjs/common";
 import {
   ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -37,6 +41,7 @@ import {
 
 import { ConfirmUploadUseCase } from "@/assets/application/use-cases/confirm-upload.use-case";
 import { CreateUploadIntentUseCase } from "@/assets/application/use-cases/create-upload-intent.use-case";
+import { DeleteAssetUseCase } from "@/assets/application/use-cases/delete-asset.use-case";
 import { GetAssetByIdUseCase } from "@/assets/application/use-cases/get-asset-by-id.use-case";
 import { GetAssetByPublicIdUseCase } from "@/assets/application/use-cases/get-asset-by-public-id.use-case";
 import { GetAssetDownloadUrlUseCase } from "@/assets/application/use-cases/get-asset-download-url.use-case";
@@ -50,6 +55,7 @@ import type { Asset } from "@/assets/domain/entities/asset.entity";
 import { AssetNotDownloadableError } from "@/assets/domain/errors/asset-not-downloadable.error";
 import { AssetNotFoundError } from "@/assets/domain/errors/asset-not-found.error";
 import { AssetNotInProcessingFailedStateError } from "@/assets/domain/errors/asset-not-in-processing-failed-state.error";
+import { AssetUnderLegalHoldError } from "@/assets/domain/errors/asset-under-legal-hold.error";
 import { FileSizeExceedsPolicyError } from "@/assets/domain/errors/file-size-exceeds-policy.error";
 import { MimeTypeNotAllowedError } from "@/assets/domain/errors/mime-type-not-allowed.error";
 import { ProcessingJobNotFoundError } from "@/assets/domain/errors/processing-job-not-found.error";
@@ -111,6 +117,7 @@ export class AssetsController {
     private readonly retryAssetProcessingUseCase: RetryAssetProcessingUseCase,
     private readonly getAssetDownloadUrlUseCase: GetAssetDownloadUrlUseCase,
     private readonly refreshUploadUrlUseCase: RefreshUploadUrlUseCase,
+    private readonly deleteAssetUseCase: DeleteAssetUseCase,
     private readonly assetQueryRepository: AssetQueryRepositoryPort,
     private readonly previewUrlSigner: PreviewUrlSignerPort,
     private readonly assetStorage: AssetStoragePort,
@@ -522,6 +529,41 @@ export class AssetsController {
       }
       if (err instanceof AssetNotInProcessingFailedStateError) {
         throw new UnprocessableEntityException(err.message, { cause: err });
+      }
+      throw err;
+    }
+  }
+
+  @Delete(":id")
+  @EndpointRequiredRoles([ApplicationRole.ASSET_DELETER])
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: "Soft-delete an asset",
+    description:
+      "Transitions the asset to the terminal `deleted` state. Idempotent: " +
+      "deleting an already-deleted asset returns 204 without a new " +
+      "transition. The stored object remains in place — a separate purge " +
+      "process removes bytes later. Assets under a legal hold cannot be " +
+      "deleted (409).",
+  })
+  @ApiNoContentResponse()
+  @ApiNotFoundResponse()
+  @ApiConflictResponse()
+  async deleteAsset(
+    @Param("id") id: string,
+    @AuthenticatedUser() user: AuthenticatedUserType,
+  ): Promise<void> {
+    try {
+      await this.deleteAssetUseCase.execute({ id, requestedByEmail: user.emailAddress });
+    } catch (err) {
+      if (err instanceof AssetNotFoundError) {
+        throw new NotFoundException(err.message, { cause: err });
+      }
+      if (err instanceof AssetUnderLegalHoldError) {
+        // 409 (not the DomainError-default 422): the delete conflicts with the
+        // resource's current state and succeeds once the hold is lifted. The
+        // delete-asset E2E pins this status.
+        throw new ConflictException(err.message, { cause: err });
       }
       throw err;
     }

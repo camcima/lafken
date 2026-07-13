@@ -8,6 +8,7 @@ import { SystemInfrastructureModule } from "@/system/infrastructure/system-infra
 
 import { ConfirmUploadUseCase } from "./application/use-cases/confirm-upload.use-case";
 import { CreateUploadIntentUseCase } from "./application/use-cases/create-upload-intent.use-case";
+import { DeleteAssetUseCase } from "./application/use-cases/delete-asset.use-case";
 import { GetAssetByIdUseCase } from "./application/use-cases/get-asset-by-id.use-case";
 import { GetAssetByPublicIdUseCase } from "./application/use-cases/get-asset-by-public-id.use-case";
 import { GetAssetDownloadUrlUseCase } from "./application/use-cases/get-asset-download-url.use-case";
@@ -38,6 +39,7 @@ import { AssetsController } from "./presentation/controllers/assets.controller";
     ListAssetAnalysesUseCase,
     GetAssetProcessingJobUseCase,
     CreateUploadIntentUseCase,
+    DeleteAssetUseCase,
     ConfirmUploadUseCase,
     RetryAssetProcessingUseCase,
     GetAssetDownloadUrlUseCase,
