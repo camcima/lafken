@@ -14,7 +14,7 @@ export const assetsSearchSchema = z.object({
   page: z.coerce.number().int().min(1).catch(1).default(1),
   namespaceSlug: z.string().optional(),
   state: z.enum(ASSET_STATES).optional().catch(undefined),
-  legalHoldId: z.uuid().optional(),
+  legalHoldId: z.uuid().optional().catch(undefined),
 });
 
 export const Route = createFileRoute("/_protected/assets/")({
