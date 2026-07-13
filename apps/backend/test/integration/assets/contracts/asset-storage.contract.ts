@@ -20,6 +20,9 @@ const FULL_BYTE_COUNT = 8;
 const PREFIX_BYTE_COUNT = 4;
 const MOVE_BYTE_COUNT = 3;
 const SINGLE_BYTE_COUNT = 1;
+const OVERSIZED_MAX_BYTES_MARGIN = 4;
+const ZERO_MAX_BYTES = 0;
+const NEGATIVE_MAX_BYTES = -1;
 
 /**
  * Deterministic byte sequence 1..count. Cases only assert on
@@ -68,6 +71,8 @@ export function runAssetStorageContract(
     const expected = sequentialBytes(READ_BYTE_COUNT);
     await ctx.putObject(key, expected);
 
+    // No `maxBytes` passed: pins the omitted-maxBytes contract ("read the
+    // whole object") alongside the explicit oversized/exact-cap cases below.
     const bytes = await ctx.storage.readObjectBytes({ binding: ctx.binding, storageKey: key });
 
     expect(Array.from(bytes)).toEqual(Array.from(expected));
@@ -85,6 +90,64 @@ export function runAssetStorageContract(
     });
 
     expect(Array.from(bytes)).toEqual(Array.from(sequentialBytes(PREFIX_BYTE_COUNT)));
+  });
+
+  it("readObjectBytes returns the whole object when maxBytes exceeds its length", async () => {
+    const ctx = await makeContext();
+    const key = ctx.uniqueKey("read-oversized-cap");
+    const expected = sequentialBytes(FULL_BYTE_COUNT);
+    await ctx.putObject(key, expected);
+
+    const bytes = await ctx.storage.readObjectBytes({
+      binding: ctx.binding,
+      storageKey: key,
+      maxBytes: FULL_BYTE_COUNT + OVERSIZED_MAX_BYTES_MARGIN,
+    });
+
+    expect(Array.from(bytes)).toEqual(Array.from(expected));
+  });
+
+  it("readObjectBytes returns the whole object when maxBytes equals its length exactly", async () => {
+    const ctx = await makeContext();
+    const key = ctx.uniqueKey("read-exact-cap");
+    const expected = sequentialBytes(FULL_BYTE_COUNT);
+    await ctx.putObject(key, expected);
+
+    const bytes = await ctx.storage.readObjectBytes({
+      binding: ctx.binding,
+      storageKey: key,
+      maxBytes: FULL_BYTE_COUNT,
+    });
+
+    expect(Array.from(bytes)).toEqual(Array.from(expected));
+  });
+
+  it("readObjectBytes rejects when maxBytes is zero instead of fail-opening to the whole object", async () => {
+    const ctx = await makeContext();
+    const key = ctx.uniqueKey("read-zero-cap");
+    await ctx.putObject(key, sequentialBytes(FULL_BYTE_COUNT));
+
+    await expect(
+      ctx.storage.readObjectBytes({
+        binding: ctx.binding,
+        storageKey: key,
+        maxBytes: ZERO_MAX_BYTES,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("readObjectBytes rejects when maxBytes is negative", async () => {
+    const ctx = await makeContext();
+    const key = ctx.uniqueKey("read-negative-cap");
+    await ctx.putObject(key, sequentialBytes(FULL_BYTE_COUNT));
+
+    await expect(
+      ctx.storage.readObjectBytes({
+        binding: ctx.binding,
+        storageKey: key,
+        maxBytes: NEGATIVE_MAX_BYTES,
+      }),
+    ).rejects.toThrow();
   });
 
   it("readObjectBytes rejects for a missing key", async () => {

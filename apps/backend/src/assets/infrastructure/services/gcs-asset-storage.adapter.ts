@@ -2,6 +2,7 @@ import { type Bucket, Storage, type StorageOptions } from "@google-cloud/storage
 import { Injectable } from "@nestjs/common";
 
 import {
+  assertValidMaxBytes,
   AssetStoragePort,
   type IDeleteObjectInput,
   type IGcsBindingDescriptor,
@@ -93,7 +94,9 @@ export class GcsAssetStorageAdapter extends AssetStoragePort {
   }
 
   async readObjectBytes(input: IReadObjectBytesInput): Promise<Buffer> {
-    const downloadOptions = input.maxBytes ? { start: 0, end: input.maxBytes - 1 } : undefined;
+    assertValidMaxBytes(input.maxBytes);
+    const downloadOptions =
+      input.maxBytes !== undefined ? { start: 0, end: input.maxBytes - 1 } : undefined;
     const [bytes] = await this.getBucket(input.binding)
       .file(input.storageKey)
       .download(downloadOptions);

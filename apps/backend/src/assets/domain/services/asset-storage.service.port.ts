@@ -26,12 +26,37 @@ export interface IReadObjectBytesInput {
   binding: IGcsBindingDescriptor;
   storageKey: string;
   /**
-   * Optional cap on bytes returned. When set, the adapter MUST issue a
-   * `Range: bytes=0-(maxBytes-1)` request so we don't pull the full object
+   * Optional cap on bytes returned. Omitted/`undefined` means "read the
+   * whole object" (current behavior, both implementations agree). When
+   * provided, it MUST be a positive integer (`>= 1`); the adapter MUST issue
+   * a `Range: bytes=0-(maxBytes-1)` request so we don't pull the full object
    * across the wire just to inspect a prefix (e.g., for magic-byte sniffing
    * during confirm).
+   *
+   * A value `<= 0` or non-integer is a programming error, not a valid
+   * "read nothing"/"unlimited" request: every implementation MUST throw via
+   * {@link assertValidMaxBytes} rather than fail open (returning the whole
+   * object, e.g. because `0` is falsy) or silently returning an empty
+   * buffer. Callers must never pass `0`/negative/non-integer values.
    */
   maxBytes?: number;
+}
+
+/**
+ * Shared precondition for every `readObjectBytes` implementation, so the
+ * fake and the real GCS adapter can't drift on how they treat the `maxBytes`
+ * edge (see {@link IReadObjectBytesInput.maxBytes}). Throws a plain `Error`
+ * — this is an invalid-argument/programming error, not a business rule
+ * violation or user input problem, so it deliberately isn't a `DomainError`
+ * or `ValidationError`.
+ */
+export function assertValidMaxBytes(maxBytes: number | undefined): void {
+  if (maxBytes === undefined) return;
+  if (!Number.isInteger(maxBytes) || maxBytes <= 0) {
+    throw new Error(
+      `readObjectBytes: maxBytes must be a positive integer when provided, got ${String(maxBytes)}.`,
+    );
+  }
 }
 
 export interface ISignReadUrlInput {

@@ -1,4 +1,5 @@
 import {
+  assertValidMaxBytes,
   AssetStoragePort,
   type IDeleteObjectInput,
   type IIssueSignedUploadUrlInput,
@@ -44,6 +45,11 @@ export class FakeAssetStorage extends AssetStoragePort {
 
   readObjectBytes(input: IReadObjectBytesInput): Promise<Buffer> {
     this.readCalls.push(input);
+    try {
+      assertValidMaxBytes(input.maxBytes);
+    } catch (err) {
+      return Promise.reject(err instanceof Error ? err : new Error(String(err)));
+    }
     const bytes: Buffer | undefined = this.objects.get(input.storageKey);
     if (!bytes) {
       return Promise.reject(new Error(`Object "${input.storageKey}" does not exist`));
