@@ -20,6 +20,7 @@ export class FakeAssetStorage extends AssetStoragePort {
   readonly deleteCalls: IDeleteObjectInput[] = [];
   readonly objects: Map<string, Buffer> = new Map();
   existsResult = true;
+  existsError: Error | null = null;
 
   issueSignedUploadUrl(input: IIssueSignedUploadUrlInput): Promise<IIssueSignedUploadUrlResult> {
     this.issued.push(input);
@@ -35,6 +36,9 @@ export class FakeAssetStorage extends AssetStoragePort {
 
   objectExists(input: IObjectExistsInput): Promise<boolean> {
     this.existsCalls.push(input);
+    if (this.existsError) {
+      return Promise.reject(this.existsError);
+    }
     return Promise.resolve(this.existsResult || this.objects.has(input.storageKey));
   }
 

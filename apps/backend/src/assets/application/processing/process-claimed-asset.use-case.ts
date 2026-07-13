@@ -699,7 +699,9 @@ export class ProcessClaimedAssetUseCase {
    * the primary object is still there, the read failed for some other reason
    * (auth/quota/network) and we must rethrow the original error unchanged —
    * otherwise we'd silently mask a real failure by reading unrelated bytes
-   * from `_quarantined/<key>`.
+   * from `_quarantined/<key>`. `objectExists` itself is a live network call
+   * and can throw; if it does, absence was never confirmed, so we rethrow
+   * the original read failure rather than the existence-check's error.
    */
   private async readSourceBytes(input: {
     assetId: string;
@@ -713,10 +715,18 @@ export class ProcessClaimedAssetUseCase {
       if (input.storageKey.startsWith(QUARANTINE_KEY_PREFIX)) {
         throw err;
       }
-      const primaryExists: boolean = await this.assetStorage.objectExists({
-        binding: input.binding,
-        storageKey: input.storageKey,
-      });
+      let primaryExists: boolean;
+      try {
+        primaryExists = await this.assetStorage.objectExists({
+          binding: input.binding,
+          storageKey: input.storageKey,
+        });
+      } catch {
+        // Absence could not be confirmed — surface the original read
+        // failure, not the objectExists error, so a flaky existence check
+        // never masks the real cause.
+        throw err;
+      }
       if (primaryExists) {
         // Not a "not found" — rethrow the original failure unchanged.
         throw err;

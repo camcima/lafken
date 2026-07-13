@@ -485,6 +485,34 @@ describe("ProcessClaimedAssetUseCase", () => {
     expect(assetRepo.transitions.map((item) => item.toState)).toEqual(["processing"]);
   });
 
+  it("rethrows the original read_object error unchanged when objectExists itself throws", async () => {
+    // Primary read fails, and the objectExists absence-check (used to decide
+    // whether the quarantine fallback is safe) also throws — e.g. a network
+    // blip on the existence check. Absence was never confirmed, so the
+    // fallback must not be attempted and the ORIGINAL read failure must be
+    // what surfaces — not the objectExists error, which would otherwise mask
+    // the real cause.
+    storage.objects.delete("uploads/test.png");
+    storage.objects.set("_quarantined/uploads/test.png", Buffer.from("unrelated-bytes"));
+    storage.existsError = new Error("existence check timed out");
+
+    await expect(
+      useCase.execute({ assetId: TEST_UUIDS.asset1, workerId: "worker-a", attemptNumber: 1 }),
+    ).rejects.toMatchObject({
+      name: "TransientProcessingError",
+      step: "read_object",
+      cause: expect.objectContaining({
+        message: expect.stringContaining('"uploads/test.png"'),
+      }),
+    });
+
+    // Only the primary key was ever read — objectExists throwing must not
+    // trigger the quarantined-key fallback read.
+    expect(storage.readCalls.map((call) => call.storageKey)).toEqual(["uploads/test.png"]);
+    // Only the uploaded->processing transition happened; nothing terminal.
+    expect(assetRepo.transitions.map((item) => item.toState)).toEqual(["processing"]);
+  });
+
   it("transitions the asset to processing_failed when the storage binding is missing", async () => {
     // FakeStorageBindingRepository.findById matches on id — give it a binding
     // whose id differs from the asset's storageBindingId.
