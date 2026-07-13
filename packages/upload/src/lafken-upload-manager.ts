@@ -1,9 +1,6 @@
 import type { LafkenClient } from "@lafken/client";
 import Uppy, { type UppyFile } from "@uppy/core";
-import Tus from "@uppy/tus";
 import XHRUpload from "@uppy/xhr-upload";
-
-export type UploadProtocol = "simple" | "tus";
 
 export interface ISharedUploadMetadata {
   externalRefType?: string;
@@ -36,8 +33,6 @@ export interface ILafkenUploadManagerOptions {
   namespaceSlug: string;
   /** Initial restrictions; can be updated later via `setRestrictions`. */
   restrictions?: IUploadRestrictions;
-  /** Upload protocol to use. Default: "simple" (XHR PUT). */
-  protocol?: UploadProtocol;
   /** ms before `expiresAt` at which to pre-flight a URL refresh. Default 30000. */
   refreshSafetyMarginMs?: number;
   /** Initial polling interval in ms when waiting for asset processing. Default 1000. */
@@ -183,7 +178,6 @@ export class LafkenUploadManager extends EventTarget {
   private readonly dimProbesByFileId = new Map<string, Promise<IImageDimensions | null>>();
   private readonly expiresAtByFileId = new Map<string, Date>();
   private sharedMetadata: ISharedUploadMetadata = {};
-  private readonly protocol: UploadProtocol;
   private readonly refreshSafetyMarginMs: number;
   private readonly pollingIntervalMs: number;
   private readonly pollingMaxIntervalMs: number;
@@ -194,7 +188,6 @@ export class LafkenUploadManager extends EventTarget {
 
   constructor(private readonly opts: ILafkenUploadManagerOptions) {
     super();
-    this.protocol = opts.protocol ?? "simple";
     this.refreshSafetyMarginMs = opts.refreshSafetyMarginMs ?? DEFAULT_REFRESH_SAFETY_MARGIN_MS;
     this.pollingIntervalMs = opts.pollingIntervalMs ?? DEFAULT_POLLING_INTERVAL_MS;
     this.pollingMaxIntervalMs = opts.pollingMaxIntervalMs ?? DEFAULT_POLLING_MAX_INTERVAL_MS;
@@ -225,15 +218,11 @@ export class LafkenUploadManager extends EventTarget {
       );
     });
 
-    if (this.protocol === "tus") {
-      this.uppy.use(Tus, { endpoint: "placeholder" });
-    } else {
-      this.uppy.use(XHRUpload, {
-        endpoint: "placeholder",
-        method: "PUT",
-        formData: false,
-      });
-    }
+    this.uppy.use(XHRUpload, {
+      endpoint: "placeholder",
+      method: "PUT",
+      formData: false,
+    });
 
     // Pre-processor: call createUploadIntent per file and store the upload URL/headers
     // as per-file overrides before the upload starts. Each file is handled
@@ -329,7 +318,6 @@ export class LafkenUploadManager extends EventTarget {
             namespaceSlug: this.opts.namespaceSlug,
             declaredMimeType: (file.type as string | undefined) ?? "application/octet-stream",
             declaredSizeBytes: (file.size as number | undefined) ?? 0,
-            protocol: this.protocol,
           });
 
           let uploadUrl: string = result.uploadUrl;
@@ -361,20 +349,14 @@ export class LafkenUploadManager extends EventTarget {
 
           this.publicIdByFileId.set(fileId, result.publicId);
 
-          if (this.protocol === "tus") {
-            this.uppy.setFileState(fileId, {
-              tus: { endpoint: uploadUrl, headers: uploadHeaders },
-            });
-          } else {
-            this.uppy.setFileState(fileId, {
-              xhrUpload: {
-                endpoint: uploadUrl,
-                method: "PUT",
-                formData: false,
-                headers: uploadHeaders,
-              },
-            });
-          }
+          this.uppy.setFileState(fileId, {
+            xhrUpload: {
+              endpoint: uploadUrl,
+              method: "PUT",
+              formData: false,
+              headers: uploadHeaders,
+            },
+          });
         } catch (err) {
           const error = err instanceof Error ? err : new Error(String(err));
           this.dispatchEvent(

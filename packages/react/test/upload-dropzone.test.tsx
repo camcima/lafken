@@ -38,20 +38,20 @@ describe("UploadDropzone", () => {
     expect(input.multiple).toBe(true);
   });
 
-  it("forwards protocol and refreshSafetyMarginMs to the manager", () => {
+  it("forwards refreshSafetyMarginMs to the manager", () => {
     const before = managerCtorArgs.length;
     render(
       <UploadDropzone
         client={stubClient as unknown as Parameters<typeof UploadDropzone>[0]["client"]}
         namespaceSlug="n"
-        protocol="tus"
         refreshSafetyMarginMs={45_000}
         render={() => null}
       />,
     );
     const calls = managerCtorArgs.slice(before);
     expect(calls).toHaveLength(1);
-    expect(calls[0]).toMatchObject({ protocol: "tus", refreshSafetyMarginMs: 45_000 });
+    expect(calls[0]).toMatchObject({ refreshSafetyMarginMs: 45_000 });
+    expect(calls[0]).not.toHaveProperty("protocol");
   });
 
   it("forwards pollingIntervalMs, pollingMaxIntervalMs, pollingTimeoutMs to the manager", () => {
