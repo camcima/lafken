@@ -1,3 +1,4 @@
+import { LafkenApiError } from "@lafken/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LafkenUploadManager } from "../src/lafken-upload-manager";
@@ -579,6 +580,123 @@ describe("LafkenUploadManager", () => {
         publicId: "pub-virus",
         kind: "virus",
       });
+    });
+
+    it("polls using the confirmed asset's internal id, not the publicId, while still emitting publicId on file-ready", async () => {
+      // The backend's GET /v1/assets/:id endpoint resolves the INTERNAL id —
+      // there is no publicId-keyed getter. confirmUpload's response carries
+      // both `id` (internal) and `publicId` (external); polling must key off
+      // `id`, not `publicId`, or every poll 404s.
+      const client = {
+        assets: {
+          createUploadIntent: vi.fn(),
+          confirmUpload: vi.fn().mockResolvedValue({
+            id: "internal-uuidv7-abc",
+            publicId: "pub-int",
+            state: "processing",
+          }),
+          get: vi
+            .fn()
+            .mockResolvedValue({ id: "internal-uuidv7-abc", publicId: "pub-int", state: "ready" }),
+        },
+      };
+
+      const manager = new LafkenUploadManager({
+        client: client as never,
+        namespaceSlug: "ns",
+        pollingIntervalMs: 1_000,
+        pollingMaxIntervalMs: 10_000,
+        pollingTimeoutMs: 600_000,
+      });
+
+      const readyEvents: IFileReadyEventDetail[] = [];
+      manager.addEventListener("file-ready", (evt) => {
+        readyEvents.push((evt as CustomEvent<IFileReadyEventDetail>).detail);
+      });
+
+      const file = new File(["data"], "video.mp4", { type: "video/mp4" });
+      manager.addFiles([file]);
+      const uppy = manager.getUppy();
+      const [uppyFile] = uppy.getFiles();
+      expect(uppyFile).toBeDefined();
+
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+      (manager as any).publicIdByFileId.set(uppyFile.id, "pub-int");
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+
+      uppy.emit("complete", { successful: [uppyFile], failed: [] });
+      await flushMicrotasks();
+
+      await vi.advanceTimersByTimeAsync(1_000);
+      await flushMicrotasks();
+
+      // The poll must look up the INTERNAL id, never the publicId.
+      expect(client.assets.get).toHaveBeenCalledWith("internal-uuidv7-abc");
+
+      // The external contract is unchanged: file-ready still carries publicId.
+      expect(readyEvents).toHaveLength(1);
+      expect(readyEvents[0]).toMatchObject({
+        fileId: uppyFile.id,
+        publicId: "pub-int",
+      });
+    });
+
+    it("stops polling and emits file-failed with the real error on a non-retryable 404, instead of masking it as polling-timeout", async () => {
+      const notFoundError = new LafkenApiError({
+        status: 404,
+        problemDetails: null,
+        message: "Asset not found",
+      });
+      const client = {
+        assets: {
+          createUploadIntent: vi.fn(),
+          confirmUpload: vi.fn().mockResolvedValue({
+            id: "internal-404-id",
+            publicId: "pub-404",
+            state: "processing",
+          }),
+          get: vi.fn().mockRejectedValue(notFoundError),
+        },
+      };
+
+      const manager = new LafkenUploadManager({
+        client: client as never,
+        namespaceSlug: "ns",
+        pollingIntervalMs: 1_000,
+        pollingMaxIntervalMs: 2_000,
+        // Deliberately long so a "polling-timeout" failure could only come
+        // from masking, never from the timeout itself, within this test.
+        pollingTimeoutMs: 600_000,
+      });
+
+      const failedEvents: IFileFailedEventDetail[] = [];
+      manager.addEventListener("file-failed", (evt) => {
+        failedEvents.push((evt as CustomEvent<IFileFailedEventDetail>).detail);
+      });
+
+      const file = new File(["data"], "clip.mp4", { type: "video/mp4" });
+      manager.addFiles([file]);
+      const uppy = manager.getUppy();
+      const [uppyFile] = uppy.getFiles();
+      expect(uppyFile).toBeDefined();
+
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+      (manager as any).publicIdByFileId.set(uppyFile.id, "pub-404");
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+
+      uppy.emit("complete", { successful: [uppyFile], failed: [] });
+      await flushMicrotasks();
+
+      // Only the first poll tick — a non-retryable error must fail fast, not
+      // back off and keep polling toward the (very long) timeout.
+      await vi.advanceTimersByTimeAsync(1_000);
+      await flushMicrotasks();
+
+      expect(client.assets.get).toHaveBeenCalledTimes(1);
+      expect(failedEvents).toHaveLength(1);
+      expect(failedEvents[0].fileId).toBe(uppyFile.id);
+      expect(failedEvents[0].error).toBe(notFoundError);
+      expect(failedEvents[0].error.message).not.toBe("polling-timeout");
     });
   });
 

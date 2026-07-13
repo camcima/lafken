@@ -1,4 +1,4 @@
-import type { LafkenClient } from "@lafken/client";
+import { LafkenApiError, type LafkenClient } from "@lafken/client";
 import Uppy, { type UppyFile } from "@uppy/core";
 import XHRUpload from "@uppy/xhr-upload";
 
@@ -56,7 +56,7 @@ export interface IFileProcessingEventDetail {
 export interface IFileReadyEventDetail {
   fileId: string;
   publicId: string;
-  asset: { state: string; publicId: string };
+  asset: { id: string; state: string; publicId: string };
 }
 
 export type QuarantineKind = "virus" | "moderation" | "invalid_format" | (string & {});
@@ -159,6 +159,14 @@ const DEFAULT_REFRESH_SAFETY_MARGIN_MS = 30_000;
 const DEFAULT_POLLING_INTERVAL_MS = 1_000;
 const DEFAULT_POLLING_MAX_INTERVAL_MS = 10_000;
 const DEFAULT_POLLING_TIMEOUT_MS = 600_000;
+
+/**
+ * HTTP statuses on `assets.get` during polling that are never transient —
+ * retrying them is pointless (wrong/missing id, or no longer authorized).
+ * Polling stops immediately and surfaces the real error instead of masking
+ * it behind a `polling-timeout`.
+ */
+const NON_RETRYABLE_POLL_STATUSES = new Set([401, 403, 404]);
 
 /** Terminal states: polling stops immediately on these. */
 const TERMINAL_STATES = new Set([
@@ -425,7 +433,7 @@ export class LafkenUploadManager extends EventTarget {
   private async handleConfirmedAsset(
     fileId: string,
     publicId: string,
-    asset: { state: string; publicId: string },
+    asset: { id: string; state: string; publicId: string },
   ): Promise<void> {
     const state = asset.state;
 
@@ -475,7 +483,7 @@ export class LafkenUploadManager extends EventTarget {
           detail: { fileId, publicId },
         }),
       );
-      await this.pollUntilTerminal(fileId, publicId);
+      await this.pollUntilTerminal(fileId, publicId, asset.id);
       return;
     }
 
@@ -489,12 +497,21 @@ export class LafkenUploadManager extends EventTarget {
   }
 
   /**
-   * Poll `client.assets.get(publicId)` with exponential backoff until the
+   * Poll `client.assets.get(internalId)` with exponential backoff until the
    * asset reaches a terminal state or the polling timeout elapses.
+   *
+   * `GET /v1/assets/:id` resolves the **internal** id — there is no
+   * publicId-keyed getter — so this must poll with the confirmed asset's
+   * `id`, not its `publicId`. `publicId` is threaded through separately
+   * purely to keep emitting it on the public event payloads.
    *
    * Backoff sequence: pollingIntervalMs, 2×, 4×, … capped at pollingMaxIntervalMs.
    */
-  private async pollUntilTerminal(fileId: string, publicId: string): Promise<void> {
+  private async pollUntilTerminal(
+    fileId: string,
+    publicId: string,
+    internalId: string,
+  ): Promise<void> {
     const startedAt = Date.now();
     let intervalMs = this.pollingIntervalMs;
 
@@ -517,10 +534,20 @@ export class LafkenUploadManager extends EventTarget {
         return;
       }
 
-      let asset: { state: string; publicId: string };
+      let asset: { id: string; state: string; publicId: string };
       try {
-        asset = await this.opts.client.assets.get(publicId);
-      } catch {
+        asset = await this.opts.client.assets.get(internalId);
+      } catch (err) {
+        if (err instanceof LafkenApiError && NON_RETRYABLE_POLL_STATUSES.has(err.status)) {
+          // Not transient — retrying a 401/403/404 is pointless and would
+          // otherwise mask the real cause behind a bogus polling-timeout.
+          this.dispatchEvent(
+            new CustomEvent<IFileFailedEventDetail>("file-failed", {
+              detail: { fileId, error: err },
+            }),
+          );
+          return;
+        }
         // Transient errors — keep polling; the timeout will stop us eventually.
         intervalMs = Math.min(intervalMs * 2, this.pollingMaxIntervalMs);
         continue;
