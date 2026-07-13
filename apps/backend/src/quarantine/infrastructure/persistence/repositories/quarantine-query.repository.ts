@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
+import { QUARANTINED_ASSET_STATES } from "@/assets/domain/value-objects/asset-state.value-object";
 import {
   ListQuarantineInput,
   QuarantinedAssetPage,
@@ -9,12 +10,6 @@ import { DatabaseClient } from "@/shared/infrastructure/persistence/database-cli
 import { computeLastPage } from "@/shared/kernel/domain/pagination";
 
 import { QuarantinedAssetViewDbMapper } from "../mappers/quarantined-asset-view.db-mapper";
-
-const QUARANTINED_STATES = [
-  "quarantined_virus",
-  "quarantined_moderation",
-  "quarantined_invalid_format",
-] as const;
 
 @Injectable()
 export class QuarantineQueryRepository implements QuarantineQueryRepositoryPort {
@@ -31,7 +26,7 @@ export class QuarantineQueryRepository implements QuarantineQueryRepositoryPort 
           ? ["quarantined_moderation"]
           : input.kind === "invalid_format"
             ? ["quarantined_invalid_format"]
-            : [...QUARANTINED_STATES];
+            : [...QUARANTINED_ASSET_STATES];
 
     let countQuery = this.db.connection
       .selectFrom("assets")

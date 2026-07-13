@@ -15,6 +15,17 @@ export const ASSET_STATES = [
 export type AssetState = (typeof ASSET_STATES)[number];
 
 /**
+ * The three quarantine states. Single source of truth for every consumer
+ * that needs "all quarantined assets" (quarantine list, dashboard counts) —
+ * never re-declare this list elsewhere.
+ */
+export const QUARANTINED_ASSET_STATES = [
+  "quarantined_virus",
+  "quarantined_moderation",
+  "quarantined_invalid_format",
+] as const satisfies readonly AssetState[];
+
+/**
  * Storage-key prefix applied when an asset is moved out of imgproxy's reach
  * on quarantine. Previously-issued imgproxy URLs embed the original key, so
  * after the move they 404 — which is exactly what we want for quarantined
