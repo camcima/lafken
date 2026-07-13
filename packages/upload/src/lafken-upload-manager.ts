@@ -375,11 +375,19 @@ export class LafkenUploadManager extends EventTarget {
           let uploadUrl: string = result.uploadUrl;
           let uploadHeaders: Record<string, string> = result.uploadHeaders;
           const expiresAt = new Date(result.expiresAt);
+          const expiresAtMs: number = expiresAt.getTime();
 
           // Pre-flight URL refresh when the signed URL is within the safety
           // margin of expiry. This guards against long idle time between
           // addFiles() and start().
-          if (expiresAt.getTime() - Date.now() < this.refreshSafetyMarginMs) {
+          //
+          // An unparseable expiresAt yields NaN, and every NaN comparison is
+          // false — so the margin check alone would silently *skip* the refresh
+          // and upload against a possibly-dead URL. Treat it as already expired.
+          const needsRefresh: boolean =
+            Number.isNaN(expiresAtMs) || expiresAtMs - Date.now() < this.refreshSafetyMarginMs;
+
+          if (needsRefresh) {
             try {
               const refreshed = await this.opts.client.assets.refreshUploadUrl(result.publicId);
               // Same guard as above, after the second awaitable in this path.

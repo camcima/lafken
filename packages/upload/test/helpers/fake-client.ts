@@ -13,6 +13,11 @@ export interface IFakeClientOptions {
    */
   initialExpiresInMs?: number;
   /**
+   * Verbatim `expiresAt` for the createUploadIntent response, bypassing
+   * `initialExpiresInMs`. Use it to simulate a malformed/unparseable value.
+   */
+  initialExpiresAtRaw?: string;
+  /**
    * How far in the future (ms from now) expiresAt should be on the
    * refreshUploadUrl response. Default: 3_600_000 (1 hour).
    */
@@ -77,7 +82,8 @@ export function fakeClientFor(opts: IFakeClientOptions = {}): IFakeClient {
             protocol === "tus"
               ? { "Tus-Resumable": "1.0.0" }
               : { "x-goog-content-length-range": "0,10485760" },
-          expiresAt: new Date(Date.now() + initialExpiresInMs).toISOString(),
+          expiresAt:
+            opts.initialExpiresAtRaw ?? new Date(Date.now() + initialExpiresInMs).toISOString(),
         };
         createUploadIntentCalls.push({ input, response });
         return response;
