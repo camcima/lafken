@@ -196,13 +196,13 @@ describe("AssetDetailPage", () => {
     expect(screen.getByRole("button", { name: /retry processing/i })).toBeInTheDocument();
   });
 
-  it("calls the SDK retryProcessing when the retry button is clicked", async () => {
+  it("calls the SDK retryProcessing with the asset's internal id when the retry button is clicked", async () => {
     mockAsset = withState("processing_failed");
     renderPage();
     const button = screen.getByRole("button", { name: /retry processing/i });
     await userEvent.click(button);
     expect(mockRetryProcessing).toHaveBeenCalledTimes(1);
-    expect(mockRetryProcessing).toHaveBeenCalledWith(TEST_ASSET.publicId);
+    expect(mockRetryProcessing).toHaveBeenCalledWith(TEST_ASSET.id);
   });
 
   it("renders system preset rows in the PresetsCard", () => {

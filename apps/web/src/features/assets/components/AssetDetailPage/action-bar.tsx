@@ -67,7 +67,7 @@ export function ActionBar({ asset, onCopy, onToast }: IActionBarProps): React.JS
     setIsRetrying(true);
     try {
       const client = getLafkenClient();
-      await client.assets.retryProcessing(asset.publicId);
+      await client.assets.retryProcessing(asset.id);
       onToast(t("pages.assetDetail.actions.toasts.retryStarted"));
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: assetsKeys.detail(asset.id) }),

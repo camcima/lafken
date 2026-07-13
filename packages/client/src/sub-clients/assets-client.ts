@@ -22,8 +22,8 @@ export class AssetsClient {
     return this.t.request<PaginatedResult<AssetResponseDTO>>("GET", this.buildListUrl(q));
   }
 
-  get(publicId: string): Promise<AssetResponseDTO> {
-    return this.t.request<AssetResponseDTO>("GET", `/v1/assets/${encodeURIComponent(publicId)}`);
+  get(id: string): Promise<AssetResponseDTO> {
+    return this.t.request<AssetResponseDTO>("GET", `/v1/assets/${encodeURIComponent(id)}`);
   }
 
   createUploadIntent(input: CreateUploadIntentRequestDTO): Promise<CreateUploadIntentResponseDTO> {
@@ -84,10 +84,10 @@ export class AssetsClient {
     );
   }
 
-  retryProcessing(publicId: string): Promise<void> {
+  retryProcessing(id: string): Promise<void> {
     return this.t.request<void>(
       "POST",
-      `/v1/assets/${encodeURIComponent(publicId)}/retry-processing`,
+      `/v1/assets/${encodeURIComponent(id)}/retry-processing`,
       {},
     );
   }
