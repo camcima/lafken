@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { UploadIntentWriteRepository } from "@/assets/infrastructure/persistence/repositories/upload-intent-write.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
@@ -149,53 +149,5 @@ describe("UploadIntentWriteRepository", () => {
     expect(found).not.toBeNull();
     expect(found!.props.storageKey).toBe("uploads/find-me.jpg");
     expect(found!.props.consumedAt).toBeNull();
-  });
-
-  it("markConsumed preserves the original consumed_at on a repeated call", async () => {
-    const futureExpiry = new Date(Date.now() + 3600 * 1000);
-    await repository.insert({
-      publicId: NIL_UUID,
-      namespaceId,
-      policyVersionId,
-      storageBindingId: bindingId,
-      storageKey: "uploads/consume-me.jpg",
-      declaredMimeType: "image/jpeg",
-      declaredSizeBytes: 512n,
-      uploadUrl: "https://storage.example.com/signed",
-      uploadUrlExpiresAt: futureExpiry,
-      createdBy: null,
-    });
-
-    // markConsumed takes no now/Clock argument, so this fakes the system
-    // clock and advances it between the two calls — a re-consume that
-    // blindly rewrote consumed_at would produce a visibly different
-    // timestamp instead of only coincidentally matching the first call's.
-    vi.useFakeTimers({ toFake: ["Date"] });
-    try {
-      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
-      await repository.markConsumed(NIL_UUID);
-
-      const firstRow = await db.connection
-        .selectFrom("upload_intents")
-        .selectAll()
-        .where("public_id", "=", NIL_UUID)
-        .executeTakeFirstOrThrow();
-      const firstConsumedAt = (firstRow as { consumed_at: Date | null }).consumed_at;
-      expect(firstConsumedAt).not.toBeNull();
-
-      vi.setSystemTime(new Date("2026-01-01T01:00:00.000Z"));
-      await repository.markConsumed(NIL_UUID);
-
-      const secondRow = await db.connection
-        .selectFrom("upload_intents")
-        .selectAll()
-        .where("public_id", "=", NIL_UUID)
-        .executeTakeFirstOrThrow();
-      const secondConsumedAt = (secondRow as { consumed_at: Date | null }).consumed_at;
-      expect(secondConsumedAt).not.toBeNull();
-      expect(secondConsumedAt!.getTime()).toBe(firstConsumedAt!.getTime());
-    } finally {
-      vi.useRealTimers();
-    }
   });
 });

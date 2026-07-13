@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { beforeEach, expect, it, vi } from "vitest";
+import { beforeEach, expect, it } from "vitest";
 
 import type {
   IInsertUploadIntentInput,
@@ -15,6 +15,15 @@ export interface IUploadIntentWriteContractContext {
    * publicId defaults to a fresh random UUID per call.
    */
   makeInsertInput(overrides?: Partial<IInsertUploadIntentInput>): IInsertUploadIntentInput;
+  /**
+   * Test-only: forces the intent at `publicId` into the consumed state,
+   * bypassing the port. The port intentionally has no consume operation —
+   * in production, consuming an intent is an atomic side effect of
+   * AssetWriteRepository.createUploadedAsset (the CAS that also creates the
+   * asset row), never a standalone step. This exists purely to set up
+   * "already consumed" fixtures for the cases below.
+   */
+  consumeForTest(publicId: string): Promise<void>;
 }
 
 const HOUR_MS = 3_600_000;
@@ -26,13 +35,6 @@ const SWEEP_OLDER_MINUTES = 30;
 const SWEEP_WITHIN_GRACE_MINUTES = 2;
 const SWEEP_CONSUMED_MINUTES = 45;
 const SWEEP_EXPIRED_MINUTES = 90;
-/** Fixed instant used as the faked system clock's starting point for the
- *  re-consume test — arbitrary, just needs to be a valid Date. */
-const FIRST_CONSUME_INSTANT = new Date("2026-01-01T00:00:00.000Z");
-/** How far the faked clock is advanced between the two markConsumed calls so
- *  a buggy re-consume (one that blindly rewrites consumedAt) produces a
- *  timestamp that visibly differs from the first call's. */
-const CLOCK_ADVANCE_MS = HOUR_MS;
 /** Fixed instant used for the markExpired boundary case — arbitrary, just
  *  needs to be a valid Date shared by uploadUrlExpiresAt/now/expiresBefore. */
 const BOUNDARY_INSTANT = new Date("2026-02-01T00:00:00.000Z");
@@ -71,36 +73,6 @@ export function runUploadIntentWriteContract(
     expect(await ctx.repo.findByPublicId(randomUUID())).toBeNull();
   });
 
-  it("markConsumed preserves the original consumedAt on a repeated call", async () => {
-    const input = ctx.makeInsertInput();
-    await ctx.repo.insert(input);
-
-    // Neither implementation's markConsumed takes a `now`/Clock argument, so
-    // this case can't inject one. Per CLAUDE.md's adapter-test rule, fake the
-    // system clock instead and advance it between the two calls — a buggy
-    // re-consume that blindly rewrites consumedAt with a fresh timestamp
-    // would then produce a visibly different value, instead of only
-    // coincidentally matching the first call's timestamp.
-    vi.useFakeTimers({ toFake: ["Date"] });
-    try {
-      vi.setSystemTime(FIRST_CONSUME_INSTANT);
-      await ctx.repo.markConsumed(input.publicId);
-      const afterFirst = await ctx.repo.findByPublicId(input.publicId);
-      expect(afterFirst!.props.consumedAt).not.toBeNull();
-
-      vi.setSystemTime(new Date(FIRST_CONSUME_INSTANT.getTime() + CLOCK_ADVANCE_MS));
-      await ctx.repo.markConsumed(input.publicId);
-      const afterSecond = await ctx.repo.findByPublicId(input.publicId);
-
-      expect(afterSecond!.props.consumedAt).not.toBeNull();
-      expect(afterSecond!.props.consumedAt!.getTime()).toBe(
-        afterFirst!.props.consumedAt!.getTime(),
-      );
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
   it("markExpired expires a wall-clock-expired intent once and returns false on repeat", async () => {
     const now = new Date();
     const input = ctx.makeInsertInput({
@@ -126,7 +98,7 @@ export function runUploadIntentWriteContract(
       uploadUrlExpiresAt: new Date(now.getTime() - HOUR_MS),
     });
     await ctx.repo.insert(input);
-    await ctx.repo.markConsumed(input.publicId);
+    await ctx.consumeForTest(input.publicId);
 
     expect(
       await ctx.repo.markExpired({
@@ -195,7 +167,7 @@ export function runUploadIntentWriteContract(
   it("refreshUploadUrl returns false for a consumed intent", async () => {
     const input = ctx.makeInsertInput();
     await ctx.repo.insert(input);
-    await ctx.repo.markConsumed(input.publicId);
+    await ctx.consumeForTest(input.publicId);
 
     const refreshed = await ctx.repo.refreshUploadUrl({
       publicId: input.publicId,
@@ -247,7 +219,7 @@ export function runUploadIntentWriteContract(
     await ctx.repo.insert(withinGrace);
     await ctx.repo.insert(live);
     await ctx.repo.insert(consumed);
-    await ctx.repo.markConsumed(consumed.publicId);
+    await ctx.consumeForTest(consumed.publicId);
 
     const sweep = await ctx.repo.findOrphanedForSweep({ now, graceMs, limit: 10 });
     expect(sweep.map((i) => i.props.publicId)).toEqual([oldest.publicId, older.publicId]);

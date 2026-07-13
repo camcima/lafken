@@ -90,10 +90,6 @@ export function buildIntentRepoStub(opts: IIntentRepoStubOptions = {}): IIntentR
         return Promise.resolve(null);
       },
 
-      markConsumed(): Promise<void> {
-        return Promise.resolve();
-      },
-
       refreshUploadUrl(): Promise<boolean> {
         return Promise.resolve(false);
       },

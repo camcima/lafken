@@ -89,10 +89,6 @@ export function buildIntentRepoStub(opts: IIntentStubOptions = {}): IIntentRepoS
         throw new Error("not implemented in stub");
       },
 
-      markConsumed(): Promise<void> {
-        return Promise.resolve();
-      },
-
       findOrphanedForSweep(): Promise<UploadIntent[]> {
         return Promise.resolve([]);
       },

@@ -50,15 +50,6 @@ export class UploadIntentWriteRepository implements UploadIntentWriteRepositoryP
     return row ? UploadIntentDbMapper.toDomain(row as Record<string, any>) : null;
   }
 
-  async markConsumed(publicId: string): Promise<void> {
-    await this.db.connection
-      .updateTable("upload_intents")
-      .set({ consumed_at: new Date() })
-      .where("public_id", "=", publicId)
-      .where("consumed_at", "is", null)
-      .execute();
-  }
-
   async findOrphanedForSweep(input: IFindOrphanedForSweepInput): Promise<UploadIntent[]> {
     const cutoff = new Date(input.now.getTime() - input.graceMs);
     const rows = await this.db.connection

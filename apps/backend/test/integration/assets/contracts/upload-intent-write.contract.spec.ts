@@ -39,16 +39,21 @@ function makeInputFactory(ids: {
 }
 
 describe("UploadIntentWriteRepositoryPort contract — in-memory fake", () => {
-  runUploadIntentWriteContract(() =>
-    Promise.resolve<IUploadIntentWriteContractContext>({
-      repo: new FakeUploadIntentWriteRepository(),
+  runUploadIntentWriteContract(() => {
+    const repo = new FakeUploadIntentWriteRepository();
+    return Promise.resolve<IUploadIntentWriteContractContext>({
+      repo,
       makeInsertInput: makeInputFactory({
         namespaceId: NIL_UUID,
         policyVersionId: NIL_UUID,
         storageBindingId: NIL_UUID,
       }),
-    }),
-  );
+      consumeForTest: (publicId) => {
+        repo.consumeSeeded(publicId, new Date());
+        return Promise.resolve();
+      },
+    });
+  });
 });
 
 describe("UploadIntentWriteRepositoryPort contract — Postgres repository", () => {
@@ -67,6 +72,15 @@ describe("UploadIntentWriteRepositoryPort contract — Postgres repository", () 
         policyVersionId: seeded.policyVersionId,
         storageBindingId: seeded.bindingId,
       }),
+      // Test-only bypass of the port (see IUploadIntentWriteContractContext
+      // doc comment) — direct SQL, not the repository under test.
+      consumeForTest: async (publicId: string): Promise<void> => {
+        await dbCtx.db.connection
+          .updateTable("upload_intents")
+          .set({ consumed_at: new Date() })
+          .where("public_id", "=", publicId)
+          .execute();
+      },
     };
   });
 });
