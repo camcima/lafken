@@ -581,4 +581,29 @@ describe("LafkenUploadManager", () => {
       });
     });
   });
+
+  it("dispatches file-failed when Uppy reports upload-error for a file", async () => {
+    const client = makeClientMock();
+    const manager = new LafkenUploadManager({
+      client: client as never,
+      namespaceSlug: "my-namespace",
+    });
+
+    const failures: IFileFailedEventDetail[] = [];
+    manager.addEventListener("file-failed", (evt) => {
+      failures.push((evt as CustomEvent<IFileFailedEventDetail>).detail);
+    });
+
+    manager.addFiles([new File(["x"], "x.png", { type: "image/png" })]);
+    const uppy = manager.getUppy();
+    const [uppyFile] = uppy.getFiles();
+    expect(uppyFile).toBeDefined();
+
+    uppy.emit("upload-error", uppyFile, { name: "HTTPError", message: "403 Forbidden" });
+    await flushMicrotasks();
+
+    expect(failures).toHaveLength(1);
+    expect(failures[0].fileId).toBe(uppyFile.id);
+    expect(failures[0].error.message).toBe("403 Forbidden");
+  });
 });

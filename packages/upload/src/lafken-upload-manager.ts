@@ -218,6 +218,19 @@ export class LafkenUploadManager extends EventTarget {
       );
     });
 
+    // A transfer-level failure (expired signed URL → 403, network error, CORS)
+    // otherwise leaves the tile stuck: Uppy's `complete` event lists the file
+    // under `failed`, which confirmCompletedFiles never touches. Surface it as
+    // `file-failed` so consumers can mark the tile as errored (F-K2).
+    this.uppy.on("upload-error", (file, err) => {
+      if (!file) return;
+      this.dispatchEvent(
+        new CustomEvent<IFileFailedEventDetail>("file-failed", {
+          detail: { fileId: file.id, error: new Error(err.message || "upload-error") },
+        }),
+      );
+    });
+
     this.uppy.use(XHRUpload, {
       endpoint: "placeholder",
       method: "PUT",
