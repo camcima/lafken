@@ -16,6 +16,7 @@ export class DashboardCountsRepository implements DashboardCountsRepositoryPort 
       queueDepthRow,
       quarantineRow,
       legalHoldsRow,
+      assetsUnderLegalHoldRow,
       failedProcessingRow,
       namespacesRow,
     ] = await Promise.all([
@@ -51,6 +52,12 @@ export class DashboardCountsRepository implements DashboardCountsRepositoryPort 
       this.db.connection
         .selectFrom("assets")
         .select((eb) => eb.fn.countAll<string>().as("count"))
+        .where("legal_hold", "=", true)
+        .executeTakeFirstOrThrow(),
+
+      this.db.connection
+        .selectFrom("assets")
+        .select((eb) => eb.fn.countAll<string>().as("count"))
         .where("state", "=", "processing_failed")
         .executeTakeFirstOrThrow(),
 
@@ -67,6 +74,7 @@ export class DashboardCountsRepository implements DashboardCountsRepositoryPort 
       queueDepth: Number(queueDepthRow.count),
       quarantine: Number(quarantineRow.count),
       legalHolds: Number(legalHoldsRow.count),
+      assetsUnderLegalHold: Number(assetsUnderLegalHoldRow.count),
       failedProcessing: Number(failedProcessingRow.count),
       namespaces: Number(namespacesRow.count),
     };

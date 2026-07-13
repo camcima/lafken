@@ -40,6 +40,7 @@ describe("[E2E] Dashboard controller", () => {
         queueDepth: 0,
         quarantine: 0,
         legalHolds: 0,
+        assetsUnderLegalHold: 0,
         failedProcessing: 0,
         namespaces: 0,
       });

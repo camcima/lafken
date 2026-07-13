@@ -12,6 +12,7 @@ describe("DashboardOverviewResponseMapper", () => {
       queueDepth: 1,
       quarantine: 3,
       legalHolds: 0,
+      assetsUnderLegalHold: 0,
       failedProcessing: 1,
       namespaces: 5,
     },
