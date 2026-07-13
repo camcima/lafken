@@ -83,8 +83,15 @@ export class ReclaimStaleProcessingJobsUseCase {
       // Only transition the asset if it actually got into 'processing'. If the
       // worker died before the 'uploaded -> processing' transition ran, the
       // asset is still 'uploaded' and the only legal move from there is via
-      // the normal pipeline. Just mark the job failed so it stops being
-      // retried.
+      // the normal pipeline — so we just mark the job failed.
+      //
+      // DECISION (F-P10, v1.0): an asset left at 'uploaded' with a failed job
+      // has no self-service recovery route — the retry endpoint requires
+      // 'processing_failed'. Accepted for v1.0 because the window (worker
+      // death between claim and first transition, times max retries) is tiny;
+      // the recovery is an operator re-enqueue via restartProcessing-style
+      // tooling, tracked as follow-up work. The warn log below is the
+      // operational signal.
       if (loaded.asset.props.state === "processing") {
         const transitioned: boolean = await this.assets.transitionAsset({
           assetId: job.props.assetId,

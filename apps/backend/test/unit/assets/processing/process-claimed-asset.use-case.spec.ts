@@ -363,6 +363,24 @@ describe("ProcessClaimedAssetUseCase", () => {
       useCase.execute({ assetId: TEST_UUIDS.asset1, workerId: "worker-a", attemptNumber: 1 }),
     ).rejects.toMatchObject({ name: "TransientProcessingError", step: "transition_state" });
   });
+
+  it("transitions the asset to processing_failed when the storage binding is missing", async () => {
+    // FakeStorageBindingRepository.findById matches on id — give it a binding
+    // whose id differs from the asset's storageBindingId.
+    storageBindings.binding = makeStorageBinding({ id: "99999999-9999-9999-9999-999999999999" });
+
+    const result = await useCase.execute({
+      assetId: TEST_UUIDS.asset1,
+      workerId: "worker-a",
+      attemptNumber: 1,
+    });
+
+    expect(result.kind).toBe("failed");
+    const terminal = assetRepo.transitions.at(-1);
+    expect(terminal?.toState).toBe("processing_failed");
+    expect(terminal?.reason).toBe("storage_binding_not_found");
+    expect(jobRepo.failed).toBe(true);
+  });
 });
 
 class InMemoryAssetProcessingRepository extends AssetProcessingRepositoryPort {

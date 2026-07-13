@@ -149,8 +149,33 @@ export class ProcessClaimedAssetUseCase {
     if (!binding) {
       this.logger.warn(
         { assetId: asset.props.id, storageBindingId: asset.props.storageBindingId },
-        "storage binding not found; marking job failed",
+        "storage binding not found; marking asset processing_failed and job failed",
       );
+      // F-P10: without this transition the asset strands in 'processing'
+      // forever — the retry endpoint requires 'processing_failed'.
+      const transitioned: boolean = await this.runStep("transition_state", () =>
+        this.assetRepo.transitionAsset({
+          assetId: asset.props.id,
+          fromState: currentState,
+          toState: "processing_failed",
+          reason: "storage_binding_not_found",
+          metadata: makeTransitionMetadata({
+            workerId: input.workerId,
+            attemptNumber: input.attemptNumber,
+            reasonCode: "storage_binding_not_found",
+          }),
+          occurredBy: this.workerActor(input.workerId),
+          now: new Date(),
+        }),
+      );
+      if (transitioned) {
+        this.metrics.recordProcessingTerminalState({ state: "processing_failed" });
+      } else {
+        this.logger.warn(
+          { assetId: asset.props.id },
+          "processing_failed transition lost race on missing binding",
+        );
+      }
       await this.jobRepo.markFailed({
         assetId: asset.props.id,
         workerId: input.workerId,
