@@ -463,7 +463,7 @@ export class LafkenUploadManager extends EventTarget {
         // unsubscribing would otherwise see events for a dead batch.
         if (this.epoch !== epoch) return;
 
-        await this.handleConfirmedAsset(file.id, publicId, confirmed);
+        await this.handleConfirmedAsset(file.id, publicId, confirmed, epoch);
       } catch (err) {
         if (this.epoch !== epoch) return;
         this.dispatchEvent(
@@ -481,11 +481,18 @@ export class LafkenUploadManager extends EventTarget {
   /**
    * Branch on the confirmed asset's state and emit the appropriate lifecycle
    * event. For assets in `processing`, also initiates the polling loop.
+   *
+   * `epoch` is threaded in from the caller and must NOT be re-read from
+   * `this.epoch`: `dispatchEvent` runs listeners synchronously, so a consumer
+   * cancelling from inside its own `file-processing` handler bumps the epoch
+   * before the polling loop below is even entered. Re-reading the field there
+   * would capture the already-bumped value and poll a cancelled batch.
    */
   private async handleConfirmedAsset(
     fileId: string,
     publicId: string,
     asset: { id: string; state: string; publicId: string },
+    epoch: number,
   ): Promise<void> {
     const state = asset.state;
 
@@ -535,7 +542,7 @@ export class LafkenUploadManager extends EventTarget {
           detail: { fileId, publicId },
         }),
       );
-      await this.pollUntilTerminal(fileId, publicId, asset.id);
+      await this.pollUntilTerminal(fileId, publicId, asset.id, epoch);
       return;
     }
 
@@ -558,13 +565,17 @@ export class LafkenUploadManager extends EventTarget {
    * purely to keep emitting it on the public event payloads.
    *
    * Backoff sequence: pollingIntervalMs, 2×, 4×, … capped at pollingMaxIntervalMs.
+   *
+   * `epoch` is threaded in from the root of the async chain (see
+   * `handleConfirmedAsset`) — deliberately never re-read from `this.epoch` on
+   * entry, which would let a re-entrant `cancelAll()` be captured as "live".
    */
   private async pollUntilTerminal(
     fileId: string,
     publicId: string,
     internalId: string,
+    epoch: number,
   ): Promise<void> {
-    const epoch = this.epoch;
     const startedAt = Date.now();
     let intervalMs = this.pollingIntervalMs;
 
