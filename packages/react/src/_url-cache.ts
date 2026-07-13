@@ -47,7 +47,11 @@ function doFetch(
   key: string,
 ): Promise<string> {
   const promise: Promise<string> = client.assets.getPreviewUrl({ publicId, preset }).then((dto) => {
-    const expiresAt = Date.parse(dto.expiresAt);
+    const parsed: number = Date.parse(dto.expiresAt);
+    // An unparseable expiresAt must never poison the entry as permanently
+    // fresh (NaN comparisons are always false). Treat it as already expired:
+    // callers still get the URL, but the next access refetches.
+    const expiresAt: number = Number.isNaN(parsed) ? 0 : parsed;
     // Write the resolved entry (clearing the refreshPromise)
     cache.set(key, { url: dto.url, expiresAt });
     cacheUpdateBus.dispatchEvent(new CustomEvent("cache-updated", { detail: { key } }));
@@ -56,14 +60,28 @@ function doFetch(
   return promise;
 }
 
+/**
+ * Drops expired entries that have no refresh in flight. Runs on every cache
+ * access so the map cannot grow without bound (F-K5). Entries with an active
+ * refreshPromise are protected — including initial-fetch placeholders.
+ */
+function evictExpiredEntries(now: number): void {
+  for (const [entryKey, entry] of cache) {
+    if (entry.refreshPromise === undefined && entry.expiresAt <= now) {
+      cache.delete(entryKey);
+    }
+  }
+}
+
 export function _getCachedPresetUrl(
   client: LafkenClient,
   publicId: string,
   preset: string,
 ): Promise<string> {
   const key: string = `${publicId}|${preset}`;
-  const entry: ICacheEntry | undefined = cache.get(key);
   const now = Date.now();
+  evictExpiredEntries(now);
+  const entry: ICacheEntry | undefined = cache.get(key);
 
   // No entry at all — start initial fetch, deduplicate concurrent callers
   if (entry === undefined) {
@@ -126,4 +144,9 @@ export function _evictPresetUrl(publicId: string, preset: string): void {
 /** Test-only — reset the dedup cache between tests. */
 export function _resetPresetUrlCache(): void {
   cache.clear();
+}
+
+/** Test-only — current number of cache entries (for eviction assertions). */
+export function _presetUrlCacheSize(): number {
+  return cache.size;
 }

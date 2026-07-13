@@ -1,7 +1,7 @@
 import type { LafkenClient } from "@lafken/client";
 import { useContext, useEffect, useState } from "react";
 
-import { _getCachedPresetUrl } from "./_url-cache";
+import { _getCachedPresetUrl, cacheUpdateBus } from "./_url-cache";
 import { _LafkenClientContext } from "./lafken-provider";
 
 export interface IUseAssetPresetUrlResult {
@@ -73,6 +73,25 @@ export function useAssetPresetUrl(
       cancelled = true;
     };
   }, [client, publicId, preset, key]);
+
+  // Subscribe to background-refresh completions so the returned URL stays
+  // valid past its TTL — the same pattern <AssetImage> uses (F-K5).
+  useEffect(() => {
+    const onCacheUpdated = (ev: Event): void => {
+      const eventKey: string = (ev as CustomEvent<{ key: string }>).detail.key;
+      if (eventKey !== key) return;
+      // Re-read from the cache (synchronous resolve for a fresh entry).
+      void _getCachedPresetUrl(client, publicId, preset).then((resolved: string) => {
+        setState((prev) =>
+          prev.key === key ? { key, url: resolved, isLoading: false, error: null } : prev,
+        );
+      });
+    };
+    cacheUpdateBus.addEventListener("cache-updated", onCacheUpdated);
+    return () => {
+      cacheUpdateBus.removeEventListener("cache-updated", onCacheUpdated);
+    };
+  }, [client, key, publicId, preset]);
 
   return { url: visibleState.url, isLoading: visibleState.isLoading, error: visibleState.error };
 }
