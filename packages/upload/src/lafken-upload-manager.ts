@@ -195,7 +195,19 @@ export class LafkenUploadManager extends EventTarget {
     ReturnType<typeof setTimeout>,
     (slept: boolean) => void
   >();
-  private cancelled = false;
+  /**
+   * Monotonic cancellation epoch, bumped by every `cancelAll()`. Async
+   * coroutines capture it on entry and re-check it after every `await`; a
+   * mismatch means the batch they belong to was cancelled while they were
+   * suspended, so they must unwind without touching Uppy, the id maps, or the
+   * event target.
+   *
+   * A resettable boolean cannot do this job: `start()` would clear it, so a
+   * coroutine suspended across a `cancelAll()` → `start()` sequence would
+   * resume with the flag back to `false` and sail past every guard. An epoch
+   * never returns to a previous value, so a stale coroutine stays stale.
+   */
+  private epoch = 0;
 
   constructor(private readonly opts: ILafkenUploadManagerOptions) {
     super();
@@ -290,7 +302,8 @@ export class LafkenUploadManager extends EventTarget {
   }
 
   async start(): Promise<void> {
-    this.cancelled = false;
+    // Nothing to reset: cancellation is tracked by a monotonic epoch, so a new
+    // batch cannot un-cancel coroutines still suspended from a previous one.
     await this.uppy.upload();
   }
 
@@ -313,8 +326,15 @@ export class LafkenUploadManager extends EventTarget {
     this.uppy.setOptions({ restrictions: toUppyRestrictions(restrictions) });
   }
 
+  /**
+   * Tears down the current batch. Stays fully synchronous on purpose: the
+   * `resolve()` calls below only schedule microtasks, so no continuation can
+   * run — and therefore no new sleep can be registered — before
+   * `pendingSleeps.clear()` executes.
+   */
   cancelAll(): void {
-    this.cancelled = true;
+    // Invalidate every coroutine that captured the previous epoch.
+    this.epoch++;
     // Clear all pending polling sleeps and resolve them with `false` so
     // pollUntilTerminal loops exit promptly instead of leaking forever-pending
     // promises (F-K5).
@@ -334,6 +354,7 @@ export class LafkenUploadManager extends EventTarget {
   }
 
   private async runPreProcessing(fileIds: string[]): Promise<void> {
+    const epoch = this.epoch;
     const failedIds: string[] = [];
     await Promise.all(
       fileIds.map(async (fileId) => {
@@ -349,7 +370,7 @@ export class LafkenUploadManager extends EventTarget {
           // cancelAll() (and a subsequent uppy.destroy()) may have run while
           // the request above was in flight — treat a late resolution as a
           // safe no-op instead of touching a torn-down Uppy instance (F-U2).
-          if (this.cancelled) return;
+          if (this.epoch !== epoch) return;
 
           let uploadUrl: string = result.uploadUrl;
           let uploadHeaders: Record<string, string> = result.uploadHeaders;
@@ -362,11 +383,14 @@ export class LafkenUploadManager extends EventTarget {
             try {
               const refreshed = await this.opts.client.assets.refreshUploadUrl(result.publicId);
               // Same guard as above, after the second awaitable in this path.
-              if (this.cancelled) return;
+              if (this.epoch !== epoch) return;
               uploadUrl = refreshed.uploadUrl;
               uploadHeaders = refreshed.uploadHeaders;
               this.expiresAtByFileId.set(fileId, new Date(refreshed.expiresAt));
             } catch (err) {
+              // The rejection itself may be the teardown's doing (or simply
+              // irrelevant now) — a cancelled batch emits nothing.
+              if (this.epoch !== epoch) return;
               const error = err instanceof Error ? err : new Error(String(err));
               this.dispatchEvent(
                 new CustomEvent<IFileFailedEventDetail>("file-failed", {
@@ -391,6 +415,7 @@ export class LafkenUploadManager extends EventTarget {
             },
           });
         } catch (err) {
+          if (this.epoch !== epoch) return;
           const error = err instanceof Error ? err : new Error(String(err));
           this.dispatchEvent(
             new CustomEvent<IFileFailedEventDetail>("file-failed", {
@@ -401,6 +426,9 @@ export class LafkenUploadManager extends EventTarget {
         }
       }),
     );
+    // `Promise.all` is an await too: the batch may have been torn down while it
+    // was settling, in which case Uppy no longer holds these files at all.
+    if (this.epoch !== epoch) return;
     // Drop failed files from Uppy so the rest of the batch can upload. The
     // consumer's React layer keeps the tile visible by retaining files in
     // "error" state even after they're removed from Uppy.
@@ -412,20 +440,32 @@ export class LafkenUploadManager extends EventTarget {
   private async confirmCompletedFiles(
     successful: ReadonlyArray<UppyFile<AnyMeta, AnyBody>>,
   ): Promise<void> {
+    const epoch = this.epoch;
     for (const file of successful) {
+      // A cancel during a previous iteration (or during its polling) invalidates
+      // the rest of the batch too.
+      if (this.epoch !== epoch) return;
+
       const publicId = this.publicIdByFileId.get(file.id);
       if (!publicId) continue;
       try {
         const dims = await this.dimProbesByFileId.get(file.id);
+        if (this.epoch !== epoch) return;
+
         const merged = {
           ...this.sharedMetadata,
           ...(dims ? { width: dims.width, height: dims.height } : {}),
         };
         const options = Object.keys(merged).length > 0 ? merged : undefined;
         const confirmed = await this.opts.client.assets.confirmUpload(publicId, options);
+        // A confirm settling after teardown must not dispatch lifecycle events:
+        // this is a public EventTarget, and a consumer who cancelled without
+        // unsubscribing would otherwise see events for a dead batch.
+        if (this.epoch !== epoch) return;
 
         await this.handleConfirmedAsset(file.id, publicId, confirmed);
       } catch (err) {
+        if (this.epoch !== epoch) return;
         this.dispatchEvent(
           new CustomEvent<IFileFailedEventDetail>("file-failed", {
             detail: {
@@ -524,15 +564,20 @@ export class LafkenUploadManager extends EventTarget {
     publicId: string,
     internalId: string,
   ): Promise<void> {
+    const epoch = this.epoch;
     const startedAt = Date.now();
     let intervalMs = this.pollingIntervalMs;
 
     while (true) {
-      if (this.cancelled) return;
+      if (this.epoch !== epoch) return;
 
       // Wait for current interval via a cancellable sleep.
       const slept = await this.cancellableSleep(intervalMs);
       if (!slept) return; // cancelled during sleep
+      // The sleep can resolve `true` (its timer fired) and *then* cancelAll()
+      // can land before this continuation runs. Without this re-check, one
+      // authenticated request would still be issued after teardown.
+      if (this.epoch !== epoch) return;
 
       if (Date.now() - startedAt >= this.pollingTimeoutMs) {
         this.dispatchEvent(
@@ -550,6 +595,7 @@ export class LafkenUploadManager extends EventTarget {
       try {
         asset = await this.opts.client.assets.get(internalId);
       } catch (err) {
+        if (this.epoch !== epoch) return;
         if (err instanceof LafkenApiError && NON_RETRYABLE_POLL_STATUSES.has(err.status)) {
           // Not transient — retrying a 401/403/404 is pointless and would
           // otherwise mask the real cause behind a bogus polling-timeout.
@@ -565,7 +611,7 @@ export class LafkenUploadManager extends EventTarget {
         continue;
       }
 
-      if (this.cancelled) return;
+      if (this.epoch !== epoch) return;
 
       const state = asset.state;
 
