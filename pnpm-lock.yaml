@@ -518,11 +518,10 @@ importers:
         version: 5.2.0
 
   packages/client:
-    dependencies:
+    devDependencies:
       '@shared/backend-api':
         specifier: workspace:*
         version: link:../../shared/backend-api
-    devDependencies:
       '@shared/typescript-config':
         specifier: workspace:*
         version: link:../../shared/typescript-config
