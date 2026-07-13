@@ -6,6 +6,7 @@ import { AssetNotInQuarantineError } from "@/assets/domain/errors/asset-not-in-q
 import { AssetUnderLegalHoldError } from "@/assets/domain/errors/asset-under-legal-hold.error";
 import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-query.repository.port";
 import { AssetWriteRepositoryPort } from "@/assets/domain/repositories/asset-write.repository.port";
+import type { AssetState } from "@/assets/domain/value-objects/asset-state.value-object";
 
 export interface IRejectQuarantinedAssetInput {
   publicId: string;
@@ -42,16 +43,25 @@ export class RejectQuarantinedAssetUseCase {
 
     const reason = `rejected_from_quarantine: ${input.note.trim()}`;
 
+    const expectedFromState: AssetState = asset.props.state;
     const updated = await this.assetWriteRepo.transitionState({
       publicId: input.publicId,
       toState: "rejected",
       reason,
       by: input.reviewerId,
       metadata: { note: input.note, decision: "reject" },
+      expectedFromState,
     });
 
     if (!updated) {
-      throw new AssetNotFoundError({ publicId: input.publicId });
+      const current = await this.assetQueryRepo.findByPublicId(input.publicId);
+      if (!current) {
+        throw new AssetNotFoundError({ publicId: input.publicId });
+      }
+      throw new AssetNotInQuarantineError({
+        publicId: input.publicId,
+        currentState: current.props.state,
+      });
     }
     return updated;
   }

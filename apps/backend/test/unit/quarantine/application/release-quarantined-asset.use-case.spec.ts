@@ -102,6 +102,7 @@ describe("ReleaseQuarantinedAssetUseCase", () => {
       toState: "ready",
       by: "reviewer@example.com",
       newStorageKey: ORIGINAL_KEY,
+      expectedFromState: "quarantined_invalid_format",
     });
     expect(writeRepo.transitions[0]?.reason).toContain("released_from_quarantine");
     expect(writeRepo.transitions[0]?.reason).toContain("manual override");
@@ -154,5 +155,16 @@ describe("ReleaseQuarantinedAssetUseCase", () => {
     await expect(
       useCase.execute({ publicId: TEST_UUIDS.asset1, reviewerId: null }),
     ).rejects.toBeInstanceOf(AssetUnderLegalHoldError);
+  });
+
+  it("maps a lost CAS race to AssetNotInQuarantineError instead of a silent overwrite", async () => {
+    // Asset is quarantined at read time, but the fake returns null from
+    // transitionState — the shape of a concurrent reviewer winning the race.
+    queryRepo.seed([makeAsset("quarantined_virus")]);
+
+    await expect(
+      useCase.execute({ publicId: TEST_UUIDS.asset1, reviewerId: "reviewer@example.com" }),
+    ).rejects.toBeInstanceOf(AssetNotInQuarantineError);
+    expect(writeRepo.transitions).toHaveLength(1);
   });
 });

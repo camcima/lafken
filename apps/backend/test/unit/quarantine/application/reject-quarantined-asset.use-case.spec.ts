@@ -72,6 +72,7 @@ describe("RejectQuarantinedAssetUseCase", () => {
       publicId: TEST_UUIDS.asset1,
       toState: "rejected",
       by: "reviewer@example.com",
+      expectedFromState: "quarantined_moderation",
     });
     expect(writeRepo.transitions[0]?.metadata).toMatchObject({
       decision: "reject",
@@ -105,5 +106,17 @@ describe("RejectQuarantinedAssetUseCase", () => {
         note: "should not transition",
       }),
     ).rejects.toBeInstanceOf(AssetUnderLegalHoldError);
+  });
+
+  it("maps a lost CAS race to AssetNotInQuarantineError instead of a silent overwrite", async () => {
+    queryRepo.seed([makeAsset("quarantined_moderation")]);
+
+    await expect(
+      useCase.execute({
+        publicId: TEST_UUIDS.asset1,
+        reviewerId: "reviewer@example.com",
+        note: "duplicate decision from a second tab",
+      }),
+    ).rejects.toBeInstanceOf(AssetNotInQuarantineError);
   });
 });

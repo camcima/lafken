@@ -144,6 +144,9 @@ export class AssetWriteRepository implements AssetWriteRepositoryPort {
 
       const fromState: string = (existing as { state: string }).state;
       const assetId: string = (existing as { id: string }).id;
+      if (input.expectedFromState !== undefined && fromState !== input.expectedFromState) {
+        return null;
+      }
       const now = new Date();
 
       const setExpression: Record<string, unknown> = {
@@ -154,12 +157,15 @@ export class AssetWriteRepository implements AssetWriteRepositoryPort {
       if (input.newStorageKey !== undefined) {
         setExpression.storage_key = input.newStorageKey;
       }
-      const updated = await tx
-        .updateTable("assets")
-        .set(setExpression)
-        .where("id", "=", assetId)
-        .returningAll()
-        .executeTakeFirstOrThrow();
+      let updateQuery = tx.updateTable("assets").set(setExpression).where("id", "=", assetId);
+      if (input.expectedFromState !== undefined) {
+        // The CAS lives in the UPDATE's WHERE clause: under READ COMMITTED a
+        // concurrent transition commits first, this UPDATE re-evaluates the
+        // predicate against the new row version and matches zero rows.
+        updateQuery = updateQuery.where("state", "=", input.expectedFromState);
+      }
+      const updated = await updateQuery.returningAll().executeTakeFirst();
+      if (!updated) return null;
 
       await tx
         .insertInto("asset_state_transitions")

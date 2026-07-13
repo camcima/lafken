@@ -8,6 +8,7 @@ import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-que
 import { AssetWriteRepositoryPort } from "@/assets/domain/repositories/asset-write.repository.port";
 import { AssetStoragePort } from "@/assets/domain/services/asset-storage.service.port";
 import {
+  type AssetState,
   fromQuarantinedStorageKey,
   QUARANTINE_KEY_PREFIX,
 } from "@/assets/domain/value-objects/asset-state.value-object";
@@ -73,6 +74,7 @@ export class ReleaseQuarantinedAssetUseCase {
       });
     }
 
+    const expectedFromState: AssetState = asset.props.state;
     const updated = await this.assetWriteRepo.transitionState({
       publicId: input.publicId,
       toState: "ready",
@@ -80,10 +82,20 @@ export class ReleaseQuarantinedAssetUseCase {
       by: input.reviewerId,
       metadata: input.note ? { note: input.note, decision: "release" } : { decision: "release" },
       newStorageKey,
+      expectedFromState,
     });
 
     if (!updated) {
-      throw new AssetNotFoundError({ publicId: input.publicId });
+      // Not found, or a concurrent reviewer transitioned the asset first
+      // (lost CAS). Re-read to report the truth.
+      const current = await this.assetQueryRepo.findByPublicId(input.publicId);
+      if (!current) {
+        throw new AssetNotFoundError({ publicId: input.publicId });
+      }
+      throw new AssetNotInQuarantineError({
+        publicId: input.publicId,
+        currentState: current.props.state,
+      });
     }
     return updated;
   }

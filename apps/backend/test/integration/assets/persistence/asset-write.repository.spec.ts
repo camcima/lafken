@@ -293,4 +293,81 @@ describe("AssetWriteRepository", () => {
     const assets = await db.connection.selectFrom("assets").selectAll().execute();
     expect(assets).toHaveLength(0);
   });
+
+  async function seedAssetInState(state: string): Promise<{ id: string; publicId: string }> {
+    const row = await db.connection
+      .insertInto("assets")
+      .values({
+        namespace_id: namespaceId,
+        policy_version_id: policyVersionId,
+        storage_binding_id: bindingId,
+        storage_key: "uploads/cas-test.jpg",
+        state,
+        declared_mime_type: "image/jpeg",
+        size_bytes: 4096n,
+        effective_max_size_bytes: 52_428_800n,
+        effective_url_ttl: 3600,
+      })
+      .returning(["id", "public_id"])
+      .executeTakeFirstOrThrow();
+    return { id: (row as { id: string }).id, publicId: (row as { public_id: string }).public_id };
+  }
+
+  it("transitionState applies the transition when expectedFromState matches", async () => {
+    const seeded = await seedAssetInState("quarantined_virus");
+
+    const updated = await repository.transitionState({
+      publicId: seeded.publicId,
+      toState: "ready",
+      reason: "released_from_quarantine",
+      by: "reviewer@latam.com",
+      expectedFromState: "quarantined_virus",
+    });
+
+    expect(updated).not.toBeNull();
+    expect(updated?.props.state).toBe("ready");
+
+    const dbRow = await db.connection
+      .selectFrom("assets")
+      .select(["state"])
+      .where("id", "=", seeded.id)
+      .executeTakeFirstOrThrow();
+    expect((dbRow as { state: string }).state).toBe("ready");
+
+    const transitions = await db.connection
+      .selectFrom("asset_state_transitions")
+      .select(["from_state", "to_state"])
+      .where("asset_id", "=", seeded.id)
+      .execute();
+    expect(transitions).toHaveLength(1);
+    expect(transitions[0]).toMatchObject({ from_state: "quarantined_virus", to_state: "ready" });
+  });
+
+  it("transitionState returns null and writes nothing when expectedFromState does not match", async () => {
+    const seeded = await seedAssetInState("ready");
+
+    const updated = await repository.transitionState({
+      publicId: seeded.publicId,
+      toState: "rejected",
+      reason: "rejected_from_quarantine: stale reviewer tab",
+      by: "reviewer@latam.com",
+      expectedFromState: "quarantined_virus",
+    });
+
+    expect(updated).toBeNull();
+
+    const dbRow = await db.connection
+      .selectFrom("assets")
+      .select(["state"])
+      .where("id", "=", seeded.id)
+      .executeTakeFirstOrThrow();
+    expect((dbRow as { state: string }).state).toBe("ready");
+
+    const transitions = await db.connection
+      .selectFrom("asset_state_transitions")
+      .selectAll()
+      .where("asset_id", "=", seeded.id)
+      .execute();
+    expect(transitions).toHaveLength(0);
+  });
 });
