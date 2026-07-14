@@ -49,7 +49,7 @@ presentation/   controllers, response mappers
 
 Dependencies point inward only: `presentation → application → domain`
 and `infrastructure → domain`. The rule is enforced by
-`pnpm dep-check` (Dependency Cruiser).
+`pnpm -F backend dep-check` (Dependency Cruiser).
 
 ## Runtime topology
 

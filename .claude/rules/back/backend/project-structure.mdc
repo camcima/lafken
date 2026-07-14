@@ -79,7 +79,7 @@ apps/backend/test/
 - `presentation` may depend on `application` and DTOs, **never** on `infrastructure` directly.
 - `application` may depend on `domain` and **ports** (interfaces), **never** on `infrastructure` or `presentation`.
 - `infrastructure` implements ports and depends on `domain` types/ports and `application` DTOs (**only if necessary** for mapping).
-- Enforce with dependency-cruiser by running `pnpm dep-check` to check it
+- Enforce with dependency-cruiser by running `pnpm -F backend dep-check` to check it
 
 #### 5) Providers & DI
 - Use NestJS `@Injectable()` annotation to auto-wire dependencies into classes

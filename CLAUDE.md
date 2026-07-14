@@ -15,6 +15,7 @@ Dependencies point inward only: `infrastructure` → `application` → `domain`.
 Rules below are enforced via Dependency Cruiser and ESLint — violations fail CI. When writing or modifying code, follow these rules. When in doubt, prefer the more decoupled option (a port, an injected dependency, a value object) over the shorter one. If a rule seems to conflict with the task, surface the conflict rather than silently bending the rule.
 
 ## Hexagonal Architecture
+
 - **Domain has no external dependencies.** Code in `domain/` must not import from `infrastructure/`, `application/`, frameworks, ORMs, HTTP clients, or third-party libraries beyond standard language utilities. If the domain needs something external, define a port (interface) it owns and let outer layers implement it.
 - **Dependencies point inward.** `infrastructure` → `application` → `domain`. Never the reverse. If you need to import "up," you need a port.
 - **Ports live with their consumer, not their implementation.** A `UserRepository` interface lives in `domain/` or `application/`. The Postgres implementation lives in `infrastructure/`. The consumer owns the contract.
@@ -24,9 +25,11 @@ Rules below are enforced via Dependency Cruiser and ESLint — violations fail C
 - **Don't leak ORM entities past the repository.** Repositories return domain objects or plain data, not ActiveRecord/TypeORM entities. Mapping happens at the adapter boundary.
 
 ## Dependency Injection
+
 - **Inject services, repositories, and clients via the constructor.** Never use `new` to instantiate them inside method bodies. Value objects, DTOs, and errors are fine to instantiate inline.
 
 ❌ Don't:
+
 ```ts
 class OrderService {
   process(order: Order) {
@@ -37,6 +40,7 @@ class OrderService {
 ```
 
 ✅ Do:
+
 ```ts
 class OrderService {
   constructor(private readonly mailer: Mailer) {}
@@ -70,6 +74,7 @@ class OrderService {
 - **Read environment variables once, at startup, into a typed config object.** Don't sprinkle `process.env.X` across the codebase. Parse, validate, and fail fast on missing or malformed config at boot.
 
 ❌ Don't:
+
 ```ts
 function sendEmail(to: string) {
   return fetch(`${process.env.MAIL_API_URL}/send`, { ... });
@@ -77,6 +82,7 @@ function sendEmail(to: string) {
 ```
 
 ✅ Do:
+
 ```ts
 // config/index.ts — parsed and validated once at startup
 export const config = loadConfig({
@@ -98,9 +104,11 @@ class HttpMailer {
 - **Treat secrets as config.** API keys, DB passwords, and signing keys are environment variables — never literals, never committed, never logged.
 
 ## Runtime & Operations (12-Factor)
+
 - **Processes are stateless and share-nothing.** Never store request data, user sessions, or cached results in module-level variables, class statics, or process memory across requests. State that must persist goes to a backing service (DB, cache, object store).
 
 ❌ Don't:
+
 ```ts
 const cache = new Map<string, User>(); // module-level state
 
@@ -113,6 +121,7 @@ class UserService {
 ```
 
 ✅ Do:
+
 ```ts
 class UserService {
   constructor(
@@ -135,13 +144,15 @@ class UserService {
 - **Logs are event streams to stdout.** Write structured log events (JSON) to stdout. Never open log files, rotate logs, or ship logs from inside the application. Log routing, aggregation, and retention are infrastructure concerns.
 
 ❌ Don't:
+
 ```ts
-fs.appendFileSync('app.log', `[${new Date()}] user ${id} logged in\n`);
+fs.appendFileSync("app.log", `[${new Date()}] user ${id} logged in\n`);
 ```
 
 ✅ Do:
+
 ```ts
-logger.info({ event: 'user.logged_in', userId: id });
+logger.info({ event: "user.logged_in", userId: id });
 ```
 
 - **Admin tasks are separate entry points.** Migrations, backfills, and one-off scripts are separate processes in the same codebase, using the same config and adapters as the main app. Never expose them as HTTP endpoints, never hide them inside request handlers, never run them automatically on app boot (except for migrations gated by an explicit deploy step).
@@ -149,19 +160,22 @@ logger.info({ event: 'user.logged_in', userId: id });
 - **No runtime builds.** Compilation, dependency installation, and asset bundling happen at build time, not at runtime. Built artifacts are immutable; the running process only reads config and executes.
 
 ## Testing
+
 - **Follow the test pyramid.** Most tests are fast unit tests on domain logic and use cases. A smaller layer of integration tests covers adapters and the boundaries they cross. A thin layer of end-to-end tests covers critical user journeys. Inverted pyramids (mostly E2E) are slow, flaky, and forbidden.
 - **Unit-test the domain in isolation.** Domain entities, value objects, and domain services run in pure unit tests with no test doubles, no framework boot, no I/O. If you need a mock to test domain logic, the logic has a hidden dependency that should be a port.
 - **Test use cases with in-memory port implementations.** Use cases run with hand-written in-memory adapters (`InMemoryUserRepository`, `FakeClock`, `InMemoryEventBus`) — not mocking libraries. If a use case can't be tested this way, it has a hidden dependency.
 - **Always integration-test adapters.** Repositories, HTTP clients, message consumers, and any other adapter must have integration tests that exercise the real backing service (real Postgres, real Redis, real broker) via Testcontainers or an equivalent ephemeral instance. Mocking the database to test a repository proves nothing.
-  
+
 ❌ Don't:
+
 ```ts
 // "Testing" the repository by mocking the ORM — proves nothing about SQL, schema, or mapping.
-const mockOrm = { query: jest.fn().mockResolvedValue([{ id: '1', name: 'Ada' }]) };
+const mockOrm = { query: jest.fn().mockResolvedValue([{ id: "1", name: "Ada" }]) };
 const repo = new PostgresUserRepository(mockOrm);
 ```
 
 ✅ Do:
+
 ```ts
 // Real Postgres via Testcontainers; the test fails if SQL, schema, or mapping is wrong.
 const container = await new PostgresContainer().start();
@@ -184,6 +198,7 @@ expect(await repo.findById(id)).toEqual(expectedUser);
 - **Use the shared DB client setup helpers** for integration tests. Don't roll your own connection setup.
 
 ## Forbidden
+
 - Circular dependencies between modules. Extract the shared concept into a third module.
 - Reading `process.env` outside the config module.
 - Instantiating injectable dependencies (services, repositories, clients) inside method bodies.
@@ -235,7 +250,7 @@ Filter a workspace: `pnpm -F <workspace> <script>`. Setup hooks once: `pnpm left
 
 ## Backend Specifics
 
-Layers per bounded context: `domain/`, `application/`, `infrastructure/`, **`presentation/`** (controllers + response mappers). Dependency rule enforced by `pnpm dep-check`.
+Layers per bounded context: `domain/`, `application/`, `infrastructure/`, **`presentation/`** (controllers + response mappers). Dependency rule enforced by `pnpm -F backend dep-check`.
 
 - **Ports are abstract classes**, not interfaces. Wire via NestJS `useClass` / `useExisting` / `useFactory`. Constructor injection only — no `ModuleRef`.
 - Controllers translate domain errors to HTTP. Domain/application **never** throw `HttpException`.
@@ -248,7 +263,7 @@ Layers per bounded context: `domain/`, `application/`, `infrastructure/`, **`pre
 
 - Routing: **TanStack Router** (file-based, Zod-validated `searchParams` — URL is source of truth).
 - Server state: **TanStack Query**. UI state: **Zustand**, only when needed.
-- Auth: `IAuthProvider` + `AuthProviderFactory` (MSAL or Mock); `AuthGuard` / `AuthMonitoredGuard` for protected routes.
+- Auth: `IAuthProvider` + `AuthProviderFactory` (OIDC only — local dev and tests use the `dev-oidc` container); `AuthGuard` / `AuthMonitoredGuard` for protected routes.
 - Forms: `react-hook-form` + Zod. UI: shadcn/ui + Radix + Tailwind v4 + `cva`. i18n: `react-i18next`.
 - Monitoring: Grafana Faro via `withMonitoring` HOC, initialized **post-auth only**. No-op when `MONITORING_URL` is empty.
 - Runtime config: `public/config.js` from `VITE_*` (dev) or `envsubst` (prod), validated by Zod in `app-config.ts`.
@@ -264,20 +279,20 @@ Layers per bounded context: `domain/`, `application/`, `infrastructure/`, **`pre
 
 ### Naming
 
-| Element           | Convention                 | Example                   |
-| ----------------- | -------------------------- | ------------------------- |
-| Files             | kebab-case                 | `user-query.service.ts`   |
-| Classes           | PascalCase                 | `UserQueryService`        |
-| Internal types    | `I` prefix                 | `IWorkCenterProps`        |
-| Constants         | SCREAMING_SNAKE_CASE       | `DATABASE_URL`            |
-| DB tables         | plural snake_case          | `work_centers`            |
-| DB columns        | snake_case                 | `email_address`           |
-| Ports             | `*Port` (abstract class)   | `UserQueryRepositoryPort` |
-| Use cases         | `*UseCase`                 | `RegisterUserUseCase`     |
-| DTOs              | `*DTO` / `*ResponseDTO`    | `RegisterNewUserDTO`      |
-| Domain errors     | `*Error`                   | `UserNotFoundError`       |
-| DB mappers        | `*DbMapper`                | `WorkCenterDbMapper`      |
-| Response mappers  | `*ResponseMapper` (static) | `UserResponseMapper`      |
+| Element          | Convention                 | Example                   |
+| ---------------- | -------------------------- | ------------------------- |
+| Files            | kebab-case                 | `user-query.service.ts`   |
+| Classes          | PascalCase                 | `UserQueryService`        |
+| Internal types   | `I` prefix                 | `IWorkCenterProps`        |
+| Constants        | SCREAMING_SNAKE_CASE       | `DATABASE_URL`            |
+| DB tables        | plural snake_case          | `work_centers`            |
+| DB columns       | snake_case                 | `email_address`           |
+| Ports            | `*Port` (abstract class)   | `UserQueryRepositoryPort` |
+| Use cases        | `*UseCase`                 | `RegisterUserUseCase`     |
+| DTOs             | `*DTO` / `*ResponseDTO`    | `RegisterNewUserDTO`      |
+| Domain errors    | `*Error`                   | `UserNotFoundError`       |
+| DB mappers       | `*DbMapper`                | `WorkCenterDbMapper`      |
+| Response mappers | `*ResponseMapper` (static) | `UserResponseMapper`      |
 
 ## API Design
 

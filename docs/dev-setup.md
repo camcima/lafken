@@ -120,7 +120,7 @@ prefer a single command.
 | Symptom                      | Cause                                       | Fix                                                                                                                               |
 | ---------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `ECONNREFUSED 5433`          | Postgres not running.                       | `docker compose -f apps/backend/docker-compose.yml up -d`.                                                                        |
-| `JWKS could not be parsed`   | OIDC provider not running.                  | Start the dev OIDC container, or set `AUTH_PROVIDER=mock` for local dev.                                                          |
+| `JWKS could not be parsed`   | OIDC provider not running.                  | Start the dev OIDC container (`dev-oidc`, port 8095).                                                                             |
 | Web app shows stale config   | `public/config.js` not regenerated.         | Restart `pnpm -F web dev` (the Vite dev plugin regenerates on boot).                                                              |
 | `db.types.ts` is out of date | Forgot to regenerate types after migrating. | `pnpm -F backend db:update` (runs migrate + kysely-codegen). CI fails commits where migrations and `db.types.ts` are out of sync. |
 

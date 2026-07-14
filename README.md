@@ -7,9 +7,9 @@ content-moderation pipeline, signed serving via imgproxy, namespace +
 versioned policy + versioned preset modeling, audit, legal holds, and
 an operator console.
 
-> *Lafken means "sea" in Mapudungun, the language of the Mapuche
+> _Lafken means "sea" in Mapudungun, the language of the Mapuche
 > people of southern Chile and Argentina. The term refers to a
-> geographic feature, not a sacred or politically charged concept.*
+> geographic feature, not a sacred or politically charged concept._
 
 ## Features (v1.0)
 
@@ -52,24 +52,23 @@ This brings up:
 - Processing worker (separate Node process).
 - Admin console at <http://localhost:5173>.
 
-Sign in to the admin console with the local OIDC provider (or with
-`AUTH_PROVIDER=mock` set, any non-empty bearer token works), pick a
-namespace, drop a JPEG into the upload page, and watch it transition
+Sign in to the admin console with the local `dev-oidc` provider, pick
+a namespace, drop a JPEG into the upload page, and watch it transition
 through `awaiting_upload → processing → ready`.
 
 For the full setup walkthrough see [`docs/dev-setup.md`](./docs/dev-setup.md).
 
 ## Repository layout
 
-| Path | Description |
-| ---- | ----------- |
-| `apps/backend` | NestJS service. Public API + processing worker. |
-| `apps/web` | React 19 SPA (Vite, CSR only). |
-| `packages/client` | `@lafken/client` — typed REST SDK. |
-| `packages/upload` | `@lafken/upload` — browser upload manager. |
-| `packages/react` | `@lafken/react` — hooks and components. |
-| `shared/backend-api` | Backend DTOs, single source of truth. |
-| `shared/web-tests` | Playwright E2E. |
+| Path                 | Description                                     |
+| -------------------- | ----------------------------------------------- |
+| `apps/backend`       | NestJS service. Public API + processing worker. |
+| `apps/web`           | React 19 SPA (Vite, CSR only).                  |
+| `packages/client`    | `@lafken/client` — typed REST SDK.              |
+| `packages/upload`    | `@lafken/upload` — browser upload manager.      |
+| `packages/react`     | `@lafken/react` — hooks and components.         |
+| `shared/backend-api` | Backend DTOs, single source of truth.           |
+| `shared/web-tests`   | Playwright E2E.                                 |
 
 ## Documentation
 

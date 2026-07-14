@@ -70,7 +70,7 @@ Presentation -> Application -> Domain <- Infrastructure
 | **Infrastructure** | Domain (types/ports only)                  | Application (except implementing ports), Presentation |
 | **Presentation**   | Application + DTOs                         | Infrastructure directly                               |
 
-Enforce with: `pnpm dep-check` (dependency-cruiser).
+Enforce with: `pnpm -F backend dep-check` (dependency-cruiser).
 
 ## Naming Bounded Contexts
 

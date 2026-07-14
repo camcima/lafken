@@ -1,6 +1,6 @@
 > **Archived**: This document describes the Backend architecture which was removed from the monorepo. Retained for historical reference only.
 
-## Authentication and Authorization with Azure AD
+## Authentication and Authorization with OIDC
 
 To implement auth in the application, we will have an `AuthModule` (`auth.module.ts`).
 For OIDC-based auth it will require the OIDC provider configuration variables defined in
@@ -14,9 +14,9 @@ This module is:
 
 Its capabilities are:
 
-- Exposes the method decorator `@AuthenticatedEndpoint()` to indicate that an endpoint (presentation layer) requires a valid Azure AD bearer token. Otherwise, a '401 Unauthorized' error
+- Exposes the method decorator `@AuthenticatedEndpoint()` to indicate that an endpoint (presentation layer) requires a valid OIDC bearer token. Otherwise, a '401 Unauthorized' error
   - You can use that decorator at the controller class instead of its method to ensure that all the endpoints will be private
-- Exposes the parameter decorator `@AuthenticatedUser()` to facilitate retrieving the authenticated user via a valid Azure AD bearer token. The type alias `AuthenticatedUser` should be used as the parameter type to maintain type-safety.
+- Exposes the parameter decorator `@AuthenticatedUser()` to facilitate retrieving the authenticated user via a valid OIDC bearer token. The type alias `AuthenticatedUser` should be used as the parameter type to maintain type-safety.
 - Exposes the method decorator `@EndpointRequiredRoles()` to require role-based authorization (RBAC) on the annotated method
 
 Example:
@@ -50,8 +50,6 @@ class UserController {
 }
 ```
 
-### Mock adapter for local testing
+### Local development and tests
 
-The Azure-AD bearer strategy described in earlier revisions of this guide has been removed. Lafken authenticates API requests via OIDC only. For local development the `mock` auth provider (`AUTH_PROVIDER=mock`) returns a deterministic principal; the implementation lives under `apps/backend/src/shared/presentation/auth/`.
-
-Note that this only works when the `NODE_ENV` is not `"production"` — we are not supposed to forge the auth provider in production.
+The Azure AD bearer strategy described in earlier revisions of this guide has been removed. Lafken authenticates API requests via OIDC only (`AUTH_PROVIDER` is pinned to the literal `"oidc"`; there is no `mock` provider). For local development and the automated test suites, the `dev-oidc` container (`apps/backend/dev-oidc.config.json`) issues real OIDC tokens against configurable profiles/roles; the implementation lives under `apps/backend/src/shared/presentation/auth/`.

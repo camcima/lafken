@@ -48,5 +48,5 @@ alwaysApply: false
   - Adapters (infrastructure) implement ports and can depend on external SDKs/clients; they are selected and injected by the wiring layer.
 
 - **Compliance**  
-  - Enforce boundaries with **dependency-cruiser** (`pnpm dep-check`).
+  - Enforce boundaries with **dependency-cruiser** (`pnpm -F backend dep-check`).
   - Violations (framework annotations in core, direct env access, service locators, or DI container injection) are not allowed.
