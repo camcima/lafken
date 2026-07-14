@@ -3,10 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ALLOWED_METRIC_ATTRIBUTE_KEYS,
   apiRequestDurationHistogram,
-  downloadUrlIssuedCounter,
   LAFKEN_METRIC_NAMES,
-  previewUrlDurationHistogram,
-  previewUrlIssuedCounter,
   processingJobClaimedCounter,
   processingJobReleasedCounter,
   processingQueueDepthGauge,
@@ -83,9 +80,6 @@ describe("lafken §5.3 instruments", () => {
     expect(typeof processingTerminalStateCounter.add).toBe("function");
     expect(typeof processingStaleClaimReclaimedCounter.add).toBe("function");
     expect(typeof processingQueueDepthGauge.addCallback).toBe("function");
-    expect(typeof previewUrlIssuedCounter.add).toBe("function");
-    expect(typeof previewUrlDurationHistogram.record).toBe("function");
-    expect(typeof downloadUrlIssuedCounter.add).toBe("function");
     expect(typeof apiRequestDurationHistogram.record).toBe("function");
   });
 

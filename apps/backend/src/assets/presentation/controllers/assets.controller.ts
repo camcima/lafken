@@ -43,18 +43,19 @@ import { ConfirmUploadUseCase } from "@/assets/application/use-cases/confirm-upl
 import { CreateUploadIntentUseCase } from "@/assets/application/use-cases/create-upload-intent.use-case";
 import { DeleteAssetUseCase } from "@/assets/application/use-cases/delete-asset.use-case";
 import { GetAssetByIdUseCase } from "@/assets/application/use-cases/get-asset-by-id.use-case";
-import { GetAssetByPublicIdUseCase } from "@/assets/application/use-cases/get-asset-by-public-id.use-case";
 import { GetAssetDownloadUrlUseCase } from "@/assets/application/use-cases/get-asset-download-url.use-case";
 import { GetAssetProcessingJobUseCase } from "@/assets/application/use-cases/get-asset-processing-job.use-case";
+import { GetPreviewUrlUseCase } from "@/assets/application/use-cases/get-preview-url.use-case";
 import { ListAssetAnalysesUseCase } from "@/assets/application/use-cases/list-asset-analyses.use-case";
 import { ListAssetStateTransitionsUseCase } from "@/assets/application/use-cases/list-asset-state-transitions.use-case";
 import { ListAssetsUseCase } from "@/assets/application/use-cases/list-assets.use-case";
 import { RefreshUploadUrlUseCase } from "@/assets/application/use-cases/refresh-upload-url.use-case";
 import { RetryAssetProcessingUseCase } from "@/assets/application/use-cases/retry-asset-processing.use-case";
-import type { Asset } from "@/assets/domain/entities/asset.entity";
+import { ActivePresetNotFoundError } from "@/assets/domain/errors/active-preset-not-found.error";
 import { AssetNotDownloadableError } from "@/assets/domain/errors/asset-not-downloadable.error";
 import { AssetNotFoundError } from "@/assets/domain/errors/asset-not-found.error";
 import { AssetNotInProcessingFailedStateError } from "@/assets/domain/errors/asset-not-in-processing-failed-state.error";
+import { AssetNotPreviewableError } from "@/assets/domain/errors/asset-not-previewable.error";
 import { AssetUnderLegalHoldError } from "@/assets/domain/errors/asset-under-legal-hold.error";
 import { FileSizeExceedsPolicyError } from "@/assets/domain/errors/file-size-exceeds-policy.error";
 import { MimeTypeNotAllowedError } from "@/assets/domain/errors/mime-type-not-allowed.error";
@@ -65,17 +66,8 @@ import { UploadIntentExpiredError } from "@/assets/domain/errors/upload-intent-e
 import { UploadIntentNotFoundError } from "@/assets/domain/errors/upload-intent-not-found.error";
 import { UploadedObjectMissingError } from "@/assets/domain/errors/uploaded-object-missing.error";
 import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-query.repository.port";
-import { AssetStoragePort } from "@/assets/domain/services/asset-storage.service.port";
-import {
-  type IPreviewSpec,
-  PreviewUrlSignerPort,
-} from "@/assets/domain/services/preview-url-signer.port";
-import { isAssetPreviewable } from "@/assets/domain/value-objects/asset-state.value-object";
-import { SYSTEM_PRESETS } from "@/assets/domain/value-objects/system-presets";
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
-import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
-import { MetricsPort } from "@/shared/application/metrics.port";
 import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 import { AuthenticatedEndpoint } from "@/shared/presentation/auth/decorators/authenticated-endpoint.decorator";
 import {
@@ -83,20 +75,12 @@ import {
   type AuthenticatedUser as AuthenticatedUserType,
 } from "@/shared/presentation/auth/decorators/authenticated-user.decorator";
 import { EndpointRequiredRoles } from "@/shared/presentation/auth/decorators/endpoint-required-roles.decorator";
-import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 
 import { PaginatedAssetResponseDTO } from "../dto/list-assets-paginated-response.dto";
 import { AssetAnalysisResponseMapper } from "../mappers/asset-analysis.response-mapper";
 import { AssetStateTransitionResponseMapper } from "../mappers/asset-state-transition.response-mapper";
-import { AssetResponseMapper, type IPreviewSignContext } from "../mappers/asset.response-mapper";
+import { AssetResponseMapper } from "../mappers/asset.response-mapper";
 import { ProcessingJobResponseMapper } from "../mappers/processing-job.response-mapper";
-
-/**
- * TTL for the V4-signed source URL handed to imgproxy. Keeps a comfortable
- * margin over imgproxy's render + retry window so a transient retry never
- * outlives the URL.
- */
-const PREVIEW_SOURCE_URL_TTL_SECONDS = 900;
 
 @Controller({ path: "assets" })
 @ApiTags("Assets")
@@ -104,7 +88,6 @@ export class AssetsController {
   constructor(
     private readonly listAssetsUseCase: ListAssetsUseCase,
     private readonly getAssetByIdUseCase: GetAssetByIdUseCase,
-    private readonly getAssetByPublicIdUseCase: GetAssetByPublicIdUseCase,
     private readonly listAssetStateTransitionsUseCase: ListAssetStateTransitionsUseCase,
     private readonly listAssetAnalysesUseCase: ListAssetAnalysesUseCase,
     private readonly getAssetProcessingJobUseCase: GetAssetProcessingJobUseCase,
@@ -114,67 +97,9 @@ export class AssetsController {
     private readonly getAssetDownloadUrlUseCase: GetAssetDownloadUrlUseCase,
     private readonly refreshUploadUrlUseCase: RefreshUploadUrlUseCase,
     private readonly deleteAssetUseCase: DeleteAssetUseCase,
+    private readonly getPreviewUrlUseCase: GetPreviewUrlUseCase,
     private readonly assetQueryRepository: AssetQueryRepositoryPort,
-    private readonly previewUrlSigner: PreviewUrlSignerPort,
-    private readonly assetStorage: AssetStoragePort,
-    private readonly namespaceQueryRepository: NamespaceQueryRepositoryPort,
-    private readonly storageBindingQueryRepository: StorageBindingQueryRepositoryPort,
-    private readonly metrics: MetricsPort,
   ) {}
-
-  /**
-   * Builds a per-asset preview-sign context, caching per-namespace presets and
-   * per-binding GCS config lookups across the loop. Returns null when there
-   * are no active presets for the asset's namespace or when the asset's
-   * binding cannot be resolved.
-   */
-  private buildSignContextResolver(): (asset: Asset) => Promise<IPreviewSignContext | null> {
-    const presetsCache: Map<string, Array<{ name: string; spec: IPreviewSpec }>> = new Map();
-    const bindingCache: Map<string, { bucket: string; projectId: string } | null> = new Map();
-    const signer: PreviewUrlSignerPort = this.previewUrlSigner;
-    const namespaceRepo: NamespaceQueryRepositoryPort = this.namespaceQueryRepository;
-    const bindingRepo: StorageBindingQueryRepositoryPort = this.storageBindingQueryRepository;
-
-    return async (asset: Asset): Promise<IPreviewSignContext | null> => {
-      const namespaceId: string = asset.props.namespaceId;
-      let presets: Array<{ name: string; spec: IPreviewSpec }> | undefined =
-        presetsCache.get(namespaceId);
-      if (!presets) {
-        // listPresets returns exactly one row per preset name (the latest
-        // version, F-D5) — filter to active ones. System presets are seeded
-        // first; namespace presets can never collide with them thanks to the
-        // reserved-prefix validation.
-        const list = await namespaceRepo.listPresets(namespaceId);
-        const latestByName: Map<string, IPreviewSpec> = new Map();
-        for (const sys of SYSTEM_PRESETS) {
-          latestByName.set(sys.name, sys.spec);
-        }
-        for (const preset of list) {
-          if (preset.props.active && !latestByName.has(preset.props.name)) {
-            latestByName.set(preset.props.name, preset.props.params.props);
-          }
-        }
-        presets = Array.from(latestByName, ([name, spec]) => ({ name, spec }));
-        presetsCache.set(namespaceId, presets);
-      }
-      if (presets.length === 0) {
-        return null;
-      }
-      const bindingId: string = asset.props.storageBindingId;
-      let binding: { bucket: string; projectId: string } | null | undefined =
-        bindingCache.get(bindingId);
-      if (binding === undefined) {
-        const found = await bindingRepo.findById(bindingId);
-        const gcs = found?.getGcsConfig();
-        binding = gcs ? { bucket: gcs.bucket, projectId: gcs.projectId } : null;
-        bindingCache.set(bindingId, binding);
-      }
-      if (!binding) {
-        return null;
-      }
-      return { signer, presets, binding };
-    };
-  }
 
   @Get()
   @AuthenticatedEndpoint()
@@ -239,62 +164,15 @@ export class AssetsController {
     if (!preset || preset.trim() === "") {
       throw new UnprocessableEntityException("preset query parameter is required");
     }
-    const startedAt: number = Date.now();
     try {
-      const result = await this.getAssetByPublicIdUseCase.execute({ publicId });
-      // Defense in depth: refuse to mint preview URLs for non-previewable
-      // states (quarantined / rejected / deleted / expired). Even though the
-      // bytes are physically moved out of imgproxy's reach on quarantine,
-      // refusing to sign new URLs here closes the future-issuance vector and
-      // shields the bytes from any caller that already knows the publicId.
-      if (!isAssetPreviewable(result.asset.props.state)) {
-        throw new NotFoundException(
-          `Asset "${publicId}" is not in a previewable state (current: "${result.asset.props.state}").`,
-        );
-      }
-      const resolveSignCtx = this.buildSignContextResolver();
-      const signCtx: IPreviewSignContext | null = await resolveSignCtx(result.asset);
-      if (signCtx === null) {
-        throw new NotFoundException(
-          `No active preset matching "${preset}" was found for this asset's namespace.`,
-        );
-      }
-      const matched = signCtx.presets.find((entry) => entry.name === preset);
-      if (!matched) {
-        throw new NotFoundException(
-          `No active preset matching "${preset}" was found for this asset's namespace.`,
-        );
-      }
-      // Mint a V4-signed read URL against the asset's binding. imgproxy fetches
-      // this URL anonymously, so the bucket itself never has to be public-read
-      // and Lafken can host any number of bindings without per-bucket setup on
-      // imgproxy. The TTL must outlive imgproxy's worst-case render+retry
-      // window for a single asset.
-      const sourceUrl: string = await this.assetStorage.signSourceUrlForRendering({
-        binding: signCtx.binding,
-        storageKey: result.asset.props.storageKey,
-        ttlSeconds: PREVIEW_SOURCE_URL_TTL_SECONDS,
-      });
-      const url: string | null = signCtx.signer.sign({ sourceUrl, preset: matched.spec });
-      if (url === null) {
-        throw new NotFoundException(
-          `No active preset matching "${preset}" was found for this asset's namespace.`,
-        );
-      }
-      // eslint-disable-next-line no-magic-numbers -- TTL constant is in seconds; "* 1000" converts to milliseconds for the JS Date API.
-      const expiresAt = new Date(Date.now() + PREVIEW_SOURCE_URL_TTL_SECONDS * 1000).toISOString();
-      this.metrics.recordPreviewUrlIssued({
-        namespaceSlug: result.namespaceSlug,
-        presetName: preset,
-      });
-      this.metrics.recordPreviewUrlDuration({
-        namespaceSlug: result.namespaceSlug,
-        presetName: preset,
-        durationMs: Date.now() - startedAt,
-      });
-      return { url, expiresAt };
+      const result = await this.getPreviewUrlUseCase.execute({ publicId, presetName: preset });
+      return { url: result.url, expiresAt: result.expiresAt.toISOString() };
     } catch (err) {
-      if (err instanceof AssetNotFoundError) {
+      if (
+        err instanceof AssetNotFoundError ||
+        err instanceof AssetNotPreviewableError ||
+        err instanceof ActivePresetNotFoundError
+      ) {
         throw new NotFoundException(err.message, { cause: err });
       }
       throw err;
@@ -314,9 +192,6 @@ export class AssetsController {
   async getDownloadUrl(@Param("publicId") publicId: string): Promise<AssetDownloadUrlResponseDTO> {
     try {
       const result = await this.getAssetDownloadUrlUseCase.execute({ publicId });
-      if (result.namespaceSlug !== null) {
-        this.metrics.recordDownloadUrlIssued({ namespaceSlug: result.namespaceSlug });
-      }
       return { url: result.url };
     } catch (err) {
       if (err instanceof AssetNotFoundError || err instanceof AssetNotDownloadableError) {

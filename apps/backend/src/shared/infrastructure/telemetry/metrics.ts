@@ -104,19 +104,10 @@ export const processingStaleClaimReclaimedCounter: Counter = meter.createCounter
   { description: "Number of stale processing claims reclaimed by the sweeper" },
 );
 
-// Serving
-export const previewUrlIssuedCounter: Counter = meter.createCounter(
-  LAFKEN_METRIC_NAMES.SERVING_PREVIEW_URL_ISSUED,
-  { description: "Number of signed preview URLs minted (with namespace_slug, preset_name)" },
-);
-export const previewUrlDurationHistogram: Histogram = meter.createHistogram(
-  LAFKEN_METRIC_NAMES.SERVING_PREVIEW_URL_DURATION,
-  { description: "Duration of preview-url issuance in milliseconds", unit: "ms" },
-);
-export const downloadUrlIssuedCounter: Counter = meter.createCounter(
-  LAFKEN_METRIC_NAMES.SERVING_DOWNLOAD_URL_ISSUED,
-  { description: "Number of signed download URLs minted" },
-);
+// Serving instruments live on OpenTelemetryMetricsAdapter (MetricsPort) —
+// application code records them through the port, never through raw
+// instruments. The LAFKEN_METRIC_NAMES.SERVING_* entries above remain the
+// single source of truth for the metric names.
 
 // API
 // NOTE: `lafken.api.request.duration` is the v1.0 spec name. nestjs-otel 8.x

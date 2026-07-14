@@ -1,18 +1,6 @@
 import { AssetResponseDTO } from "@shared/backend-api";
 
 import type { Asset } from "@/assets/domain/entities/asset.entity";
-import type {
-  IPreviewSpec,
-  PreviewUrlSignerPort,
-} from "@/assets/domain/services/preview-url-signer.port";
-
-export interface IPreviewSignContext {
-  signer: PreviewUrlSignerPort;
-  /** Active namespace presets to expand into preview URLs. */
-  presets: Array<{ name: string; spec: IPreviewSpec }>;
-  /** The asset's storage binding, resolved once per request. */
-  binding: { bucket: string; projectId: string };
-}
 
 export class AssetResponseMapper {
   static fromDomain(asset: Asset, namespaceSlug: string, policyVersion: number): AssetResponseDTO {
