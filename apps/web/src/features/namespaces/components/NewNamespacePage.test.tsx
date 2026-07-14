@@ -1,12 +1,15 @@
 import type { NamespaceResponseDTO, StorageBindingResponseDTO } from "@shared/backend-api";
 import {
+  NAMESPACE_DESCRIPTION_MAX_LENGTH,
+  NAMESPACE_DISPLAY_NAME_MAX_LENGTH,
+  NAMESPACE_SLUG_MAX_LENGTH,
   POLICY_MAX_FILE_SIZE_BYTES,
   POLICY_MAX_RETENTION_DAYS,
   POLICY_MAX_SIGNED_URL_BUCKET_SIZE,
   POLICY_MAX_TTL_SECONDS,
 } from "@shared/backend-api/validation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -144,6 +147,88 @@ describe("NewNamespacePage", () => {
       "max",
       String(POLICY_MAX_SIGNED_URL_BUCKET_SIZE),
     );
+  });
+
+  // Proves the client-side Zod schema's slug/displayName/description bounds
+  // are derived from the shared NAMESPACE_* constants — the same ones
+  // CreateNamespaceRequestDTO enforces on the backend
+  // (shared/backend-api/presentation/namespaces/__tests__) — rather than
+  // local literals that could silently drift from the backend.
+  it("rejects a slug one character over NAMESPACE_SLUG_MAX_LENGTH while accepting one at the bound", async () => {
+    renderPage();
+
+    const slugInput = screen.getByLabelText(/^slug$/i);
+
+    fireEvent.change(slugInput, { target: { value: "a".repeat(NAMESPACE_SLUG_MAX_LENGTH) } });
+    fireEvent.blur(slugInput);
+    await waitFor(() => {
+      expect(slugInput).not.toHaveAttribute("aria-invalid");
+    });
+
+    fireEvent.change(slugInput, { target: { value: "a".repeat(NAMESPACE_SLUG_MAX_LENGTH + 1) } });
+    fireEvent.blur(slugInput);
+    await waitFor(() => {
+      expect(slugInput).toHaveAttribute("aria-invalid", "true");
+    });
+  });
+
+  // Discriminates the slug *pattern* (NAMESPACE_SLUG_PATTERN) from the slug
+  // *length* (NAMESPACE_SLUG_MAX_LENGTH): a slug well within the length
+  // bound but violating the pattern must still be rejected.
+  it("rejects an uppercase slug that satisfies NAMESPACE_SLUG_MAX_LENGTH but violates NAMESPACE_SLUG_PATTERN", async () => {
+    renderPage();
+
+    const slugInput = screen.getByLabelText(/^slug$/i);
+
+    fireEvent.change(slugInput, { target: { value: "Aircraft-Photos" } });
+    fireEvent.blur(slugInput);
+    await waitFor(() => {
+      expect(slugInput).toHaveAttribute("aria-invalid", "true");
+    });
+  });
+
+  it("rejects a displayName one character over NAMESPACE_DISPLAY_NAME_MAX_LENGTH while accepting one at the bound", async () => {
+    renderPage();
+
+    const displayNameInput = screen.getByLabelText(/^display name$/i);
+
+    fireEvent.change(displayNameInput, {
+      target: { value: "d".repeat(NAMESPACE_DISPLAY_NAME_MAX_LENGTH) },
+    });
+    fireEvent.blur(displayNameInput);
+    await waitFor(() => {
+      expect(displayNameInput).not.toHaveAttribute("aria-invalid");
+    });
+
+    fireEvent.change(displayNameInput, {
+      target: { value: "d".repeat(NAMESPACE_DISPLAY_NAME_MAX_LENGTH + 1) },
+    });
+    fireEvent.blur(displayNameInput);
+    await waitFor(() => {
+      expect(displayNameInput).toHaveAttribute("aria-invalid", "true");
+    });
+  });
+
+  it("rejects a description one character over NAMESPACE_DESCRIPTION_MAX_LENGTH while accepting one at the bound", async () => {
+    renderPage();
+
+    const descriptionInput = screen.getByLabelText(/description/i);
+
+    fireEvent.change(descriptionInput, {
+      target: { value: "d".repeat(NAMESPACE_DESCRIPTION_MAX_LENGTH) },
+    });
+    fireEvent.blur(descriptionInput);
+    await waitFor(() => {
+      expect(descriptionInput).not.toHaveAttribute("aria-invalid");
+    });
+
+    fireEvent.change(descriptionInput, {
+      target: { value: "d".repeat(NAMESPACE_DESCRIPTION_MAX_LENGTH + 1) },
+    });
+    fireEvent.blur(descriptionInput);
+    await waitFor(() => {
+      expect(descriptionInput).toHaveAttribute("aria-invalid", "true");
+    });
   });
 
   it("renders a live YAML preview that reflects the current slug", async () => {

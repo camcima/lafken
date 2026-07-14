@@ -7,6 +7,7 @@ import {
   NAMESPACE_DESCRIPTION_MAX_LENGTH,
   NAMESPACE_DISPLAY_NAME_MAX_LENGTH,
   NAMESPACE_SLUG_MAX_LENGTH,
+  NAMESPACE_SLUG_PATTERN,
   POLICY_MAX_FILE_SIZE_BYTES,
   POLICY_MAX_RETENTION_DAYS,
   POLICY_MAX_SIGNED_URL_BUCKET_SIZE,
@@ -76,6 +77,32 @@ describe("CreateNamespaceRequestDTO — slug bound matches NAMESPACE_SLUG_MAX_LE
     const slug = "a".repeat(NAMESPACE_SLUG_MAX_LENGTH + 1);
     const errors = await validateDto(validPayload({ slug }));
     expect(findError(errors, "slug")).toBeDefined();
+  });
+});
+
+// Discriminates the slug *pattern* (@Matches(NAMESPACE_SLUG_PATTERN)) from the
+// slug *length* (@MaxLength(NAMESPACE_SLUG_MAX_LENGTH)): a slug well within
+// the length bound but violating the pattern must fail on the "matches"
+// constraint specifically, not be conflated with a length violation.
+describe("CreateNamespaceRequestDTO — slug pattern is enforced independently of NAMESPACE_SLUG_MAX_LENGTH", () => {
+  it("rejects an uppercase slug that satisfies NAMESPACE_SLUG_MAX_LENGTH but violates NAMESPACE_SLUG_PATTERN", async () => {
+    expect(NAMESPACE_SLUG_PATTERN.test("Aircraft-Photos")).toBe(false);
+    expect("Aircraft-Photos".length).toBeLessThanOrEqual(NAMESPACE_SLUG_MAX_LENGTH);
+
+    const errors = await validateDto(validPayload({ slug: "Aircraft-Photos" }));
+    const slugError = findError(errors, "slug");
+    expect(slugError?.constraints).toHaveProperty("matches");
+    expect(slugError?.constraints).not.toHaveProperty("maxLength");
+  });
+
+  it("rejects an overlong but pattern-valid slug on maxLength only, not matches", async () => {
+    const slug = "a".repeat(NAMESPACE_SLUG_MAX_LENGTH + 1);
+    expect(NAMESPACE_SLUG_PATTERN.test(slug)).toBe(true);
+
+    const errors = await validateDto(validPayload({ slug }));
+    const slugError = findError(errors, "slug");
+    expect(slugError?.constraints).toHaveProperty("maxLength");
+    expect(slugError?.constraints).not.toHaveProperty("matches");
   });
 });
 
