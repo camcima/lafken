@@ -17,17 +17,22 @@ import {
   ValidateNested,
 } from "class-validator";
 
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const MAX_FILE_SIZE = 5_368_709_120; // 5 GiB
-const MAX_TTL_SECONDS = 7 * 24 * 60 * 60;
-const MAX_BUCKET_SIZE = 86_400;
-const MAX_RETENTION_DAYS = 36_500;
+import {
+  NAMESPACE_DESCRIPTION_MAX_LENGTH,
+  NAMESPACE_DISPLAY_NAME_MAX_LENGTH,
+  NAMESPACE_SLUG_MAX_LENGTH,
+  NAMESPACE_SLUG_PATTERN,
+  POLICY_MAX_FILE_SIZE_BYTES,
+  POLICY_MAX_RETENTION_DAYS,
+  POLICY_MAX_SIGNED_URL_BUCKET_SIZE,
+  POLICY_MAX_TTL_SECONDS,
+} from "../../shared/validation-constants";
 
 export class CreateNamespacePolicyDTO {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(MAX_RETENTION_DAYS)
+  @Max(POLICY_MAX_RETENTION_DAYS)
   @ApiProperty({ required: false, type: Number, nullable: true })
   retentionDays!: number | null;
 
@@ -37,7 +42,7 @@ export class CreateNamespacePolicyDTO {
 
   @IsInt()
   @Min(1)
-  @Max(MAX_FILE_SIZE)
+  @Max(POLICY_MAX_FILE_SIZE_BYTES)
   @ApiProperty({ type: Number, example: 52428800 })
   maxFileSizeBytes!: number;
 
@@ -72,14 +77,14 @@ export class CreateNamespacePolicyDTO {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(MAX_TTL_SECONDS)
+  @Max(POLICY_MAX_TTL_SECONDS)
   @ApiProperty({ required: false, type: Number, nullable: true })
   signedUrlTtlSeconds!: number | null;
 
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(MAX_BUCKET_SIZE)
+  @Max(POLICY_MAX_SIGNED_URL_BUCKET_SIZE)
   @ApiProperty({ required: false, type: Number, nullable: true })
   signedUrlBucketSize!: number | null;
 
@@ -91,19 +96,19 @@ export class CreateNamespacePolicyDTO {
 
 export class CreateNamespaceRequestDTO {
   @IsString()
-  @Matches(SLUG_PATTERN)
-  @MaxLength(64)
+  @Matches(NAMESPACE_SLUG_PATTERN)
+  @MaxLength(NAMESPACE_SLUG_MAX_LENGTH)
   @ApiProperty({ example: "aircraft-photos" })
   slug!: string;
 
   @IsString()
-  @MaxLength(200)
+  @MaxLength(NAMESPACE_DISPLAY_NAME_MAX_LENGTH)
   @ApiProperty({ example: "Aircraft photos" })
   displayName!: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(2000)
+  @MaxLength(NAMESPACE_DESCRIPTION_MAX_LENGTH)
   @ApiProperty({ required: false, type: String, nullable: true })
   description!: string | null;
 

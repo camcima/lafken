@@ -1,24 +1,45 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsEnum, IsInt, IsNumber, IsOptional, Max, Min } from "class-validator";
 
-export const PRESET_FITS = ["cover", "contain", "fill", "inside", "outside"] as const;
+import {
+  PRESET_DIMENSION_MAX,
+  PRESET_DIMENSION_MIN,
+  PRESET_DPR_MAX,
+  PRESET_DPR_MIN,
+  PRESET_FITS,
+  PRESET_FORMATS,
+  PRESET_QUALITY_MAX,
+  PRESET_QUALITY_MIN,
+} from "../../shared/validation-constants";
+
 export type PresetFitDTO = (typeof PRESET_FITS)[number];
-export const PRESET_FORMATS = ["webp", "avif", "jpeg", "png", "auto"] as const;
 export type PresetFormatDTO = (typeof PRESET_FORMATS)[number];
 
 export class PresetParamsInputDTO {
   @IsOptional()
   @IsInt()
-  @Min(1)
-  @Max(10000)
-  @ApiProperty({ required: false, type: Number, nullable: true, minimum: 1, maximum: 10000 })
+  @Min(PRESET_DIMENSION_MIN)
+  @Max(PRESET_DIMENSION_MAX)
+  @ApiProperty({
+    required: false,
+    type: Number,
+    nullable: true,
+    minimum: PRESET_DIMENSION_MIN,
+    maximum: PRESET_DIMENSION_MAX,
+  })
   width?: number | null;
 
   @IsOptional()
   @IsInt()
-  @Min(1)
-  @Max(10000)
-  @ApiProperty({ required: false, type: Number, nullable: true, minimum: 1, maximum: 10000 })
+  @Min(PRESET_DIMENSION_MIN)
+  @Max(PRESET_DIMENSION_MAX)
+  @ApiProperty({
+    required: false,
+    type: Number,
+    nullable: true,
+    minimum: PRESET_DIMENSION_MIN,
+    maximum: PRESET_DIMENSION_MAX,
+  })
   height?: number | null;
 
   @IsEnum(PRESET_FITS)
@@ -30,15 +51,21 @@ export class PresetParamsInputDTO {
   format!: PresetFormatDTO;
 
   @IsInt()
-  @Min(1)
-  @Max(100)
-  @ApiProperty({ minimum: 1, maximum: 100 })
+  @Min(PRESET_QUALITY_MIN)
+  @Max(PRESET_QUALITY_MAX)
+  @ApiProperty({ minimum: PRESET_QUALITY_MIN, maximum: PRESET_QUALITY_MAX })
   quality!: number;
 
   @IsOptional()
   @IsNumber()
-  @Min(0.5)
-  @Max(4)
-  @ApiProperty({ required: false, type: Number, nullable: true, minimum: 0.5, maximum: 4 })
+  @Min(PRESET_DPR_MIN)
+  @Max(PRESET_DPR_MAX)
+  @ApiProperty({
+    required: false,
+    type: Number,
+    nullable: true,
+    minimum: PRESET_DPR_MIN,
+    maximum: PRESET_DPR_MAX,
+  })
   dpr?: number | null;
 }

@@ -1,4 +1,10 @@
 import type { NamespaceResponseDTO, StorageBindingResponseDTO } from "@shared/backend-api";
+import {
+  POLICY_MAX_FILE_SIZE_BYTES,
+  POLICY_MAX_RETENTION_DAYS,
+  POLICY_MAX_SIGNED_URL_BUCKET_SIZE,
+  POLICY_MAX_TTL_SECONDS,
+} from "@shared/backend-api/validation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -113,6 +119,31 @@ describe("NewNamespacePage", () => {
     expect(screen.getByLabelText(/^slug$/i)).toHaveValue("");
     expect(screen.getByLabelText(/max file size/i)).toHaveValue(52_428_800);
     expect(screen.getByLabelText(/require virus scan/i)).toBeChecked();
+  });
+
+  // Proves the rendered form bounds are wired to the shared validation
+  // constants — the same ones the backend CreateNamespaceRequestDTO enforces
+  // (shared/backend-api/presentation/namespaces/__tests__) — rather than to
+  // local literals that could silently drift from the backend.
+  it("renders numeric field bounds equal to the shared POLICY_* constants", () => {
+    renderPage();
+
+    expect(screen.getByLabelText(/max file size/i)).toHaveAttribute(
+      "max",
+      String(POLICY_MAX_FILE_SIZE_BYTES),
+    );
+    expect(screen.getByLabelText(/retention.*days/i)).toHaveAttribute(
+      "max",
+      String(POLICY_MAX_RETENTION_DAYS),
+    );
+    expect(screen.getByLabelText(/signed url ttl/i)).toHaveAttribute(
+      "max",
+      String(POLICY_MAX_TTL_SECONDS),
+    );
+    expect(screen.getByLabelText(/signed url bucket size/i)).toHaveAttribute(
+      "max",
+      String(POLICY_MAX_SIGNED_URL_BUCKET_SIZE),
+    );
   });
 
   it("renders a live YAML preview that reflects the current slug", async () => {

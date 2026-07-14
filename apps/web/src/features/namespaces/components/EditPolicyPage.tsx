@@ -1,4 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  POLICY_MAX_FILE_SIZE_BYTES,
+  POLICY_MAX_RETENTION_DAYS,
+  POLICY_MAX_SIGNED_URL_BUCKET_SIZE,
+  POLICY_MAX_TTL_SECONDS,
+} from "@shared/backend-api/validation";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import React, { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -16,10 +22,6 @@ import { extractProblemTypeSuffix } from "@/lib/api/problem-types";
 import { cn } from "@/lib/utils";
 
 // ── Constants ─────────────────────────────────────────────
-const MAX_FILE_SIZE_BYTES = 5_368_709_120;
-const MAX_TTL_SECONDS = 604_800;
-const MAX_SIGNED_URL_BUCKET_SECONDS = 86_400;
-const MAX_RETENTION_DAYS = 36_500;
 const DEFAULT_MAX_FILE_SIZE = 52_428_800;
 
 // ── Form value types ──────────────────────────────────────
@@ -201,8 +203,8 @@ export function EditPolicyPage(): React.JSX.Element {
               val !== "" &&
               Number.isInteger(Number(val)) &&
               Number(val) >= 1 &&
-              Number(val) <= MAX_FILE_SIZE_BYTES,
-            { message: `Must be between 1 and ${MAX_FILE_SIZE_BYTES}` },
+              Number(val) <= POLICY_MAX_FILE_SIZE_BYTES,
+            { message: `Must be between 1 and ${POLICY_MAX_FILE_SIZE_BYTES}` },
           ),
         allowedMimeTypesRaw: z.string().min(1),
         virusScanRequired: z.boolean(),
@@ -213,8 +215,8 @@ export function EditPolicyPage(): React.JSX.Element {
               val === "" ||
               (Number.isInteger(Number(val)) &&
                 Number(val) >= 1 &&
-                Number(val) <= MAX_RETENTION_DAYS),
-            { message: `Must be between 1 and ${MAX_RETENTION_DAYS}` },
+                Number(val) <= POLICY_MAX_RETENTION_DAYS),
+            { message: `Must be between 1 and ${POLICY_MAX_RETENTION_DAYS}` },
           ),
         retentionMode: z.enum(["delete", "archive", "none"]),
         immutable: z.boolean(),
@@ -224,8 +226,10 @@ export function EditPolicyPage(): React.JSX.Element {
           .refine(
             (val) =>
               val === "" ||
-              (Number.isInteger(Number(val)) && Number(val) >= 1 && Number(val) <= MAX_TTL_SECONDS),
-            { message: `Must be between 1 and ${MAX_TTL_SECONDS}` },
+              (Number.isInteger(Number(val)) &&
+                Number(val) >= 1 &&
+                Number(val) <= POLICY_MAX_TTL_SECONDS),
+            { message: `Must be between 1 and ${POLICY_MAX_TTL_SECONDS}` },
           ),
         signedUrlBucketSize: z
           .string()
@@ -234,8 +238,8 @@ export function EditPolicyPage(): React.JSX.Element {
               val === "" ||
               (Number.isInteger(Number(val)) &&
                 Number(val) >= 1 &&
-                Number(val) <= MAX_SIGNED_URL_BUCKET_SECONDS),
-            { message: `Must be between 1 and ${MAX_SIGNED_URL_BUCKET_SECONDS}` },
+                Number(val) <= POLICY_MAX_SIGNED_URL_BUCKET_SIZE),
+            { message: `Must be between 1 and ${POLICY_MAX_SIGNED_URL_BUCKET_SIZE}` },
           ),
         contentModerationRaw: z.string().refine((val) => val === "" || isValidJson(val), {
           message: t("pages.namespaces.errors.invalidJson"),
@@ -490,7 +494,7 @@ export function EditPolicyPage(): React.JSX.Element {
                 id="ep-max-file-size"
                 type="number"
                 min={1}
-                max={MAX_FILE_SIZE_BYTES}
+                max={POLICY_MAX_FILE_SIZE_BYTES}
                 aria-invalid={errors.maxFileSizeBytes ? true : undefined}
                 aria-describedby={errors.maxFileSizeBytes ? "ep-max-file-size-error" : undefined}
                 {...register("maxFileSizeBytes")}
@@ -564,7 +568,7 @@ export function EditPolicyPage(): React.JSX.Element {
                 id="ep-retention-days"
                 type="number"
                 min={1}
-                max={MAX_RETENTION_DAYS}
+                max={POLICY_MAX_RETENTION_DAYS}
                 placeholder="—"
                 aria-invalid={errors.retentionDays ? true : undefined}
                 aria-describedby={errors.retentionDays ? "ep-retention-days-error" : undefined}
@@ -654,7 +658,7 @@ export function EditPolicyPage(): React.JSX.Element {
                 id="ep-signed-url-ttl"
                 type="number"
                 min={1}
-                max={MAX_TTL_SECONDS}
+                max={POLICY_MAX_TTL_SECONDS}
                 aria-invalid={errors.signedUrlTtlSeconds ? true : undefined}
                 aria-describedby={
                   errors.signedUrlTtlSeconds ? "ep-signed-url-ttl-error" : undefined
@@ -677,7 +681,7 @@ export function EditPolicyPage(): React.JSX.Element {
                 id="ep-signed-url-bucket-size"
                 type="number"
                 min={1}
-                max={MAX_SIGNED_URL_BUCKET_SECONDS}
+                max={POLICY_MAX_SIGNED_URL_BUCKET_SIZE}
                 aria-invalid={errors.signedUrlBucketSize ? true : undefined}
                 aria-describedby={
                   errors.signedUrlBucketSize ? "ep-signed-url-bucket-size-error" : undefined
