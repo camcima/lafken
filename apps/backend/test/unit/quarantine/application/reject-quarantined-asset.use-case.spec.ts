@@ -8,8 +8,10 @@ import type { AssetState } from "@/assets/domain/value-objects/asset-state.value
 import { RejectQuarantinedAssetUseCase } from "@/quarantine/application/use-cases/reject-quarantined-asset.use-case";
 
 import { FakeAssetWriteRepository } from "../../../__fakes__/fake-asset-write.repository";
+import { FakeUnitOfWork } from "../../../__fakes__/fake-unit-of-work";
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryAssetQueryRepository } from "../../assets/__fakes__/in-memory-asset-query.repository";
+import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 
 function makeAsset(state: AssetState, legalHold = false): Asset {
   const now = new Date();
@@ -48,12 +50,19 @@ function makeAsset(state: AssetState, legalHold = false): Asset {
 describe("RejectQuarantinedAssetUseCase", () => {
   let queryRepo: InMemoryAssetQueryRepository;
   let writeRepo: FakeAssetWriteRepository;
+  let auditRepo: InMemoryAuditWriteRepository;
   let useCase: RejectQuarantinedAssetUseCase;
 
   beforeEach(() => {
     queryRepo = new InMemoryAssetQueryRepository();
     writeRepo = new FakeAssetWriteRepository();
-    useCase = new RejectQuarantinedAssetUseCase(queryRepo, writeRepo);
+    auditRepo = new InMemoryAuditWriteRepository();
+    useCase = new RejectQuarantinedAssetUseCase(
+      queryRepo,
+      writeRepo,
+      auditRepo,
+      new FakeUnitOfWork(),
+    );
   });
 
   it("transitions a quarantined asset to rejected and persists the note", async () => {
@@ -64,6 +73,7 @@ describe("RejectQuarantinedAssetUseCase", () => {
       publicId: TEST_UUIDS.asset1,
       reviewerId: "reviewer@example.com",
       note: "Confirmed graphic-injury detail per policy.",
+      requestIp: null,
     });
 
     expect(result.props.state).toBe("rejected");
@@ -82,7 +92,12 @@ describe("RejectQuarantinedAssetUseCase", () => {
 
   it("throws AssetNotFoundError when no asset exists", async () => {
     await expect(
-      useCase.execute({ publicId: "missing", reviewerId: null, note: "n/a long enough" }),
+      useCase.execute({
+        publicId: "missing",
+        reviewerId: null,
+        note: "n/a long enough",
+        requestIp: null,
+      }),
     ).rejects.toBeInstanceOf(AssetNotFoundError);
   });
 
@@ -93,6 +108,7 @@ describe("RejectQuarantinedAssetUseCase", () => {
         publicId: TEST_UUIDS.asset1,
         reviewerId: null,
         note: "long enough note here",
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(AssetNotInQuarantineError);
   });
@@ -104,11 +120,14 @@ describe("RejectQuarantinedAssetUseCase", () => {
         publicId: TEST_UUIDS.asset1,
         reviewerId: null,
         note: "should not transition",
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(AssetUnderLegalHoldError);
   });
 
-  it("maps a lost CAS race to AssetNotInQuarantineError instead of a silent overwrite", async () => {
+  it("maps a lost CAS race to AssetNotInQuarantineError instead of a silent overwrite, and writes no audit entry", async () => {
+    // Asset is quarantined at read time, but the fake returns null from
+    // transitionState — the shape of a concurrent reviewer winning the race.
     queryRepo.seed([makeAsset("quarantined_moderation")]);
 
     await expect(
@@ -116,7 +135,51 @@ describe("RejectQuarantinedAssetUseCase", () => {
         publicId: TEST_UUIDS.asset1,
         reviewerId: "reviewer@example.com",
         note: "duplicate decision from a second tab",
+        requestIp: null,
       }),
     ).rejects.toBeInstanceOf(AssetNotInQuarantineError);
+    expect(writeRepo.transitions).toHaveLength(1);
+    // The transition attempt lost the CAS inside the unit of work, so the
+    // audit write inside the same block must never have run either.
+    expect(auditRepo.records).toHaveLength(0);
+  });
+
+  it("records a configuration audit entry for the reject decision", async () => {
+    queryRepo.seed([makeAsset("quarantined_moderation")]);
+    writeRepo.transitionResponses.set(TEST_UUIDS.asset1, makeAsset("rejected"));
+
+    await useCase.execute({
+      publicId: TEST_UUIDS.asset1,
+      reviewerId: "reviewer@example.com",
+      note: "contains prohibited content",
+      requestIp: "10.0.0.9",
+    });
+
+    expect(auditRepo.records).toHaveLength(1);
+    expect(auditRepo.records[0]).toMatchObject({
+      entityType: "asset",
+      entityId: TEST_UUIDS.asset1,
+      action: "reject",
+      occurredBy: "reviewer@example.com",
+      requestIp: "10.0.0.9",
+      beforeState: { state: "quarantined_moderation" },
+      afterState: { state: "rejected" },
+    });
+    expect(auditRepo.records[0]?.reason).toContain("rejected_from_quarantine");
+  });
+
+  it("writes no audit entry when the transition finds no asset at all (true 404, not a lost CAS)", async () => {
+    // Nothing seeded in queryRepo → the use case throws AssetNotFoundError
+    // before ever reaching the unit of work / transitionState / audit write.
+    await expect(
+      useCase.execute({
+        publicId: "missing",
+        reviewerId: null,
+        note: "contains prohibited content",
+        requestIp: null,
+      }),
+    ).rejects.toBeInstanceOf(AssetNotFoundError);
+
+    expect(auditRepo.records).toHaveLength(0);
   });
 });
