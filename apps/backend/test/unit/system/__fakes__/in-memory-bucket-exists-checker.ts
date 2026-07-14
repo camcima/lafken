@@ -1,5 +1,5 @@
+import type { GcsBindingConfig } from "@/system/domain/entities/storage-binding.entity";
 import { BucketNotFoundError } from "@/system/domain/errors/bucket-not-found.error";
-import type { GcsBindingConfig } from "@/system/domain/schemas/gcs-binding-config.schema";
 import { BucketExistsCheckerPort } from "@/system/domain/services/bucket-exists-checker.service.port";
 
 export class InMemoryBucketExistsChecker implements BucketExistsCheckerPort {

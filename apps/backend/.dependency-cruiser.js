@@ -36,6 +36,55 @@ module.exports = {
       to: { path: "^src/shared/infrastructure/" },
     },
 
+    // CLAUDE.md's first, most important hexagonal rule: "Domain has no
+    // external dependencies... must not import from infrastructure,
+    // frameworks, ORMs, HTTP clients, or third-party libraries." Nothing
+    // above enforced this — `no-application-into-shared-infrastructure` only
+    // covers `/application/`, and no rule at all blocked domain from
+    // reaching into shared/infrastructure. Domain needs a port; the adapter
+    // is bound at the composition root like every other outward dependency.
+    {
+      name: "no-domain-into-shared-infrastructure",
+      severity: "error",
+      comment:
+        "Domain must not depend on shared infrastructure. Define a domain-owned port and bind the adapter at the composition root.",
+      from: { path: "^src/[^/]+/domain" },
+      to: { path: "^src/shared/infrastructure/" },
+    },
+
+    // Companion to the rule above: domain must also stay framework-free —
+    // no npm dependency at all (NestJS decorators, ORMs, HTTP clients,
+    // validation libraries, anything). If domain needs something external,
+    // it defines a port it owns and an outer layer implements it.
+    //
+    // Lists all seven `npm*` dependencyTypes dependency-cruiser recognizes,
+    // not just the four ("npm", "npm-dev", "npm-peer", "npm-optional") that
+    // cover a package declared in *this* workspace's own package.json. In
+    // this pnpm monorepo, a domain file importing `zod` (declared only in
+    // the repo-root package.json, not apps/backend/package.json) resolves
+    // as dependencyType "npm-no-pkg" — proven empirically while wiring this
+    // rule up: the four-type list let that exact violation through
+    // silently. Also including "npm-bundled" and "npm-unknown" so no
+    // resolution-mechanism quirk creates another blind spot.
+    {
+      name: "domain-is-framework-free",
+      severity: "error",
+      comment:
+        "Domain code must not depend on any third-party package. Define a port and let an outer layer implement it.",
+      from: { path: "^src/[^/]+/domain" },
+      to: {
+        dependencyTypes: [
+          "npm",
+          "npm-dev",
+          "npm-peer",
+          "npm-optional",
+          "npm-bundled",
+          "npm-no-pkg",
+          "npm-unknown",
+        ],
+      },
+    },
+
     // Presentation (controllers, guards, response mappers, decorators) reaches
     // infrastructure only through application ports — for ANY feature, not
     // just its own. Two sanctioned escapes (verified by grep against the
@@ -55,11 +104,35 @@ module.exports = {
       from: { path: "^src/[^/]+/presentation" },
       to: {
         path: "^src/[^/]+/infrastructure",
+        // Anchored with `\.ts$` so these `pathNot` escapes only ever match
+        // the two exact files they were written for — an unanchored prefix
+        // match (e.g. `database-client`) would also silently exempt a
+        // future `database-client-pool.ts` or similar.
         pathNot: [
-          "^src/shared/infrastructure/environment\\.configuration",
-          "^src/shared/infrastructure/persistence/database-client",
+          "^src/shared/infrastructure/environment\\.configuration\\.ts$",
+          "^src/shared/infrastructure/persistence/database-client\\.ts$",
         ],
       },
+    },
+
+    // `no-presentation-into-infrastructure`'s `database-client` escape above
+    // is scoped to `^src/[^/]+/infrastructure` in general, which makes it a
+    // *global* exemption: any presentation file anywhere gets a free pass to
+    // import DatabaseClient directly, not just the one Terminus health
+    // indicator the comment names. This companion rule closes that hole by
+    // forbidding presentation -> database-client specifically, with the one
+    // sanctioned caller (the health probe, whose whole job is pinging the DB
+    // directly) as the only `from.pathNot` exception.
+    {
+      name: "no-presentation-into-database-client",
+      severity: "error",
+      comment:
+        "Only the Terminus DB health indicator may import DatabaseClient directly from presentation. Every other presentation file must route through an application port.",
+      from: {
+        path: "^src/[^/]+/presentation",
+        pathNot: ["^src/health/presentation/indicators/database-health\\.indicator\\.ts$"],
+      },
+      to: { path: "^src/shared/infrastructure/persistence/database-client" },
     },
 
     // A feature's domain must not import another feature's internals.

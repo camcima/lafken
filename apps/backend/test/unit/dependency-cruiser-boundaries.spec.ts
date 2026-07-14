@@ -168,6 +168,46 @@ const SCENARIOS: Array<{ name: string; ruleName: string; plant: () => void }> = 
       );
     },
   },
+  {
+    name: "a feature's domain importing shared infrastructure directly",
+    ruleName: "no-domain-into-shared-infrastructure",
+    plant: () => {
+      writeFixtureFile(
+        path.join(FIXTURE_FEATURE_DIR, "domain/violation.ts"),
+        'import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";\n' +
+          "export const violation = DatabaseClient;\n",
+      );
+    },
+  },
+  {
+    name: "a feature's domain importing a third-party npm package",
+    ruleName: "domain-is-framework-free",
+    plant: () => {
+      // Deliberately `zod`, not a hypothetical package: this reproduces the
+      // real casualty found while wiring this rule up
+      // (system/domain/schemas/gcs-binding-config.schema.ts). `zod` is
+      // declared in the monorepo *root* package.json, not
+      // apps/backend/package.json, so dependency-cruiser resolves it as
+      // dependencyType "npm-no-pkg" rather than "npm" — the exact edge case
+      // that made the rule's dependencyTypes list need all seven `npm*`
+      // variants instead of just the four covering an in-workspace package.
+      writeFixtureFile(
+        path.join(FIXTURE_FEATURE_DIR, "domain/violation.ts"),
+        'import { z } from "zod";\n' + "export const violation = z.string();\n",
+      );
+    },
+  },
+  {
+    name: "a feature's presentation layer importing DatabaseClient directly (not the sanctioned health indicator)",
+    ruleName: "no-presentation-into-database-client",
+    plant: () => {
+      writeFixtureFile(
+        path.join(FIXTURE_FEATURE_DIR, "presentation/violation.ts"),
+        'import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";\n' +
+          "export const violation = DatabaseClient;\n",
+      );
+    },
+  },
 ];
 
 describe("dependency-cruiser architectural boundaries (fixture-based, self-defending)", () => {
@@ -188,4 +228,25 @@ describe("dependency-cruiser architectural boundaries (fixture-based, self-defen
       expect(result.output).toMatch(new RegExp(`error ${scenario.ruleName}`, "u"));
     });
   }
+
+  // Every case above only proves a rule fires when a fixture violates it —
+  // it never asserts the real, unmodified `src` tree is clean. Without this,
+  // `.dependency-cruiser.js` stays documentation: a genuine new violation in
+  // real code could slip in and nothing here would notice, and `dep-check`
+  // itself is neither a turbo task nor wired into a git hook. This test is
+  // what turns the config into an actual gate — it's the one case in this
+  // file that is *supposed* to pass dep-check, not fail it.
+  //
+  // `cleanFixtures()` runs first so this is order-independent: it doesn't
+  // matter whether a previous case in this file (or a prior failed run)
+  // left fixture directories behind, this test always starts from the real
+  // tree only.
+  it(
+    "passes dep-check on the unmodified tree (no error-severity violations)",
+    { timeout: 60_000 },
+    () => {
+      cleanFixtures();
+      expect(runDepCruise().exitCode).toBe(0);
+    },
+  );
 });

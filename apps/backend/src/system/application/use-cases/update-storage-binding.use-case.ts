@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { AuditWriteRepositoryPort } from "@/audit/domain/repositories/audit-write.repository.port";
+import { gcsBindingConfigSchema } from "@/system/application/gcs-binding-config.schema";
 import { StorageBinding } from "@/system/domain/entities/storage-binding.entity";
 import {
   InvalidStorageBindingConfigError,
@@ -9,7 +10,6 @@ import {
 import { StorageBindingNotFoundError } from "@/system/domain/errors/storage-binding-not-found.error";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
 import { StorageBindingWriteRepositoryPort } from "@/system/domain/repositories/storage-binding-write.repository.port";
-import { gcsBindingConfigSchema } from "@/system/domain/schemas/gcs-binding-config.schema";
 import { BucketExistsCheckerPort } from "@/system/domain/services/bucket-exists-checker.service.port";
 
 const AUDIT_FALLBACK_PRINCIPAL = "system";

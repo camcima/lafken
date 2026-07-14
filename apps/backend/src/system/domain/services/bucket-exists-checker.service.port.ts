@@ -1,4 +1,4 @@
-import type { GcsBindingConfig } from "../schemas/gcs-binding-config.schema";
+import type { GcsBindingConfig } from "../entities/storage-binding.entity";
 
 export abstract class BucketExistsCheckerPort {
   abstract checkBucketExists(props: {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { gcsBindingConfigSchema } from "@/system/domain/schemas/gcs-binding-config.schema";
+import { gcsBindingConfigSchema } from "@/system/application/gcs-binding-config.schema";
 
 describe("gcsBindingConfigSchema", () => {
   it("accepts a minimal valid config (bucket + projectId, no prefix)", () => {
