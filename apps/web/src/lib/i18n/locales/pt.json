@@ -243,16 +243,7 @@
       "filters": {
         "allStates": "Todos os estados",
         "allNamespaces": "Todos os namespaces",
-        "moreFilters": "Mais filtros",
-        "clear": "Limpar filtros",
-        "quickFiltersLabel": "Filtros rápidos:",
-        "quickFilters": {
-          "last24h": "Últimas 24h",
-          "hasLegalHold": "Com retenção legal",
-          "failedPipelines": "Pipelines com falha",
-          "mine": "Meus",
-          "quarantined": "Em quarentena"
-        }
+        "clear": "Limpar filtros"
       },
       "viewToggle": {
         "rows": "Linhas",
@@ -260,14 +251,10 @@
         "grid": "Grade"
       },
       "actions": {
-        "export": "Exportar visão",
         "upload": "Enviar"
       },
       "bulkBar": {
         "selected": "{{count}} selecionados",
-        "export": "Exportar",
-        "placeHold": "Aplicar retenção legal…",
-        "editMetadata": "Editar metadados…",
         "clear": "Limpar"
       },
       "summary": "Exibindo {{shown}} de {{total}} ativos correspondentes",
@@ -937,7 +924,6 @@
         "awaitingReview": "aguardando revisão · mais antigo 36h · SLO do revisor",
         "slo": "4h"
       },
-      "reviewedToday": "{{count}} revisados hoje",
       "exportQueue": "Exportar fila",
       "policyBadge": "política v7",
       "decisionNote": "Todas as decisões são registradas no log de auditoria com seu principal, o ID do ativo, o nome do analisador e sua nota.",
@@ -1074,10 +1060,6 @@
         "assetsUnderHold": {
           "label": "Ativos sob retenção",
           "sub": "em todos os escopos"
-        },
-        "oldestHold": {
-          "label": "Retenção mais antiga",
-          "sub": "CHL-2025-AVN-099"
         }
       },
       "filters": {
@@ -1281,13 +1263,7 @@
     },
     "settings": {
       "title": "Configurações",
-      "subtitle": "Workspace LATAM Lafken (prod) · sa-east-1",
-      "comingSoon": "Configurações persistentes disponíveis em um próximo slice",
-      "labels": {
-        "theme": "Tema",
-        "language": "Idioma",
-        "dateFormat": "Formato de data"
-      },
+      "subtitle": "Configuração do workspace",
       "tabs": {
         "workspace": "Workspace",
         "members": "Membros e funções",
@@ -1295,137 +1271,9 @@
         "policies": "Políticas e padrões",
         "danger": "Zona de risco"
       },
-      "workspace": {
-        "fields": {
-          "name": {
-            "label": "Nome do workspace",
-            "value": "LATAM Lafken (prod)"
-          },
-          "slug": {
-            "label": "Slug do workspace",
-            "value": "latam-lafken-prod"
-          },
-          "region": {
-            "label": "Região",
-            "value": "sa-east-1 (São Paulo, primária)"
-          },
-          "replica": {
-            "label": "Réplica",
-            "value": "sa-east-1c (morna)"
-          },
-          "defaultNamespace": {
-            "label": "Namespace padrão",
-            "value": "aircraft-photos"
-          },
-          "reviewerSlo": {
-            "label": "SLO do revisor padrão",
-            "value": "4 horas"
-          },
-          "created": {
-            "label": "Criado",
-            "value": "2024-08-12 por p.estrada@latam.com"
-          },
-          "plan": {
-            "label": "Plano"
-          }
-        },
-        "plan": {
-          "label": "Enterprise · personalizado"
-        }
-      },
-      "branding": {
-        "title": "Identidade visual",
-        "description": "Favicon do console, fundo do login e cabeçalho de e-mail são obtidos deste kit de marca.",
-        "lastEdited": "Última edição há 38 dias por p.estrada@latam.com.",
-        "replaceLogo": "Substituir logotipo",
-        "reset": "Redefinir para padrão"
-      },
-      "members": {
-        "title": "Membros",
-        "inviteMember": "Convidar membro",
-        "empty": "Nenhum membro ainda.",
-        "table": {
-          "person": "Pessoa",
-          "role": "Função",
-          "scope": "Escopo",
-          "mfa": "MFA",
-          "lastActive": "Última atividade"
-        },
-        "mfa": {
-          "on": "ativo",
-          "off": "inativo"
-        }
-      },
-      "api": {
-        "title": "Chaves de API",
-        "createKey": "Criar chave",
-        "empty": "Nenhuma chave de API ainda.",
-        "table": {
-          "label": "Rótulo",
-          "scopes": "Escopos",
-          "lastUsed": "Último uso",
-          "rotates": "Rotação automática",
-          "createdBy": "Criado por",
-          "status": "Status"
-        },
-        "status": {
-          "active": "ativo",
-          "revoked": "revogado"
-        }
-      },
-      "policies": {
-        "title": "Padrões aplicados a novos namespaces",
-        "defaults": {
-          "retention": {
-            "label": "Retenção padrão",
-            "value": "7 anos",
-            "note": "Substituível por namespace na YAML de política."
-          },
-          "maxUpload": {
-            "label": "Tamanho máximo de upload padrão",
-            "value": "26 MB",
-            "note": "Teto absoluto 200 MB."
-          },
-          "allowedMimes": {
-            "label": "Tipos MIME permitidos",
-            "value": "image/jpeg, image/png, image/heic, application/pdf"
-          },
-          "moderation": {
-            "label": "Moderação",
-            "value": "habilitada (v2)",
-            "note": "Limite 0,65 em todas as categorias."
-          },
-          "exif": {
-            "label": "Política EXIF",
-            "value": "remover dos bytes; preservar GPS em capture_context"
-          },
-          "retentionWarning": {
-            "label": "Aviso prévio de retenção",
-            "value": "60 dias",
-            "note": "E-mail + banner do console antes da expiração."
-          }
-        },
-        "edit": "Editar"
-      },
-      "danger": {
-        "title": "Zona de risco",
-        "actions": {
-          "pauseUploads": {
-            "label": "Pausar todos os uploads",
-            "note": "Para os uploaders sem derrubar o pipeline; ativos prontos continuam disponíveis.",
-            "btn": "Pausar"
-          },
-          "rotateKey": {
-            "label": "Rotacionar chave de assinatura do workspace",
-            "note": "Reassina a cadeia de auditoria. Apenas novas âncoras.",
-            "btn": "Rotacionar…"
-          },
-          "disableConsole": {
-            "label": "Desabilitar acesso ao console",
-            "note": "Modo somente leitura em todo o workspace. Chaves de API não afetadas.",
-            "btn": "Desabilitar…"
-          }
-        }
+      "notConfigured": {
+        "title": "Ainda não configurado",
+        "description": "As configurações do workspace ainda não estão conectadas ao backend. Esta aba será ativada quando a API correspondente for lançada."
       }
     },
     "placeLegalHold": {

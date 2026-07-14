@@ -117,12 +117,6 @@ describe("AssetsListPage", () => {
     expect(screen.getByRole("button", { name: /grid/i })).toBeInTheDocument();
   });
 
-  it("renders quick filter pills", async () => {
-    await renderPage();
-    expect(await screen.findByRole("button", { name: /last 24h/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /has legal hold/i })).toBeInTheDocument();
-  });
-
   it("renders a row from the BE response", async () => {
     await renderPage();
     await waitFor(() => {

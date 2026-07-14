@@ -385,7 +385,7 @@ export function LegalHoldsListPage(): React.JSX.Element {
       </div>
 
       {/* Stats grid */}
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-3">
         <Card className="px-4 py-3">
           <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
             {t("pages.legalHolds.stats.activeHolds.label")}
@@ -406,15 +406,6 @@ export function LegalHoldsListPage(): React.JSX.Element {
           </div>
           <div className="text-muted-foreground text-[11px]">
             {t("pages.legalHolds.stats.assetsUnderHold.sub")}
-          </div>
-        </Card>
-        <Card className="px-4 py-3">
-          <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
-            {t("pages.legalHolds.stats.oldestHold.label")}
-          </div>
-          <div className="mt-0.5 font-mono text-[24px] leading-tight tabular-nums">—</div>
-          <div className="text-muted-foreground text-[11px]">
-            {t("pages.legalHolds.stats.oldestHold.sub")}
           </div>
         </Card>
       </div>

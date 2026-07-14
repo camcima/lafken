@@ -1,6 +1,6 @@
 import type { AssetState, NamespaceResponseDTO } from "@shared/backend-api";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { Download, Filter, Lock, Plus, Search, Tag, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -26,17 +26,6 @@ const PAGE_SIZE_OPTIONS = [18, 24, 50, 100] as const;
 /* eslint-enable no-magic-numbers */
 
 const NAMESPACE_FILTER_LIMIT = 100;
-
-const QUICK_FILTER_KEYS = [
-  "last24h",
-  "hasLegalHold",
-  "quarantined",
-  "failedPipelines",
-  "mine",
-] as const;
-
-// Slice 1: wire to active more-filters count
-const MORE_FILTERS_BADGE_PLACEHOLDER = 2;
 
 interface INamespaceOption {
   slug: string;
@@ -206,9 +195,6 @@ export function AssetsListPage(): React.JSX.Element {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <ViewToggle view={view} onChange={handleViewChange} />
-            <Button type="button" variant="outline">
-              <Download /> {t("pages.assets.actions.export")}
-            </Button>
             <Button asChild variant="indigo">
               <Link to="/assets/upload">
                 <Plus /> {t("pages.assets.actions.upload")}
@@ -276,17 +262,6 @@ export function AssetsListPage(): React.JSX.Element {
             ))}
           </select>
 
-          {/* More filters — matches the h-9 filter row, not the action-bar h-8 */}
-          <button
-            type="button"
-            className="border-border bg-card hover:bg-secondary hover:border-latam-indigo/30 inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-[12.5px]"
-          >
-            <Filter size={13} /> {t("pages.assets.filters.moreFilters")}
-            <span className="bg-secondary text-muted-foreground ml-1 rounded-full px-1.5 py-px text-[10.5px]">
-              {MORE_FILTERS_BADGE_PLACEHOLDER}
-            </span>
-          </button>
-
           {/* Clear filters */}
           {hasActiveFilters && (
             <button
@@ -298,22 +273,6 @@ export function AssetsListPage(): React.JSX.Element {
             </button>
           )}
         </div>
-
-        {/* Quick filters strip */}
-        <div className="border-border mt-2 flex flex-wrap items-center gap-1.5 border-t border-dashed pt-2 text-[11px]">
-          <span className="text-muted-foreground self-center text-[10.5px] tracking-wider uppercase">
-            {t("pages.assets.filters.quickFiltersLabel")}
-          </span>
-          {QUICK_FILTER_KEYS.map((key) => (
-            <button
-              key={key}
-              type="button"
-              className="border-border bg-card text-muted-foreground hover:border-latam-indigo/30 hover:text-foreground rounded-full border px-2.5 py-0.5 text-[11.5px]"
-            >
-              {t(`pages.assets.filters.quickFilters.${key}`)}
-            </button>
-          ))}
-        </div>
       </Card>
 
       {/* ── Bulk action bar ─────────────────────────────────── */}
@@ -324,24 +283,6 @@ export function AssetsListPage(): React.JSX.Element {
               {t("pages.assets.bulkBar.selected", { count: selected.size })}
             </span>
             <div className="ml-auto flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-md border border-white/30 bg-white/10 px-3 py-1 text-[12px] text-white hover:bg-white/20"
-              >
-                <Download size={13} /> {t("pages.assets.bulkBar.export")}
-              </button>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-md border border-white/30 bg-white/10 px-3 py-1 text-[12px] text-white hover:bg-white/20"
-              >
-                <Lock size={13} /> {t("pages.assets.bulkBar.placeHold")}
-              </button>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-md border border-white/30 bg-white/10 px-3 py-1 text-[12px] text-white hover:bg-white/20"
-              >
-                <Tag size={13} /> {t("pages.assets.bulkBar.editMetadata")}
-              </button>
               <button
                 type="button"
                 onClick={() => {

@@ -190,12 +190,8 @@ describe("LegalHoldsListPage", () => {
 
   it("applies the status filter from a deep link", async () => {
     await renderPage("/legal-holds?status=lifted");
-    // The lifted hold's case ref renders in the row — but it also
-    // coincidentally matches the hardcoded "oldest hold" stat sub-text
-    // (see en.json `pages.legalHolds.stats.oldestHold.sub`), so two
-    // occurrences confirms the row itself rendered, not just the stat tile.
     await waitFor(() => {
-      expect(screen.getAllByText(LIFTED_HOLD.caseReference)).toHaveLength(2);
+      expect(screen.getByText(LIFTED_HOLD.caseReference)).toBeInTheDocument();
     });
     expect(screen.queryByText(ACTIVE_HOLD.caseReference)).not.toBeInTheDocument();
   });
@@ -388,11 +384,9 @@ describe("LegalHoldsListPage", () => {
     await renderPage("/legal-holds?status=not-a-real-status");
 
     expect(await screen.findByRole("heading", { name: /legal holds/i })).toBeInTheDocument();
-    // Unfiltered: both rows render. The lifted hold's case ref also matches
-    // the hardcoded "oldest hold" stat sub-text (see en.json
-    // `pages.legalHolds.stats.oldestHold.sub`), so it appears twice.
+    // Unfiltered: both rows render.
     expect(await screen.findByText(ACTIVE_HOLD.caseReference)).toBeInTheDocument();
-    expect(screen.getAllByText(LIFTED_HOLD.caseReference)).toHaveLength(2);
+    expect(screen.getByText(LIFTED_HOLD.caseReference)).toBeInTheDocument();
   });
 
   // ── Error state with retry (F-W4) ─────────────────────────────────────
