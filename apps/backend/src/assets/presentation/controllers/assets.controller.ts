@@ -71,7 +71,7 @@ import {
   PreviewUrlSignerPort,
 } from "@/assets/domain/services/preview-url-signer.port";
 import { isAssetPreviewable } from "@/assets/domain/value-objects/asset-state.value-object";
-import { SYSTEM_PRESETS } from "@/assets/infrastructure/services/system-presets";
+import { SYSTEM_PRESETS } from "@/assets/domain/value-objects/system-presets";
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";

@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  SYSTEM_PRESET_NAME_PREFIX,
-  SYSTEM_PRESETS,
-} from "@/assets/infrastructure/services/system-presets";
+import { SYSTEM_PRESETS } from "@/assets/domain/value-objects/system-presets";
+import { SYSTEM_PRESET_NAME_PREFIX } from "@/shared/kernel/domain/preset-naming";
 
 describe("SYSTEM_PRESETS", () => {
   it("includes lafken:thumbnail with sensible default spec", () => {
