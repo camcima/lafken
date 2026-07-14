@@ -29,6 +29,8 @@ paths:
           required: false
           in: query
           schema:
+            minimum: 1
+            maximum: 100
             default: 20
             type: number
         - name: order
@@ -239,7 +241,9 @@ paths:
           description: ''
       security:
         - bearer: []
-      summary: List active presets for a namespace
+      summary: >-
+        List presets for a namespace (latest version per name, including
+        inactive)
       tags:
         - Namespaces
     post:
@@ -519,6 +523,8 @@ paths:
           required: false
           in: query
           schema:
+            minimum: 1
+            maximum: 100
             default: 20
             type: number
         - name: order
@@ -661,6 +667,43 @@ paths:
       security:
         - bearer: []
       summary: Get an asset by internal id
+      tags:
+        - Assets
+    delete:
+      description: >-
+        Transitions the asset to the terminal `deleted` state. Idempotent:
+        deleting an already-deleted asset returns 204 without a new transition.
+        The stored object remains in place — a separate purge process removes
+        bytes later. Assets under a legal hold cannot be deleted (409).
+      operationId: AssetsController_deleteAsset_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '204':
+          description: ''
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
+          description: ''
+        '404':
+          description: ''
+        '409':
+          description: ''
+      security:
+        - bearer: []
+      summary: Soft-delete an asset
       tags:
         - Assets
   /v1/assets/{publicId}/preview-url:
@@ -992,6 +1035,8 @@ paths:
           required: false
           in: query
           schema:
+            minimum: 1
+            maximum: 100
             default: 20
             type: number
         - name: order
@@ -1159,6 +1204,8 @@ paths:
           required: false
           in: query
           schema:
+            minimum: 1
+            maximum: 100
             default: 20
             type: number
         - name: order
@@ -1192,6 +1239,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
           description: ''
       security:
         - bearer: []
@@ -1256,6 +1309,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
           description: ''
         '404':
           description: ''
@@ -1322,6 +1381,8 @@ paths:
           required: false
           in: query
           schema:
+            minimum: 1
+            maximum: 100
             default: 20
             type: number
         - name: order
@@ -1394,6 +1455,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
           description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
+          description: ''
       security:
         - bearer: []
       summary: List audit log entries
@@ -1417,6 +1484,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
           description: ''
       security:
         - bearer: []
@@ -1483,6 +1556,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
           description: ''
         '404':
           description: ''
@@ -1586,6 +1665,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
           description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
+          description: ''
       security:
         - bearer: []
       summary: List integration adapter statuses
@@ -1607,6 +1692,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/UnauthorizedErrorResponseDTO'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenErrorResponseDTO'
           description: ''
       security:
         - bearer: []
@@ -1651,7 +1742,7 @@ components:
       scheme: bearer
       bearerFormat: JWT
       type: http
-      description: Azure AD Bearer token authorization
+      description: OIDC Bearer token authorization
   schemas:
     HealthIndicatorStatusDTO:
       type: object
@@ -2337,6 +2428,18 @@ components:
           type: number
         height:
           type: number
+        externalRefType:
+          type: string
+          example: work_order
+        externalRefId:
+          type: string
+          example: wo-2026-04-29-N12345-018
+        note:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
     QuarantinedAssetResponseDTO:
       type: object
       properties:
@@ -2739,6 +2842,8 @@ components:
           type: number
         legalHolds:
           type: number
+        assetsUnderLegalHold:
+          type: number
         failedProcessing:
           type: number
         namespaces:
@@ -2749,6 +2854,7 @@ components:
         - queueDepth
         - quarantine
         - legalHolds
+        - assetsUnderLegalHold
         - failedProcessing
         - namespaces
     DashboardOverviewResponseDTO:
