@@ -181,7 +181,9 @@ function PoliciesTab(): React.JSX.Element {
     key: string;
     label: string;
     value: string;
-    note: string;
+    // Some defaults carry no note. Absent, not an empty translation: an empty
+    // string would render as the raw key once i18next treats "" as missing.
+    note?: string;
   };
 
   const defaults: IPolicyDefault[] = [
@@ -201,7 +203,6 @@ function PoliciesTab(): React.JSX.Element {
       key: "allowedMimes",
       label: t("pages.settings.policies.defaults.allowedMimes.label"),
       value: t("pages.settings.policies.defaults.allowedMimes.value"),
-      note: t("pages.settings.policies.defaults.allowedMimes.note"),
     },
     {
       key: "moderation",
@@ -213,7 +214,6 @@ function PoliciesTab(): React.JSX.Element {
       key: "exif",
       label: t("pages.settings.policies.defaults.exif.label"),
       value: t("pages.settings.policies.defaults.exif.value"),
-      note: t("pages.settings.policies.defaults.exif.note"),
     },
     {
       key: "retentionWarning",

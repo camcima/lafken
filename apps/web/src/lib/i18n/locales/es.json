@@ -1383,8 +1383,7 @@
           },
           "allowedMimes": {
             "label": "Tipos MIME permitidos",
-            "value": "image/jpeg, image/png, image/heic, application/pdf",
-            "note": ""
+            "value": "image/jpeg, image/png, image/heic, application/pdf"
           },
           "moderation": {
             "label": "Moderación",
@@ -1393,8 +1392,7 @@
           },
           "exif": {
             "label": "Política EXIF",
-            "value": "eliminar de los bytes; preservar GPS en capture_context",
-            "note": ""
+            "value": "eliminar de los bytes; preservar GPS en capture_context"
           },
           "retentionWarning": {
             "label": "Aviso previo de retención",
