@@ -270,4 +270,15 @@ describe("AssetsListPage", () => {
       expect(listAssetsMock).toHaveBeenCalledWith(expect.objectContaining({ states: undefined }));
     });
   });
+
+  it("renders unscoped without crashing when `legalHoldId` is not a uuid", async () => {
+    await renderPage("/assets?legalHoldId=not-a-uuid");
+
+    expect(await screen.findByRole("heading", { level: 1, name: /^Assets$/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(listAssetsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ legalHoldId: undefined }),
+      );
+    });
+  });
 });
