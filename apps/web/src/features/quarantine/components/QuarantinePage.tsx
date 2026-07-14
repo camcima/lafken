@@ -1,5 +1,5 @@
 import type { QuarantinedAssetResponseDTO } from "@shared/backend-api";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { Check, ExternalLink, Image as ImageIcon, Shield, X } from "lucide-react";
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -297,7 +297,8 @@ export function QuarantinePage(): React.JSX.Element {
   const rejectMutation = useRejectQuarantinedAsset();
   const mutating = releaseMutation.isPending || rejectMutation.isPending;
 
-  const [filter, setFilter] = useState<IFilterType>("all");
+  const { kind: filter } = useSearch({ from: "/_protected/quarantine" });
+  const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [reviewedToday, setReviewedToday] = useState(0);
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -436,7 +437,7 @@ export function QuarantinePage(): React.JSX.Element {
               key={tab.id}
               type="button"
               onClick={() => {
-                setFilter(tab.id);
+                void navigate({ to: "/quarantine", search: { kind: tab.id } });
               }}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded px-2.5 py-1 transition-colors",
