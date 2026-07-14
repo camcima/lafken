@@ -13,6 +13,7 @@ import { GetAssetByIdUseCase } from "./application/use-cases/get-asset-by-id.use
 import { GetAssetByPublicIdUseCase } from "./application/use-cases/get-asset-by-public-id.use-case";
 import { GetAssetDownloadUrlUseCase } from "./application/use-cases/get-asset-download-url.use-case";
 import { GetAssetProcessingJobUseCase } from "./application/use-cases/get-asset-processing-job.use-case";
+import { GetPreviewUrlUseCase } from "./application/use-cases/get-preview-url.use-case";
 import { ListAssetAnalysesUseCase } from "./application/use-cases/list-asset-analyses.use-case";
 import { ListAssetStateTransitionsUseCase } from "./application/use-cases/list-asset-state-transitions.use-case";
 import { ListAssetsUseCase } from "./application/use-cases/list-assets.use-case";
@@ -38,6 +39,7 @@ import { AssetsController } from "./presentation/controllers/assets.controller";
     ListAssetStateTransitionsUseCase,
     ListAssetAnalysesUseCase,
     GetAssetProcessingJobUseCase,
+    GetPreviewUrlUseCase,
     CreateUploadIntentUseCase,
     DeleteAssetUseCase,
     ConfirmUploadUseCase,
