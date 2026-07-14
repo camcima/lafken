@@ -214,7 +214,12 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
     e.preventDefault();
 
     placeMutation.mutate(
-      { caseReference, description, assetIds: [...picked.keys()] },
+      {
+        caseReference,
+        description,
+        assetIds: [...picked.keys()],
+        assetInternalIds: [...picked.values()].map((asset) => asset.id),
+      },
       {
         onSuccess: () => {
           toast.success(t("pages.placeLegalHold.toast.success", { caseReference }));

@@ -9,6 +9,7 @@ import type {
 } from "@shared/backend-api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { auditKeys } from "@/features/audit/keys";
 import { namespacesKeys } from "@/features/namespaces/keys";
 import type { IListNamespacesQuery } from "@/features/namespaces/keys";
 
@@ -54,6 +55,7 @@ export function useCreateNamespace() {
     mutationFn: (input: CreateNamespaceRequestDTO) => client.namespaces.create(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: auditKeys.lists() });
     },
   });
 }
@@ -67,6 +69,7 @@ export function useUpdateNamespaceMetadata() {
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.detail(variables.slug) });
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: auditKeys.lists() });
     },
   });
 }
@@ -79,6 +82,7 @@ export function useArchiveNamespace() {
     onSuccess: (_data, slug) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.detail(slug) });
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: auditKeys.lists() });
     },
   });
 }
@@ -91,6 +95,7 @@ export function useUnarchiveNamespace() {
     onSuccess: (_data, slug) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.detail(slug) });
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: auditKeys.lists() });
     },
   });
 }
@@ -104,6 +109,7 @@ export function useUpdateNamespacePolicy() {
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.detail(variables.slug) });
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.policies(variables.slug) });
+      void queryClient.invalidateQueries({ queryKey: auditKeys.lists() });
     },
   });
 }
@@ -116,6 +122,7 @@ export function useCreatePreset() {
       client.namespaces.createPreset(slug, input),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.presets(variables.slug) });
+      void queryClient.invalidateQueries({ queryKey: auditKeys.lists() });
     },
   });
 }
@@ -135,6 +142,7 @@ export function useUpdatePresetVersion() {
     }) => client.namespaces.updatePresetVersion(slug, name, input),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.presets(variables.slug) });
+      void queryClient.invalidateQueries({ queryKey: auditKeys.lists() });
     },
   });
 }
@@ -154,6 +162,7 @@ export function useSetPresetActive() {
     }) => client.namespaces.setPresetActive(slug, name, input),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: namespacesKeys.presets(variables.slug) });
+      void queryClient.invalidateQueries({ queryKey: auditKeys.lists() });
     },
   });
 }

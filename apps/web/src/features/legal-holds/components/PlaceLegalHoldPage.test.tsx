@@ -24,8 +24,8 @@ vi.mock("@/features/assets/hooks/useAssets", () => ({
   useAssets: () => ({
     data: {
       data: [
-        { publicId: "01HXASSET001", legalHold: false },
-        { publicId: "01HXASSET002", legalHold: true },
+        { id: "01977b7a-0000-7000-8000-000000000001", publicId: "01HXASSET001", legalHold: false },
+        { id: "01977b7a-0000-7000-8000-000000000002", publicId: "01HXASSET002", legalHold: true },
       ],
     },
   }),
@@ -106,6 +106,10 @@ describe("PlaceLegalHoldPage", () => {
         description: "Investigation per DGAC requirement.",
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         assetIds: expect.arrayContaining(["01HXASSET001"]),
+        // The mutation invalidates the asset-detail cache by internal id, so
+        // it must be threaded through alongside the publicIds sent to the API.
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        assetInternalIds: expect.arrayContaining(["01977b7a-0000-7000-8000-000000000001"]),
       }),
       expect.any(Object),
     );

@@ -44,7 +44,7 @@ export const queryClient = new QueryClient({
       },
       retryDelay: (attemptIndex) =>
         Math.min(RETRY_BASE_DELAY_MS * 2 ** attemptIndex, RETRY_MAX_DELAY_MS),
-      refetchOnWindowFocus: import.meta.env.DEV,
+      refetchOnWindowFocus: true,
       refetchOnReconnect: true,
     },
     mutations: {
