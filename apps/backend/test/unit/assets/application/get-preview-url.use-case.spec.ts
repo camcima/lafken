@@ -79,7 +79,12 @@ function makeBinding(): StorageBinding {
   });
 }
 
-function makePreset(name: string, version: number, width: number): NamespacePreset {
+function makePreset(
+  name: string,
+  version: number,
+  width: number,
+  active: boolean = true,
+): NamespacePreset {
   return NamespacePreset.fromProps({
     id: TEST_UUIDS.preset1,
     namespaceId: TEST_UUIDS.namespace1,
@@ -97,7 +102,7 @@ function makePreset(name: string, version: number, width: number): NamespacePres
     preGenerate: false,
     requiredPermission: null,
     description: null,
-    active: true,
+    active,
     createdAt: new Date(),
   });
 }
@@ -188,6 +193,29 @@ describe("GetPreviewUrlUseCase", () => {
     await useCase.execute({ publicId: TEST_UUIDS.asset1, presetName: "lafken:thumbnail" });
 
     expect(signer.signed[0]?.preset).toMatchObject({ width: 200, height: 200 });
+  });
+
+  it("lets a system preset win even when the same-named namespace preset is deactivated", async () => {
+    // listPresets never filters by active (see the port's doc comment), so a
+    // deactivated preset can still reach this dedupe pass. System presets are
+    // seeded into the map first, so precedence must hold regardless of the
+    // shadowing namespace preset's active flag.
+    namespaceRepo.seedPresets([makePreset("lafken:thumbnail", 1, 999, false)]);
+
+    await useCase.execute({ publicId: TEST_UUIDS.asset1, presetName: "lafken:thumbnail" });
+
+    expect(signer.signed[0]?.preset).toMatchObject({ width: 200, height: 200 });
+  });
+
+  it("throws ActivePresetNotFoundError for a namespace preset that exists but is deactivated", async () => {
+    // listPresets returns exactly one (latest) row per name regardless of
+    // `active` (DISTINCT ON semantics) — the use case must still refuse to
+    // resolve a deactivated preset rather than treat it as servable.
+    namespaceRepo.seedPresets([makePreset("cover-md", 1, 640, false)]);
+
+    await expect(
+      useCase.execute({ publicId: TEST_UUIDS.asset1, presetName: "cover-md" }),
+    ).rejects.toBeInstanceOf(ActivePresetNotFoundError);
   });
 
   it("throws AssetNotFoundError when no asset matches the publicId", async () => {
