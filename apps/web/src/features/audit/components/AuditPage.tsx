@@ -23,6 +23,7 @@ import { Card } from "@/components/common/Card";
 import { Paginator } from "@/components/common/Paginator";
 import { RightDrawer } from "@/components/common/RightDrawer";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
+import { ListQueryError } from "@/components/feedback/Error/ListQueryError";
 import { useAuditEntries } from "@/features/audit/hooks/useAudit";
 import { cn } from "@/lib/utils";
 import { AUDIT_ENTITY_TYPES } from "@/routes/_protected/audit";
@@ -344,71 +345,80 @@ export function AuditPage(): React.JSX.Element {
         </div>
       </Card>
 
-      <Card className="overflow-x-auto">
-        <div className="min-w-[920px]">
-          <div
-            className={cn(
-              "border-border bg-secondary/40 text-muted-foreground grid items-center gap-3 border-b px-4 py-2 text-[10.5px] font-medium tracking-wider uppercase",
-              TABLE_COLS,
-            )}
-          >
-            <span>{t("pages.audit.table.time")}</span>
-            <span>{t("pages.audit.table.type")}</span>
-            <span>{t("pages.audit.table.actor")}</span>
-            <span>{t("pages.audit.table.target")}</span>
-            <span>{t("pages.audit.table.ip")}</span>
-            <span>{t("pages.audit.table.result")}</span>
-            <span />
-          </div>
-          {pageRows.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              onClick={() => {
-                setOpenId(entry.id);
-              }}
+      {realQuery.isError ? (
+        <ListQueryError
+          isRetrying={realQuery.isFetching}
+          onRetry={() => {
+            void realQuery.refetch();
+          }}
+        />
+      ) : (
+        <Card className="overflow-x-auto">
+          <div className="min-w-[920px]">
+            <div
               className={cn(
-                "border-border/40 hover:bg-secondary/30 grid w-full items-center gap-3 border-b px-4 py-2 text-left text-[12px] last:border-b-0",
+                "border-border bg-secondary/40 text-muted-foreground grid items-center gap-3 border-b px-4 py-2 text-[10.5px] font-medium tracking-wider uppercase",
                 TABLE_COLS,
               )}
             >
-              <div className="text-muted-foreground font-mono text-[11px] tabular-nums">
-                {fmtMinAgo(entry.minutesAgo)}
-              </div>
-              <div className="inline-flex min-w-0 items-center gap-1.5">
-                <TypeIcon type={entry.type} />
-                <span className="truncate font-mono text-[11.5px]">{entry.type}</span>
-              </div>
-              <div className="text-muted-foreground truncate font-mono text-[11.5px]">
-                {entry.actor}
-              </div>
-              <div className="min-w-0">
-                <div className="truncate font-mono text-[11.5px]">{entry.target}</div>
-                <div className="text-muted-foreground truncate font-mono text-[10.5px]">
-                  {entry.namespace}
-                </div>
-              </div>
-              <div className="text-muted-foreground font-mono text-[10.5px] tabular-nums">
-                {entry.ip}
-              </div>
-              <div>
-                {entry.result === "ok" ? (
-                  <Badge variant="ok">
-                    <span className="bg-ok size-1 rounded-full" />
-                    {t("pages.audit.result.ok")}
-                  </Badge>
-                ) : (
-                  <Badge variant="danger">
-                    <span className="bg-danger size-1 rounded-full" />
-                    {t("pages.audit.result.fail")}
-                  </Badge>
+              <span>{t("pages.audit.table.time")}</span>
+              <span>{t("pages.audit.table.type")}</span>
+              <span>{t("pages.audit.table.actor")}</span>
+              <span>{t("pages.audit.table.target")}</span>
+              <span>{t("pages.audit.table.ip")}</span>
+              <span>{t("pages.audit.table.result")}</span>
+              <span />
+            </div>
+            {pageRows.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                onClick={() => {
+                  setOpenId(entry.id);
+                }}
+                className={cn(
+                  "border-border/40 hover:bg-secondary/30 grid w-full items-center gap-3 border-b px-4 py-2 text-left text-[12px] last:border-b-0",
+                  TABLE_COLS,
                 )}
-              </div>
-              <ChevronRight size={CHEVRON_SIZE} className="text-muted-foreground" />
-            </button>
-          ))}
-        </div>
-      </Card>
+              >
+                <div className="text-muted-foreground font-mono text-[11px] tabular-nums">
+                  {fmtMinAgo(entry.minutesAgo)}
+                </div>
+                <div className="inline-flex min-w-0 items-center gap-1.5">
+                  <TypeIcon type={entry.type} />
+                  <span className="truncate font-mono text-[11.5px]">{entry.type}</span>
+                </div>
+                <div className="text-muted-foreground truncate font-mono text-[11.5px]">
+                  {entry.actor}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate font-mono text-[11.5px]">{entry.target}</div>
+                  <div className="text-muted-foreground truncate font-mono text-[10.5px]">
+                    {entry.namespace}
+                  </div>
+                </div>
+                <div className="text-muted-foreground font-mono text-[10.5px] tabular-nums">
+                  {entry.ip}
+                </div>
+                <div>
+                  {entry.result === "ok" ? (
+                    <Badge variant="ok">
+                      <span className="bg-ok size-1 rounded-full" />
+                      {t("pages.audit.result.ok")}
+                    </Badge>
+                  ) : (
+                    <Badge variant="danger">
+                      <span className="bg-danger size-1 rounded-full" />
+                      {t("pages.audit.result.fail")}
+                    </Badge>
+                  )}
+                </div>
+                <ChevronRight size={CHEVRON_SIZE} className="text-muted-foreground" />
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <div className="text-muted-foreground mt-3 flex flex-wrap items-center justify-between gap-3 text-[11.5px]">
         <div className="flex items-center gap-2">

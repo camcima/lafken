@@ -9,6 +9,7 @@ import { Button } from "@/components/common/Button";
 import { Card, CardHeader, CardMeta, CardTitle } from "@/components/common/Card";
 import { RelativeTime } from "@/components/common/RelativeTime";
 import { StatePill } from "@/components/common/StatePill";
+import { ListQueryError } from "@/components/feedback/Error/ListQueryError";
 import { useQuarantine } from "@/features/quarantine/hooks/useQuarantine";
 import {
   useRejectQuarantinedAsset,
@@ -290,7 +291,10 @@ function DetailPane({ asset, onRelease, onReject, busy }: IDetailPaneProps): Rea
 
 export function QuarantinePage(): React.JSX.Element {
   const { t } = useTranslation();
-  const { data, isLoading } = useQuarantine({ page: 1, limit: QUEUE_FETCH_LIMIT });
+  const { data, isLoading, isError, isFetching, refetch } = useQuarantine({
+    page: 1,
+    limit: QUEUE_FETCH_LIMIT,
+  });
   const allAssets: QuarantinedAssetResponseDTO[] = useMemo(() => data?.data ?? [], [data]);
 
   const releaseMutation = useReleaseQuarantinedAsset();
@@ -466,7 +470,15 @@ export function QuarantinePage(): React.JSX.Element {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]">
         {/* Queue list */}
         <Card className="max-h-[calc(100vh-220px)] overflow-y-auto p-0">
-          {isLoading ? (
+          {isError ? (
+            <ListQueryError
+              className="border-0 shadow-none"
+              isRetrying={isFetching}
+              onRetry={() => {
+                void refetch();
+              }}
+            />
+          ) : isLoading ? (
             <div className="text-muted-foreground px-6 py-12 text-center text-[12.5px]">
               {t("pages.quarantine.loading")}
             </div>

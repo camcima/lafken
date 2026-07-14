@@ -32,6 +32,11 @@
     "actions": {
       "retry": "Reintentar",
       "close": "Cerrar panel"
+    },
+    "listError": {
+      "title": "No se pudo cargar esta lista",
+      "description": "La solicitud falló. Verifica tu conexión e inténtalo de nuevo.",
+      "retry": "Reintentar"
     }
   },
   "errors": {

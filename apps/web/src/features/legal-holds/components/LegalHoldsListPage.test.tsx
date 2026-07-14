@@ -394,4 +394,37 @@ describe("LegalHoldsListPage", () => {
     expect(await screen.findByText(ACTIVE_HOLD.caseReference)).toBeInTheDocument();
     expect(screen.getAllByText(LIFTED_HOLD.caseReference)).toHaveLength(2);
   });
+
+  // ── Error state with retry (F-W4) ─────────────────────────────────────
+
+  it("shows the error state with a retry button when the list query fails", async () => {
+    useLegalHoldsMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch: vi.fn(),
+    });
+
+    await renderPage();
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+    expect(screen.queryByText(ACTIVE_HOLD.caseReference)).not.toBeInTheDocument();
+  });
+
+  it("calls the query's refetch when the retry button is clicked", async () => {
+    const refetch = vi.fn();
+    useLegalHoldsMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch,
+    });
+
+    await renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: /retry/i }));
+
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
 });

@@ -1,7 +1,7 @@
-import type { QuarantinedAssetResponseDTO } from "@shared/backend-api";
-import { screen, waitFor, within } from "@testing-library/react";
+import type { PaginatedResult, QuarantinedAssetResponseDTO } from "@shared/backend-api";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithRouter } from "@/lib/test/render-with-router";
 import { quarantineSearchSchema } from "@/routes/_protected/quarantine";
@@ -70,17 +70,36 @@ const VIRUS_ASSET: QuarantinedAssetResponseDTO = makeAsset({
 
 const ASSETS: QuarantinedAssetResponseDTO[] = [INVALID_FORMAT_ASSET, MODERATION_ASSET, VIRUS_ASSET];
 
+interface IUseQuarantineResult {
+  data: PaginatedResult<QuarantinedAssetResponseDTO> | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  refetch: () => void;
+}
+
+const useQuarantineMock = vi.fn<(query: Record<string, unknown>) => IUseQuarantineResult>();
 vi.mock("@/features/quarantine/hooks/useQuarantine", () => ({
-  useQuarantine: () => ({
-    data: { data: ASSETS, total: ASSETS.length, page: 1, limit: 20, lastPage: 1 },
-    isLoading: false,
-  }),
+  useQuarantine: (q: Record<string, unknown>) => useQuarantineMock(q),
 }));
 
 vi.mock("@/features/quarantine/hooks/useQuarantineMutations", () => ({
   useReleaseQuarantinedAsset: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useRejectQuarantinedAsset: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
+
+afterEach(() => {
+  cleanup();
+});
+
+beforeEach(() => {
+  useQuarantineMock.mockReset();
+  useQuarantineMock.mockReturnValue({
+    data: { data: ASSETS, total: ASSETS.length, page: 1, limit: 20, lastPage: 1 },
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  });
+});
 
 describe("QuarantinePage", () => {
   it("renders the title heading", async () => {
@@ -184,5 +203,39 @@ describe("QuarantinePage", () => {
     expect(screen.getByText(/aaaaaaaa…/)).toBeInTheDocument();
     expect(screen.getByText(/bbbbbbbb…/)).toBeInTheDocument();
     expect(screen.getByText(/cccccccc…/)).toBeInTheDocument();
+  });
+
+  // ── Error state with retry (F-W4) ─────────────────────────────────────
+
+  it("shows the error state with a retry button when the list query fails", async () => {
+    useQuarantineMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch: vi.fn(),
+    });
+
+    await renderPage();
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+    expect(screen.queryByText(/aaaaaaaa…/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/all clear/i)).not.toBeInTheDocument();
+  });
+
+  it("calls the query's refetch when the retry button is clicked", async () => {
+    const refetch = vi.fn();
+    useQuarantineMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch,
+    });
+
+    await renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: /retry/i }));
+
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

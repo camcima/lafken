@@ -32,6 +32,11 @@
     "actions": {
       "retry": "Retry",
       "close": "Close drawer"
+    },
+    "listError": {
+      "title": "Couldn't load this list",
+      "description": "The request failed. Check your connection and try again.",
+      "retry": "Retry"
     }
   },
   "errors": {

@@ -8,6 +8,7 @@ import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
 import { Paginator } from "@/components/common/Paginator";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
+import { ListQueryError } from "@/components/feedback/Error/ListQueryError";
 import { assetResponseToRow, type IAssetRow } from "@/features/assets/asset-row";
 import {
   AssetsListView,
@@ -67,7 +68,13 @@ export function AssetsListPage(): React.JSX.Element {
     states: stateFilter !== "all" ? [stateFilter as AssetState] : undefined,
     legalHoldId,
   };
-  const { data: realAssetsPage, isLoading: realAssetsLoading } = useAssets(listQuery);
+  const {
+    data: realAssetsPage,
+    isLoading: realAssetsLoading,
+    isError: realAssetsError,
+    isFetching: realAssetsFetching,
+    refetch: refetchAssets,
+  } = useAssets(listQuery);
 
   const { data: realNamespacesPage } = useNamespaces({
     page: 1,
@@ -373,7 +380,14 @@ export function AssetsListPage(): React.JSX.Element {
       </div>
 
       {/* ── Content area ──────────────────────────────────────── */}
-      {isLoading ? (
+      {realAssetsError ? (
+        <ListQueryError
+          isRetrying={realAssetsFetching}
+          onRetry={() => {
+            void refetchAssets();
+          }}
+        />
+      ) : isLoading ? (
         <Card className="px-8 py-16 text-center">
           <div className="text-muted-foreground text-[12.5px]">
             {t("pages.namespaceDetail.loading")}

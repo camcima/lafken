@@ -23,6 +23,7 @@ import { Label } from "@/components/common/Label";
 import { Paginator } from "@/components/common/Paginator";
 import { RightDrawer } from "@/components/common/RightDrawer";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
+import { ListQueryError } from "@/components/feedback/Error/ListQueryError";
 import { useDashboardOverview } from "@/features/dashboard/hooks/useDashboardOverview";
 import { LiftLegalHoldDialog } from "@/features/legal-holds/components/LiftLegalHoldDialog";
 import { useLegalHolds } from "@/features/legal-holds/hooks/useLegalHolds";
@@ -460,81 +461,90 @@ export function LegalHoldsListPage(): React.JSX.Element {
       </Card>
 
       {/* Table card */}
-      <Card className="overflow-x-auto">
-        <div className="min-w-[1080px]">
-          <div
-            className={cn(
-              "border-border bg-secondary/40 text-muted-foreground grid items-center gap-3 border-b px-4 py-2 text-[10.5px] font-medium tracking-wider uppercase",
-              TABLE_COLS,
-            )}
-          >
-            <span>{t("pages.legalHolds.table.caseRef")}</span>
-            <span>{t("pages.legalHolds.table.scope")}</span>
-            <span>{t("pages.legalHolds.table.target")}</span>
-            <span className="text-right">{t("pages.legalHolds.table.assets")}</span>
-            <span>{t("pages.legalHolds.table.placedBy")}</span>
-            <span>{t("pages.legalHolds.table.lastReviewed")}</span>
-            <span>{t("pages.legalHolds.table.status")}</span>
-            <span />
-          </div>
-          {pageRows.map((row) => (
-            <button
-              key={row.id}
-              type="button"
-              onClick={() => {
-                setOpenId(row.id);
-              }}
+      {realQuery.isError ? (
+        <ListQueryError
+          isRetrying={realQuery.isFetching}
+          onRetry={() => {
+            void realQuery.refetch();
+          }}
+        />
+      ) : (
+        <Card className="overflow-x-auto">
+          <div className="min-w-[1080px]">
+            <div
               className={cn(
-                "border-border/40 hover:bg-secondary/30 grid w-full items-center gap-3 border-b px-4 py-2.5 text-left text-[12.5px] last:border-b-0",
+                "border-border bg-secondary/40 text-muted-foreground grid items-center gap-3 border-b px-4 py-2 text-[10.5px] font-medium tracking-wider uppercase",
                 TABLE_COLS,
               )}
             >
-              <div className="min-w-0">
-                <div className="text-latam-indigo-deep truncate font-mono text-[12.5px]">
-                  {row.caseRef}
-                </div>
-                <div className="text-muted-foreground truncate font-mono text-[10.5px]">
-                  {row.id}
-                </div>
-              </div>
-              <div
+              <span>{t("pages.legalHolds.table.caseRef")}</span>
+              <span>{t("pages.legalHolds.table.scope")}</span>
+              <span>{t("pages.legalHolds.table.target")}</span>
+              <span className="text-right">{t("pages.legalHolds.table.assets")}</span>
+              <span>{t("pages.legalHolds.table.placedBy")}</span>
+              <span>{t("pages.legalHolds.table.lastReviewed")}</span>
+              <span>{t("pages.legalHolds.table.status")}</span>
+              <span />
+            </div>
+            {pageRows.map((row) => (
+              <button
+                key={row.id}
+                type="button"
+                onClick={() => {
+                  setOpenId(row.id);
+                }}
                 className={cn(
-                  "border-border bg-secondary/40 inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px]",
+                  "border-border/40 hover:bg-secondary/30 grid w-full items-center gap-3 border-b px-4 py-2.5 text-left text-[12.5px] last:border-b-0",
+                  TABLE_COLS,
                 )}
               >
-                <ScopeIcon scope={row.scope} />
-                {scopeLabels[row.scope] ?? row.scopeLabel}
-              </div>
-              <div className="text-muted-foreground truncate font-mono text-[11.5px]">
-                {row.scopeLabel}
-              </div>
-              <div className="text-right font-mono text-[12.5px] tabular-nums">
-                {row.assets.toLocaleString()}
-              </div>
-              <div className="text-muted-foreground truncate font-mono text-[11.5px]">
-                {row.placedBy}
-              </div>
-              <div className="text-muted-foreground text-[11.5px]">
-                {row.lastReviewed.slice(0, DATE_SLICE_END)}
-              </div>
-              <div>
-                {row.active ? (
-                  <Badge variant="warn">
-                    <Lock size={BADGE_ICON_SIZE} />
-                    {t("pages.legalHolds.statuses.active")}
-                  </Badge>
-                ) : (
-                  <Badge variant="info">
-                    <Clock size={BADGE_ICON_SIZE} />
-                    {t("pages.legalHolds.statuses.lifted")}
-                  </Badge>
-                )}
-              </div>
-              <ChevronRight size={CHEVRON_SIZE} className="text-muted-foreground" />
-            </button>
-          ))}
-        </div>
-      </Card>
+                <div className="min-w-0">
+                  <div className="text-latam-indigo-deep truncate font-mono text-[12.5px]">
+                    {row.caseRef}
+                  </div>
+                  <div className="text-muted-foreground truncate font-mono text-[10.5px]">
+                    {row.id}
+                  </div>
+                </div>
+                <div
+                  className={cn(
+                    "border-border bg-secondary/40 inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px]",
+                  )}
+                >
+                  <ScopeIcon scope={row.scope} />
+                  {scopeLabels[row.scope] ?? row.scopeLabel}
+                </div>
+                <div className="text-muted-foreground truncate font-mono text-[11.5px]">
+                  {row.scopeLabel}
+                </div>
+                <div className="text-right font-mono text-[12.5px] tabular-nums">
+                  {row.assets.toLocaleString()}
+                </div>
+                <div className="text-muted-foreground truncate font-mono text-[11.5px]">
+                  {row.placedBy}
+                </div>
+                <div className="text-muted-foreground text-[11.5px]">
+                  {row.lastReviewed.slice(0, DATE_SLICE_END)}
+                </div>
+                <div>
+                  {row.active ? (
+                    <Badge variant="warn">
+                      <Lock size={BADGE_ICON_SIZE} />
+                      {t("pages.legalHolds.statuses.active")}
+                    </Badge>
+                  ) : (
+                    <Badge variant="info">
+                      <Clock size={BADGE_ICON_SIZE} />
+                      {t("pages.legalHolds.statuses.lifted")}
+                    </Badge>
+                  )}
+                </div>
+                <ChevronRight size={CHEVRON_SIZE} className="text-muted-foreground" />
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Footer paginator */}
       <div className="text-muted-foreground mt-3 flex flex-wrap items-center justify-between gap-3 text-[11.5px]">

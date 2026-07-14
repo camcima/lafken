@@ -32,6 +32,11 @@
     "actions": {
       "retry": "Tentar novamente",
       "close": "Fechar painel"
+    },
+    "listError": {
+      "title": "Não foi possível carregar esta lista",
+      "description": "A requisição falhou. Verifique sua conexão e tente novamente.",
+      "retry": "Tentar novamente"
     }
   },
   "errors": {

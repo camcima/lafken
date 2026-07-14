@@ -281,4 +281,42 @@ describe("AssetsListPage", () => {
       );
     });
   });
+
+  // ── Error state with retry (F-W4) ─────────────────────────────────────
+
+  it("shows the error state with a retry button when the list query fails", async () => {
+    listAssetsMock.mockRejectedValue(new Error("boom"));
+
+    await renderPage();
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+    expect(screen.queryByText(/no assets match these filters/i)).not.toBeInTheDocument();
+  });
+
+  it("re-fetches on retry and replaces the error with data once the retry succeeds", async () => {
+    listAssetsMock.mockRejectedValueOnce(new Error("boom"));
+
+    await renderPage();
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(listAssetsMock).toHaveBeenCalledTimes(1);
+
+    listAssetsMock.mockResolvedValueOnce({
+      data: [ASSET],
+      total: 100,
+      page: 1,
+      limit: 18,
+      lastPage: 6,
+    });
+    await userEvent.click(screen.getByRole("button", { name: /retry/i }));
+
+    await waitFor(() => {
+      expect(listAssetsMock).toHaveBeenCalledTimes(2);
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+    expect(screen.getByText(/abcdef12/)).toBeInTheDocument();
+  });
 });
