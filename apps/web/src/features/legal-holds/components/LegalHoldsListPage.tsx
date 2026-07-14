@@ -1,5 +1,5 @@
 import type { LegalHoldResponseDTO } from "@shared/backend-api";
-import { Link, useSearch } from "@tanstack/react-router";
+import { Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import {
   Check,
   ChevronRight,
@@ -13,7 +13,7 @@ import {
   Search,
   Tag,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/common/Badge";
@@ -253,23 +253,76 @@ function HoldDrawer({ hold, onClose, onLift }: IHoldDrawerProps): React.JSX.Elem
 
 // ── Page ──────────────────────────────────────────────────────────────────
 
+const SEARCH_DEBOUNCE_MS = 250;
+
 export function LegalHoldsListPage(): React.JSX.Element {
   const { t } = useTranslation();
-  const { q: initialQ } = useSearch({ from: "/_protected/legal-holds/" });
-  const [query, setQuery] = useState(initialQ ?? "");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const {
+    q,
+    status: statusFilter,
+    page: urlPage,
+  } = useSearch({
+    from: "/_protected/legal-holds/",
+  });
+  const navigate = useNavigate();
+  const router = useRouter();
+
+  // `pendingQuery` is the user's not-yet-committed edit: null except while a
+  // debounce write is in flight. The displayed `query` derives from it (or
+  // falls back to the URL's `q`) instead of mirroring `q` into its own state,
+  // so external navigation is reflected for free on the next render — no
+  // resync effect required, and nothing to fight the debounce write below.
+  // (Same pattern as AuditPage — see there for the full writeup.)
+  const [pendingQuery, setPendingQuery] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [liftDialogOpen, setLiftDialogOpen] = useState(false);
-  const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  const realQuery = useLegalHolds({ page: page + 1, limit: pageSize });
+  const query: string = pendingQuery ?? q ?? "";
+  const page: number = urlPage - 1; // URL is 1-indexed; Paginator is 0-indexed
+
+  // History navigation (Back/Forward) always wins over an edit the user never
+  // committed: discard the pending edit, which both disarms the debounce
+  // below (its cleanup cancels the armed timer) and drops the input back to
+  // the URL's `q`. This path may only ever CANCEL, never write `q` — writing
+  // in response to an external `q` change is what lets the URL resurrect a
+  // stale search after Back (see AuditPage for the full invariant writeup).
+  useEffect(() => {
+    return router.history.subscribe(({ action }) => {
+      if (action.type === "PUSH" || action.type === "REPLACE") return;
+      setPendingQuery(null);
+    });
+  }, [router]);
+
+  // Debounce the free-text input into the URL (replace: no history entry per
+  // keystroke). Only armed while there is a pending edit; the effect depends
+  // on `[pendingQuery, navigate]` only — never `q` — so an external change to
+  // `q` (e.g. Back) cannot re-arm a write.
+  useEffect(() => {
+    if (pendingQuery === null) return;
+    const handle = window.setTimeout(() => {
+      const trimmed = pendingQuery.trim();
+      void navigate({
+        to: "/legal-holds",
+        search: (prev) => ({ ...prev, q: trimmed === "" ? undefined : trimmed, page: 1 }),
+        replace: true,
+      });
+      setPendingQuery(null);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(handle);
+    };
+  }, [pendingQuery, navigate]);
+
+  const realQuery = useLegalHolds({ page: urlPage, limit: pageSize });
   const overviewQuery = useDashboardOverview();
 
   const allRows: IHoldRow[] = (realQuery.data?.data ?? []).map(apiToRow);
 
   // Client-side refinement of the *visible page only* — the API has no
-  // q/status filters yet. Server totals below are unaffected by this.
+  // q/status filters yet. Server totals below are unaffected by this. `query`
+  // (not the committed URL `q`) drives this so filtering reacts to every
+  // keystroke; the debounce above is purely about persisting to the URL.
   const filtered: IHoldRow[] = allRows.filter((row) => {
     if (statusFilter === "active" && !row.active) return false;
     if (statusFilter === "lifted" && row.active) return false;
@@ -378,18 +431,25 @@ export function LegalHoldsListPage(): React.JSX.Element {
               placeholder={t("pages.legalHolds.searchPlaceholder")}
               value={query}
               onChange={(ev: React.ChangeEvent<HTMLInputElement>) => {
-                setQuery(ev.target.value);
-                setPage(0);
+                setPendingQuery(ev.target.value);
               }}
+              aria-label={t("pages.legalHolds.searchPlaceholder")}
               className="border-input bg-card focus:ring-ring h-9 w-full rounded-md border pr-3 pl-9 text-[12.5px] outline-none focus:ring-1"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
-              setStatusFilter(ev.target.value);
-              setPage(0);
+              void navigate({
+                to: "/legal-holds",
+                search: (prev) => ({
+                  ...prev,
+                  status: ev.target.value as "all" | "active" | "lifted",
+                  page: 1,
+                }),
+              });
             }}
+            aria-label={t("pages.legalHolds.table.status")}
             className={SELECT_CLASS}
           >
             <option value="all">{t("pages.legalHolds.filters.allStatuses")}</option>
@@ -484,7 +544,7 @@ export function LegalHoldsListPage(): React.JSX.Element {
             value={pageSize}
             onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
               setPageSize(Number(ev.target.value));
-              setPage(0);
+              void navigate({ to: "/legal-holds", search: (prev) => ({ ...prev, page: 1 }) });
             }}
             className={SELECT_CLASS_SM}
             aria-label={t("paginator.rowsPerPage")}
@@ -512,7 +572,10 @@ export function LegalHoldsListPage(): React.JSX.Element {
           page={page}
           totalPages={totalPages}
           onChange={(newPage) => {
-            setPage(newPage);
+            void navigate({
+              to: "/legal-holds",
+              search: (prev) => ({ ...prev, page: newPage + 1 }),
+            });
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
         />
