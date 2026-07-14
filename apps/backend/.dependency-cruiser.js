@@ -9,7 +9,7 @@ module.exports = {
       name: "feature-domain-cannot-depend-on-other-layers-in-same-feature",
       severity: "error",
       from: { path: "^src/([^/]+)/domain" },
-      to: { path: "^src/\\1/(application|infrastructure)" },
+      to: { path: "^src/$1/(application|infrastructure)" },
     },
 
     // This rule ensures the application layer of a feature
@@ -18,7 +18,7 @@ module.exports = {
       name: "feature-application-cannot-depend-on-infrastructure-in-same-feature",
       severity: "error",
       from: { path: "^src/([^/]+)/application" },
-      to: { path: "^src/\\1/infrastructure" },
+      to: { path: "^src/$1/infrastructure" },
     },
 
     // This rule forbids any application-layer file (path contains /application/)
@@ -42,9 +42,10 @@ module.exports = {
       severity: "warn", // Start with 'warn' to avoid breaking builds immediately
       from: { path: "^src/([^/]+)/(domain|application)" },
       to: {
-        path: "^src/((?!\\1)[^/]+)/(domain|application)",
-        // You can add exceptions here for shared libraries, e.g.,
-        // pathNot: ['^src/shared']
+        path: "^src/((?!$1)[^/]+)/(domain|application)",
+        // `shared/` is the deliberate cross-cutting module (ports, logger,
+        // persistence primitives); it is not another feature's implementation.
+        pathNot: ["^src/shared/"],
       },
     },
   ],
