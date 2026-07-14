@@ -3,8 +3,10 @@ module.exports = {
   forbidden: [
     // This rule ensures the domain layer of a feature (e.g., 'orders')
     // does not depend on the application or infrastructure layers of the *same* feature.
-    // It uses a capture group `([^/]+)` for the feature name and a backreference `\\1`
-    // to ensure the rule is constrained to a single feature slice.
+    // It uses a capture group `([^/]+)` for the feature name and dependency-cruiser's
+    // `$1` placeholder to constrain the rule to a single feature slice. `$1` is
+    // substituted into `to.path` before it is compiled; a regex backreference (`\1`)
+    // would silently never match, which is exactly how this rule sat dead.
     {
       name: "feature-domain-cannot-depend-on-other-layers-in-same-feature",
       severity: "error",
