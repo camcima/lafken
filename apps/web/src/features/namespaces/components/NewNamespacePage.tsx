@@ -22,6 +22,7 @@ import { Card } from "@/components/common/Card";
 import { RadioCardGroup } from "@/features/namespaces/components/PresetFormShared";
 import { useCreateNamespace } from "@/features/namespaces/hooks/useNamespaces";
 import { useStorageBindings } from "@/features/system/hooks/useSystem";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { ApiError } from "@/lib/api/api-error";
 import { extractProblemTypeSuffix } from "@/lib/api/problem-types";
 import { cn } from "@/lib/utils";
@@ -375,8 +376,10 @@ export function NewNamespacePage(): React.JSX.Element {
     handleSubmit,
     register,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty, isSubmitSuccessful },
   } = form;
+
+  useUnsavedChangesGuard(isDirty && !isSubmitting && !isSubmitSuccessful);
 
   const isPending = createMutation.isPending;
   const isBusy = isSubmitting || isPending;

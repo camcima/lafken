@@ -21,6 +21,7 @@ import { EditPresetPage } from "./EditPresetPage";
 // ── Shared mock state ──────────────────────────────────────
 const mockNavigate = vi.fn();
 const mockMutateAsync = vi.fn();
+const mockUseUnsavedChangesGuard = vi.fn<(when: boolean) => void>();
 let mockNamespace: NamespaceResponseDTO | undefined;
 let mockPresets: NamespacePresetResponseDTO[] = [];
 
@@ -108,6 +109,17 @@ vi.mock("@tanstack/react-router", async () => {
   };
 });
 
+// The unsaved-changes guard itself (F-W6) is exercised end-to-end, with a
+// real router, in useUnsavedChangesGuard.test.tsx. Mocking it here — rather
+// than rendering under a real RouterProvider — lets these tests assert the
+// call-site contract (isDirty && !isSubmitting && !isSubmitSuccessful)
+// without duplicating the mechanism's own test suite.
+vi.mock("@/hooks/useUnsavedChangesGuard", () => ({
+  useUnsavedChangesGuard: (when: boolean) => {
+    mockUseUnsavedChangesGuard(when);
+  },
+}));
+
 // ── Render helper ──────────────────────────────────────────
 function renderPage() {
   const queryClient = new QueryClient({
@@ -135,6 +147,7 @@ describe("EditPresetPage", () => {
   beforeEach(() => {
     mockMutateAsync.mockReset();
     mockNavigate.mockReset();
+    mockUseUnsavedChangesGuard.mockReset();
     mockNamespace = sampleNamespace;
     mockPresets = [samplePreset];
   });
@@ -347,5 +360,63 @@ describe("EditPresetPage", () => {
 
     // "Back to latest" should now appear
     expect(screen.getByText(/back to latest/i)).toBeInTheDocument();
+  });
+
+  // ── Unsaved-changes guard call-site contract (F-W6) ────────
+  // The brief calls out that EditPresetPage's `reset(...)` on load makes
+  // isDirty naturally false until the user edits — proven here rather than
+  // just asserted.
+  it("does not arm the unsaved-changes guard on a pristine (freshly loaded) form", async () => {
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveValue(75);
+    });
+
+    expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(false);
+  });
+
+  it("arms the unsaved-changes guard once the user edits a field", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveValue(75);
+    });
+
+    const qualityInput = screen.getByRole("spinbutton", { name: /quality/i });
+    await user.clear(qualityInput);
+    await user.type(qualityInput, "90");
+
+    await waitFor(() => {
+      expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(true);
+    });
+  });
+
+  // The classic bug: a form that saves successfully and then navigates away
+  // must not prompt the user — isSubmitSuccessful is what disarms it.
+  it("disarms the unsaved-changes guard after a successful submit", async () => {
+    const user = userEvent.setup();
+    mockMutateAsync.mockResolvedValue(undefined);
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveValue(75);
+    });
+
+    const qualityInput = screen.getByRole("spinbutton", { name: /quality/i });
+    await user.clear(qualityInput);
+    await user.type(qualityInput, "90");
+
+    await waitFor(() => {
+      expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(true);
+    });
+
+    await user.click(screen.getByRole("button", { name: /save preset/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalled();
+    });
+    expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(false);
   });
 });

@@ -17,6 +17,7 @@ import {
   useNamespacePolicies,
   useUpdateNamespacePolicy,
 } from "@/features/namespaces/hooks/useNamespaces";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { ApiError } from "@/lib/api/api-error";
 import { extractProblemTypeSuffix } from "@/lib/api/problem-types";
 import { cn } from "@/lib/utils";
@@ -305,8 +306,10 @@ export function EditPolicyPage(): React.JSX.Element {
     handleSubmit,
     register,
     setError,
-    formState: { errors, isSubmitting, isDirty },
+    formState: { errors, isSubmitting, isDirty, isSubmitSuccessful },
   } = form;
+
+  useUnsavedChangesGuard(isDirty && !isSubmitting && !isSubmitSuccessful);
 
   const isPending = updateMutation.isPending;
   const isBusy = isSubmitting || isPending;

@@ -37,7 +37,8 @@
       "title": "Couldn't load this list",
       "description": "The request failed. Check your connection and try again.",
       "retry": "Retry"
-    }
+    },
+    "unsavedChanges": "You have unsaved changes. Discard them and leave this page?"
   },
   "errors": {
     "serverError": "A server error occurred. Please try again later.",

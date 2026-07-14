@@ -37,7 +37,8 @@
       "title": "Não foi possível carregar esta lista",
       "description": "A requisição falhou. Verifique sua conexão e tente novamente.",
       "retry": "Tentar novamente"
-    }
+    },
+    "unsavedChanges": "Você tem alterações não salvas. Descartá-las e sair desta página?"
   },
   "errors": {
     "serverError": "Ocorreu um erro no servidor. Por favor, tente novamente mais tarde.",

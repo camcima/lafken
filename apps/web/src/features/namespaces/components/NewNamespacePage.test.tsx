@@ -22,6 +22,7 @@ import { NewNamespacePage } from "./NewNamespacePage";
 // ── Shared mock state ──────────────────────────────────────
 const mockNavigate = vi.fn();
 const mockMutateAsync = vi.fn();
+const mockUseUnsavedChangesGuard = vi.fn<(when: boolean) => void>();
 let mockBindings: StorageBindingResponseDTO[] = [];
 let mockBindingsLoading = false;
 
@@ -54,6 +55,17 @@ vi.mock("@/features/namespaces/hooks/useNamespaces", () => ({
 
 vi.mock("@/features/system/hooks/useSystem", () => ({
   useStorageBindings: () => ({ data: mockBindings, isLoading: mockBindingsLoading }),
+}));
+
+// The unsaved-changes guard itself (F-W6) is exercised end-to-end, with a
+// real router, in useUnsavedChangesGuard.test.tsx. Mocking it here — rather
+// than rendering under a real RouterProvider — lets these tests assert the
+// call-site contract (isDirty && !isSubmitting && !isSubmitSuccessful)
+// without duplicating the mechanism's own test suite.
+vi.mock("@/hooks/useUnsavedChangesGuard", () => ({
+  useUnsavedChangesGuard: (when: boolean) => {
+    mockUseUnsavedChangesGuard(when);
+  },
 }));
 
 vi.mock("@tanstack/react-router", async () => {
@@ -105,6 +117,7 @@ describe("NewNamespacePage", () => {
   beforeEach(() => {
     mockMutateAsync.mockReset();
     mockNavigate.mockReset();
+    mockUseUnsavedChangesGuard.mockReset();
     mockBindings = [sampleBinding];
     mockBindingsLoading = false;
   });
@@ -366,5 +379,47 @@ describe("NewNamespacePage", () => {
         params: { slug: "aircraft-photos" },
       });
     });
+  });
+
+  // ── Unsaved-changes guard call-site contract (F-W6) ────────
+  it("does not arm the unsaved-changes guard on a pristine form", () => {
+    renderPage();
+
+    expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(false);
+  });
+
+  it("arms the unsaved-changes guard once the user edits a field", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText(/^slug$/i), "a");
+
+    await waitFor(() => {
+      expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(true);
+    });
+  });
+
+  // The classic bug: a form that saves successfully and then navigates away
+  // must not prompt the user, even though the form values are still "dirty"
+  // (nothing calls reset() here) — isSubmitSuccessful is what disarms it.
+  it("disarms the unsaved-changes guard after a successful submit", async () => {
+    const user = userEvent.setup();
+    mockMutateAsync.mockResolvedValue(sampleCreated);
+    renderPage();
+
+    await user.type(screen.getByLabelText(/^slug$/i), "aircraft-photos");
+    await user.type(screen.getByLabelText(/^display name$/i), "Aircraft Photos");
+    await user.selectOptions(screen.getByLabelText(/^storage binding$/i), "gcs-prod-main");
+
+    await waitFor(() => {
+      expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(true);
+    });
+
+    await user.click(screen.getByRole("button", { name: /create namespace/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalled();
+    });
+    expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(false);
   });
 });
