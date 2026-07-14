@@ -1,5 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { NamespaceResponseDTO } from "@shared/backend-api";
+import {
+  NAMESPACE_DESCRIPTION_MAX_LENGTH,
+  NAMESPACE_DISPLAY_NAME_MAX_LENGTH,
+} from "@shared/backend-api/validation";
 import React, { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -13,8 +17,6 @@ import { extractProblemTypeSuffix } from "@/lib/api/problem-types";
 import { cn } from "@/lib/utils";
 
 // ── Constants ─────────────────────────────────────────────
-const DISPLAY_NAME_MAX = 200;
-const DESCRIPTION_MAX = 2000;
 const HTTP_BAD_REQUEST = 400;
 
 interface INamespaceMetadataDrawerProps {
@@ -107,10 +109,14 @@ export function NamespaceMetadataDrawer({
         displayName: z
           .string()
           .min(1, { message: t("pages.namespaces.errors.displayNameRequired") })
-          .max(DISPLAY_NAME_MAX, { message: t("pages.namespaces.errors.displayNameTooLong") }),
+          .max(NAMESPACE_DISPLAY_NAME_MAX_LENGTH, {
+            message: t("pages.namespaces.errors.displayNameTooLong"),
+          }),
         description: z
           .string()
-          .max(DESCRIPTION_MAX, { message: t("pages.namespaces.errors.descriptionTooLong") })
+          .max(NAMESPACE_DESCRIPTION_MAX_LENGTH, {
+            message: t("pages.namespaces.errors.descriptionTooLong"),
+          })
           .optional(),
       }),
     [t],
