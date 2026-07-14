@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common";
 
 import { AssetsInfrastructureModule } from "@/assets/infrastructure/assets-infrastructure.module";
+import { AuditInfrastructureModule } from "@/audit/infrastructure/audit-infrastructure.module";
+import { DatabaseModule } from "@/shared/infrastructure/persistence/database.module";
 import { SystemInfrastructureModule } from "@/system/infrastructure/system-infrastructure.module";
 
 import { ListQuarantinedAssetsUseCase } from "./application/use-cases/list-quarantined-assets.use-case";
@@ -10,7 +12,13 @@ import { QuarantineInfrastructureModule } from "./infrastructure/quarantine-infr
 import { QuarantineController } from "./presentation/controllers/quarantine.controller";
 
 @Module({
-  imports: [QuarantineInfrastructureModule, AssetsInfrastructureModule, SystemInfrastructureModule],
+  imports: [
+    QuarantineInfrastructureModule,
+    AssetsInfrastructureModule,
+    SystemInfrastructureModule,
+    AuditInfrastructureModule,
+    DatabaseModule,
+  ],
   controllers: [QuarantineController],
   providers: [
     ListQuarantinedAssetsUseCase,

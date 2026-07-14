@@ -12,12 +12,17 @@ import {
   fromQuarantinedStorageKey,
   QUARANTINE_KEY_PREFIX,
 } from "@/assets/domain/value-objects/asset-state.value-object";
+import { AuditWriteRepositoryPort } from "@/audit/domain/repositories/audit-write.repository.port";
+import { UnitOfWorkPort } from "@/shared/application/unit-of-work.port";
 import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/storage-binding-query.repository.port";
+
+const AUDIT_FALLBACK_PRINCIPAL = "system";
 
 export interface IReleaseQuarantinedAssetInput {
   publicId: string;
   reviewerId: string | null;
   note?: string;
+  requestIp: string | null;
 }
 
 @Injectable()
@@ -27,6 +32,8 @@ export class ReleaseQuarantinedAssetUseCase {
     private readonly assetWriteRepo: AssetWriteRepositoryPort,
     private readonly assetStorage: AssetStoragePort,
     private readonly storageBindingRepo: StorageBindingQueryRepositoryPort,
+    private readonly auditWriteRepo: AuditWriteRepositoryPort,
+    private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
   async execute(input: IReleaseQuarantinedAssetInput): Promise<Asset> {
@@ -75,14 +82,39 @@ export class ReleaseQuarantinedAssetUseCase {
     }
 
     const expectedFromState: AssetState = asset.props.state;
-    const updated = await this.assetWriteRepo.transitionState({
-      publicId: input.publicId,
-      toState: "ready",
-      reason,
-      by: input.reviewerId,
-      metadata: input.note ? { note: input.note, decision: "release" } : { decision: "release" },
-      newStorageKey,
-      expectedFromState,
+
+    // Transition + audit write happen inside one unit of work: a committed
+    // release with no audit row (or an audit row with no committed release)
+    // would violate the audit-trail guarantee (F-A9). The byte move above
+    // stays outside the transaction as before — the known move/CAS
+    // compensation gap (F-D4) is unrelated to the audit write and this
+    // change must not widen it.
+    const updated: Asset | null = await this.unitOfWork.execute(async (): Promise<Asset | null> => {
+      const transitioned = await this.assetWriteRepo.transitionState({
+        publicId: input.publicId,
+        toState: "ready",
+        reason,
+        by: input.reviewerId,
+        metadata: input.note ? { note: input.note, decision: "release" } : { decision: "release" },
+        newStorageKey,
+        expectedFromState,
+      });
+      if (!transitioned) {
+        return null;
+      }
+
+      await this.auditWriteRepo.record({
+        entityType: "asset",
+        entityId: transitioned.props.publicId,
+        action: "release",
+        occurredBy: input.reviewerId ?? AUDIT_FALLBACK_PRINCIPAL,
+        requestIp: input.requestIp,
+        beforeState: { state: expectedFromState },
+        afterState: { state: transitioned.props.state, storageKey: transitioned.props.storageKey },
+        reason,
+      });
+
+      return transitioned;
     });
 
     if (!updated) {
