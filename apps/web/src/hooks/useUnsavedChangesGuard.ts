@@ -2,8 +2,13 @@ import { useBlocker } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 /**
- * Blocks in-app navigation with a confirm dialog — and arms the browser's
- * `beforeunload` prompt — while `when` is true (F-W6).
+ * Blocks navigation with a confirm dialog while `when` is true (F-W6).
+ * This covers three exit paths:
+ * - In-app PUSH/REPLACE navigation (`navigate()`, `<Link>`).
+ * - The browser's physical Back/Forward buttons — `@tanstack/history`'s
+ *   `createBrowserHistory` wires a native `popstate` listener that runs
+ *   this same blocker for BACK/FORWARD/GO and reverts the URL when blocked.
+ * - Tab close / reload, via the browser's native `beforeunload` prompt.
  *
  * Only navigations that leave the current route (a different `pathname`)
  * are blocked. Same-route navigations — e.g. writing a filter or page

@@ -1,13 +1,15 @@
 import {
   createBrowserHistory,
   createRootRoute,
+  createRoute,
   createRouter,
+  Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
 import { useNavigate } from "@tanstack/react-router";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
@@ -165,6 +167,115 @@ describe("useUnsavedChangesGuard", () => {
       window.dispatchEvent(event);
 
       expect(event.defaultPrevented).toBe(false);
+    });
+  });
+
+  // The implementer's report claimed the guard does NOT intercept the
+  // browser's physical Back/Forward buttons — only in-app PUSH/REPLACE and
+  // `beforeunload`. That claim is false: `@tanstack/history`'s
+  // `createBrowserHistory` wires a native `popstate` listener
+  // (`onPushPopEvent`) that runs registered blockers for BACK/FORWARD/GO
+  // too, and reverts (`window.history.go(1)`) when blocked. This suite
+  // proves it for real by pressing Back on the SAME `createBrowserHistory`
+  // harness the `beforeunload` suite above builds — `createMemoryHistory`
+  // (used by `renderWithRouter`) never fires `popstate`, so it cannot
+  // exercise this path.
+  describe("physical Back/Forward button", () => {
+    // Two real routes (not the single rootRoute the `beforeunload` suite
+    // uses) so there is a distinct prior entry for the browser to land on
+    // when Back is pressed.
+    function renderNavigableBrowserHistory(when: boolean) {
+      const rootRoute = createRootRoute({ component: Outlet });
+      const homeRoute = createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/",
+        component: () => <div>home</div>,
+      });
+      const guardedRoute = createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/guarded",
+        component: () => <GuardedPage when={when} />,
+      });
+      const routeTree = rootRoute.addChildren([homeRoute, guardedRoute]);
+      const router = createRouter({ routeTree, history: createBrowserHistory() });
+      render(
+        <I18nProvider>
+          <RouterProvider router={router as never} />
+        </I18nProvider>,
+      );
+      return router;
+    }
+
+    beforeEach(() => {
+      // jsdom's `window` persists across tests in this file (only React
+      // unmounts via `cleanup()`), so without resetting the REAL location
+      // here, a test would inherit wherever the previous test's back
+      // navigation left `window.location`.
+      window.history.replaceState(null, "", "/");
+      // Plain `vi.useFakeTimers()` hangs TanStack Router's Transitioner;
+      // `shouldAdvanceTime: true` lets its internal scheduling keep
+      // resolving while we still control time deterministically below.
+      // Needed here because jsdom's `history.back()`/`go()` queue their
+      // popstate dispatch through nested `setTimeout(0)` tasks (see
+      // jsdom's SessionHistory#traverseByDelta) rather than firing
+      // synchronously.
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    async function goToGuardedPage(router: ReturnType<typeof renderNavigableBrowserHistory>) {
+      await act(async () => {
+        await router.navigate({ to: "/guarded" } as never);
+      });
+      await screen.findByRole("button", { name: "leave" });
+    }
+
+    async function pressPhysicalBackButton() {
+      await act(async () => {
+        // This is exactly what a physical Back-button press invokes —
+        // NOT `router.history.back()`, which would go through TanStack's
+        // in-app BACK handling instead of the native popstate path.
+        window.history.back();
+        await vi.runAllTimersAsync();
+      });
+    }
+
+    it("blocks Back and keeps the URL in place when dirty and the user cancels", async () => {
+      vi.spyOn(window, "confirm").mockReturnValue(false);
+      const router = renderNavigableBrowserHistory(true);
+      await goToGuardedPage(router);
+
+      await pressPhysicalBackButton();
+
+      expect(window.confirm).toHaveBeenCalledTimes(1);
+      expect(router.state.location.pathname).toBe("/guarded");
+      expect(window.location.pathname).toBe("/guarded");
+    });
+
+    it("proceeds with Back when dirty and the user confirms discarding changes", async () => {
+      vi.spyOn(window, "confirm").mockReturnValue(true);
+      const router = renderNavigableBrowserHistory(true);
+      await goToGuardedPage(router);
+
+      await pressPhysicalBackButton();
+
+      expect(window.confirm).toHaveBeenCalledTimes(1);
+      expect(router.state.location.pathname).toBe("/");
+      expect(window.location.pathname).toBe("/");
+    });
+
+    it("proceeds with Back and never prompts when the form is pristine", async () => {
+      const confirmSpy = vi.spyOn(window, "confirm");
+      const router = renderNavigableBrowserHistory(false);
+      await goToGuardedPage(router);
+
+      await pressPhysicalBackButton();
+
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(router.state.location.pathname).toBe("/");
     });
   });
 });
