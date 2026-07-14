@@ -1,5 +1,5 @@
 import type { AuditEntryResponseDTO, PaginatedResult } from "@shared/backend-api";
-import type { RouterHistory } from "@tanstack/react-router";
+import type { AnyRouter, RouterHistory } from "@tanstack/react-router";
 import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -149,17 +149,23 @@ describe("AuditPage", () => {
       expect(router.state.location.search).toMatchObject({ q: "carlos", page: 1 });
     });
 
-    it("keeps the URL where Back navigation left it instead of resurrecting the typed query", async () => {
-      const { router } = await renderPage("/audit");
-
-      // Push a second history entry first — mirrors the reviewer's repro:
-      // the user changes a filter (a normal push) before typing a search.
+    // Pushes a second history entry so a later `back()` has somewhere to go.
+    // `as never` because the app-wide `Register` type merge (routeTree.gen.ts)
+    // makes `navigate` reject any `to` outside the REAL route tree, and this
+    // harness mounts a synthetic one — same escape hatch, and for the same
+    // reason, as `render-with-router.tsx` documents.
+    async function pushFilterEntry(router: AnyRouter): Promise<void> {
       await act(async () => {
         await router.navigate({
           to: "/audit",
           search: { type: "legal_hold", page: 1 },
         } as never);
       });
+    }
+
+    it("keeps the URL where Back navigation left it instead of resurrecting the typed query", async () => {
+      const { router } = await renderPage("/audit");
+      await pushFilterEntry(router);
 
       const input = await screen.findByRole("textbox", { name: /search/i });
       await user.type(input, "alice");
@@ -172,15 +178,78 @@ describe("AuditPage", () => {
         (router.history as RouterHistory).back();
       });
 
-      // Let the debounce window fully elapse *after* Back. A buggy effect
-      // that re-arms whenever `q` changes (not only when the user types)
-      // would silently rewrite q=alice here, undoing the Back navigation.
+      // Let the debounce window fully elapse *after* Back. An effect that
+      // re-arms whenever `q` changes (not only when the user types) would
+      // silently rewrite q=alice here, undoing the Back navigation.
       await act(async () => {
         await vi.advanceTimersByTimeAsync(DEBOUNCE_MS * 2);
       });
 
       const search = router.state.location.search as AuditSearch;
       expect(search.q).toBeUndefined();
+    });
+
+    it("discards the in-flight edit when Back lands before the debounce fires", async () => {
+      const { router } = await renderPage("/audit");
+      await pushFilterEntry(router);
+
+      const input = await screen.findByRole("textbox", { name: /search/i });
+      await user.type(input, "alice");
+
+      // The other ordering: Back arrives while the write is still ARMED, so
+      // the URL has not seen `q` at all yet. Guard that precondition — if the
+      // debounce had already committed, this test would silently degenerate
+      // into a duplicate of the one above.
+      const beforeBack = router.state.location.search as AuditSearch;
+      expect(beforeBack.q).toBeUndefined();
+
+      act(() => {
+        (router.history as RouterHistory).back();
+      });
+
+      // A timer armed by the last keystroke survives an external navigation
+      // unless something cancels it: it fires with its stale closure value and
+      // writes q=alice, undoing the Back the user just performed.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(DEBOUNCE_MS * 4);
+      });
+
+      const search = router.state.location.search as AuditSearch;
+      expect(search.q).toBeUndefined();
+    });
+
+    it("drops `q` from the URL entirely when the search box is cleared", async () => {
+      const { router } = await renderPage("/audit?q=alice");
+
+      const input = await screen.findByRole("textbox", { name: /search/i });
+      await user.clear(input);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
+      });
+
+      // `q` must be absent, not an empty string sitting in the URL as `?q=`.
+      const search = router.state.location.search as AuditSearch;
+      expect(search.q).toBeUndefined();
+    });
+
+    it("shows the URL's q in the search box after Back", async () => {
+      const { router } = await renderPage("/audit?q=alice");
+
+      const input = await screen.findByRole("textbox", { name: /search/i });
+      expect(input).toHaveValue("alice");
+
+      await user.type(input, "bob");
+      act(() => {
+        (router.history as RouterHistory).back();
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(DEBOUNCE_MS * 2);
+      });
+
+      // The uncommitted "bob" edit is discarded and the input falls back to
+      // whatever the URL says — it does not keep displaying a value the URL
+      // no longer holds.
+      expect(await screen.findByRole("textbox", { name: /search/i })).toHaveValue("alice");
     });
   });
 

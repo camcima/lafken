@@ -1,5 +1,5 @@
 import type { AuditEntryResponseDTO } from "@shared/backend-api";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import {
   Check,
   ChevronRight,
@@ -212,13 +212,13 @@ export function AuditPage(): React.JSX.Element {
   const { t } = useTranslation();
   const { q, type, page } = useSearch({ from: "/_protected/audit" });
   const navigate = useNavigate();
+  const router = useRouter();
 
   // `pendingQuery` is the user's not-yet-committed edit: null except while a
   // debounce write is in flight. The displayed `query` derives from it (or
   // falls back to the URL's `q`) instead of mirroring `q` into its own state,
-  // so external navigation (Back/Forward, a deep link, a `Link` click) is
-  // reflected for free on the next render — no resync effect required, and
-  // nothing to fight the debounce write below.
+  // so external navigation is reflected for free on the next render — no
+  // resync effect required, and nothing to fight the debounce write below.
   const [pendingQuery, setPendingQuery] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -228,11 +228,27 @@ export function AuditPage(): React.JSX.Element {
   const typeFilter: string = type ?? "all";
   const beEntityType: string | undefined = TYPE_FILTER_TO_ENTITY_TYPE[typeFilter];
 
+  // History navigation (Back/Forward) always wins over an edit the user never
+  // committed: discard the pending edit, which both disarms the debounce below
+  // (its cleanup cancels the armed timer) and drops the input back to the URL's
+  // `q`. Without this, a timer armed by the last keystroke survives the Back —
+  // no dependency of the effect below changed — and fires with its stale
+  // closure value, rewriting the URL and undoing the navigation.
+  //
+  // This path may only ever CANCEL, never write `q`. That is the invariant: an
+  // effect that WRITES in response to an external `q` change is what let the
+  // URL resurrect a stale search in the first place. Clearing state in a
+  // subscription callback (rather than synchronously in an effect body) is also
+  // exactly the pattern `react-hooks/set-state-in-effect` prescribes.
+  useEffect(() => {
+    return router.history.subscribe(({ action }) => {
+      if (action.type === "PUSH" || action.type === "REPLACE") return;
+      setPendingQuery(null);
+    });
+  }, [router]);
+
   // Debounce the free-text input into the URL (replace, so Back skips
-  // keystrokes). Only armed while there's a pending edit, so it never re-fires
-  // just because `q` changed on its own — which is what previously let a
-  // stale typed value get silently rewritten into the URL after the user
-  // pressed Back.
+  // keystrokes). Only armed while there is a pending edit.
   useEffect(() => {
     if (pendingQuery === null) return;
     const handle = window.setTimeout(() => {
