@@ -1,4 +1,5 @@
 import type { AuditEntryResponseDTO } from "@shared/backend-api";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
   Check,
   ChevronRight,
@@ -24,6 +25,7 @@ import { RightDrawer } from "@/components/common/RightDrawer";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
 import { useAuditEntries } from "@/features/audit/hooks/useAudit";
 import { cn } from "@/lib/utils";
+import { AUDIT_ENTITY_TYPES } from "@/routes/_protected/audit";
 
 type AuditResult = "ok" | "fail";
 
@@ -208,29 +210,38 @@ const SEARCH_DEBOUNCE_MS = 250;
 
 export function AuditPage(): React.JSX.Element {
   const { t } = useTranslation();
-  const [query, setQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const { q, type, page } = useSearch({ from: "/_protected/audit" });
+  const navigate = useNavigate();
+
+  const [query, setQuery] = useState(q ?? "");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
+  const pageIndex: number = page - 1;
+  const typeFilter: string = type ?? "all";
   const beEntityType: string | undefined = TYPE_FILTER_TO_ENTITY_TYPE[typeFilter];
 
-  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  // Debounce the free-text input into the URL (replace, so Back skips keystrokes).
   useEffect(() => {
     const handle = window.setTimeout(() => {
-      setDebouncedQuery(query);
+      const trimmed = query.trim();
+      if ((q ?? "") === trimmed) return;
+      void navigate({
+        to: "/audit",
+        search: (prev) => ({ ...prev, q: trimmed === "" ? undefined : trimmed, page: 1 }),
+        replace: true,
+      });
     }, SEARCH_DEBOUNCE_MS);
     return () => {
       window.clearTimeout(handle);
     };
-  }, [query]);
+  }, [query, q, navigate]);
 
   const realQuery = useAuditEntries({
-    page: page + 1,
+    page,
     limit: pageSize,
     ...(beEntityType ? { entityType: beEntityType } : {}),
-    ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
+    ...(q?.trim() ? { q: q.trim() } : {}),
   });
 
   const allRows: IAuditRow[] = (realQuery.data?.data ?? []).map(apiToRow);
@@ -242,8 +253,8 @@ export function AuditPage(): React.JSX.Element {
   const openEntry: IAuditRow | undefined = allRows.find((entry) => entry.id === openId);
 
   const visibleTotal: number = realTotal;
-  const rangeFrom = visibleTotal === 0 ? 0 : page * pageSize + 1;
-  const rangeTo = Math.min((page + 1) * pageSize, realTotal);
+  const rangeFrom = visibleTotal === 0 ? 0 : pageIndex * pageSize + 1;
+  const rangeTo = Math.min((pageIndex + 1) * pageSize, realTotal);
 
   const anchorMinutesAgo: number = allRows[0]?.minutesAgo ?? 0;
 
@@ -272,17 +283,26 @@ export function AuditPage(): React.JSX.Element {
               value={query}
               onChange={(ev: React.ChangeEvent<HTMLInputElement>) => {
                 setQuery(ev.target.value);
-                setPage(0);
               }}
+              aria-label={t("pages.audit.searchLabel")}
               className="border-input bg-card focus:ring-ring h-9 w-full rounded-md border pr-3 pl-9 text-[12.5px] outline-none focus:ring-1"
             />
           </div>
           <select
             value={typeFilter}
             onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
-              setTypeFilter(ev.target.value);
-              setPage(0);
+              const value = ev.target.value;
+              void navigate({
+                to: "/audit",
+                search: (prev) => ({
+                  ...prev,
+                  type:
+                    value === "all" ? undefined : (value as (typeof AUDIT_ENTITY_TYPES)[number]),
+                  page: 1,
+                }),
+              });
             }}
+            aria-label={t("pages.audit.filters.typeLabel")}
             className={SELECT_CLASS}
           >
             <option value="all">{t("pages.audit.filters.allTypes")}</option>
@@ -369,7 +389,7 @@ export function AuditPage(): React.JSX.Element {
             value={pageSize}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
               setPageSize(Number(e.target.value));
-              setPage(0);
+              void navigate({ to: "/audit", search: (prev) => ({ ...prev, page: 1 }) });
             }}
             className={SELECT_CLASS_SM}
             aria-label={t("paginator.rowsPerPage")}
@@ -394,10 +414,10 @@ export function AuditPage(): React.JSX.Element {
           )}
         </div>
         <Paginator
-          page={page}
+          page={pageIndex}
           totalPages={totalPages}
           onChange={(newPage) => {
-            setPage(newPage);
+            void navigate({ to: "/audit", search: (prev) => ({ ...prev, page: newPage + 1 }) });
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
         />

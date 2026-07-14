@@ -1,9 +1,10 @@
 import type { AuditEntryResponseDTO, PaginatedResult } from "@shared/backend-api";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { I18nProvider } from "@/lib/i18n/i18n-test-provider";
+import { renderWithRouter } from "@/lib/test/render-with-router";
+import { auditSearchSchema } from "@/routes/_protected/audit";
 
 import { AuditPage } from "./AuditPage";
 
@@ -36,35 +37,139 @@ const PAGE: PaginatedResult<AuditEntryResponseDTO> = {
   lastPage: 1,
 };
 
+interface IUseAuditEntriesResult {
+  data: PaginatedResult<AuditEntryResponseDTO> | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  refetch: () => void;
+}
+
+const useAuditEntriesMock = vi.fn<(query: Record<string, unknown>) => IUseAuditEntriesResult>();
 vi.mock("@/features/audit/hooks/useAudit", () => ({
-  useAuditEntries: () => ({ data: PAGE, isLoading: false }),
+  useAuditEntries: (q: Record<string, unknown>) => useAuditEntriesMock(q),
 }));
 
-function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <I18nProvider>
-      <QueryClientProvider client={client}>
-        <AuditPage />
-      </QueryClientProvider>
-    </I18nProvider>,
+function renderPage(initialUrl = "/audit") {
+  return renderWithRouter(
+    { path: "audit", index: false, component: AuditPage, validateSearch: auditSearchSchema },
+    initialUrl,
   );
 }
 
+afterEach(() => {
+  cleanup();
+});
+
+beforeEach(() => {
+  useAuditEntriesMock.mockReset();
+  useAuditEntriesMock.mockReturnValue({
+    data: PAGE,
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  });
+});
+
 describe("AuditPage", () => {
-  it("renders the page title", () => {
-    renderPage();
+  it("renders the page title", async () => {
+    await renderPage();
     expect(screen.getByText(/audit log/i)).toBeInTheDocument();
   });
 
-  it("renders rows from the audit feed", () => {
-    renderPage();
+  it("renders rows from the audit feed", async () => {
+    await renderPage();
     expect(screen.getByText("asset.uploaded")).toBeInTheDocument();
     expect(screen.getByText("legal_hold.placed")).toBeInTheDocument();
   });
 
-  it("renders ok result badges", () => {
-    renderPage();
+  it("renders ok result badges", async () => {
+    await renderPage();
     expect(screen.getAllByText("ok").length).toBeGreaterThan(0);
+  });
+
+  // ── URL-as-truth (F-W2) ─────────────────────────────────────────────
+
+  it("queries the BE with entityType, q, and page from a deep link", async () => {
+    await renderPage("/audit?type=legal_hold&q=alice&page=2");
+
+    await waitFor(() => {
+      expect(useAuditEntriesMock).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 2, entityType: "legal_hold", q: "alice" }),
+      );
+    });
+  });
+
+  it("writes the type filter to the URL and resets page", async () => {
+    const { router } = await renderPage("/audit?page=4");
+
+    const typeSelect = await screen.findByRole("combobox", { name: /event type/i });
+    await userEvent.selectOptions(typeSelect, "legal_hold");
+
+    await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({ type: "legal_hold", page: 1 });
+    });
+  });
+
+  it("debounces the search input into the q search param", async () => {
+    const { router } = await renderPage("/audit");
+
+    const input = await screen.findByRole("textbox", { name: /search/i });
+    await userEvent.type(input, "carlos");
+
+    await waitFor(
+      () => {
+        expect(router.state.location.search).toMatchObject({ q: "carlos", page: 1 });
+      },
+      { timeout: 2000 },
+    );
+  });
+
+  it("resets page to 1 when the rows-per-page selector changes", async () => {
+    const { router } = await renderPage("/audit?page=3");
+
+    const rowsPerPageSelect = await screen.findByRole("combobox", { name: /rows per page/i });
+    await userEvent.selectOptions(rowsPerPageSelect, "100");
+
+    await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({ page: 1 });
+    });
+  });
+
+  it("writes paginator page changes to the URL", async () => {
+    useAuditEntriesMock.mockReturnValue({
+      data: { ...PAGE, total: 200 },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    const { router } = await renderPage("/audit");
+
+    const nextButton = await screen.findByRole("button", { name: /next page/i });
+    await userEvent.click(nextButton);
+
+    await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({ page: 2 });
+    });
+  });
+
+  // ── URL is Truth: malformed search params degrade gracefully ─────────
+
+  it("falls back to page 1 without crashing when `page` is not a number", async () => {
+    await renderPage("/audit?page=abc");
+
+    expect(await screen.findByText(/audit log/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(useAuditEntriesMock).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }));
+    });
+  });
+
+  it("renders unfiltered without crashing when `type` is not a known entity type", async () => {
+    await renderPage("/audit?type=not-a-real-type");
+
+    expect(await screen.findByText(/audit log/i)).toBeInTheDocument();
+    await waitFor(() => {
+      const lastCall = useAuditEntriesMock.mock.calls.at(-1)?.[0];
+      expect(lastCall?.entityType).toBeUndefined();
+    });
   });
 });

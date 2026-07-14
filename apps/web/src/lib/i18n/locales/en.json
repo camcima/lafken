@@ -1151,12 +1151,14 @@
       "subtitle": "Append-only · retained {{retention}} · cryptographically chained · last anchor {{anchor}}",
       "export": "Export",
       "searchPlaceholder": "Filter by actor, target, type, namespace…",
+      "searchLabel": "Search audit log",
       "filters": {
         "principal": "Principal",
         "action": "Action",
         "entity": "Entity",
         "from": "From",
         "to": "To",
+        "typeLabel": "Event type",
         "allTypes": "All event types",
         "allResults": "All results",
         "results": {

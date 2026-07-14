@@ -1150,12 +1150,14 @@
       "subtitle": "Solo anexo · retenido {{retention}} · encadenado criptográficamente · último anclaje {{anchor}}",
       "export": "Exportar",
       "searchPlaceholder": "Filtrar por actor, objetivo, tipo, namespace…",
+      "searchLabel": "Buscar registro de auditoría",
       "filters": {
         "principal": "Principal",
         "action": "Acción",
         "entity": "Entidad",
         "from": "Desde",
         "to": "Hasta",
+        "typeLabel": "Tipo de evento",
         "allTypes": "Todos los tipos de evento",
         "allResults": "Todos los resultados",
         "results": {
