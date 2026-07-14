@@ -1,4 +1,12 @@
 import type { NamespaceResponseDTO } from "@shared/backend-api";
+import {
+  PRESET_DIMENSION_MAX,
+  PRESET_DIMENSION_MIN,
+  PRESET_DPR_MAX,
+  PRESET_DPR_MIN,
+  PRESET_QUALITY_MAX,
+  PRESET_QUALITY_MIN,
+} from "@shared/backend-api/validation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -126,6 +134,30 @@ describe("NewPresetPage", () => {
 
     // Quality is a slider + numeric pair sharing the same accessible name.
     expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveValue(80);
+  });
+
+  // Proves the rendered dimension/quality/DPR bounds are wired to the shared
+  // PRESET_* validation constants — the same ones the backend
+  // CreatePresetRequestDTO enforces (shared/backend-api/presentation/namespaces/__tests__)
+  // and the Zod schema in preset-params.schema.ts reads — rather than to
+  // local literals that could silently drift from either.
+  it("renders width/height/dpr/quality bounds equal to the shared PRESET_* constants", () => {
+    renderPage();
+
+    expect(screen.getByLabelText(/width/i)).toHaveAttribute("min", String(PRESET_DIMENSION_MIN));
+    expect(screen.getByLabelText(/width/i)).toHaveAttribute("max", String(PRESET_DIMENSION_MAX));
+    expect(screen.getByLabelText(/height/i)).toHaveAttribute("min", String(PRESET_DIMENSION_MIN));
+    expect(screen.getByLabelText(/height/i)).toHaveAttribute("max", String(PRESET_DIMENSION_MAX));
+    expect(screen.getByLabelText(/dpr/i)).toHaveAttribute("min", String(PRESET_DPR_MIN));
+    expect(screen.getByLabelText(/dpr/i)).toHaveAttribute("max", String(PRESET_DPR_MAX));
+    expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveAttribute(
+      "min",
+      String(PRESET_QUALITY_MIN),
+    );
+    expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveAttribute(
+      "max",
+      String(PRESET_QUALITY_MAX),
+    );
   });
 
   it("disables submit while pending", () => {
