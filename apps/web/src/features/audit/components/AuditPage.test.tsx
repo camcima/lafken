@@ -1,7 +1,9 @@
 import type { AuditEntryResponseDTO, PaginatedResult } from "@shared/backend-api";
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import type { RouterHistory } from "@tanstack/react-router";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { z } from "zod";
 
 import { renderWithRouter } from "@/lib/test/render-with-router";
 import { auditSearchSchema } from "@/routes/_protected/audit";
@@ -36,6 +38,8 @@ const PAGE: PaginatedResult<AuditEntryResponseDTO> = {
   limit: 50,
   lastPage: 1,
 };
+
+type AuditSearch = z.infer<typeof auditSearchSchema>;
 
 interface IUseAuditEntriesResult {
   data: PaginatedResult<AuditEntryResponseDTO> | undefined;
@@ -110,18 +114,74 @@ describe("AuditPage", () => {
     });
   });
 
-  it("debounces the search input into the q search param", async () => {
-    const { router } = await renderPage("/audit");
+  // The debounce is a real `setTimeout` (see SEARCH_DEBOUNCE_MS in AuditPage),
+  // so these tests drive it with fake timers instead of a real ~250ms sleep —
+  // "tests are deterministic … no reliance on wall-clock time" (CLAUDE.md).
+  // `userEvent` needs `advanceTimers` wired to its own `setup()` instance so
+  // its internal per-keystroke waits resolve against the mocked clock.
+  describe("debounced search — deterministic timing", () => {
+    const DEBOUNCE_MS = 250; // mirrors AuditPage's SEARCH_DEBOUNCE_MS
+    let user: ReturnType<typeof userEvent.setup>;
 
-    const input = await screen.findByRole("textbox", { name: /search/i });
-    await userEvent.type(input, "carlos");
+    beforeEach(() => {
+      // `shouldAdvanceTime` lets the mocked clock tick forward on its own so
+      // React's scheduler and userEvent's own internal waits keep resolving;
+      // the 250ms debounce itself is still driven deterministically below via
+      // explicit `advanceTimersByTimeAsync` jumps, not by waiting on it.
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    });
 
-    await waitFor(
-      () => {
-        expect(router.state.location.search).toMatchObject({ q: "carlos", page: 1 });
-      },
-      { timeout: 2000 },
-    );
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("debounces the search input into the q search param", async () => {
+      const { router } = await renderPage("/audit");
+
+      const input = await screen.findByRole("textbox", { name: /search/i });
+      await user.type(input, "carlos");
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
+      });
+
+      expect(router.state.location.search).toMatchObject({ q: "carlos", page: 1 });
+    });
+
+    it("keeps the URL where Back navigation left it instead of resurrecting the typed query", async () => {
+      const { router } = await renderPage("/audit");
+
+      // Push a second history entry first — mirrors the reviewer's repro:
+      // the user changes a filter (a normal push) before typing a search.
+      await act(async () => {
+        await router.navigate({
+          to: "/audit",
+          search: { type: "legal_hold", page: 1 },
+        } as never);
+      });
+
+      const input = await screen.findByRole("textbox", { name: /search/i });
+      await user.type(input, "alice");
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
+      });
+      expect(router.state.location.search).toMatchObject({ q: "alice" });
+
+      act(() => {
+        (router.history as RouterHistory).back();
+      });
+
+      // Let the debounce window fully elapse *after* Back. A buggy effect
+      // that re-arms whenever `q` changes (not only when the user types)
+      // would silently rewrite q=alice here, undoing the Back navigation.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(DEBOUNCE_MS * 2);
+      });
+
+      const search = router.state.location.search as AuditSearch;
+      expect(search.q).toBeUndefined();
+    });
   });
 
   it("resets page to 1 when the rows-per-page selector changes", async () => {

@@ -213,29 +213,41 @@ export function AuditPage(): React.JSX.Element {
   const { q, type, page } = useSearch({ from: "/_protected/audit" });
   const navigate = useNavigate();
 
-  const [query, setQuery] = useState(q ?? "");
+  // `pendingQuery` is the user's not-yet-committed edit: null except while a
+  // debounce write is in flight. The displayed `query` derives from it (or
+  // falls back to the URL's `q`) instead of mirroring `q` into its own state,
+  // so external navigation (Back/Forward, a deep link, a `Link` click) is
+  // reflected for free on the next render — no resync effect required, and
+  // nothing to fight the debounce write below.
+  const [pendingQuery, setPendingQuery] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
+  const query: string = pendingQuery ?? q ?? "";
   const pageIndex: number = page - 1;
   const typeFilter: string = type ?? "all";
   const beEntityType: string | undefined = TYPE_FILTER_TO_ENTITY_TYPE[typeFilter];
 
-  // Debounce the free-text input into the URL (replace, so Back skips keystrokes).
+  // Debounce the free-text input into the URL (replace, so Back skips
+  // keystrokes). Only armed while there's a pending edit, so it never re-fires
+  // just because `q` changed on its own — which is what previously let a
+  // stale typed value get silently rewritten into the URL after the user
+  // pressed Back.
   useEffect(() => {
+    if (pendingQuery === null) return;
     const handle = window.setTimeout(() => {
-      const trimmed = query.trim();
-      if ((q ?? "") === trimmed) return;
+      const trimmed = pendingQuery.trim();
       void navigate({
         to: "/audit",
         search: (prev) => ({ ...prev, q: trimmed === "" ? undefined : trimmed, page: 1 }),
         replace: true,
       });
+      setPendingQuery(null);
     }, SEARCH_DEBOUNCE_MS);
     return () => {
       window.clearTimeout(handle);
     };
-  }, [query, q, navigate]);
+  }, [pendingQuery, navigate]);
 
   const realQuery = useAuditEntries({
     page,
@@ -282,7 +294,7 @@ export function AuditPage(): React.JSX.Element {
               placeholder={t("pages.audit.searchPlaceholder")}
               value={query}
               onChange={(ev: React.ChangeEvent<HTMLInputElement>) => {
-                setQuery(ev.target.value);
+                setPendingQuery(ev.target.value);
               }}
               aria-label={t("pages.audit.searchLabel")}
               className="border-input bg-card focus:ring-ring h-9 w-full rounded-md border pr-3 pl-9 text-[12.5px] outline-none focus:ring-1"
