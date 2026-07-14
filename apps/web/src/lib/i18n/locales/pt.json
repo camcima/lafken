@@ -1150,7 +1150,7 @@
       "subtitle": "Somente anexo · retido {{retention}} · encadeado criptograficamente · última âncora {{anchor}}",
       "export": "Exportar",
       "searchPlaceholder": "Filtrar por ator, alvo, tipo, namespace…",
-      "searchLabel": "Pesquisar registro de auditoria",
+      "searchLabel": "Buscar registro de auditoria",
       "filters": {
         "principal": "Principal",
         "action": "Ação",

@@ -14,7 +14,7 @@
   },
   "auth": {
     "welcomeToLafken": "Bienvenido a Lafken",
-    "signInWithSso": "Iniciar sesión con inicio de sesión único (SSO)",
+    "signInWithSso": "Iniciar sesión con SSO",
     "welcomeToLatam": "Bienvenido a LATAM",
     "toAccess": "Para acceder, utiliza tu cuenta LATAM",
     "login": "Conéctate",
