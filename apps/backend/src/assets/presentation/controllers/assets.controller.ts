@@ -75,11 +75,7 @@ import { SYSTEM_PRESETS } from "@/assets/domain/value-objects/system-presets";
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
-import {
-  downloadUrlIssuedCounter,
-  previewUrlDurationHistogram,
-  previewUrlIssuedCounter,
-} from "@/shared/infrastructure/telemetry/metrics";
+import { MetricsPort } from "@/shared/application/metrics.port";
 import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
 import { AuthenticatedEndpoint } from "@/shared/presentation/auth/decorators/authenticated-endpoint.decorator";
 import {
@@ -123,6 +119,7 @@ export class AssetsController {
     private readonly assetStorage: AssetStoragePort,
     private readonly namespaceQueryRepository: NamespaceQueryRepositoryPort,
     private readonly storageBindingQueryRepository: StorageBindingQueryRepositoryPort,
+    private readonly metrics: MetricsPort,
   ) {}
 
   /**
@@ -286,13 +283,14 @@ export class AssetsController {
       }
       // eslint-disable-next-line no-magic-numbers -- TTL constant is in seconds; "* 1000" converts to milliseconds for the JS Date API.
       const expiresAt = new Date(Date.now() + PREVIEW_SOURCE_URL_TTL_SECONDS * 1000).toISOString();
-      previewUrlIssuedCounter.add(1, {
-        namespace_slug: result.namespaceSlug,
-        preset_name: preset,
+      this.metrics.recordPreviewUrlIssued({
+        namespaceSlug: result.namespaceSlug,
+        presetName: preset,
       });
-      previewUrlDurationHistogram.record(Date.now() - startedAt, {
-        namespace_slug: result.namespaceSlug,
-        preset_name: preset,
+      this.metrics.recordPreviewUrlDuration({
+        namespaceSlug: result.namespaceSlug,
+        presetName: preset,
+        durationMs: Date.now() - startedAt,
       });
       return { url, expiresAt };
     } catch (err) {
@@ -317,7 +315,7 @@ export class AssetsController {
     try {
       const result = await this.getAssetDownloadUrlUseCase.execute({ publicId });
       if (result.namespaceSlug !== null) {
-        downloadUrlIssuedCounter.add(1, { namespace_slug: result.namespaceSlug });
+        this.metrics.recordDownloadUrlIssued({ namespaceSlug: result.namespaceSlug });
       }
       return { url: result.url };
     } catch (err) {

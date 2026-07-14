@@ -66,6 +66,22 @@ export class FakeMetricsPort extends MetricsPort {
     this.recorded.push({ method: "recordProcessingStaleClaimReclaimed", ..._input });
   }
 
+  recordPreviewUrlIssued(_input: { namespaceSlug: string; presetName: string }): void {
+    this.recorded.push({ method: "recordPreviewUrlIssued", ..._input });
+  }
+
+  recordPreviewUrlDuration(_input: {
+    namespaceSlug: string;
+    presetName: string;
+    durationMs: number;
+  }): void {
+    this.recorded.push({ method: "recordPreviewUrlDuration", ..._input });
+  }
+
+  recordDownloadUrlIssued(_input: { namespaceSlug: string }): void {
+    this.recorded.push({ method: "recordDownloadUrlIssued", ..._input });
+  }
+
   registerQueueDepthSampler(_sampler: IQueueDepthSampler): void {
     this.recorded.push({ method: "registerQueueDepthSampler" });
   }
