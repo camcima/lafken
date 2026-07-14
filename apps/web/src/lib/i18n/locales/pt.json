@@ -13,8 +13,8 @@
     "weeks": "há {{count}} sem"
   },
   "auth": {
-    "welcomeToLafken": "",
-    "signInWithSso": "",
+    "welcomeToLafken": "Bem-vindo ao Lafken",
+    "signInWithSso": "Entrar com logon único (SSO)",
     "welcomeToLatam": "Bem-vindo à LATAM",
     "toAccess": "Para acessar, utilize sua conta LATAM",
     "login": "Conecte-se",
@@ -141,32 +141,32 @@
     "deleted": "Excluído"
   },
   "idChip": {
-    "copyToClipboard": "",
-    "copied": ""
+    "copyToClipboard": "Copiar para a área de transferência",
+    "copied": "Copiado!"
   },
   "nav": {
     "groups": {
-      "workspace": "",
-      "review": "",
-      "platform": ""
+      "workspace": "Espaço de trabalho",
+      "review": "Revisão",
+      "platform": "Plataforma"
     },
-    "home": "",
-    "assets": "",
-    "namespaces": "",
-    "quarantine": "",
-    "legalHolds": "",
-    "audit": "",
-    "system": "",
-    "settings": "",
-    "envBadge": "",
-    "comingInSlice1": ""
+    "home": "Início",
+    "assets": "Ativos",
+    "namespaces": "Namespaces",
+    "quarantine": "Quarentena",
+    "legalHolds": "Retenções legais",
+    "audit": "Auditoria",
+    "system": "Sistema",
+    "settings": "Configurações",
+    "envBadge": "{{env}}",
+    "comingInSlice1": "Disponível em uma etapa futura"
   },
   "topBar": {
-    "refresh": ""
+    "refresh": "Atualizar"
   },
   "user": {
-    "noRole": "",
-    "signOut": ""
+    "noRole": "Sem função",
+    "signOut": "Sair"
   },
   "pages": {
     "home": {

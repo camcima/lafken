@@ -26,6 +26,9 @@ void i18n
     resources,
     fallbackLng: "es",
     supportedLngs: Object.keys(resources),
+    // i18next returns "" verbatim by default, so an untranslated key renders as
+    // blank chrome instead of falling back. Treat empty as missing.
+    returnEmptyString: false,
     detection: {
       order: ["cookie", "navigator", "htmlTag"],
       caches: ["cookie"],
