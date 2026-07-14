@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
+import type { AssetWithMetadata } from "@/assets/application/use-cases/list-assets.use-case";
 import type { Asset } from "@/assets/domain/entities/asset.entity";
 import { UploadIntentConsumeConflictError } from "@/assets/domain/errors/upload-intent-consume-conflict.error";
 import { UploadIntentExpiredError } from "@/assets/domain/errors/upload-intent-expired.error";
@@ -17,6 +18,8 @@ import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/
 
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 3600;
 const AUDIT_FALLBACK_PRINCIPAL = "system";
+const UNKNOWN_NAMESPACE_SLUG = "unknown";
+const UNKNOWN_POLICY_VERSION = 0;
 
 export interface IConfirmUploadInput {
   publicId: string;
@@ -45,7 +48,7 @@ export class ConfirmUploadUseCase {
     private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
-  async execute(input: IConfirmUploadInput): Promise<Asset> {
+  async execute(input: IConfirmUploadInput): Promise<AssetWithMetadata> {
     const intent = await this.intentRepo.findByPublicId(input.publicId);
     if (!intent) {
       throw new UploadIntentNotFoundError({ publicId: input.publicId });
@@ -58,7 +61,7 @@ export class ConfirmUploadUseCase {
           `Intent "${input.publicId}" is consumed but no asset exists — invariant violation.`,
         );
       }
-      return existing;
+      return this.composeMetadata(existing);
     }
 
     const now = new Date();
@@ -147,7 +150,7 @@ export class ConfirmUploadUseCase {
         // unique-constraint 500.
         const existing = await this.assetQueryRepo.findByPublicId(input.publicId);
         if (existing) {
-          return existing;
+          return this.composeMetadata(existing);
         }
         const freshIntent = await this.intentRepo.findByPublicId(input.publicId);
         if (freshIntent?.props.expiredAt) {
@@ -170,6 +173,26 @@ export class ConfirmUploadUseCase {
       });
     }
 
-    return asset;
+    return {
+      asset,
+      namespaceSlug: namespaceSlug ?? UNKNOWN_NAMESPACE_SLUG,
+      policyVersion: policy.props.version,
+    };
+  }
+
+  /**
+   * Re-resolves display metadata for the idempotent path, where the policy
+   * and slug weren't loaded as part of a fresh confirm.
+   */
+  private async composeMetadata(asset: Asset): Promise<AssetWithMetadata> {
+    const [namespaceSlug, policyVersion] = await Promise.all([
+      this.assetQueryRepo.findNamespaceSlug(asset.props.namespaceId),
+      this.assetQueryRepo.findPolicyVersion(asset.props.policyVersionId),
+    ]);
+    return {
+      asset,
+      namespaceSlug: namespaceSlug ?? UNKNOWN_NAMESPACE_SLUG,
+      policyVersion: policyVersion ?? UNKNOWN_POLICY_VERSION,
+    };
   }
 }

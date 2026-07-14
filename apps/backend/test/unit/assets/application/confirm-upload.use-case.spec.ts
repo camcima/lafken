@@ -133,6 +133,7 @@ describe("ConfirmUploadUseCase", () => {
     namespaceQueryRepo = new InMemoryNamespaceQueryRepository();
     storageBindingQueryRepo = new InMemoryStorageBindingQueryRepository();
     assetQueryRepo = new InMemoryAssetQueryRepository();
+    assetQueryRepo.seedNamespaceSlug(TEST_UUIDS.namespace1, "ns-test");
     auditRepo = new InMemoryAuditWriteRepository();
     useCase = new ConfirmUploadUseCase(
       intentRepo,
@@ -147,20 +148,22 @@ describe("ConfirmUploadUseCase", () => {
     );
   });
 
-  it("confirms a valid upload and returns a new Asset", async () => {
+  it("confirms a valid upload and returns the asset with namespace slug and policy version", async () => {
     const intent = makeIntent();
     intentRepo.seed([intent]);
     storageBindingQueryRepo.seed([makeBinding()]);
     namespaceQueryRepo.seedPolicies(TEST_UUIDS.namespace1, [makePolicy()]);
 
-    const asset = await useCase.execute({
+    const result = await useCase.execute({
       publicId: TEST_UUIDS.asset1,
       uploadedBy: "user@example.com",
       requestIp: null,
     });
 
-    expect(asset.props.publicId).toBe(TEST_UUIDS.asset1);
-    expect(asset.props.state).toBe("uploaded");
+    expect(result.asset.props.publicId).toBe(TEST_UUIDS.asset1);
+    expect(result.asset.props.state).toBe("uploaded");
+    expect(result.namespaceSlug).toBe("ns-test");
+    expect(result.policyVersion).toBe(1);
     expect(assetWriteRepo.createdAssets).toHaveLength(1);
     expect(assetStorage.existsCalls).toHaveLength(1);
     expect(auditRepo.records).toHaveLength(1);
@@ -184,10 +187,13 @@ describe("ConfirmUploadUseCase", () => {
     const existingAsset = makeAsset(publicId);
     intentRepo.seed([consumedIntent]);
     assetQueryRepo.seed([existingAsset]);
+    assetQueryRepo.seedPolicyVersion(TEST_UUIDS.policy1, 1);
 
     const result = await useCase.execute({ publicId, uploadedBy: null, requestIp: null });
 
-    expect(result.props.publicId).toBe(publicId);
+    expect(result.asset.props.publicId).toBe(publicId);
+    expect(result.namespaceSlug).toBe("ns-test");
+    expect(result.policyVersion).toBe(1);
     expect(assetWriteRepo.createdAssets).toHaveLength(0);
   });
 
@@ -207,7 +213,7 @@ describe("ConfirmUploadUseCase", () => {
     storageBindingQueryRepo.seed([makeBinding()]);
     namespaceQueryRepo.seedPolicies(TEST_UUIDS.namespace1, [makePolicy()]);
 
-    const asset = await useCase.execute({
+    const result = await useCase.execute({
       publicId: TEST_UUIDS.asset1,
       uploadedBy: "user@example.com",
       width: 256,
@@ -215,8 +221,8 @@ describe("ConfirmUploadUseCase", () => {
       requestIp: null,
     });
 
-    expect(asset.props.width).toBe(256);
-    expect(asset.props.height).toBe(128);
+    expect(result.asset.props.width).toBe(256);
+    expect(result.asset.props.height).toBe(128);
     expect(assetWriteRepo.createdAssets).toHaveLength(1);
     expect(assetWriteRepo.createdAssets[0]?.width).toBe(256);
     expect(assetWriteRepo.createdAssets[0]?.height).toBe(128);
@@ -247,7 +253,7 @@ describe("ConfirmUploadUseCase", () => {
       requestIp: null,
     });
 
-    expect(result).toBe(existing);
+    expect(result.asset).toBe(existing);
   });
 
   it("throws UploadIntentExpiredError when the sweeper expired the intent mid-confirm", async () => {

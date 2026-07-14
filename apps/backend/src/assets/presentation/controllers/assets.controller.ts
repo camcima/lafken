@@ -65,7 +65,6 @@ import { UploadIntentAlreadyConsumedError } from "@/assets/domain/errors/upload-
 import { UploadIntentExpiredError } from "@/assets/domain/errors/upload-intent-expired.error";
 import { UploadIntentNotFoundError } from "@/assets/domain/errors/upload-intent-not-found.error";
 import { UploadedObjectMissingError } from "@/assets/domain/errors/uploaded-object-missing.error";
-import { AssetQueryRepositoryPort } from "@/assets/domain/repositories/asset-query.repository.port";
 import { NamespaceArchivedError } from "@/namespaces/domain/errors/namespace-archived.error";
 import { NamespaceNotFoundError } from "@/namespaces/domain/errors/namespace-not-found.error";
 import { ApplicationRole } from "@/shared/kernel/domain/application-roles";
@@ -98,7 +97,6 @@ export class AssetsController {
     private readonly refreshUploadUrlUseCase: RefreshUploadUrlUseCase,
     private readonly deleteAssetUseCase: DeleteAssetUseCase,
     private readonly getPreviewUrlUseCase: GetPreviewUrlUseCase,
-    private readonly assetQueryRepository: AssetQueryRepositoryPort,
   ) {}
 
   @Get()
@@ -346,7 +344,7 @@ export class AssetsController {
     @Ip() requestIp: string,
   ): Promise<AssetResponseDTO> {
     try {
-      const asset = await this.confirmUploadUseCase.execute({
+      const result = await this.confirmUploadUseCase.execute({
         publicId,
         uploadedBy: user.emailAddress,
         width: body.width,
@@ -357,11 +355,11 @@ export class AssetsController {
         tags: body.tags,
         requestIp,
       });
-      const namespaceSlug =
-        (await this.assetQueryRepository.findNamespaceSlug(asset.props.namespaceId)) ?? "unknown";
-      const policyVersion =
-        (await this.assetQueryRepository.findPolicyVersion(asset.props.policyVersionId)) ?? 0;
-      return AssetResponseMapper.fromDomain(asset, namespaceSlug, policyVersion);
+      return AssetResponseMapper.fromDomain(
+        result.asset,
+        result.namespaceSlug,
+        result.policyVersion,
+      );
     } catch (err) {
       if (err instanceof UploadIntentNotFoundError) {
         throw new NotFoundException(err.message, { cause: err });
