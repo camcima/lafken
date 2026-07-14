@@ -1,10 +1,20 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import { AssetImage } from "@lafken/react";
 import type { AssetResponseDTO } from "@shared/backend-api";
+import {
+  LEGAL_HOLD_ASSET_IDS_MAX,
+  LEGAL_HOLD_CASE_REFERENCE_MAX_LENGTH,
+  LEGAL_HOLD_CASE_REFERENCE_MIN_LENGTH,
+  LEGAL_HOLD_DESCRIPTION_MAX_LENGTH,
+  LEGAL_HOLD_DESCRIPTION_MIN_LENGTH,
+} from "@shared/backend-api/validation";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Plus, Search, X } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { Badge } from "@/components/common/Badge";
 import { Button } from "@/components/common/Button";
@@ -13,6 +23,7 @@ import { SELECT_CLASS } from "@/components/common/select-styles";
 import { useAssets } from "@/features/assets/hooks/useAssets";
 import { usePlaceLegalHold } from "@/features/legal-holds/hooks/useLegalHoldMutations";
 import { useNamespaces } from "@/features/namespaces/hooks/useNamespaces";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { cn } from "@/lib/utils";
 
 // Photoshop-style transparency checker reused from the asset list / hero so
@@ -51,12 +62,16 @@ function PickerThumb({ asset, size }: IPickerThumbProps): React.JSX.Element {
 }
 
 // ── Constants ──────────────────────────────────────────────
-const CASE_REF_MIN = 3;
-const CASE_REF_MAX = 100;
-const DESCRIPTION_MIN = 10;
-const DESCRIPTION_MAX = 1000;
 const PAGE_SIZE = 25;
 const NAMESPACE_LIMIT = 100;
+
+// ── Form value types ──────────────────────────────────────
+interface IPlaceHoldFormValues {
+  caseReference: string;
+  description: string;
+  assetIds: string[];
+  acknowledged: boolean;
+}
 
 // ── Sub-components ─────────────────────────────────────────
 function FieldLabel(
@@ -141,11 +156,6 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
   const navigate = useNavigate();
   const placeMutation = usePlaceLegalHold();
 
-  // Form state
-  const [caseReference, setCaseReference] = useState("");
-  const [description, setDescription] = useState("");
-  const [acknowledged, setAcknowledged] = useState(false);
-
   // Picker state. Storing the full AssetResponseDTO per pick (not just the
   // publicId) lets the basket render thumbnails even after the user changes
   // the namespace/search filter and the picked asset is no longer in the
@@ -164,6 +174,61 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
     limit: PAGE_SIZE,
   });
   const assets: AssetResponseDTO[] = assetsQuery.data?.data ?? [];
+
+  const schema = useMemo(
+    () =>
+      z.object({
+        caseReference: z
+          .string()
+          .min(LEGAL_HOLD_CASE_REFERENCE_MIN_LENGTH, t("pages.placeLegalHold.errors.caseReference"))
+          .max(
+            LEGAL_HOLD_CASE_REFERENCE_MAX_LENGTH,
+            t("pages.placeLegalHold.errors.caseReference"),
+          ),
+        description: z
+          .string()
+          .min(LEGAL_HOLD_DESCRIPTION_MIN_LENGTH, t("pages.placeLegalHold.errors.description"))
+          .max(LEGAL_HOLD_DESCRIPTION_MAX_LENGTH, t("pages.placeLegalHold.errors.description")),
+        assetIds: z
+          .array(z.uuid())
+          .min(1, t("pages.placeLegalHold.errors.assetIds"))
+          .max(LEGAL_HOLD_ASSET_IDS_MAX),
+        // z.literal(true) would infer the field as the literal type `true`,
+        // which conflicts with IPlaceHoldFormValues's `acknowledged: boolean`
+        // (needed so the checkbox can default to false). z.boolean().refine
+        // keeps the inferred type as `boolean` while still requiring `true`.
+        acknowledged: z
+          .boolean()
+          .refine((val) => val === true, { error: t("pages.placeLegalHold.errors.acknowledged") }),
+      }),
+    [t],
+  );
+
+  const form = useForm<IPlaceHoldFormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { caseReference: "", description: "", assetIds: [], acknowledged: false },
+    mode: "onBlur",
+  });
+  const {
+    handleSubmit,
+    register,
+    setError,
+    setValue,
+    control,
+    formState: { errors, isDirty, isSubmitting, isSubmitSuccessful },
+  } = form;
+
+  // useWatch (not the destructured `watch()` from useForm) so this
+  // subscription is compatible with the React Compiler's memoization.
+  const descriptionValue = useWatch({ control, name: "description" });
+
+  useUnsavedChangesGuard(isDirty && !isSubmitting && !isSubmitSuccessful);
+
+  // Mirror the basket into the form's assetIds field so Zod validates it and
+  // the wire body is built from a single source of truth.
+  useEffect(() => {
+    setValue("assetIds", [...picked.keys()], { shouldDirty: true, shouldValidate: false });
+  }, [picked, setValue]);
 
   // ── Basket helpers ─────────────────────────────────────────
   function togglePicked(asset: AssetResponseDTO): void {
@@ -200,40 +265,31 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
     setPicked(new Map());
   }
 
-  // ── Submit gating ──────────────────────────────────────────
-  const canSubmit =
-    caseReference.length >= CASE_REF_MIN &&
-    caseReference.length <= CASE_REF_MAX &&
-    description.length >= DESCRIPTION_MIN &&
-    description.length <= DESCRIPTION_MAX &&
-    picked.size >= 1 &&
-    acknowledged &&
-    !placeMutation.isPending;
-
-  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>): void {
-    e.preventDefault();
-
-    placeMutation.mutate(
-      {
-        caseReference,
-        description,
-        assetIds: [...picked.keys()],
+  // ── Submit ───────────────────────────────────────────────
+  async function onSubmit(values: IPlaceHoldFormValues): Promise<void> {
+    try {
+      await placeMutation.mutateAsync({
+        caseReference: values.caseReference,
+        description: values.description,
+        assetIds: values.assetIds,
         assetInternalIds: [...picked.values()].map((asset) => asset.id),
-      },
-      {
-        onSuccess: () => {
-          toast.success(t("pages.placeLegalHold.toast.success", { caseReference }));
-          void navigate({ to: "/legal-holds" });
-        },
-        onError: (err) => {
-          toast.error(
-            t("pages.placeLegalHold.toast.failure", {
-              error: err instanceof Error ? err.message : String(err),
-            }),
-          );
-        },
-      },
-    );
+      });
+      toast.success(
+        t("pages.placeLegalHold.toast.success", { caseReference: values.caseReference }),
+      );
+      await navigate({ to: "/legal-holds" });
+    } catch (err) {
+      // setError keeps isSubmitSuccessful false so the unsaved-changes guard stays armed.
+      setError("root", {
+        type: "server",
+        message: err instanceof Error ? err.message : String(err),
+      });
+      toast.error(
+        t("pages.placeLegalHold.toast.failure", {
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    }
   }
 
   return (
@@ -251,7 +307,12 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
         <p className="text-muted-foreground mt-1 text-sm">{t("pages.placeLegalHold.subtitle")}</p>
       </div>
 
-      <form id="place-legal-hold-form" onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <form
+        id="place-legal-hold-form"
+        onSubmit={(e) => void handleSubmit(onSubmit)(e)}
+        className="space-y-4"
+        noValidate
+      >
         {/* ── Section 1: Case ──────────────────────────── */}
         <NumberedSection
           num={1}
@@ -264,16 +325,18 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
             </FieldLabel>
             <TextInput
               id="plh-case-reference"
-              value={caseReference}
-              onChange={(e) => {
-                setCaseReference(e.target.value);
-              }}
-              maxLength={CASE_REF_MAX}
+              aria-invalid={errors.caseReference ? true : undefined}
               placeholder="CHL-AVN-2026-014"
+              {...register("caseReference")}
             />
             <p className="text-muted-foreground mt-1 text-[11px]">
               {t("pages.placeLegalHold.fields.caseReferenceHint")}
             </p>
+            {errors.caseReference?.message ? (
+              <p role="alert" className="text-destructive mt-1 text-[11px]">
+                {errors.caseReference.message}
+              </p>
+            ) : null}
           </div>
         </NumberedSection>
 
@@ -423,6 +486,11 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
               )}
             </div>
           </div>
+          {errors.assetIds?.message ? (
+            <p role="alert" className="text-destructive mt-1 text-[11px]">
+              {errors.assetIds.message}
+            </p>
+          ) : null}
         </NumberedSection>
 
         {/* ── Section 3: Reason ────────────────────────── */}
@@ -438,17 +506,19 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
             <TextArea
               id="plh-description"
               rows={4}
-              value={description}
-              onChange={(e) => {
-                setDescription(e.target.value);
-              }}
-              maxLength={DESCRIPTION_MAX}
+              aria-invalid={errors.description ? true : undefined}
+              {...register("description")}
             />
             <p className="text-muted-foreground mt-1 text-[11px]">
               {t("pages.placeLegalHold.fields.descriptionCounter", {
-                count: description.length,
+                count: descriptionValue.length,
               })}
             </p>
+            {errors.description?.message ? (
+              <p role="alert" className="text-destructive mt-1 text-[11px]">
+                {errors.description.message}
+              </p>
+            ) : null}
           </div>
         </NumberedSection>
 
@@ -463,16 +533,28 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
               id="plh-acknowledged"
               type="checkbox"
               className="h-4 w-4 rounded"
-              checked={acknowledged}
-              onChange={(e) => {
-                setAcknowledged(e.target.checked);
-              }}
+              aria-invalid={errors.acknowledged ? true : undefined}
+              {...register("acknowledged")}
             />
             <FieldLabel htmlFor="plh-acknowledged">
               {t("pages.placeLegalHold.acknowledgement")}
             </FieldLabel>
+            {errors.acknowledged?.message ? (
+              <p role="alert" className="text-destructive text-[11px]">
+                {errors.acknowledged.message}
+              </p>
+            ) : null}
           </div>
         </NumberedSection>
+
+        {errors.root?.message ? (
+          <div
+            role="alert"
+            className="border-destructive/40 bg-destructive/10 text-destructive rounded-md border px-4 py-3 text-sm"
+          >
+            {errors.root.message}
+          </div>
+        ) : null}
 
         {/* ── Sticky footer ─────────────────────────────── */}
         <div className="border-border/40 bg-background/95 sticky bottom-0 z-10 flex items-center justify-between gap-3 border-t pt-4 pb-2 backdrop-blur-sm">
@@ -491,7 +573,7 @@ export function PlaceLegalHoldPage(): React.JSX.Element {
               type="submit"
               form="place-legal-hold-form"
               variant="indigo"
-              disabled={!canSubmit}
+              disabled={isSubmitting || placeMutation.isPending}
             >
               {t("pages.placeLegalHold.footer.submit")}
             </Button>

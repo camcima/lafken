@@ -1308,6 +1308,12 @@
         "remove": "Remove from basket"
       },
       "acknowledgement": "I understand this hold suspends deletion until lifted.",
+      "errors": {
+        "caseReference": "Case reference must be 3–100 characters",
+        "description": "Reason must be 10–1,000 characters",
+        "assetIds": "Select at least one asset",
+        "acknowledged": "You must acknowledge the hold implications"
+      },
       "footer": {
         "summary_one": "{{count}} asset will be locked",
         "summary_other": "{{count}} assets will be locked",

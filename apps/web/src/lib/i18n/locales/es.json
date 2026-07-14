@@ -1307,6 +1307,12 @@
         "remove": "Quitar de la selección"
       },
       "acknowledgement": "Entiendo que esta retención suspende la eliminación hasta que se levante.",
+      "errors": {
+        "caseReference": "La referencia del caso debe tener entre 3 y 100 caracteres",
+        "description": "El motivo debe tener entre 10 y 1.000 caracteres",
+        "assetIds": "Selecciona al menos un asset",
+        "acknowledged": "Debes reconocer las implicaciones de la retención"
+      },
       "footer": {
         "summary_one": "{{count}} activo será bloqueado",
         "summary_other": "{{count}} activos serán bloqueados",
