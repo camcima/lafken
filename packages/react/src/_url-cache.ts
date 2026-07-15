@@ -33,10 +33,22 @@ const REFRESH_THRESHOLD_MS = 60_000;
 
 const cache: Map<string, ICacheEntry> = new Map();
 
+/** Payload of the `cache-updated` event. */
+export interface ICacheUpdatedDetail {
+  key: string;
+  url: string;
+}
+
 /**
- * Module-level EventTarget that fires a `cache-updated` event whenever a
- * background refresh completes successfully. <AssetImage> subscribes to this
- * to swap the displayed URL without a full remount.
+ * Module-level EventTarget that fires a `cache-updated` event whenever a fetch
+ * (initial or background refresh) resolves. <AssetImage> and useAssetPresetUrl
+ * subscribe to this to swap the displayed URL without a full remount.
+ *
+ * The resolved URL travels *in the event*. Subscribers must render it directly
+ * and must never call back into `_getCachedPresetUrl` from their listener: a
+ * re-read would find the just-written entry expired (unparseable `expiresAt`)
+ * or inside REFRESH_THRESHOLD_MS (a sub-minute TTL), issue another fetch, and
+ * dispatch again — an unbounded, event-loop-starving request storm.
  */
 export const cacheUpdateBus: EventTarget = new EventTarget();
 
@@ -47,13 +59,31 @@ function doFetch(
   key: string,
 ): Promise<string> {
   const promise: Promise<string> = client.assets.getPreviewUrl({ publicId, preset }).then((dto) => {
-    const expiresAt = Date.parse(dto.expiresAt);
+    const parsed: number = Date.parse(dto.expiresAt);
+    // An unparseable expiresAt must never poison the entry as permanently
+    // fresh (NaN comparisons are always false). Treat it as already expired:
+    // callers still get the URL, but the next access refetches.
+    const expiresAt: number = Number.isNaN(parsed) ? 0 : parsed;
     // Write the resolved entry (clearing the refreshPromise)
     cache.set(key, { url: dto.url, expiresAt });
-    cacheUpdateBus.dispatchEvent(new CustomEvent("cache-updated", { detail: { key } }));
+    const detail: ICacheUpdatedDetail = { key, url: dto.url };
+    cacheUpdateBus.dispatchEvent(new CustomEvent<ICacheUpdatedDetail>("cache-updated", { detail }));
     return dto.url;
   });
   return promise;
+}
+
+/**
+ * Drops expired entries that have no refresh in flight. Runs on every cache
+ * access so the map cannot grow without bound (F-K5). Entries with an active
+ * refreshPromise are protected — including initial-fetch placeholders.
+ */
+function evictExpiredEntries(now: number): void {
+  for (const [entryKey, entry] of cache) {
+    if (entry.refreshPromise === undefined && entry.expiresAt <= now) {
+      cache.delete(entryKey);
+    }
+  }
 }
 
 export function _getCachedPresetUrl(
@@ -62,8 +92,9 @@ export function _getCachedPresetUrl(
   preset: string,
 ): Promise<string> {
   const key: string = `${publicId}|${preset}`;
-  const entry: ICacheEntry | undefined = cache.get(key);
   const now = Date.now();
+  evictExpiredEntries(now);
+  const entry: ICacheEntry | undefined = cache.get(key);
 
   // No entry at all — start initial fetch, deduplicate concurrent callers
   if (entry === undefined) {
@@ -85,21 +116,13 @@ export function _getCachedPresetUrl(
     return entry.refreshPromise;
   }
 
-  // Entry is fully expired — issue a new fetch (deduplicated)
-  if (entry.expiresAt <= now) {
-    // If a refresh is already in flight, reuse it
-    if (entry.refreshPromise !== undefined) {
-      return entry.refreshPromise;
-    }
-    const fresh = doFetch(client, publicId, preset, key);
-    cache.set(key, { ...entry, refreshPromise: fresh });
-    fresh.catch(() => {
-      const current = cache.get(key);
-      if (current?.refreshPromise === fresh) {
-        cache.delete(key);
-      }
-    });
-    return fresh;
+  // Entry is expired yet survived the sweep above. That is only possible with a
+  // refresh already in flight: evictExpiredEntries() — called with this same
+  // `now`, so there is no clock-drift loophole — dropped every other expired
+  // entry, and the map cannot have changed in between. Reuse the in-flight
+  // promise rather than issuing a duplicate fetch.
+  if (entry.expiresAt <= now && entry.refreshPromise !== undefined) {
+    return entry.refreshPromise;
   }
 
   // Within threshold — trigger background refresh (deduplicated) and return current URL synchronously
@@ -126,4 +149,9 @@ export function _evictPresetUrl(publicId: string, preset: string): void {
 /** Test-only — reset the dedup cache between tests. */
 export function _resetPresetUrlCache(): void {
   cache.clear();
+}
+
+/** Test-only — current number of cache entries (for eviction assertions). */
+export function _presetUrlCacheSize(): number {
+  return cache.size;
 }

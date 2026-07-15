@@ -14,7 +14,7 @@ Concrete examples of affected flows:
 - `PlaceLegalHoldUseCase` / `LiftLegalHoldUseCase` — writes a `legal_holds` row, updates M2M `legal_hold_assets`, and flips denormalized flags on `assets`, all inside `LegalHoldWriteRepository`, and then records an audit-log entry.
 - Namespace lifecycle use cases (`CreateNamespaceUseCase`, `ArchiveNamespaceUseCase`, `UnarchiveNamespaceUseCase`, `UpdateNamespacePolicyUseCase`) — each writes to `NamespaceWriteRepository` and then records an audit-log entry.
 
-The `AuditWriteRepository` is a boundary where errors are explicitly swallowed (best-effort semantics for the audit log). However, the transactional guarantee still matters: the audit entry and the business write must be committed together or rolled back together, not written and silently orphaned.
+The `AuditWriteRepository` throws on failure (best-effort swallowing was removed in commit `11cf8db`). The transactional guarantee is therefore load-bearing: the audit entry and the business write must be committed together or rolled back together — an audit failure after a committed business write would leave a change with no audit row.
 
 ## Decision
 
@@ -36,11 +36,11 @@ Use cases that cross repository boundaries wrap all writes in `unitOfWork.execut
 
 `UnitOfWorkPort` and `ConnectionResolver` are exported by the shared `DatabaseModule`, making them available to all feature modules without per-module wiring changes.
 
-The `AuditWriteRepository`'s internal `try/catch` that swallows errors is preserved. In integration rollback tests, we spy on `record()` directly (bypassing the internal try/catch) so errors propagate to the UoW block and trigger the rollback.
+Integration rollback tests force the audit write to fail through a real database mechanism — an unparseable value for the `inet`-typed `configuration_audit_log.request_ip` column — rather than by mocking or spying on the repository under test. This exercises the same code path production would take.
 
 ## Scope
 
-Only use cases with genuine cross-repository writes are opted in. Repositories used exclusively in single-repository contexts are left unchanged. The `NamespacePresetWriteRepository` and `UploadIntentWriteRepository` are not wrapped because their callers do not combine them with other write repositories in a way that requires atomicity.
+Use cases that combine a business write with an audit write (or any second repository) are opted in. This includes the namespace lifecycle use cases, the legal-hold use cases, `ConfirmUploadUseCase`, and — as of the F-D2 remediation — `CreatePresetUseCase`, `SetPresetActiveUseCase`, `UpdatePresetVersionUseCase`, and `UpdateNamespaceMetadataUseCase`. `NamespacePresetWriteRepository` participates in ambient transactions via `ConnectionResolver` like its siblings. `UploadIntentWriteRepository` remains single-repository in its callers and is unchanged.
 
 ## Rationale
 
@@ -55,4 +55,4 @@ Only use cases with genuine cross-repository writes are opted in. Repositories u
 - Any future use case that writes to two or more repositories must wrap those writes in `unitOfWork.execute()` and inject `UnitOfWorkPort`.
 - Any new repository that participates in transactional use cases must accept a `ConnectionResolver` constructor argument and apply the branching pattern.
 - Integration rollback tests are required for every adopted use case (see `test/integration/<context>/use-cases/*-uow-rollback.spec.ts`).
-- The `AuditWriteRepository` best-effort semantics are preserved: a transient audit-log failure will roll back the business write rather than produce a ghost audit entry. If the requirement changes to "best-effort for audit, commit business write regardless," the scope of `unitOfWork.execute()` must be narrowed to exclude the audit call.
+- Audit writes are all-or-nothing with the business write: a transient audit-log failure rolls back the business write. If the requirement ever changes to "best-effort for audit, commit business write regardless," the scope of `unitOfWork.execute()` must be narrowed to exclude the audit call.

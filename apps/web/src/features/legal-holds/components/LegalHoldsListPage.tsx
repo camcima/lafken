@@ -1,5 +1,5 @@
 import type { LegalHoldResponseDTO } from "@shared/backend-api";
-import { Link, useSearch } from "@tanstack/react-router";
+import { Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import {
   Check,
   ChevronRight,
@@ -13,7 +13,7 @@ import {
   Search,
   Tag,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/common/Badge";
@@ -23,6 +23,8 @@ import { Label } from "@/components/common/Label";
 import { Paginator } from "@/components/common/Paginator";
 import { RightDrawer } from "@/components/common/RightDrawer";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
+import { ListQueryError } from "@/components/feedback/Error/ListQueryError";
+import { useDashboardOverview } from "@/features/dashboard/hooks/useDashboardOverview";
 import { LiftLegalHoldDialog } from "@/features/legal-holds/components/LiftLegalHoldDialog";
 import { useLegalHolds } from "@/features/legal-holds/hooks/useLegalHolds";
 import { cn } from "@/lib/utils";
@@ -252,20 +254,76 @@ function HoldDrawer({ hold, onClose, onLift }: IHoldDrawerProps): React.JSX.Elem
 
 // ── Page ──────────────────────────────────────────────────────────────────
 
+const SEARCH_DEBOUNCE_MS = 250;
+
 export function LegalHoldsListPage(): React.JSX.Element {
   const { t } = useTranslation();
-  const { q: initialQ } = useSearch({ from: "/_protected/legal-holds/" });
-  const [query, setQuery] = useState(initialQ ?? "");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const {
+    q,
+    status: statusFilter,
+    page: urlPage,
+  } = useSearch({
+    from: "/_protected/legal-holds/",
+  });
+  const navigate = useNavigate();
+  const router = useRouter();
+
+  // `pendingQuery` is the user's not-yet-committed edit: null except while a
+  // debounce write is in flight. The displayed `query` derives from it (or
+  // falls back to the URL's `q`) instead of mirroring `q` into its own state,
+  // so external navigation is reflected for free on the next render — no
+  // resync effect required, and nothing to fight the debounce write below.
+  // (Same pattern as AuditPage — see there for the full writeup.)
+  const [pendingQuery, setPendingQuery] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [liftDialogOpen, setLiftDialogOpen] = useState(false);
-  const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  const realQuery = useLegalHolds({ page: page + 1, limit: pageSize });
+  const query: string = pendingQuery ?? q ?? "";
+  const page: number = urlPage - 1; // URL is 1-indexed; Paginator is 0-indexed
+
+  // History navigation (Back/Forward) always wins over an edit the user never
+  // committed: discard the pending edit, which both disarms the debounce
+  // below (its cleanup cancels the armed timer) and drops the input back to
+  // the URL's `q`. This path may only ever CANCEL, never write `q` — writing
+  // in response to an external `q` change is what lets the URL resurrect a
+  // stale search after Back (see AuditPage for the full invariant writeup).
+  useEffect(() => {
+    return router.history.subscribe(({ action }) => {
+      if (action.type === "PUSH" || action.type === "REPLACE") return;
+      setPendingQuery(null);
+    });
+  }, [router]);
+
+  // Debounce the free-text input into the URL (replace: no history entry per
+  // keystroke). Only armed while there is a pending edit; the effect depends
+  // on `[pendingQuery, navigate]` only — never `q` — so an external change to
+  // `q` (e.g. Back) cannot re-arm a write.
+  useEffect(() => {
+    if (pendingQuery === null) return;
+    const handle = window.setTimeout(() => {
+      const trimmed = pendingQuery.trim();
+      void navigate({
+        to: "/legal-holds",
+        search: (prev) => ({ ...prev, q: trimmed === "" ? undefined : trimmed, page: 1 }),
+        replace: true,
+      });
+      setPendingQuery(null);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(handle);
+    };
+  }, [pendingQuery, navigate]);
+
+  const realQuery = useLegalHolds({ page: urlPage, limit: pageSize });
+  const overviewQuery = useDashboardOverview();
 
   const allRows: IHoldRow[] = (realQuery.data?.data ?? []).map(apiToRow);
 
+  // Client-side refinement of the *visible page only* — the API has no
+  // q/status filters yet. Server totals below are unaffected by this. `query`
+  // (not the committed URL `q`) drives this so filtering reacts to every
+  // keystroke; the debounce above is purely about persisting to the URL.
   const filtered: IHoldRow[] = allRows.filter((row) => {
     if (statusFilter === "active" && !row.active) return false;
     if (statusFilter === "lifted" && row.active) return false;
@@ -281,14 +339,18 @@ export function LegalHoldsListPage(): React.JSX.Element {
     return true;
   });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const pageRows = filtered;
+  // Server totals (F-W1): pagination and stats come from the paginated
+  // response and the dashboard counts — never from the visible page.
+  const holdsTotal: number = realQuery.data?.total ?? 0;
+  const totalPages: number = Math.max(1, realQuery.data?.lastPage ?? 1);
+  const activeCount: number = overviewQuery.data?.counts.legalHolds ?? 0;
+  const assetsUnderHold: number = overviewQuery.data?.counts.assetsUnderLegalHold ?? 0;
 
-  const totalAssets: number = filtered.reduce((sum, row) => sum + row.assets, 0);
+  const pageRows = filtered;
   const openHold: IHoldRow | undefined = allRows.find((row) => row.id === openId);
 
-  const rangeFrom = filtered.length === 0 ? 0 : page * pageSize + 1;
-  const rangeTo = Math.min((page + 1) * pageSize, filtered.length);
+  const rangeFrom = holdsTotal === 0 ? 0 : page * pageSize + 1;
+  const rangeTo = Math.min((page + 1) * pageSize, holdsTotal);
 
   const scopeLabels: Record<string, string> = {
     asset: t("pages.legalHolds.scopes.asset"),
@@ -296,10 +358,6 @@ export function LegalHoldsListPage(): React.JSX.Element {
     namespace: t("pages.legalHolds.scopes.namespace"),
     uploader_window: t("pages.legalHolds.scopes.uploaderWindow"),
   };
-
-  // Stats derived from allRows (not filtered)
-  const activeCount = allRows.filter((row) => row.active).length;
-  const totalAssetsAll = allRows.reduce((sum, row) => sum + row.assets, 0);
 
   return (
     <div className="space-y-4">
@@ -311,8 +369,8 @@ export function LegalHoldsListPage(): React.JSX.Element {
           </h1>
           <div className="text-muted-foreground mt-1 text-[12.5px]">
             {t("pages.legalHolds.subtitle", {
-              filtered: filtered.length,
-              assets: totalAssets.toLocaleString(),
+              filtered: holdsTotal,
+              assets: assetsUnderHold.toLocaleString(),
             })}
           </div>
         </div>
@@ -327,7 +385,7 @@ export function LegalHoldsListPage(): React.JSX.Element {
       </div>
 
       {/* Stats grid */}
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-3">
         <Card className="px-4 py-3">
           <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
             {t("pages.legalHolds.stats.activeHolds.label")}
@@ -344,19 +402,10 @@ export function LegalHoldsListPage(): React.JSX.Element {
             {t("pages.legalHolds.stats.assetsUnderHold.label")}
           </div>
           <div className="mt-0.5 font-mono text-[24px] leading-tight tabular-nums">
-            {totalAssetsAll.toLocaleString()}
+            {assetsUnderHold.toLocaleString()}
           </div>
           <div className="text-muted-foreground text-[11px]">
             {t("pages.legalHolds.stats.assetsUnderHold.sub")}
-          </div>
-        </Card>
-        <Card className="px-4 py-3">
-          <div className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
-            {t("pages.legalHolds.stats.oldestHold.label")}
-          </div>
-          <div className="mt-0.5 font-mono text-[24px] leading-tight tabular-nums">—</div>
-          <div className="text-muted-foreground text-[11px]">
-            {t("pages.legalHolds.stats.oldestHold.sub")}
           </div>
         </Card>
       </div>
@@ -374,18 +423,25 @@ export function LegalHoldsListPage(): React.JSX.Element {
               placeholder={t("pages.legalHolds.searchPlaceholder")}
               value={query}
               onChange={(ev: React.ChangeEvent<HTMLInputElement>) => {
-                setQuery(ev.target.value);
-                setPage(0);
+                setPendingQuery(ev.target.value);
               }}
+              aria-label={t("pages.legalHolds.searchPlaceholder")}
               className="border-input bg-card focus:ring-ring h-9 w-full rounded-md border pr-3 pl-9 text-[12.5px] outline-none focus:ring-1"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
-              setStatusFilter(ev.target.value);
-              setPage(0);
+              void navigate({
+                to: "/legal-holds",
+                search: (prev) => ({
+                  ...prev,
+                  status: ev.target.value as "all" | "active" | "lifted",
+                  page: 1,
+                }),
+              });
             }}
+            aria-label={t("pages.legalHolds.table.status")}
             className={SELECT_CLASS}
           >
             <option value="all">{t("pages.legalHolds.filters.allStatuses")}</option>
@@ -396,81 +452,90 @@ export function LegalHoldsListPage(): React.JSX.Element {
       </Card>
 
       {/* Table card */}
-      <Card className="overflow-x-auto">
-        <div className="min-w-[1080px]">
-          <div
-            className={cn(
-              "border-border bg-secondary/40 text-muted-foreground grid items-center gap-3 border-b px-4 py-2 text-[10.5px] font-medium tracking-wider uppercase",
-              TABLE_COLS,
-            )}
-          >
-            <span>{t("pages.legalHolds.table.caseRef")}</span>
-            <span>{t("pages.legalHolds.table.scope")}</span>
-            <span>{t("pages.legalHolds.table.target")}</span>
-            <span className="text-right">{t("pages.legalHolds.table.assets")}</span>
-            <span>{t("pages.legalHolds.table.placedBy")}</span>
-            <span>{t("pages.legalHolds.table.lastReviewed")}</span>
-            <span>{t("pages.legalHolds.table.status")}</span>
-            <span />
-          </div>
-          {pageRows.map((row) => (
-            <button
-              key={row.id}
-              type="button"
-              onClick={() => {
-                setOpenId(row.id);
-              }}
+      {realQuery.isError ? (
+        <ListQueryError
+          isRetrying={realQuery.isFetching}
+          onRetry={() => {
+            void realQuery.refetch();
+          }}
+        />
+      ) : (
+        <Card className="overflow-x-auto">
+          <div className="min-w-[1080px]">
+            <div
               className={cn(
-                "border-border/40 hover:bg-secondary/30 grid w-full items-center gap-3 border-b px-4 py-2.5 text-left text-[12.5px] last:border-b-0",
+                "border-border bg-secondary/40 text-muted-foreground grid items-center gap-3 border-b px-4 py-2 text-[10.5px] font-medium tracking-wider uppercase",
                 TABLE_COLS,
               )}
             >
-              <div className="min-w-0">
-                <div className="text-latam-indigo-deep truncate font-mono text-[12.5px]">
-                  {row.caseRef}
-                </div>
-                <div className="text-muted-foreground truncate font-mono text-[10.5px]">
-                  {row.id}
-                </div>
-              </div>
-              <div
+              <span>{t("pages.legalHolds.table.caseRef")}</span>
+              <span>{t("pages.legalHolds.table.scope")}</span>
+              <span>{t("pages.legalHolds.table.target")}</span>
+              <span className="text-right">{t("pages.legalHolds.table.assets")}</span>
+              <span>{t("pages.legalHolds.table.placedBy")}</span>
+              <span>{t("pages.legalHolds.table.lastReviewed")}</span>
+              <span>{t("pages.legalHolds.table.status")}</span>
+              <span />
+            </div>
+            {pageRows.map((row) => (
+              <button
+                key={row.id}
+                type="button"
+                onClick={() => {
+                  setOpenId(row.id);
+                }}
                 className={cn(
-                  "border-border bg-secondary/40 inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px]",
+                  "border-border/40 hover:bg-secondary/30 grid w-full items-center gap-3 border-b px-4 py-2.5 text-left text-[12.5px] last:border-b-0",
+                  TABLE_COLS,
                 )}
               >
-                <ScopeIcon scope={row.scope} />
-                {scopeLabels[row.scope] ?? row.scopeLabel}
-              </div>
-              <div className="text-muted-foreground truncate font-mono text-[11.5px]">
-                {row.scopeLabel}
-              </div>
-              <div className="text-right font-mono text-[12.5px] tabular-nums">
-                {row.assets.toLocaleString()}
-              </div>
-              <div className="text-muted-foreground truncate font-mono text-[11.5px]">
-                {row.placedBy}
-              </div>
-              <div className="text-muted-foreground text-[11.5px]">
-                {row.lastReviewed.slice(0, DATE_SLICE_END)}
-              </div>
-              <div>
-                {row.active ? (
-                  <Badge variant="warn">
-                    <Lock size={BADGE_ICON_SIZE} />
-                    {t("pages.legalHolds.statuses.active")}
-                  </Badge>
-                ) : (
-                  <Badge variant="info">
-                    <Clock size={BADGE_ICON_SIZE} />
-                    {t("pages.legalHolds.statuses.lifted")}
-                  </Badge>
-                )}
-              </div>
-              <ChevronRight size={CHEVRON_SIZE} className="text-muted-foreground" />
-            </button>
-          ))}
-        </div>
-      </Card>
+                <div className="min-w-0">
+                  <div className="text-latam-indigo-deep truncate font-mono text-[12.5px]">
+                    {row.caseRef}
+                  </div>
+                  <div className="text-muted-foreground truncate font-mono text-[10.5px]">
+                    {row.id}
+                  </div>
+                </div>
+                <div
+                  className={cn(
+                    "border-border bg-secondary/40 inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px]",
+                  )}
+                >
+                  <ScopeIcon scope={row.scope} />
+                  {scopeLabels[row.scope] ?? row.scopeLabel}
+                </div>
+                <div className="text-muted-foreground truncate font-mono text-[11.5px]">
+                  {row.scopeLabel}
+                </div>
+                <div className="text-right font-mono text-[12.5px] tabular-nums">
+                  {row.assets.toLocaleString()}
+                </div>
+                <div className="text-muted-foreground truncate font-mono text-[11.5px]">
+                  {row.placedBy}
+                </div>
+                <div className="text-muted-foreground text-[11.5px]">
+                  {row.lastReviewed.slice(0, DATE_SLICE_END)}
+                </div>
+                <div>
+                  {row.active ? (
+                    <Badge variant="warn">
+                      <Lock size={BADGE_ICON_SIZE} />
+                      {t("pages.legalHolds.statuses.active")}
+                    </Badge>
+                  ) : (
+                    <Badge variant="info">
+                      <Clock size={BADGE_ICON_SIZE} />
+                      {t("pages.legalHolds.statuses.lifted")}
+                    </Badge>
+                  )}
+                </div>
+                <ChevronRight size={CHEVRON_SIZE} className="text-muted-foreground" />
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Footer paginator */}
       <div className="text-muted-foreground mt-3 flex flex-wrap items-center justify-between gap-3 text-[11.5px]">
@@ -480,7 +545,7 @@ export function LegalHoldsListPage(): React.JSX.Element {
             value={pageSize}
             onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
               setPageSize(Number(ev.target.value));
-              setPage(0);
+              void navigate({ to: "/legal-holds", search: (prev) => ({ ...prev, page: 1 }) });
             }}
             className={SELECT_CLASS_SM}
             aria-label={t("paginator.rowsPerPage")}
@@ -491,14 +556,14 @@ export function LegalHoldsListPage(): React.JSX.Element {
               </option>
             ))}
           </select>
-          {filtered.length > 0 && (
+          {holdsTotal > 0 && (
             <>
               <span className="hidden sm:inline">·</span>
               <span className="hidden font-mono tabular-nums sm:inline">
                 {t("paginator.range", {
                   from: rangeFrom.toLocaleString(),
                   to: rangeTo.toLocaleString(),
-                  total: filtered.length.toLocaleString(),
+                  total: holdsTotal.toLocaleString(),
                 })}
               </span>
             </>
@@ -508,7 +573,10 @@ export function LegalHoldsListPage(): React.JSX.Element {
           page={page}
           totalPages={totalPages}
           onChange={(newPage) => {
-            setPage(newPage);
+            void navigate({
+              to: "/legal-holds",
+              search: (prev) => ({ ...prev, page: newPage + 1 }),
+            });
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
         />

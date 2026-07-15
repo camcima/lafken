@@ -6,6 +6,7 @@ import { DuplicateStorageBindingNameError } from "@/system/domain/errors/duplica
 import { StorageBindingInUseError } from "@/system/domain/errors/storage-binding-in-use.error";
 import { StorageBindingWriteRepository } from "@/system/infrastructure/persistence/repositories/storage-binding-write.repository";
 
+import { cleanDatabase } from "../../helpers/clean-database";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 describe("StorageBindingWriteRepository", () => {
@@ -18,19 +19,7 @@ describe("StorageBindingWriteRepository", () => {
   });
 
   beforeEach(async () => {
-    // Clean storage_bindings; also remove namespaces that reference them first
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await cleanDatabase(db);
   });
 
   afterAll(async () => {

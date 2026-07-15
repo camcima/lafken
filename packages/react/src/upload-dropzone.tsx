@@ -40,8 +40,6 @@ export interface IUploadDropzoneProps {
    * upload queue.
    */
   restrictions?: IUploadRestrictions;
-  /** Upload protocol to use. Default: "simple" (XHR PUT). */
-  protocol?: "simple" | "tus";
   /**
    * Ms before `expiresAt` at which to pre-flight a URL refresh. Default 30000.
    */
@@ -62,7 +60,6 @@ export function UploadDropzone(props: IUploadDropzoneProps): React.JSX.Element {
       namespaceSlug: props.namespaceSlug,
       sharedMetadata: props.sharedMetadata,
       restrictions: props.restrictions,
-      protocol: props.protocol,
       refreshSafetyMarginMs: props.refreshSafetyMarginMs,
       pollingIntervalMs: props.pollingIntervalMs,
       pollingMaxIntervalMs: props.pollingMaxIntervalMs,

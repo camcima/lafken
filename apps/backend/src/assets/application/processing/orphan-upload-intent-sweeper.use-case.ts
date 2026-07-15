@@ -31,6 +31,7 @@ export class OrphanUploadIntentSweeperUseCase {
   }
 
   async execute(input: IOrphanSweepInput): Promise<void> {
+    const expiresBefore: Date = new Date(input.now.getTime() - input.graceMs);
     const orphans = await this.intents.findOrphanedForSweep({
       now: input.now,
       graceMs: input.graceMs,
@@ -40,7 +41,11 @@ export class OrphanUploadIntentSweeperUseCase {
     // a namespace and we don't want N queries per sweep tick.
     const slugByNamespaceId: Map<string, string | null> = new Map();
     for (const intent of orphans) {
-      const transitioned = await this.intents.markExpired(intent.props.publicId, input.now);
+      const transitioned = await this.intents.markExpired({
+        publicId: intent.props.publicId,
+        now: input.now,
+        expiresBefore,
+      });
       if (!transitioned) {
         // Another worker / consumer beat us — leave bytes alone.
         continue;

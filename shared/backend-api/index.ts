@@ -4,6 +4,7 @@ export {
   makePaginatedRequestInputDto,
   makePaginatedResponseDto,
 } from "./shared/pagination-dto-factories";
+export * from "./shared/validation-constants";
 
 export * from "./presentation/health-dtos/health-check-result.dto";
 export * from "./presentation/auth/unauthorized-error-response.dto";

@@ -1,8 +1,9 @@
 import type { LafkenClient } from "@lafken/client";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { _evictPresetUrl, _getCachedPresetUrl } from "../src/_url-cache";
 import { _resetPresetUrlCache, LafkenProvider, useAssetPresetUrl } from "../src/index";
 
 function makePreviewUrlDto(url: string): { url: string; expiresAt: string } {
@@ -99,5 +100,47 @@ describe("useAssetPresetUrl", () => {
     } finally {
       errorSpy.mockRestore();
     }
+  });
+
+  it("updates to the refreshed URL after a background refresh completes", async () => {
+    // The initial entry deliberately sits *inside* the 60s refresh threshold.
+    // The hook subscribes to "cache-updated", which `doFetch` dispatches for
+    // every fetch — including the initial one. A listener that reacted by
+    // re-reading the cache would find this near-expiry entry, trigger another
+    // fetch, dispatch again, and storm the API. Because the listener now takes
+    // the URL straight from the event, the initial dispatch is inert and this
+    // test deterministically observes "stale" before the explicit refresh.
+    const getPreviewUrl = vi
+      .fn()
+      .mockResolvedValueOnce({
+        url: "https://cdn/stale.webp",
+        expiresAt: new Date(Date.now() + 30_000).toISOString(),
+      })
+      .mockResolvedValueOnce({
+        url: "https://cdn/fresh.webp",
+        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+      });
+    const client = makeStubClient({ getPreviewUrl });
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <LafkenProvider client={client}>{children}</LafkenProvider>
+    );
+    const { result } = renderHook(() => useAssetPresetUrl("abc", "thumb"), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.url).toBe("https://cdn/stale.webp");
+    });
+
+    // Simulate another consumer (e.g. <AssetImage> re-fetching after an
+    // eviction) refreshing the same key; the hook must pick up the new URL
+    // via the cacheUpdateBus subscription — exactly like <AssetImage> does.
+    _evictPresetUrl("abc", "thumb");
+    await act(async () => {
+      await _getCachedPresetUrl(client, "abc", "thumb");
+    });
+
+    await waitFor(() => {
+      expect(result.current.url).toBe("https://cdn/fresh.webp");
+    });
+    expect(getPreviewUrl).toHaveBeenCalledTimes(2);
   });
 });

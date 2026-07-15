@@ -1,5 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { StorageBindingResponseDTO } from "@shared/backend-api";
+import {
+  NAMESPACE_DESCRIPTION_MAX_LENGTH,
+  NAMESPACE_DISPLAY_NAME_MAX_LENGTH,
+  NAMESPACE_SLUG_MAX_LENGTH,
+  NAMESPACE_SLUG_PATTERN,
+  POLICY_MAX_FILE_SIZE_BYTES,
+  POLICY_MAX_RETENTION_DAYS,
+  POLICY_MAX_SIGNED_URL_BUCKET_SIZE,
+  POLICY_MAX_TTL_SECONDS,
+} from "@shared/backend-api/validation";
 import { Link, useNavigate } from "@tanstack/react-router";
 import React, { useMemo } from "react";
 import type { Control } from "react-hook-form";
@@ -12,19 +22,12 @@ import { Card } from "@/components/common/Card";
 import { RadioCardGroup } from "@/features/namespaces/components/PresetFormShared";
 import { useCreateNamespace } from "@/features/namespaces/hooks/useNamespaces";
 import { useStorageBindings } from "@/features/system/hooks/useSystem";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { ApiError } from "@/lib/api/api-error";
 import { extractProblemTypeSuffix } from "@/lib/api/problem-types";
 import { cn } from "@/lib/utils";
 
 // ── Constants ─────────────────────────────────────────────
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const MAX_SLUG_LENGTH = 64;
-const MAX_DISPLAY_NAME_LENGTH = 200;
-const MAX_DESCRIPTION_LENGTH = 2000;
-const MAX_FILE_SIZE_BYTES = 5_368_709_120;
-const MAX_TTL_SECONDS = 604_800;
-const MAX_SIGNED_URL_BUCKET_SECONDS = 86_400;
-const MAX_RETENTION_DAYS = 36_500;
 const DEFAULT_MAX_FILE_SIZE = 52_428_800;
 const DEFAULT_SIGNED_URL_TTL = 3600;
 const DEFAULT_SIGNED_URL_BUCKET_SIZE = 300;
@@ -283,10 +286,10 @@ export function NewNamespacePage(): React.JSX.Element {
         slug: z
           .string()
           .min(1)
-          .max(MAX_SLUG_LENGTH)
-          .regex(SLUG_PATTERN, t("pages.namespaces.errors.invalidSlug")),
-        displayName: z.string().min(1).max(MAX_DISPLAY_NAME_LENGTH),
-        description: z.string().max(MAX_DESCRIPTION_LENGTH),
+          .max(NAMESPACE_SLUG_MAX_LENGTH)
+          .regex(NAMESPACE_SLUG_PATTERN, t("pages.namespaces.errors.invalidSlug")),
+        displayName: z.string().min(1).max(NAMESPACE_DISPLAY_NAME_MAX_LENGTH),
+        description: z.string().max(NAMESPACE_DESCRIPTION_MAX_LENGTH),
         storageBindingId: z.uuid(),
         maxFileSizeBytes: z
           .string()
@@ -295,8 +298,8 @@ export function NewNamespacePage(): React.JSX.Element {
               val !== "" &&
               Number.isInteger(Number(val)) &&
               Number(val) >= 1 &&
-              Number(val) <= MAX_FILE_SIZE_BYTES,
-            { message: `Must be between 1 and ${MAX_FILE_SIZE_BYTES}` },
+              Number(val) <= POLICY_MAX_FILE_SIZE_BYTES,
+            { message: `Must be between 1 and ${POLICY_MAX_FILE_SIZE_BYTES}` },
           ),
         allowedMimeTypesRaw: z.string().min(1),
         virusScanRequired: z.boolean(),
@@ -307,8 +310,8 @@ export function NewNamespacePage(): React.JSX.Element {
               val === "" ||
               (Number.isInteger(Number(val)) &&
                 Number(val) >= 1 &&
-                Number(val) <= MAX_RETENTION_DAYS),
-            { message: `Must be between 1 and ${MAX_RETENTION_DAYS}` },
+                Number(val) <= POLICY_MAX_RETENTION_DAYS),
+            { message: `Must be between 1 and ${POLICY_MAX_RETENTION_DAYS}` },
           ),
         retentionMode: z.enum(["delete", "archive", "none"]),
         immutable: z.boolean(),
@@ -318,8 +321,10 @@ export function NewNamespacePage(): React.JSX.Element {
           .refine(
             (val) =>
               val === "" ||
-              (Number.isInteger(Number(val)) && Number(val) >= 1 && Number(val) <= MAX_TTL_SECONDS),
-            { message: `Must be between 1 and ${MAX_TTL_SECONDS}` },
+              (Number.isInteger(Number(val)) &&
+                Number(val) >= 1 &&
+                Number(val) <= POLICY_MAX_TTL_SECONDS),
+            { message: `Must be between 1 and ${POLICY_MAX_TTL_SECONDS}` },
           ),
         signedUrlBucketSize: z
           .string()
@@ -328,8 +333,8 @@ export function NewNamespacePage(): React.JSX.Element {
               val === "" ||
               (Number.isInteger(Number(val)) &&
                 Number(val) >= 1 &&
-                Number(val) <= MAX_SIGNED_URL_BUCKET_SECONDS),
-            { message: `Must be between 1 and ${MAX_SIGNED_URL_BUCKET_SECONDS}` },
+                Number(val) <= POLICY_MAX_SIGNED_URL_BUCKET_SIZE),
+            { message: `Must be between 1 and ${POLICY_MAX_SIGNED_URL_BUCKET_SIZE}` },
           ),
         contentModerationRaw: z.string().refine((val) => val === "" || isValidJson(val), {
           message: t("pages.namespaces.errors.invalidJson"),
@@ -371,8 +376,10 @@ export function NewNamespacePage(): React.JSX.Element {
     handleSubmit,
     register,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty, isSubmitSuccessful },
   } = form;
+
+  useUnsavedChangesGuard(isDirty && !isSubmitting && !isSubmitSuccessful);
 
   const isPending = createMutation.isPending;
   const isBusy = isSubmitting || isPending;
@@ -660,7 +667,7 @@ export function NewNamespacePage(): React.JSX.Element {
                 id="ns-max-file-size"
                 type="number"
                 min={1}
-                max={MAX_FILE_SIZE_BYTES}
+                max={POLICY_MAX_FILE_SIZE_BYTES}
                 aria-invalid={errors.maxFileSizeBytes ? true : undefined}
                 aria-describedby={errors.maxFileSizeBytes ? "ns-max-file-size-error" : undefined}
                 {...register("maxFileSizeBytes")}
@@ -734,7 +741,7 @@ export function NewNamespacePage(): React.JSX.Element {
                 id="ns-retention-days"
                 type="number"
                 min={1}
-                max={MAX_RETENTION_DAYS}
+                max={POLICY_MAX_RETENTION_DAYS}
                 placeholder="—"
                 aria-invalid={errors.retentionDays ? true : undefined}
                 aria-describedby={errors.retentionDays ? "ns-retention-days-error" : undefined}
@@ -858,7 +865,7 @@ export function NewNamespacePage(): React.JSX.Element {
                 id="ns-signed-url-ttl"
                 type="number"
                 min={1}
-                max={MAX_TTL_SECONDS}
+                max={POLICY_MAX_TTL_SECONDS}
                 aria-invalid={errors.signedUrlTtlSeconds ? true : undefined}
                 aria-describedby={
                   errors.signedUrlTtlSeconds ? "ns-signed-url-ttl-error" : undefined
@@ -881,7 +888,7 @@ export function NewNamespacePage(): React.JSX.Element {
                 id="ns-signed-url-bucket-size"
                 type="number"
                 min={1}
-                max={MAX_SIGNED_URL_BUCKET_SECONDS}
+                max={POLICY_MAX_SIGNED_URL_BUCKET_SIZE}
                 aria-invalid={errors.signedUrlBucketSize ? true : undefined}
                 aria-describedby={
                   errors.signedUrlBucketSize ? "ns-signed-url-bucket-size-error" : undefined

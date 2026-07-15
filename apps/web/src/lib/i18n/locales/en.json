@@ -32,7 +32,13 @@
     "actions": {
       "retry": "Retry",
       "close": "Close drawer"
-    }
+    },
+    "listError": {
+      "title": "Couldn't load this list",
+      "description": "The request failed. Check your connection and try again.",
+      "retry": "Retry"
+    },
+    "unsavedChanges": "You have unsaved changes. Discard them and leave this page?"
   },
   "errors": {
     "serverError": "A server error occurred. Please try again later.",
@@ -238,16 +244,7 @@
       "filters": {
         "allStates": "All states",
         "allNamespaces": "All namespaces",
-        "moreFilters": "More filters",
-        "clear": "Clear filters",
-        "quickFiltersLabel": "Quick filters:",
-        "quickFilters": {
-          "last24h": "Last 24h",
-          "hasLegalHold": "Has legal hold",
-          "failedPipelines": "Failed pipelines",
-          "mine": "Mine",
-          "quarantined": "Quarantined"
-        }
+        "clear": "Clear filters"
       },
       "viewToggle": {
         "rows": "Rows",
@@ -255,14 +252,10 @@
         "grid": "Grid"
       },
       "actions": {
-        "export": "Export view",
         "upload": "Upload"
       },
       "bulkBar": {
         "selected": "{{count}} selected",
-        "export": "Export",
-        "placeHold": "Place legal hold…",
-        "editMetadata": "Edit metadata…",
         "clear": "Clear"
       },
       "summary": "Showing {{shown}} of {{total}} matching assets",
@@ -933,7 +926,6 @@
         "awaitingReview": "awaiting review · oldest 36h · reviewer SLO",
         "slo": "4h"
       },
-      "reviewedToday": "{{count}} reviewed today",
       "exportQueue": "Export queue",
       "policyBadge": "policy v7",
       "decisionNote": "All decisions write to the audit log with your principal, the asset ID, the analyzer name, and your note.",
@@ -1050,7 +1042,7 @@
     },
     "legalHolds": {
       "title": "Legal holds",
-      "subtitle": "{{filtered}} holds covering {{assets}} assets · 1 pending lift",
+      "subtitle": "{{filtered}} holds covering {{assets}} assets",
       "place": "Place hold",
       "searchPlaceholder": "Search by case reference, scope, or hold ID…",
       "actions": {
@@ -1070,10 +1062,6 @@
         "assetsUnderHold": {
           "label": "Assets under hold",
           "sub": "across all scopes"
-        },
-        "oldestHold": {
-          "label": "Oldest hold",
-          "sub": "CHL-2025-AVN-099"
         }
       },
       "filters": {
@@ -1151,12 +1139,14 @@
       "subtitle": "Append-only · retained {{retention}} · cryptographically chained · last anchor {{anchor}}",
       "export": "Export",
       "searchPlaceholder": "Filter by actor, target, type, namespace…",
+      "searchLabel": "Search audit log",
       "filters": {
         "principal": "Principal",
         "action": "Action",
         "entity": "Entity",
         "from": "From",
         "to": "To",
+        "typeLabel": "Event type",
         "allTypes": "All event types",
         "allResults": "All results",
         "results": {
@@ -1275,13 +1265,7 @@
     },
     "settings": {
       "title": "Settings",
-      "subtitle": "Workspace LATAM Lafken (prod) · sa-east-1",
-      "comingSoon": "Persistent settings come in a later slice",
-      "labels": {
-        "theme": "Theme",
-        "language": "Language",
-        "dateFormat": "Date format"
-      },
+      "subtitle": "Workspace configuration",
       "tabs": {
         "workspace": "Workspace",
         "members": "Members & roles",
@@ -1289,139 +1273,9 @@
         "policies": "Policies & defaults",
         "danger": "Danger zone"
       },
-      "workspace": {
-        "fields": {
-          "name": {
-            "label": "Workspace name",
-            "value": "LATAM Lafken (prod)"
-          },
-          "slug": {
-            "label": "Workspace slug",
-            "value": "latam-lafken-prod"
-          },
-          "region": {
-            "label": "Region",
-            "value": "sa-east-1 (São Paulo, primary)"
-          },
-          "replica": {
-            "label": "Replica",
-            "value": "sa-east-1c (warm)"
-          },
-          "defaultNamespace": {
-            "label": "Default namespace",
-            "value": "aircraft-photos"
-          },
-          "reviewerSlo": {
-            "label": "Default reviewer SLO",
-            "value": "4 hours"
-          },
-          "created": {
-            "label": "Created",
-            "value": "2024-08-12 by p.estrada@latam.com"
-          },
-          "plan": {
-            "label": "Plan"
-          }
-        },
-        "plan": {
-          "label": "Enterprise · custom"
-        }
-      },
-      "branding": {
-        "title": "Branding",
-        "description": "Console favicon, login background, and email header are pulled from this brand kit.",
-        "lastEdited": "Last edited 38 days ago by p.estrada@latam.com.",
-        "replaceLogo": "Replace logo",
-        "reset": "Reset to default"
-      },
-      "members": {
-        "title": "Members",
-        "inviteMember": "Invite member",
-        "empty": "No members yet.",
-        "table": {
-          "person": "Person",
-          "role": "Role",
-          "scope": "Scope",
-          "mfa": "MFA",
-          "lastActive": "Last active"
-        },
-        "mfa": {
-          "on": "on",
-          "off": "off"
-        }
-      },
-      "api": {
-        "title": "API keys",
-        "createKey": "Create key",
-        "empty": "No API keys yet.",
-        "table": {
-          "label": "Label",
-          "scopes": "Scopes",
-          "lastUsed": "Last used",
-          "rotates": "Auto-rotate",
-          "createdBy": "Created by",
-          "status": "Status"
-        },
-        "status": {
-          "active": "active",
-          "revoked": "revoked"
-        }
-      },
-      "policies": {
-        "title": "Defaults applied to new namespaces",
-        "defaults": {
-          "retention": {
-            "label": "Default retention",
-            "value": "7 years",
-            "note": "Override per-namespace in policy YAML."
-          },
-          "maxUpload": {
-            "label": "Default max upload size",
-            "value": "26 MB",
-            "note": "Hard ceiling 200 MB."
-          },
-          "allowedMimes": {
-            "label": "Allowed MIME types",
-            "value": "image/jpeg, image/png, image/heic, application/pdf",
-            "note": ""
-          },
-          "moderation": {
-            "label": "Moderation",
-            "value": "enabled (v2)",
-            "note": "Threshold 0.65 across all categories."
-          },
-          "exif": {
-            "label": "EXIF policy",
-            "value": "strip from bytes; preserve GPS in capture_context",
-            "note": ""
-          },
-          "retentionWarning": {
-            "label": "Retention warning lead",
-            "value": "60 days",
-            "note": "Email + console banner before expiry."
-          }
-        },
-        "edit": "Edit"
-      },
-      "danger": {
-        "title": "Danger zone",
-        "actions": {
-          "pauseUploads": {
-            "label": "Pause all uploads",
-            "note": "Stops uploaders without dropping pipeline; ready assets keep serving.",
-            "btn": "Pause"
-          },
-          "rotateKey": {
-            "label": "Rotate workspace signing key",
-            "note": "Re-signs the audit chain. New anchors only.",
-            "btn": "Rotate…"
-          },
-          "disableConsole": {
-            "label": "Disable console access",
-            "note": "Read-only mode workspace-wide. API keys unaffected.",
-            "btn": "Disable…"
-          }
-        }
+      "notConfigured": {
+        "title": "Not configured yet",
+        "description": "Workspace settings are not wired to the backend yet. This tab will activate when the corresponding API ships."
       }
     },
     "placeLegalHold": {
@@ -1454,6 +1308,12 @@
         "remove": "Remove from basket"
       },
       "acknowledgement": "I understand this hold suspends deletion until lifted.",
+      "errors": {
+        "caseReference": "Case reference must be 3–100 characters",
+        "description": "Reason must be 10–1,000 characters",
+        "assetIds": "Select at least one asset",
+        "acknowledged": "You must acknowledge the hold implications"
+      },
       "footer": {
         "summary_one": "{{count}} asset will be locked",
         "summary_other": "{{count}} assets will be locked",

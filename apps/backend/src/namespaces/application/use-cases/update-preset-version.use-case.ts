@@ -10,6 +10,7 @@ import { ReservedPresetNameError } from "@/namespaces/domain/errors/reserved-pre
 import { NamespacePresetWriteRepositoryPort } from "@/namespaces/domain/repositories/namespace-preset-write.repository.port";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import type { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
+import { UnitOfWorkPort } from "@/shared/application/unit-of-work.port";
 import { SYSTEM_PRESET_NAME_PREFIX } from "@/shared/kernel/domain/preset-naming";
 
 const RETRY_LIMIT = 1;
@@ -29,6 +30,7 @@ export class UpdatePresetVersionUseCase {
     private readonly queryRepository: NamespaceQueryRepositoryPort,
     private readonly writeRepository: NamespacePresetWriteRepositoryPort,
     private readonly auditWriteRepo: AuditWriteRepositoryPort,
+    private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
   async execute(input: IUpdatePresetVersionInput): Promise<NamespacePreset> {
@@ -55,20 +57,23 @@ export class UpdatePresetVersionUseCase {
     let lastConflict: PresetVersionConflictError | null = null;
     for (let attempt = 0; attempt <= RETRY_LIMIT; attempt += 1) {
       try {
-        const preset = await this.writeRepository.createVersion({
-          namespaceId: namespace.props.id,
-          name: input.name,
-          params: input.params,
-          createdBy: input.createdBy,
-        });
-        await this.auditWriteRepo.record({
-          entityType: "namespace_preset",
-          entityId: `${namespace.props.slug.value}/${preset.props.name}`,
-          action: "update",
-          occurredBy: input.createdBy ?? AUDIT_FALLBACK_PRINCIPAL,
-          requestIp: input.requestIp,
-          beforeState: { version: existing.props.version },
-          afterState: { version: preset.props.version },
+        const preset: NamespacePreset = await this.unitOfWork.execute(async () => {
+          const created = await this.writeRepository.createVersion({
+            namespaceId: namespace.props.id,
+            name: input.name,
+            params: input.params,
+            createdBy: input.createdBy,
+          });
+          await this.auditWriteRepo.record({
+            entityType: "namespace_preset",
+            entityId: `${namespace.props.slug.value}/${created.props.name}`,
+            action: "update",
+            occurredBy: input.createdBy ?? AUDIT_FALLBACK_PRINCIPAL,
+            requestIp: input.requestIp,
+            beforeState: { version: existing.props.version },
+            afterState: { version: created.props.version },
+          });
+          return created;
         });
         return preset;
       } catch (err) {

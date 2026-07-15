@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ProcessingJobRepository } from "@/assets/infrastructure/persistence/repositories/processing-job.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { cleanDatabase } from "../../helpers/clean-database";
 import { createConnectionResolver } from "../../helpers/create-connection-resolver";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
@@ -158,22 +159,121 @@ describe("ProcessingJobRepository", () => {
     expect(row.attempt_number).toBe(2);
     expect(row.last_error).toBe("storage timeout");
   });
-});
 
-async function cleanDatabase(db: DatabaseClient): Promise<void> {
-  await db.connection.transaction().execute(async (tx) => {
-    await tx.deleteFrom("asset_analyses").execute();
-    await tx.deleteFrom("asset_state_transitions").execute();
-    await tx.deleteFrom("processing_jobs").execute();
-    await tx.deleteFrom("legal_hold_assets").execute();
-    await tx.deleteFrom("assets").execute();
-    await tx.deleteFrom("upload_intents").execute();
-    await tx.deleteFrom("namespace_presets").execute();
-    await tx.deleteFrom("namespace_policies").execute();
-    await tx.deleteFrom("namespaces").execute();
-    await tx.deleteFrom("storage_bindings").execute();
+  it("cancelForAsset completes a released job and records the cancel reason", async () => {
+    const cancelled = await repository.cancelForAsset({
+      assetId,
+      reason: "asset_deleted",
+      now: new Date("2026-05-06T12:00:00.000Z"),
+    });
+
+    expect(cancelled).toBe(true);
+    const row = await db.connection
+      .selectFrom("processing_jobs")
+      .select(["state", "worker_id", "last_error"])
+      .where("asset_id", "=", assetId)
+      .executeTakeFirstOrThrow();
+    expect(row.state).toBe("completed");
+    expect(row.worker_id).toBeNull();
+    expect(row.last_error).toBe("asset_deleted");
   });
-}
+
+  it("cancelForAsset also cancels a claimed job owned by a live worker", async () => {
+    await repository.claimAvailable({
+      workerId: "worker-a",
+      limit: 1,
+      now: new Date("2026-05-06T12:00:00.000Z"),
+    });
+
+    const cancelled = await repository.cancelForAsset({
+      assetId,
+      reason: "asset_deleted",
+      now: new Date("2026-05-06T12:00:10.000Z"),
+    });
+
+    expect(cancelled).toBe(true);
+  });
+
+  it("cancelForAsset returns false when the job is already terminal", async () => {
+    await db.connection
+      .updateTable("processing_jobs")
+      .set({ state: "completed" })
+      .where("asset_id", "=", assetId)
+      .execute();
+
+    const cancelled = await repository.cancelForAsset({
+      assetId,
+      reason: "asset_deleted",
+      now: new Date("2026-05-06T12:00:00.000Z"),
+    });
+
+    expect(cancelled).toBe(false);
+  });
+
+  describe("releaseStaleClaim fences", () => {
+    it("releases a stale claim still owned by the expected worker", async () => {
+      await repository.claimAvailable({
+        workerId: "worker-a",
+        limit: 1,
+        now: new Date("2026-05-06T12:00:00.000Z"),
+      });
+
+      const released = await repository.releaseStaleClaim({
+        assetId,
+        nextAttemptNumber: 2,
+        staleBefore: new Date("2026-05-06T12:05:00.000Z"), // heartbeat (12:00) is older
+        expectedWorkerId: "worker-a",
+        now: new Date("2026-05-06T12:06:00.000Z"),
+      });
+
+      expect(released).toBe(true);
+      const row = await db.connection
+        .selectFrom("processing_jobs")
+        .select(["state", "worker_id", "attempt_number"])
+        .where("asset_id", "=", assetId)
+        .executeTakeFirstOrThrow();
+      expect(row.state).toBe("released");
+      expect(row.worker_id).toBeNull();
+      expect(row.attempt_number).toBe(2);
+    });
+
+    it("refuses to release when the heartbeat is fresh", async () => {
+      await repository.claimAvailable({
+        workerId: "worker-a",
+        limit: 1,
+        now: new Date("2026-05-06T12:00:00.000Z"),
+      });
+
+      const released = await repository.releaseStaleClaim({
+        assetId,
+        nextAttemptNumber: 2,
+        staleBefore: new Date("2026-05-06T11:55:00.000Z"), // heartbeat (12:00) is NEWER
+        expectedWorkerId: "worker-a",
+        now: new Date("2026-05-06T12:00:30.000Z"),
+      });
+
+      expect(released).toBe(false);
+    });
+
+    it("refuses to release when another worker owns the claim", async () => {
+      await repository.claimAvailable({
+        workerId: "worker-a",
+        limit: 1,
+        now: new Date("2026-05-06T12:00:00.000Z"),
+      });
+
+      const released = await repository.releaseStaleClaim({
+        assetId,
+        nextAttemptNumber: 2,
+        staleBefore: new Date("2026-05-06T12:05:00.000Z"),
+        expectedWorkerId: "worker-b",
+        now: new Date("2026-05-06T12:06:00.000Z"),
+      });
+
+      expect(released).toBe(false);
+    });
+  });
+});
 
 async function seedUploadedAssetWithJob(db: DatabaseClient, suffix = "default"): Promise<string> {
   return db.connection.transaction().execute(async (tx) => {

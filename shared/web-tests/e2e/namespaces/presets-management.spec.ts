@@ -1,6 +1,5 @@
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 
-const E2E_GATE = process.env.LAFKEN_E2E_REQUIRES_FAKE_GCS === "true";
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:3000";
 
 /**
@@ -75,14 +74,7 @@ async function deleteStorageBinding(request: APIRequestContext, name: string): P
   await request.delete(`${BACKEND_URL}/system/storage-bindings/${name}`).catch(() => undefined);
 }
 
-test.describe(`@requires-fake-gcs presets management ${E2E_GATE ? "" : "(skipped)"}`, () => {
-  test.beforeEach(() => {
-    test.skip(
-      !E2E_GATE,
-      "Set LAFKEN_E2E_REQUIRES_FAKE_GCS=true with the backend + fake-gcs running.",
-    );
-  });
-
+test.describe("presets management", () => {
   test("operator creates, edits, deactivates, and reactivates a preset", async ({
     request,
     page,

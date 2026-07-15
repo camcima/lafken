@@ -164,8 +164,10 @@
         "presentation/assets/namespace-storage-usage-response.dto.ts",
         "presentation/dashboard/dashboard-overview-response.dto.ts",
         "presentation/system/system-health-response.dto.ts",
-        // Constants below are part of the public surface shared with the frontend
-        // (consumed via @shared/backend-api in derived projects).
+        // PresetFitDTO/PresetFormatDTO are derived from the shared PRESET_FITS/
+        // PRESET_FORMATS constants (shared/validation-constants.ts) and used only
+        // as inline field type annotations within this file's own class — Knip
+        // can't see that same-file usage.
         "presentation/namespaces/preset-params-input.dto.ts",
         "presentation/quarantine/reject-quarantined-asset-request.dto.ts",
         // UploadProtocol is part of the @lafken/upload SDK public surface.

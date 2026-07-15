@@ -73,8 +73,6 @@ export interface IUseImageUploadOptions {
    * Updates take effect for files added after the change.
    */
   restrictions?: IUploadRestrictions;
-  /** Upload protocol to use. Default: "simple" (XHR PUT). */
-  protocol?: "simple" | "tus";
   /**
    * Ms before `expiresAt` at which to pre-flight a URL refresh. Default 30000.
    * Only relevant when the user adds files well before clicking upload.
@@ -107,29 +105,18 @@ export interface IUseImageUploadResult {
 }
 
 export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadResult {
-  // useState lazy initializer guarantees the manager is created exactly once
-  // for the lifetime of the component. We deliberately ignore later changes to
-  // `opts.client` / `opts.namespaceSlug` — re-creating the manager mid-flight
-  // would orphan in-flight uploads. Consumers must remount to switch namespaces.
-  const initialRestrictions = opts.restrictions;
-  const initialProtocol = opts.protocol;
-  const initialRefreshSafetyMarginMs = opts.refreshSafetyMarginMs;
-  const initialPollingIntervalMs = opts.pollingIntervalMs;
-  const initialPollingMaxIntervalMs = opts.pollingMaxIntervalMs;
-  const initialPollingTimeoutMs = opts.pollingTimeoutMs;
-  const [manager] = useState<LafkenUploadManager>(
-    () =>
-      new LafkenUploadManager({
-        client: opts.client,
-        namespaceSlug: opts.namespaceSlug,
-        restrictions: initialRestrictions,
-        protocol: initialProtocol,
-        refreshSafetyMarginMs: initialRefreshSafetyMarginMs,
-        pollingIntervalMs: initialPollingIntervalMs,
-        pollingMaxIntervalMs: initialPollingMaxIntervalMs,
-        pollingTimeoutMs: initialPollingTimeoutMs,
-      }),
-  );
+  // The manager is created inside the mount effect (not in a lazy useState
+  // initializer): under <StrictMode> React runs mount → unmount → mount, and
+  // an initializer-created manager would leave the first Uppy instance
+  // orphaned with no teardown path (F-K4). Creating and destroying it inside
+  // the effect gives every instance a matching cleanup.
+  //
+  // We deliberately ignore later changes to `opts.client` /
+  // `opts.namespaceSlug` — re-creating the manager mid-flight would orphan
+  // in-flight uploads. Consumers must remount to switch namespaces.
+  const optsRef = useRef<IUseImageUploadOptions>(opts);
+  optsRef.current = opts;
+  const managerRef = useRef<LafkenUploadManager | null>(null);
   const [files, setFiles] = useState<IUploadFile[]>([]);
   const [rejections, setRejections] = useState<IUploadRejection[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -138,8 +125,20 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
   const previewUrlsRef = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
+    const initial: IUseImageUploadOptions = optsRef.current;
+    const manager: LafkenUploadManager = new LafkenUploadManager({
+      client: initial.client,
+      namespaceSlug: initial.namespaceSlug,
+      restrictions: initial.restrictions,
+      refreshSafetyMarginMs: initial.refreshSafetyMarginMs,
+      pollingIntervalMs: initial.pollingIntervalMs,
+      pollingMaxIntervalMs: initial.pollingMaxIntervalMs,
+      pollingTimeoutMs: initial.pollingTimeoutMs,
+    });
+    managerRef.current = manager;
     const uppy = manager.getUppy();
     const previewUrls = previewUrlsRef.current;
+
     function syncFromUppy(): void {
       const all = uppy.getFiles();
       const uppyIds = new Set(all.map((f) => f.id));
@@ -199,7 +198,6 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
     }
     function onReady(ev: Event): void {
       const detail = (ev as CustomEvent<IFileReadyEventDetail>).detail;
-      const previewUrls = previewUrlsRef.current;
       // Revoke object URL when file reaches ready state
       const previewUrl = previewUrls.get(detail.fileId);
       if (previewUrl !== undefined) {
@@ -284,8 +282,24 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
     }
     function onUploadStart(): void {
       setIsUploading(true);
-      setFiles((prev) => prev.map((f) => ({ ...f, state: "uploading" })));
+      // Only files still waiting to upload transition to "uploading".
+      // allowMultipleUploadBatches means terminal tiles from earlier batches
+      // (ready / quarantined / rejected / failed / error) stay in the list —
+      // they must never regress to a spinner (F-K3).
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.state === "idle" || f.state === "preview" ? { ...f, state: "uploading" } : f,
+        ),
+      );
     }
+    const onUploadError = (file: { id: string } | undefined, error: { message: string }): void => {
+      if (!file) return;
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === file.id ? { ...f, state: "error", error: { message: error.message } } : f,
+        ),
+      );
+    };
     function onComplete(): void {
       setIsUploading(false);
     }
@@ -296,6 +310,7 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
     uppy.on("file-added", syncFromUppy);
     uppy.on("file-removed", syncFromUppy);
     uppy.on("upload", onUploadStart);
+    uppy.on("upload-error", onUploadError);
     uppy.on("complete", onComplete);
     uppy.on("error", onError);
     manager.addEventListener("file-confirmed", onConfirm);
@@ -310,6 +325,7 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
       uppy.off("file-added", syncFromUppy);
       uppy.off("file-removed", syncFromUppy);
       uppy.off("upload", onUploadStart);
+      uppy.off("upload-error", onUploadError);
       uppy.off("complete", onComplete);
       uppy.off("error", onError);
       manager.removeEventListener("file-confirmed", onConfirm);
@@ -319,48 +335,59 @@ export function useImageUpload(opts: IUseImageUploadOptions): IUseImageUploadRes
       manager.removeEventListener("file-rejected-terminal", onRejectedTerminal);
       manager.removeEventListener("file-failed", onFail);
       manager.removeEventListener("file-restriction-rejected", onReject);
+      // Teardown (F-K4): stop polling loops and in-flight uploads, then
+      // destroy the Uppy instance so no authenticated request outlives the
+      // component. Reset state so a StrictMode remount starts clean.
+      manager.cancelAll();
+      uppy.destroy();
+      managerRef.current = null;
       for (const url of previewUrls.values()) {
         URL.revokeObjectURL(url);
       }
       previewUrls.clear();
+      setFiles([]);
+      setRejections([]);
+      setIsUploading(false);
     };
-  }, [manager]);
+    // Mount-only by design: the manager must live exactly as long as the
+    // component instance (see the comment at the top of the hook).
+  }, []);
 
   // Sync restrictions when they change. We re-stringify to compare so callers
   // don't need to memoize the object identity themselves — restrictions are
   // typically derived from a fetched policy and recomputed on every render.
-  const restrictionsKey = JSON.stringify(opts.restrictions ?? {});
+  const restrictionsKey: string = JSON.stringify(opts.restrictions ?? {});
   useEffect(() => {
-    manager.setRestrictions(opts.restrictions ?? {});
+    managerRef.current?.setRestrictions(opts.restrictions ?? {});
     // restrictionsKey is the serialized identity we actually care about;
     // opts.restrictions itself changes identity every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [manager, restrictionsKey]);
+  }, [restrictionsKey]);
 
-  const addFiles = useCallback((toAdd: File[]) => manager.addFiles(toAdd), [manager]);
-  const removeFile = useCallback(
-    (id: string) => {
-      manager.removeFile(id);
-      // Drop ghost-errored files (already removed from Uppy after intent
-      // failure) directly from React state and revoke their preview URL.
-      const previewUrls = previewUrlsRef.current;
-      const url = previewUrls.get(id);
-      if (url) {
-        URL.revokeObjectURL(url);
-        previewUrls.delete(id);
-      }
-      setFiles((prev) => prev.filter((f) => f.id !== id));
-    },
-    [manager],
-  );
+  const addFiles = useCallback((toAdd: File[]): void => {
+    managerRef.current?.addFiles(toAdd);
+  }, []);
+  const removeFile = useCallback((id: string): void => {
+    managerRef.current?.removeFile(id);
+    // Drop ghost-errored files (already removed from Uppy after intent
+    // failure) directly from React state and revoke their preview URL.
+    const previewUrls = previewUrlsRef.current;
+    const url = previewUrls.get(id);
+    if (url) {
+      URL.revokeObjectURL(url);
+      previewUrls.delete(id);
+    }
+    setFiles((prev) => prev.filter((f) => f.id !== id));
+  }, []);
   const dismissRejection = useCallback((id: string): void => {
     setRejections((prev) => prev.filter((r) => r.id !== id));
   }, []);
-  const sharedMetadata = opts.sharedMetadata;
   const startUpload = useCallback((): Promise<void> => {
-    manager.setSharedMetadata(sharedMetadata ?? {});
+    const manager = managerRef.current;
+    if (manager === null) return Promise.resolve();
+    manager.setSharedMetadata(optsRef.current.sharedMetadata ?? {});
     return manager.start();
-  }, [manager, sharedMetadata]);
+  }, []);
 
   return { files, rejections, dismissRejection, addFiles, removeFile, startUpload, isUploading };
 }

@@ -2,6 +2,7 @@ import { UploadIntent } from "@/assets/domain/entities/upload-intent.entity";
 import {
   IFindOrphanedForSweepInput,
   IInsertUploadIntentInput,
+  IMarkExpiredInput,
   IRefreshUploadUrlInput,
   UploadIntentWriteRepositoryPort,
 } from "@/assets/domain/repositories/upload-intent-write.repository.port";
@@ -13,6 +14,26 @@ export class FakeUploadIntentWriteRepository extends UploadIntentWriteRepository
 
   seed(intents: UploadIntent[]): void {
     this.intents = [...intents];
+  }
+
+  expireSeeded(publicId: string, expiredAt: Date): void {
+    const idx = this.intents.findIndex((i) => i.props.publicId === publicId);
+    if (idx >= 0) {
+      this.intents[idx] = UploadIntent.fromProps({ ...this.intents[idx].props, expiredAt });
+    }
+  }
+
+  /**
+   * Test-only: forces a seeded/inserted intent into the consumed state,
+   * bypassing the port. There is no port method for this — in production,
+   * consuming an intent is an atomic side effect of
+   * AssetWriteRepository.createUploadedAsset, never a standalone operation.
+   */
+  consumeSeeded(publicId: string, consumedAt: Date): void {
+    const idx = this.intents.findIndex((i) => i.props.publicId === publicId);
+    if (idx >= 0) {
+      this.intents[idx] = UploadIntent.fromProps({ ...this.intents[idx].props, consumedAt });
+    }
   }
 
   insert(input: IInsertUploadIntentInput): Promise<UploadIntent> {
@@ -42,18 +63,6 @@ export class FakeUploadIntentWriteRepository extends UploadIntentWriteRepository
     return Promise.resolve(this.intents.find((i) => i.props.publicId === publicId) ?? null);
   }
 
-  markConsumed(publicId: string): Promise<void> {
-    const intent = this.intents.find((i) => i.props.publicId === publicId);
-    if (intent) {
-      const idx = this.intents.indexOf(intent);
-      this.intents[idx] = UploadIntent.fromProps({
-        ...intent.props,
-        consumedAt: new Date(),
-      });
-    }
-    return Promise.resolve();
-  }
-
   findOrphanedForSweep(input: IFindOrphanedForSweepInput): Promise<UploadIntent[]> {
     const cutoff = new Date(input.now.getTime() - input.graceMs);
     const results = this.intents
@@ -68,14 +77,17 @@ export class FakeUploadIntentWriteRepository extends UploadIntentWriteRepository
     return Promise.resolve(results);
   }
 
-  markExpired(publicId: string, now: Date): Promise<boolean> {
+  markExpired(input: IMarkExpiredInput): Promise<boolean> {
     const intent = this.intents.find(
       (i) =>
-        i.props.publicId === publicId && i.props.consumedAt === null && i.props.expiredAt === null,
+        i.props.publicId === input.publicId &&
+        i.props.consumedAt === null &&
+        i.props.expiredAt === null &&
+        i.props.uploadUrlExpiresAt < input.expiresBefore,
     );
     if (!intent) return Promise.resolve(false);
     const idx = this.intents.indexOf(intent);
-    this.intents[idx] = UploadIntent.fromProps({ ...intent.props, expiredAt: now });
+    this.intents[idx] = UploadIntent.fromProps({ ...intent.props, expiredAt: input.now });
     return Promise.resolve(true);
   }
 

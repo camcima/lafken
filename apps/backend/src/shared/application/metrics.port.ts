@@ -63,5 +63,15 @@ export abstract class MetricsPort {
 
   abstract recordProcessingStaleClaimReclaimed(input: { count: number }): void;
 
+  abstract recordPreviewUrlIssued(input: { namespaceSlug: string; presetName: string }): void;
+
+  abstract recordPreviewUrlDuration(input: {
+    namespaceSlug: string;
+    presetName: string;
+    durationMs: number;
+  }): void;
+
+  abstract recordDownloadUrlIssued(input: { namespaceSlug: string }): void;
+
   abstract registerQueueDepthSampler(sampler: IQueueDepthSampler): void;
 }

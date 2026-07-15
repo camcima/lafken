@@ -9,6 +9,9 @@ void testInstance.use(initReactI18next).init({
   resources: { en: { translation: en } },
   lng: "en",
   fallbackLng: "en",
+  // Mirror the production config: an empty translation must behave the same in
+  // tests, or tests stay blind to keys that render as the raw key string.
+  returnEmptyString: false,
   interpolation: { escapeValue: false },
 });
 

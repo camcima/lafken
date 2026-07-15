@@ -145,7 +145,9 @@ export class NamespacesController {
 
   @Get(":slug/presets")
   @AuthenticatedEndpoint()
-  @ApiOperation({ summary: "List active presets for a namespace" })
+  @ApiOperation({
+    summary: "List presets for a namespace (latest version per name, including inactive)",
+  })
   @ApiOkResponse({ type: NamespacePresetResponseDTO, isArray: true })
   @ApiNotFoundResponse()
   async listPresets(@Param("slug") slug: string): Promise<NamespacePresetResponseDTO[]> {

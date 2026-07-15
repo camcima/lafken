@@ -3,6 +3,7 @@ import type { Kysely, Transaction } from "kysely";
 
 import type { ProcessingJob } from "@/assets/domain/entities/processing-job.entity";
 import {
+  type ICancelJobForAssetInput,
   type IClaimJobsInput,
   type ICountDueJobsInput,
   type IFindStaleClaimsInput,
@@ -181,6 +182,34 @@ export class ProcessingJobRepository extends ProcessingJobRepositoryPort {
       })
       .where("asset_id", "=", input.assetId)
       .where("state", "=", "claimed")
+      // F-P6 fences: never yank a claim that heartbeated after we sampled it,
+      // and never yank a claim that changed hands since we read the row.
+      .where("heartbeat_at", "<", input.staleBefore)
+      .where((eb) =>
+        input.expectedWorkerId === null
+          ? eb("worker_id", "is", null)
+          : eb("worker_id", "=", input.expectedWorkerId),
+      )
+      .executeTakeFirst();
+    return this.hasUpdatedRows(result);
+  }
+
+  async cancelForAsset(input: ICancelJobForAssetInput): Promise<boolean> {
+    const result = await this.resolver
+      .resolve()
+      .updateTable("processing_jobs")
+      .set({
+        state: "completed",
+        worker_id: null,
+        claimed_at: null,
+        heartbeat_at: input.now,
+        current_step: null,
+        not_before: null,
+        last_error: input.reason,
+        last_error_at: input.now,
+      })
+      .where("asset_id", "=", input.assetId)
+      .where("state", "in", ["released", "claimed"])
       .executeTakeFirst();
     return this.hasUpdatedRows(result);
   }

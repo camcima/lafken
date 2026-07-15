@@ -5,7 +5,7 @@ import type {
   PaginatedResult,
 } from "@shared/backend-api";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -116,6 +116,8 @@ vi.mock("@/lib/lafken-client", () => ({
   }),
 }));
 
+const mockDeleteAsset = vi.fn().mockResolvedValue(undefined);
+
 vi.mock("@lafken/react", () => ({
   AssetImage: () => null,
   useAssetPresetUrl: () => ({
@@ -123,6 +125,7 @@ vi.mock("@lafken/react", () => ({
     isLoading: false,
     error: null,
   }),
+  useLafkenClient: () => ({ assets: { delete: mockDeleteAsset } }),
 }));
 
 vi.mock("@tanstack/react-router", async () => {
@@ -154,6 +157,7 @@ describe("AssetDetailPage", () => {
     mockAsset = TEST_ASSET;
     mockGetDownloadUrl.mockClear();
     mockRetryProcessing.mockClear();
+    mockDeleteAsset.mockClear();
   });
 
   it("renders the asset's public ID from BE data", () => {
@@ -192,18 +196,52 @@ describe("AssetDetailPage", () => {
     expect(screen.getByRole("button", { name: /retry processing/i })).toBeInTheDocument();
   });
 
-  it("calls the SDK retryProcessing when the retry button is clicked", async () => {
+  it("calls the SDK retryProcessing with the asset's internal id when the retry button is clicked", async () => {
     mockAsset = withState("processing_failed");
     renderPage();
     const button = screen.getByRole("button", { name: /retry processing/i });
     await userEvent.click(button);
     expect(mockRetryProcessing).toHaveBeenCalledTimes(1);
-    expect(mockRetryProcessing).toHaveBeenCalledWith(TEST_ASSET.publicId);
+    expect(mockRetryProcessing).toHaveBeenCalledWith(TEST_ASSET.id);
   });
 
   it("renders system preset rows in the PresetsCard", () => {
     renderPage();
     expect(screen.getByText("lafken:thumbnail")).toBeInTheDocument();
     expect(screen.getByText("lafken:detail-hero")).toBeInTheDocument();
+  });
+
+  it("opens the delete dialog and calls assets.delete with the internal id on confirm", async () => {
+    renderPage();
+
+    await userEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: /^delete$/i }));
+
+    await waitFor(() => {
+      expect(mockDeleteAsset).toHaveBeenCalledWith(TEST_ASSET.id);
+    });
+  });
+
+  it("shows an error message in the dialog when the delete fails", async () => {
+    mockDeleteAsset.mockRejectedValueOnce(new Error("409"));
+    renderPage();
+
+    await userEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: /^delete$/i }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+    });
+  });
+
+  it("does not render the delete button for an already-deleted asset", () => {
+    mockAsset = withState("deleted");
+    renderPage();
+    expect(screen.queryByRole("button", { name: /^delete$/i })).not.toBeInTheDocument();
   });
 });

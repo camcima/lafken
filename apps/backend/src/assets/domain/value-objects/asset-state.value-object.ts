@@ -15,6 +15,17 @@ export const ASSET_STATES = [
 export type AssetState = (typeof ASSET_STATES)[number];
 
 /**
+ * The three quarantine states. Single source of truth for every consumer
+ * that needs "all quarantined assets" (quarantine list, dashboard counts) —
+ * never re-declare this list elsewhere.
+ */
+export const QUARANTINED_ASSET_STATES = [
+  "quarantined_virus",
+  "quarantined_moderation",
+  "quarantined_invalid_format",
+] as const satisfies readonly AssetState[];
+
+/**
  * Storage-key prefix applied when an asset is moved out of imgproxy's reach
  * on quarantine. Previously-issued imgproxy URLs embed the original key, so
  * after the move they 404 — which is exactly what we want for quarantined
@@ -48,4 +59,24 @@ const PREVIEWABLE_ASSET_STATES: ReadonlySet<AssetState> = new Set([
 
 export function isAssetPreviewable(state: AssetState): boolean {
   return PREVIEWABLE_ASSET_STATES.has(state);
+}
+
+/**
+ * States where an asset's original bytes may be handed out through a signed
+ * download URL. Mirrors the preview allowlist today, but download and preview
+ * are distinct capabilities kept as separate predicates so they can diverge
+ * (e.g. a compliance flow could someday allow downloading rejected originals
+ * that must never be previewable). Quarantine physically moves the bytes to
+ * `_quarantined/<key>` and updates `storage_key` in the same UPDATE, so an
+ * unguarded signed URL would point at the quarantined bytes and *work* —
+ * this predicate is the gate that prevents that (implementation review F-S1).
+ */
+const DOWNLOADABLE_ASSET_STATES: ReadonlySet<AssetState> = new Set([
+  "uploaded",
+  "processing",
+  "ready",
+]);
+
+export function isAssetDownloadable(state: AssetState): boolean {
+  return DOWNLOADABLE_ASSET_STATES.has(state);
 }

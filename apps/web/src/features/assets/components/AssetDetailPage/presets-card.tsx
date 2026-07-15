@@ -22,10 +22,13 @@ interface IPresetEntry {
 /**
  * System-managed presets, available across every namespace.
  *
- * Mirrored from `apps/backend/src/assets/infrastructure/services/system-presets.ts`.
+ * Mirrored from `apps/backend/src/assets/domain/value-objects/system-presets.ts`.
  * The FE keeps its own copy because the BE doesn't (yet) expose the system
  * preset list in the namespace presets response — system presets are
  * code-defined and silent, applied uniformly per asset.
+ *
+ * This is a second source of truth and can drift. Resolve it by having the BE
+ * expose the system preset list rather than by editing this copy.
  */
 const SYSTEM_PRESETS: ReadonlyArray<IPresetEntry> = [
   {

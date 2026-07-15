@@ -1,4 +1,10 @@
 import type { NamespacePolicyResponseDTO, NamespaceResponseDTO } from "@shared/backend-api";
+import {
+  POLICY_MAX_FILE_SIZE_BYTES,
+  POLICY_MAX_RETENTION_DAYS,
+  POLICY_MAX_SIGNED_URL_BUCKET_SIZE,
+  POLICY_MAX_TTL_SECONDS,
+} from "@shared/backend-api/validation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -13,6 +19,7 @@ import { EditPolicyPage } from "./EditPolicyPage";
 // ── Shared mock state ──────────────────────────────────────
 const mockNavigate = vi.fn();
 const mockMutateAsync = vi.fn();
+const mockUseUnsavedChangesGuard = vi.fn<(when: boolean) => void>();
 let mockNamespace: NamespaceResponseDTO | undefined;
 let mockPolicies: NamespacePolicyResponseDTO[] = [];
 
@@ -101,6 +108,17 @@ vi.mock("@tanstack/react-router", async () => {
   };
 });
 
+// The unsaved-changes guard itself (F-W6) is exercised end-to-end, with a
+// real router, in useUnsavedChangesGuard.test.tsx. Mocking it here — rather
+// than rendering under a real RouterProvider — lets these tests assert the
+// call-site contract (isDirty && !isSubmitting && !isSubmitSuccessful)
+// without duplicating the mechanism's own test suite.
+vi.mock("@/hooks/useUnsavedChangesGuard", () => ({
+  useUnsavedChangesGuard: (when: boolean) => {
+    mockUseUnsavedChangesGuard(when);
+  },
+}));
+
 // ── Render helper ──────────────────────────────────────────
 function renderPage() {
   const queryClient = new QueryClient({
@@ -128,6 +146,7 @@ describe("EditPolicyPage", () => {
   beforeEach(() => {
     mockMutateAsync.mockReset();
     mockNavigate.mockReset();
+    mockUseUnsavedChangesGuard.mockReset();
     mockNamespace = sampleNamespace;
     mockPolicies = [samplePolicy];
   });
@@ -148,6 +167,35 @@ describe("EditPolicyPage", () => {
     expect(screen.getByLabelText(/serving mode/i)).toHaveValue("signed");
     expect(screen.getByLabelText(/signed url ttl/i)).toHaveValue(7200);
     expect(screen.getByLabelText(/signed url bucket size/i)).toHaveValue(600);
+  });
+
+  // Proves the rendered form bounds are wired to the shared validation
+  // constants — the same ones the backend CreateNamespaceRequestDTO enforces
+  // (shared/backend-api/presentation/namespaces/__tests__) — rather than to
+  // local literals that could silently drift from the backend.
+  it("renders numeric field bounds equal to the shared POLICY_* constants", async () => {
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/max file size/i)).toHaveValue(10_485_760);
+    });
+
+    expect(screen.getByLabelText(/max file size/i)).toHaveAttribute(
+      "max",
+      String(POLICY_MAX_FILE_SIZE_BYTES),
+    );
+    expect(screen.getByLabelText(/retention.*days/i)).toHaveAttribute(
+      "max",
+      String(POLICY_MAX_RETENTION_DAYS),
+    );
+    expect(screen.getByLabelText(/signed url ttl/i)).toHaveAttribute(
+      "max",
+      String(POLICY_MAX_TTL_SECONDS),
+    );
+    expect(screen.getByLabelText(/signed url bucket size/i)).toHaveAttribute(
+      "max",
+      String(POLICY_MAX_SIGNED_URL_BUCKET_SIZE),
+    );
   });
 
   it("disables Save until at least one field is dirty", async () => {
@@ -296,5 +344,60 @@ describe("EditPolicyPage", () => {
       expect(alert).toBeInTheDocument();
       expect(alert.textContent).toMatch(/this namespace was deleted/i);
     });
+  });
+
+  // ── Unsaved-changes guard call-site contract (F-W6) ────────
+  it("does not arm the unsaved-changes guard on a pristine form", async () => {
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/max file size/i)).toHaveValue(10_485_760);
+    });
+
+    expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(false);
+  });
+
+  it("arms the unsaved-changes guard once the user edits a field", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/max file size/i)).toHaveValue(10_485_760);
+    });
+
+    await user.clear(screen.getByLabelText(/max file size/i));
+    await user.type(screen.getByLabelText(/max file size/i), "20971520");
+
+    await waitFor(() => {
+      expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(true);
+    });
+  });
+
+  // The classic bug: a form that saves successfully and then navigates away
+  // must not prompt the user, even though the form values are still "dirty"
+  // (form.reset() only re-syncs from the query cache, which happens after
+  // navigation is already underway) — isSubmitSuccessful is what disarms it.
+  it("disarms the unsaved-changes guard after a successful submit", async () => {
+    const user = userEvent.setup();
+    mockMutateAsync.mockResolvedValue(undefined);
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/max file size/i)).toHaveValue(10_485_760);
+    });
+
+    await user.clear(screen.getByLabelText(/max file size/i));
+    await user.type(screen.getByLabelText(/max file size/i), "20971520");
+
+    await waitFor(() => {
+      expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(true);
+    });
+
+    await user.click(screen.getByRole("button", { name: /save policy/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalled();
+    });
+    expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(false);
   });
 });

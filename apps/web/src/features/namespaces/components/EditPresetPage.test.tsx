@@ -1,4 +1,12 @@
 import type { NamespacePresetResponseDTO, NamespaceResponseDTO } from "@shared/backend-api";
+import {
+  PRESET_DIMENSION_MAX,
+  PRESET_DIMENSION_MIN,
+  PRESET_DPR_MAX,
+  PRESET_DPR_MIN,
+  PRESET_QUALITY_MAX,
+  PRESET_QUALITY_MIN,
+} from "@shared/backend-api/validation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -13,6 +21,7 @@ import { EditPresetPage } from "./EditPresetPage";
 // ── Shared mock state ──────────────────────────────────────
 const mockNavigate = vi.fn();
 const mockMutateAsync = vi.fn();
+const mockUseUnsavedChangesGuard = vi.fn<(when: boolean) => void>();
 let mockNamespace: NamespaceResponseDTO | undefined;
 let mockPresets: NamespacePresetResponseDTO[] = [];
 
@@ -100,6 +109,17 @@ vi.mock("@tanstack/react-router", async () => {
   };
 });
 
+// The unsaved-changes guard itself (F-W6) is exercised end-to-end, with a
+// real router, in useUnsavedChangesGuard.test.tsx. Mocking it here — rather
+// than rendering under a real RouterProvider — lets these tests assert the
+// call-site contract (isDirty && !isSubmitting && !isSubmitSuccessful)
+// without duplicating the mechanism's own test suite.
+vi.mock("@/hooks/useUnsavedChangesGuard", () => ({
+  useUnsavedChangesGuard: (when: boolean) => {
+    mockUseUnsavedChangesGuard(when);
+  },
+}));
+
 // ── Render helper ──────────────────────────────────────────
 function renderPage() {
   const queryClient = new QueryClient({
@@ -127,6 +147,7 @@ describe("EditPresetPage", () => {
   beforeEach(() => {
     mockMutateAsync.mockReset();
     mockNavigate.mockReset();
+    mockUseUnsavedChangesGuard.mockReset();
     mockNamespace = sampleNamespace;
     mockPresets = [samplePreset];
   });
@@ -142,6 +163,34 @@ describe("EditPresetPage", () => {
     expect(screen.getByLabelText(/format/i)).toHaveValue("webp");
     expect(screen.getByLabelText(/width/i)).toHaveValue(400);
     expect(screen.getByLabelText(/height/i)).toHaveValue(300);
+  });
+
+  // Proves the rendered dimension/quality/DPR bounds are wired to the shared
+  // PRESET_* validation constants — the same ones the backend
+  // CreatePresetRequestDTO enforces (shared/backend-api/presentation/namespaces/__tests__)
+  // and the Zod schema in preset-params.schema.ts reads — rather than to
+  // local literals that could silently drift from either.
+  it("renders width/height/dpr/quality bounds equal to the shared PRESET_* constants", async () => {
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveValue(75);
+    });
+
+    expect(screen.getByLabelText(/width/i)).toHaveAttribute("min", String(PRESET_DIMENSION_MIN));
+    expect(screen.getByLabelText(/width/i)).toHaveAttribute("max", String(PRESET_DIMENSION_MAX));
+    expect(screen.getByLabelText(/height/i)).toHaveAttribute("min", String(PRESET_DIMENSION_MIN));
+    expect(screen.getByLabelText(/height/i)).toHaveAttribute("max", String(PRESET_DIMENSION_MAX));
+    expect(screen.getByLabelText(/dpr/i)).toHaveAttribute("min", String(PRESET_DPR_MIN));
+    expect(screen.getByLabelText(/dpr/i)).toHaveAttribute("max", String(PRESET_DPR_MAX));
+    expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveAttribute(
+      "min",
+      String(PRESET_QUALITY_MIN),
+    );
+    expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveAttribute(
+      "max",
+      String(PRESET_QUALITY_MAX),
+    );
   });
 
   it("disables Save until at least one field is dirty", async () => {
@@ -311,5 +360,63 @@ describe("EditPresetPage", () => {
 
     // "Back to latest" should now appear
     expect(screen.getByText(/back to latest/i)).toBeInTheDocument();
+  });
+
+  // ── Unsaved-changes guard call-site contract (F-W6) ────────
+  // The brief calls out that EditPresetPage's `reset(...)` on load makes
+  // isDirty naturally false until the user edits — proven here rather than
+  // just asserted.
+  it("does not arm the unsaved-changes guard on a pristine (freshly loaded) form", async () => {
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveValue(75);
+    });
+
+    expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(false);
+  });
+
+  it("arms the unsaved-changes guard once the user edits a field", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveValue(75);
+    });
+
+    const qualityInput = screen.getByRole("spinbutton", { name: /quality/i });
+    await user.clear(qualityInput);
+    await user.type(qualityInput, "90");
+
+    await waitFor(() => {
+      expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(true);
+    });
+  });
+
+  // The classic bug: a form that saves successfully and then navigates away
+  // must not prompt the user — isSubmitSuccessful is what disarms it.
+  it("disarms the unsaved-changes guard after a successful submit", async () => {
+    const user = userEvent.setup();
+    mockMutateAsync.mockResolvedValue(undefined);
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole("spinbutton", { name: /quality/i })).toHaveValue(75);
+    });
+
+    const qualityInput = screen.getByRole("spinbutton", { name: /quality/i });
+    await user.clear(qualityInput);
+    await user.type(qualityInput, "90");
+
+    await waitFor(() => {
+      expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(true);
+    });
+
+    await user.click(screen.getByRole("button", { name: /save preset/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalled();
+    });
+    expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(false);
   });
 });

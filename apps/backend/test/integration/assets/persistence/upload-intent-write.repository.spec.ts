@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { UploadIntentWriteRepository } from "@/assets/infrastructure/persistence/repositories/upload-intent-write.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { cleanDatabase } from "../../helpers/clean-database";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
@@ -25,19 +26,7 @@ describe("UploadIntentWriteRepository", () => {
   });
 
   beforeEach(async () => {
-    // Clean in FK order (most dependent first)
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await cleanDatabase(db);
 
     // Seed storage binding
     const sb = await db.connection
@@ -160,35 +149,5 @@ describe("UploadIntentWriteRepository", () => {
     expect(found).not.toBeNull();
     expect(found!.props.storageKey).toBe("uploads/find-me.jpg");
     expect(found!.props.consumedAt).toBeNull();
-  });
-
-  it("markConsumed sets consumed_at and is idempotent on second call", async () => {
-    const futureExpiry = new Date(Date.now() + 3600 * 1000);
-    await repository.insert({
-      publicId: NIL_UUID,
-      namespaceId,
-      policyVersionId,
-      storageBindingId: bindingId,
-      storageKey: "uploads/consume-me.jpg",
-      declaredMimeType: "image/jpeg",
-      declaredSizeBytes: 512n,
-      uploadUrl: "https://storage.example.com/signed",
-      uploadUrlExpiresAt: futureExpiry,
-      createdBy: null,
-    });
-
-    await repository.markConsumed(NIL_UUID);
-
-    // Assert consumed_at is set via direct DB query
-    const rows = await db.connection
-      .selectFrom("upload_intents")
-      .selectAll()
-      .where("public_id", "=", NIL_UUID)
-      .execute();
-    expect(rows).toHaveLength(1);
-    expect((rows[0] as { consumed_at: Date | null }).consumed_at).not.toBeNull();
-
-    // Second call must not throw (idempotent guard by WHERE consumed_at IS NULL)
-    await expect(repository.markConsumed(NIL_UUID)).resolves.toBeUndefined();
   });
 });

@@ -1,10 +1,12 @@
 import type { AssetResponseDTO } from "@shared/backend-api";
 import { useQueryClient } from "@tanstack/react-query";
-import { Copy, Download, Loader2, RefreshCw } from "lucide-react";
+import { Copy, Download, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/common/Button";
+import { DeleteAssetDialog } from "@/features/assets/components/DeleteAssetDialog";
+import { useDeleteAsset } from "@/features/assets/hooks/useDeleteAsset";
 import { assetsKeys } from "@/features/assets/keys";
 import { getLafkenClient } from "@/lib/lafken-client";
 
@@ -21,6 +23,26 @@ export function ActionBar({ asset, onCopy, onToast }: IActionBarProps): React.JS
   const [isRetrying, setIsRetrying] = useState(false);
 
   const showRetry: boolean = asset.state === "processing_failed";
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const deleteAsset = useDeleteAsset();
+  const showDelete: boolean = asset.state !== "deleted";
+
+  const handleDeleteConfirm = (): void => {
+    deleteAsset.mutate(
+      { id: asset.id },
+      {
+        onSuccess: () => {
+          setIsDeleteOpen(false);
+          onToast(t("pages.assetDetail.delete.toasts.deleted"));
+        },
+      },
+    );
+  };
+
+  const handleDeleteClose = (): void => {
+    setIsDeleteOpen(false);
+    deleteAsset.reset();
+  };
 
   const handleDownload = async (): Promise<void> => {
     if (isDownloading) return;
@@ -45,7 +67,7 @@ export function ActionBar({ asset, onCopy, onToast }: IActionBarProps): React.JS
     setIsRetrying(true);
     try {
       const client = getLafkenClient();
-      await client.assets.retryProcessing(asset.publicId);
+      await client.assets.retryProcessing(asset.id);
       onToast(t("pages.assetDetail.actions.toasts.retryStarted"));
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: assetsKeys.detail(asset.id) }),
@@ -97,6 +119,26 @@ export function ActionBar({ asset, onCopy, onToast }: IActionBarProps): React.JS
           {t("pages.assetDetail.actions.menu.retryProcessing")}
         </Button>
       )}
+      {showDelete && (
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => {
+            setIsDeleteOpen(true);
+          }}
+        >
+          <Trash2 size={13} />
+          {t("pages.assetDetail.actions.menu.delete")}
+        </Button>
+      )}
+      <DeleteAssetDialog
+        open={isDeleteOpen}
+        publicId={asset.publicId}
+        isPending={deleteAsset.isPending}
+        errorMessage={deleteAsset.error ? t("pages.assetDetail.delete.toasts.failed") : undefined}
+        onConfirm={handleDeleteConfirm}
+        onClose={handleDeleteClose}
+      />
     </div>
   );
 }

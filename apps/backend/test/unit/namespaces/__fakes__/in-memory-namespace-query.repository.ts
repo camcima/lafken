@@ -45,8 +45,19 @@ export class InMemoryNamespaceQueryRepository implements NamespaceQueryRepositor
   }
 
   listPresets(namespaceId: string): Promise<NamespacePreset[]> {
+    // Mirrors NamespaceQueryRepository.listPresets: exactly one row per preset
+    // name — the latest version — with that row's own `active` flag. Presets
+    // are never filtered by `active`, so deactivated ones are still returned.
+    const latestByName = new Map<string, NamespacePreset>();
+    for (const preset of this.presets) {
+      if (preset.props.namespaceId !== namespaceId) continue;
+      const current = latestByName.get(preset.props.name);
+      if (!current || preset.props.version > current.props.version) {
+        latestByName.set(preset.props.name, preset);
+      }
+    }
     return Promise.resolve(
-      this.presets.filter((preset) => preset.props.namespaceId === namespaceId),
+      Array.from(latestByName.values()).sort((a, b) => a.props.name.localeCompare(b.props.name)),
     );
   }
 

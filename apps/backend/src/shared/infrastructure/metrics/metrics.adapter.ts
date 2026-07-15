@@ -26,6 +26,9 @@ export class OpenTelemetryMetricsAdapter extends MetricsPort {
   private readonly processingTerminalState: Counter;
   private readonly processingQueueDepth: ObservableGauge;
   private readonly processingStaleClaimReclaimed: Counter;
+  private readonly previewUrlIssued: Counter;
+  private readonly previewUrlDuration: Histogram;
+  private readonly downloadUrlIssued: Counter;
 
   constructor() {
     super();
@@ -73,6 +76,16 @@ export class OpenTelemetryMetricsAdapter extends MetricsPort {
         description: "Number of stale processing claims reclaimed by the sweeper",
       },
     );
+    this.previewUrlIssued = meter.createCounter("lafken.serving.preview_url.issued", {
+      description: "Number of signed preview URLs minted (with namespace_slug, preset_name)",
+    });
+    this.previewUrlDuration = meter.createHistogram("lafken.serving.preview_url.duration", {
+      description: "Duration of preview-url issuance in milliseconds",
+      unit: "ms",
+    });
+    this.downloadUrlIssued = meter.createCounter("lafken.serving.download_url.issued", {
+      description: "Number of signed download URLs minted",
+    });
   }
 
   recordUploadIntentCreated(input: { namespaceSlug: string; protocol: UploadProtocol }): void {
@@ -134,6 +147,28 @@ export class OpenTelemetryMetricsAdapter extends MetricsPort {
 
   recordProcessingStaleClaimReclaimed(input: { count: number }): void {
     this.processingStaleClaimReclaimed.add(input.count);
+  }
+
+  recordPreviewUrlIssued(input: { namespaceSlug: string; presetName: string }): void {
+    this.previewUrlIssued.add(1, {
+      namespace_slug: input.namespaceSlug,
+      preset_name: input.presetName,
+    });
+  }
+
+  recordPreviewUrlDuration(input: {
+    namespaceSlug: string;
+    presetName: string;
+    durationMs: number;
+  }): void {
+    this.previewUrlDuration.record(input.durationMs, {
+      namespace_slug: input.namespaceSlug,
+      preset_name: input.presetName,
+    });
+  }
+
+  recordDownloadUrlIssued(input: { namespaceSlug: string }): void {
+    this.downloadUrlIssued.add(1, { namespace_slug: input.namespaceSlug });
   }
 
   registerQueueDepthSampler(sampler: IQueueDepthSampler): void {

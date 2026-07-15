@@ -4,6 +4,7 @@ import { UploadIntent } from "@/assets/domain/entities/upload-intent.entity";
 import {
   type IFindOrphanedForSweepInput,
   type IInsertUploadIntentInput,
+  type IMarkExpiredInput,
   type IRefreshUploadUrlInput,
   UploadIntentWriteRepositoryPort,
 } from "@/assets/domain/repositories/upload-intent-write.repository.port";
@@ -49,15 +50,6 @@ export class UploadIntentWriteRepository implements UploadIntentWriteRepositoryP
     return row ? UploadIntentDbMapper.toDomain(row as Record<string, any>) : null;
   }
 
-  async markConsumed(publicId: string): Promise<void> {
-    await this.db.connection
-      .updateTable("upload_intents")
-      .set({ consumed_at: new Date() })
-      .where("public_id", "=", publicId)
-      .where("consumed_at", "is", null)
-      .execute();
-  }
-
   async findOrphanedForSweep(input: IFindOrphanedForSweepInput): Promise<UploadIntent[]> {
     const cutoff = new Date(input.now.getTime() - input.graceMs);
     const rows = await this.db.connection
@@ -72,13 +64,16 @@ export class UploadIntentWriteRepository implements UploadIntentWriteRepositoryP
     return rows.map((row) => UploadIntentDbMapper.toDomain(row as Record<string, any>));
   }
 
-  async markExpired(publicId: string, now: Date): Promise<boolean> {
+  async markExpired(input: IMarkExpiredInput): Promise<boolean> {
     const result = await this.db.connection
       .updateTable("upload_intents")
-      .set({ expired_at: now })
-      .where("public_id", "=", publicId)
+      .set({ expired_at: input.now })
+      .where("public_id", "=", input.publicId)
       .where("consumed_at", "is", null)
       .where("expired_at", "is", null)
+      // F-P7: recheck wall-clock expiry inside the UPDATE so a refresh that
+      // landed after the sweeper's batch read wins the race.
+      .where("upload_url_expires_at", "<", input.expiresBefore)
       .executeTakeFirst();
     return Number(result.numUpdatedRows) > 0;
   }

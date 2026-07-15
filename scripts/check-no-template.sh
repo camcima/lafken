@@ -36,6 +36,7 @@ hits=$("$RG" -in "$BANNED_PATTERN" \
   --glob='!**/.turbo/**' \
   --glob='!.git/**' \
   --glob='!CURRENT_IMPLEMENTATION_REVIEW.md' \
+  --glob='!IMPLEMENTATION_REVIEW.md' \
   --glob='!CLAUDE.md' \
   --glob='!docs/superpowers/**' \
   --glob='!.gitlab-ci.yml' \

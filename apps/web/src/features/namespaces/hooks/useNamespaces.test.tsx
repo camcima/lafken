@@ -13,6 +13,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { auditKeys } from "@/features/audit/keys";
 import { namespacesKeys } from "@/features/namespaces/keys";
 
 import {
@@ -115,6 +116,7 @@ describe("useCreateNamespace", () => {
 
     expect(mockNamespaces.create).toHaveBeenCalledWith(input);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.lists() });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: auditKeys.lists() });
   });
 
   it("surfaces the error and does not invalidate the cache when the client throws", async () => {
@@ -190,6 +192,7 @@ describe("useUpdateNamespaceMetadata", () => {
     expect(mockNamespaces.updateMetadata).toHaveBeenCalledWith(slug, input);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.detail(slug) });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.lists() });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: auditKeys.lists() });
   });
 });
 
@@ -230,6 +233,7 @@ describe("useArchiveNamespace", () => {
     expect(mockNamespaces.archive).toHaveBeenCalledWith(slug);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.detail(slug) });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.lists() });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: auditKeys.lists() });
   });
 });
 
@@ -260,6 +264,7 @@ describe("useUnarchiveNamespace", () => {
     expect(mockNamespaces.unarchive).toHaveBeenCalledWith(slug);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.detail(slug) });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.lists() });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: auditKeys.lists() });
   });
 });
 
@@ -307,6 +312,7 @@ describe("useUpdateNamespacePolicy", () => {
     expect(mockNamespaces.createPolicyVersion).toHaveBeenCalledWith(slug, VALID_POLICY);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.detail(slug) });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.policies(slug) });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: auditKeys.lists() });
   });
 
   it("surfaces the error and does not invalidate the cache when the client throws", async () => {
@@ -379,6 +385,7 @@ describe("useCreatePreset", () => {
 
     expect(mockNamespaces.createPreset).toHaveBeenCalledWith(slug, VALID_PRESET_PARAMS);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.presets(slug) });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: auditKeys.lists() });
   });
 
   it("surfaces the error and does not invalidate the cache when the client throws", async () => {
@@ -447,6 +454,7 @@ describe("useUpdatePresetVersion", () => {
       VALID_PRESET_VERSION,
     );
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.presets(slug) });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: auditKeys.lists() });
   });
 
   it("surfaces the error and does not invalidate the cache when the client throws", async () => {
@@ -506,6 +514,7 @@ describe("useSetPresetActive", () => {
 
     expect(mockNamespaces.setPresetActive).toHaveBeenCalledWith(slug, name, VALID_SET_ACTIVE);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: namespacesKeys.presets(slug) });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: auditKeys.lists() });
   });
 
   it("surfaces the error and does not invalidate the cache when the client throws", async () => {

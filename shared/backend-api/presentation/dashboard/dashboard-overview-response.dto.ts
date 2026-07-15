@@ -19,6 +19,9 @@ export class DashboardCountsDTO {
   legalHolds!: number;
 
   @ApiProperty()
+  assetsUnderLegalHold!: number;
+
+  @ApiProperty()
   failedProcessing!: number;
 
   @ApiProperty()

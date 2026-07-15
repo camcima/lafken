@@ -1,35 +1,40 @@
 import { ApiProperty } from "@nestjs/swagger";
-import {
-  ArrayMaxSize,
-  ArrayMinSize,
-  IsArray,
-  IsString,
-  IsUUID,
-  Length,
-} from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsString, IsUUID, Length } from "class-validator";
 
-const CASE_REFERENCE_MIN = 3;
-const CASE_REFERENCE_MAX = 100;
-const DESCRIPTION_MIN = 10;
-const DESCRIPTION_MAX = 1000;
-const ASSET_IDS_MIN = 1;
-const ASSET_IDS_MAX = 1000;
+import {
+  LEGAL_HOLD_ASSET_IDS_MAX,
+  LEGAL_HOLD_ASSET_IDS_MIN,
+  LEGAL_HOLD_CASE_REFERENCE_MAX_LENGTH,
+  LEGAL_HOLD_CASE_REFERENCE_MIN_LENGTH,
+  LEGAL_HOLD_DESCRIPTION_MAX_LENGTH,
+  LEGAL_HOLD_DESCRIPTION_MIN_LENGTH,
+} from "../../shared/validation-constants";
 
 export class PlaceLegalHoldRequestDTO {
   @IsString()
-  @Length(CASE_REFERENCE_MIN, CASE_REFERENCE_MAX)
-  @ApiProperty({ minLength: CASE_REFERENCE_MIN, maxLength: CASE_REFERENCE_MAX })
+  @Length(LEGAL_HOLD_CASE_REFERENCE_MIN_LENGTH, LEGAL_HOLD_CASE_REFERENCE_MAX_LENGTH)
+  @ApiProperty({
+    minLength: LEGAL_HOLD_CASE_REFERENCE_MIN_LENGTH,
+    maxLength: LEGAL_HOLD_CASE_REFERENCE_MAX_LENGTH,
+  })
   caseReference!: string;
 
   @IsString()
-  @Length(DESCRIPTION_MIN, DESCRIPTION_MAX)
-  @ApiProperty({ minLength: DESCRIPTION_MIN, maxLength: DESCRIPTION_MAX })
+  @Length(LEGAL_HOLD_DESCRIPTION_MIN_LENGTH, LEGAL_HOLD_DESCRIPTION_MAX_LENGTH)
+  @ApiProperty({
+    minLength: LEGAL_HOLD_DESCRIPTION_MIN_LENGTH,
+    maxLength: LEGAL_HOLD_DESCRIPTION_MAX_LENGTH,
+  })
   description!: string;
 
   @IsArray()
-  @ArrayMinSize(ASSET_IDS_MIN)
-  @ArrayMaxSize(ASSET_IDS_MAX)
+  @ArrayMinSize(LEGAL_HOLD_ASSET_IDS_MIN)
+  @ArrayMaxSize(LEGAL_HOLD_ASSET_IDS_MAX)
   @IsUUID(undefined, { each: true })
-  @ApiProperty({ type: [String], minItems: ASSET_IDS_MIN, maxItems: ASSET_IDS_MAX })
+  @ApiProperty({
+    type: [String],
+    minItems: LEGAL_HOLD_ASSET_IDS_MIN,
+    maxItems: LEGAL_HOLD_ASSET_IDS_MAX,
+  })
   assetIds!: string[];
 }

@@ -24,7 +24,7 @@ description: Quality, internationalization, testing, security, and performance g
 ## Security
 
 - Sanitize user inputs
-- Use proper authentication with Azure AD MSAL
+- Use proper authentication with OIDC (dev-oidc locally, the deployment IdP in staging/prod)
 - Implement CSRF protection
 - Never commit sensitive data (use environment variables)
 

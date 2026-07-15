@@ -101,9 +101,11 @@ export class InMemoryNamespacePresetWriteRepository extends NamespacePresetWrite
     if (versions.length === 0) {
       return Promise.reject(new PresetNotFoundError({ slug: "<unknown>", name: input.name }));
     }
+    // Per-preset semantics: flip every version row, return the latest.
+    for (const row of versions) {
+      row.preset = NamespacePreset.fromProps({ ...row.preset.props, active: input.active });
+    }
     const latest = versions.reduce((acc, cur) => (acc.version >= cur.version ? acc : cur));
-    const updated = NamespacePreset.fromProps({ ...latest.preset.props, active: input.active });
-    latest.preset = updated;
-    return Promise.resolve(updated);
+    return Promise.resolve(latest.preset);
   }
 }

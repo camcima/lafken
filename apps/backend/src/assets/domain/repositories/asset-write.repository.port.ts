@@ -59,6 +59,13 @@ export interface ITransitionStateInput {
    * path to the original key.
    */
   newStorageKey?: string;
+  /**
+   * Optional CAS guard. When set, the UPDATE carries `AND state = :expectedFromState`;
+   * if the asset was concurrently moved to another state, no row is updated,
+   * no transition row is written, and the method returns null. Callers
+   * distinguish "not found" from "lost the race" by re-reading the asset.
+   */
+  expectedFromState?: AssetState;
 }
 
 export abstract class AssetWriteRepositoryPort {
@@ -81,7 +88,8 @@ export abstract class AssetWriteRepositoryPort {
    * `asset_state_transitions` row. The asset's `state`, `state_reason`, and
    * `state_changed_at` are updated in the same transaction. Returns the
    * post-transition Asset, or `null` when no asset exists with that
-   * `publicId` (callers can map this to a 404).
+   * `publicId` (callers can map this to a 404) — or, when `expectedFromState`
+   * is provided, when the asset's current state no longer matches (lost CAS).
    */
   abstract transitionState(input: ITransitionStateInput): Promise<Asset | null>;
 }

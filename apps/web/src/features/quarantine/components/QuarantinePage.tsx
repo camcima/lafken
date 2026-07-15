@@ -1,14 +1,16 @@
 import type { QuarantinedAssetResponseDTO } from "@shared/backend-api";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { Check, ExternalLink, Image as ImageIcon, Shield, X } from "lucide-react";
-import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import React, { useCallback, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/common/Badge";
 import { Button } from "@/components/common/Button";
 import { Card, CardHeader, CardMeta, CardTitle } from "@/components/common/Card";
 import { RelativeTime } from "@/components/common/RelativeTime";
 import { StatePill } from "@/components/common/StatePill";
+import { ListQueryError } from "@/components/feedback/Error/ListQueryError";
 import { useQuarantine } from "@/features/quarantine/hooks/useQuarantine";
 import {
   useRejectQuarantinedAsset,
@@ -17,21 +19,14 @@ import {
 import { cn, fmtBytes } from "@/lib/utils";
 
 const ICON_XS = 10;
-const ICON_SM = 11;
 const ICON_MD = 13;
 const ICON_LG = 24;
 const REJECT_MIN_CHARS = 12;
-const TOAST_DURATION_MS = 2800;
 const QUEUE_FETCH_LIMIT = 100;
 const PUBLIC_ID_PREVIEW_CHARS = 8;
 
 type IFilterType = "all" | "moderation" | "virus" | "invalid_format";
 type QuarantineKind = "moderation" | "virus" | "invalid_format";
-
-interface IToast {
-  kind: "ok" | "alert";
-  msg: string;
-}
 
 function shortReason(asset: QuarantinedAssetResponseDTO, t: (key: string) => string): string {
   if (asset.quarantineKind === "invalid_format") {
@@ -290,28 +285,20 @@ function DetailPane({ asset, onRelease, onReject, busy }: IDetailPaneProps): Rea
 
 export function QuarantinePage(): React.JSX.Element {
   const { t } = useTranslation();
-  const { data, isLoading } = useQuarantine({ page: 1, limit: QUEUE_FETCH_LIMIT });
+  const { data, isLoading, isError, isFetching, refetch } = useQuarantine({
+    page: 1,
+    limit: QUEUE_FETCH_LIMIT,
+  });
   const allAssets: QuarantinedAssetResponseDTO[] = useMemo(() => data?.data ?? [], [data]);
 
   const releaseMutation = useReleaseQuarantinedAsset();
   const rejectMutation = useRejectQuarantinedAsset();
   const mutating = releaseMutation.isPending || rejectMutation.isPending;
 
-  const [filter, setFilter] = useState<IFilterType>("all");
+  const { kind: filter } = useSearch({ from: "/_protected/quarantine" });
+  const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
-  const [reviewedToday, setReviewedToday] = useState(0);
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [toast, setToast] = useState<IToast | null>(null);
-  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Cancel any pending toast timer on unmount
-  useEffect(() => {
-    return () => {
-      if (toastTimerRef.current !== null) {
-        clearTimeout(toastTimerRef.current);
-      }
-    };
-  }, []);
 
   const filtered: QuarantinedAssetResponseDTO[] = useMemo(() => {
     return allAssets.filter((a) => filter === "all" || a.quarantineKind === filter);
@@ -323,17 +310,6 @@ export function QuarantinePage(): React.JSX.Element {
   // back via an effect — derived-only avoids a render cascade.
   const selected = filtered.find((a) => a.publicId === selectedId) ?? filtered[0];
 
-  const showToast = useCallback((kind: "ok" | "alert", msg: string): void => {
-    setToast({ kind, msg });
-    if (toastTimerRef.current !== null) {
-      clearTimeout(toastTimerRef.current);
-    }
-    toastTimerRef.current = setTimeout(() => {
-      setToast(null);
-      toastTimerRef.current = null;
-    }, TOAST_DURATION_MS);
-  }, []);
-
   const release = useCallback(
     (note?: string): void => {
       if (!selected) return;
@@ -342,19 +318,17 @@ export function QuarantinePage(): React.JSX.Element {
         { publicId, note },
         {
           onSuccess: () => {
-            setReviewedToday((prev) => prev + 1);
-            showToast("ok", t("pages.quarantine.toast.released", { id: publicId }));
+            toast.success(t("pages.quarantine.toast.released", { id: publicId }));
           },
           onError: (err) => {
-            showToast(
-              "alert",
+            toast.error(
               t("pages.quarantine.toast.releaseFailed", { id: publicId, error: err.message }),
             );
           },
         },
       );
     },
-    [releaseMutation, selected, showToast, t],
+    [releaseMutation, selected, t],
   );
 
   const reject = useCallback(
@@ -365,19 +339,17 @@ export function QuarantinePage(): React.JSX.Element {
         { publicId, note },
         {
           onSuccess: () => {
-            setReviewedToday((prev) => prev + 1);
-            showToast("alert", t("pages.quarantine.toast.rejected", { id: publicId }));
+            toast.error(t("pages.quarantine.toast.rejected", { id: publicId }));
           },
           onError: (err) => {
-            showToast(
-              "alert",
+            toast.error(
               t("pages.quarantine.toast.rejectFailed", { id: publicId, error: err.message }),
             );
           },
         },
       );
     },
-    [rejectMutation, selected, showToast, t],
+    [rejectMutation, selected, t],
   );
 
   const counts: Record<QuarantineKind, number> = useMemo(() => {
@@ -396,12 +368,6 @@ export function QuarantinePage(): React.JSX.Element {
           <h1 className="m-0 text-[22px] font-bold tracking-tight">
             {t("pages.quarantine.title")}
           </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="ok">
-            <Check size={ICON_SM} />
-            {t("pages.quarantine.reviewedToday", { count: reviewedToday })}
-          </Badge>
         </div>
       </div>
 
@@ -436,7 +402,7 @@ export function QuarantinePage(): React.JSX.Element {
               key={tab.id}
               type="button"
               onClick={() => {
-                setFilter(tab.id);
+                void navigate({ to: "/quarantine", search: { kind: tab.id } });
               }}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded px-2.5 py-1 transition-colors",
@@ -465,7 +431,15 @@ export function QuarantinePage(): React.JSX.Element {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]">
         {/* Queue list */}
         <Card className="max-h-[calc(100vh-220px)] overflow-y-auto p-0">
-          {isLoading ? (
+          {isError ? (
+            <ListQueryError
+              className="border-0 shadow-none"
+              isRetrying={isFetching}
+              onRetry={() => {
+                void refetch();
+              }}
+            />
+          ) : isLoading ? (
             <div className="text-muted-foreground px-6 py-12 text-center text-[12.5px]">
               {t("pages.quarantine.loading")}
             </div>
@@ -563,23 +537,6 @@ export function QuarantinePage(): React.JSX.Element {
             setShowRejectModal(false);
           }}
         />
-      )}
-
-      {/* Toast */}
-      {toast && (
-        <div
-          className={cn(
-            "fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-md border px-4 py-2.5 shadow-xl",
-            toast.kind === "ok"
-              ? "border-ok-line bg-ok-soft text-ok"
-              : "border-alert-line bg-alert-soft text-alert",
-          )}
-        >
-          <div className="flex items-center gap-2 text-[12.5px] font-medium">
-            {toast.kind === "ok" ? <Check size={ICON_MD} /> : <X size={ICON_MD} />}
-            {toast.msg}
-          </div>
-        </div>
       )}
     </div>
   );

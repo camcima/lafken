@@ -137,7 +137,8 @@ export class RefreshUploadUrlUseCase {
  * tests. A follow-up can add the column.
  */
 function derivePersistedProtocol(uploadUrl: string): UploadProtocol {
-  // tusd resource URLs are emitted by TusdUploadUrlIssuer below the configured
-  // endpoint; signed GCS URLs always include "X-Goog-Signature".
+  // Signed GCS URLs always include "X-Goog-Signature". Anything else is a
+  // legacy tus resource URL from before tus was descoped (v1.0) — refreshing
+  // one fails with TusNotConfiguredError, which is the intended behavior.
   return uploadUrl.includes("X-Goog-Signature") ? "simple" : "tus";
 }

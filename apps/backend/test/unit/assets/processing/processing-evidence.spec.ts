@@ -10,6 +10,7 @@ import type {
   IMakeStepTimingInput,
   IStepTiming,
 } from "@/assets/application/processing/processing-evidence";
+import { QUARANTINED_ASSET_STATES } from "@/assets/domain/value-objects/asset-state.value-object";
 
 describe("processing evidence helpers", () => {
   it("calculates non-negative step duration", () => {
@@ -49,11 +50,18 @@ describe("processing evidence helpers", () => {
     expect(isTerminalAssetState("rejected")).toBe(true);
     expect(isTerminalAssetState("quarantined_virus")).toBe(true);
     expect(isTerminalAssetState("quarantined_moderation")).toBe(true);
+    expect(isTerminalAssetState("quarantined_invalid_format")).toBe(true);
     expect(isTerminalAssetState("processing_failed")).toBe(true);
     expect(isTerminalAssetState("expired")).toBe(true);
     expect(isTerminalAssetState("deleted")).toBe(true);
     expect(isTerminalAssetState("uploaded")).toBe(false);
     expect(isTerminalAssetState("processing")).toBe(false);
+  });
+
+  it("classifies all quarantine states from the canonical list as terminal", () => {
+    for (const quarantineState of QUARANTINED_ASSET_STATES) {
+      expect(isTerminalAssetState(quarantineState)).toBe(true);
+    }
   });
 
   it("always includes reason code in transition metadata", () => {

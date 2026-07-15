@@ -20,6 +20,8 @@ import { Test } from "@nestjs/testing";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { AppModule } from "../app.module";
+import { UnitOfWorkPort } from "../shared/application/unit-of-work.port";
+import { ConnectionResolver } from "../shared/infrastructure/persistence/connection-resolver";
 import { DatabaseClient } from "../shared/infrastructure/persistence/database-client";
 import { DatabaseUnitOfWork } from "../shared/infrastructure/persistence/database-unit-of-work";
 import {
@@ -46,13 +48,31 @@ const CLOUD_ENDPOINT_OPENAPI_DEFINITION_FILE_PATH = "deploy/endpoints/openapi.ya
       },
     },
     {
+      provide: UnitOfWorkPort,
+      useFactory: () => {
+        return new Proxy({}, {});
+      },
+    },
+    {
       provide: DatabaseAsyncLocalStorage,
       useFactory: () => {
         return new Proxy({}, {});
       },
     },
+    {
+      provide: ConnectionResolver,
+      useFactory: () => {
+        return new Proxy({}, {});
+      },
+    },
   ],
-  exports: [DatabaseClient, DatabaseUnitOfWork, DatabaseAsyncLocalStorage],
+  exports: [
+    DatabaseClient,
+    DatabaseUnitOfWork,
+    UnitOfWorkPort,
+    DatabaseAsyncLocalStorage,
+    ConnectionResolver,
+  ],
 })
 class NoopDatabaseModule {}
 
@@ -77,9 +97,12 @@ async function generateOpenApiSpec(filePath: string) {
 
 // Only if the script is run directly (not imported as a module)
 if (require.main === module) {
-  const openApiFilePath = process.env.CLOUD_ENDPOINT_DEFINITION === "true"
+  const defaultFilePath = process.env.CLOUD_ENDPOINT_DEFINITION === "true"
     ? CLOUD_ENDPOINT_OPENAPI_DEFINITION_FILE_PATH
     : LOCAL_OPENAPI_DEFINITION_FILE_PATH;
+  // Allows the "spec is up to date" regression test to redirect output to a
+  // scratch file instead of overwriting the committed artifact.
+  const openApiFilePath = process.env.OPENAPI_SPEC_OUTPUT_PATH ?? defaultFilePath;
   void generateOpenApiSpec(openApiFilePath).catch((error) => {
     console.error("Error generating OpenAPI spec:", error);
     process.exitCode = 1;

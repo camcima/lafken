@@ -19,6 +19,12 @@ export abstract class NamespaceQueryRepositoryPort {
   abstract list(input: ListNamespacesInput): Promise<NamespacePage>;
   abstract findBySlug(slug: string): Promise<Namespace | null>;
   abstract listPolicies(namespaceId: string): Promise<NamespacePolicy[]>;
+  /**
+   * Returns the latest version of every preset name in the namespace — one
+   * entry per name, each carrying its authoritative `active` flag. Inactive
+   * presets are included; callers that only want servable presets must
+   * filter on `props.active`.
+   */
   abstract listPresets(namespaceId: string): Promise<NamespacePreset[]>;
   abstract findPresetByName(namespaceId: string, name: string): Promise<NamespacePreset | null>;
   abstract findStorageBindingName(storageBindingId: string): Promise<string | null>;

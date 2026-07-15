@@ -18,6 +18,8 @@ export type AuditAction =
   | "delete"
   | "place"
   | "lift"
+  | "release"
+  | "reject"
   | "expired"
   | "url_refreshed";
 

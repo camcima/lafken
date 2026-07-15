@@ -1,4 +1,5 @@
 import type { AuditEntryResponseDTO } from "@shared/backend-api";
+import { useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import {
   Check,
   ChevronRight,
@@ -22,8 +23,10 @@ import { Card } from "@/components/common/Card";
 import { Paginator } from "@/components/common/Paginator";
 import { RightDrawer } from "@/components/common/RightDrawer";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
+import { ListQueryError } from "@/components/feedback/Error/ListQueryError";
 import { useAuditEntries } from "@/features/audit/hooks/useAudit";
 import { cn } from "@/lib/utils";
+import { AUDIT_ENTITY_TYPES } from "@/routes/_protected/audit";
 
 type AuditResult = "ok" | "fail";
 
@@ -191,7 +194,7 @@ function AuditDrawer({ entry, onClose }: IAuditDrawerProps): React.JSX.Element {
 }
 
 /* eslint-disable no-magic-numbers */
-const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const;
+const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 50;
 /* eslint-enable no-magic-numbers */
 
@@ -208,29 +211,66 @@ const SEARCH_DEBOUNCE_MS = 250;
 
 export function AuditPage(): React.JSX.Element {
   const { t } = useTranslation();
-  const [query, setQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const { q, type, page } = useSearch({ from: "/_protected/audit" });
+  const navigate = useNavigate();
+  const router = useRouter();
+
+  // `pendingQuery` is the user's not-yet-committed edit: null except while a
+  // debounce write is in flight. The displayed `query` derives from it (or
+  // falls back to the URL's `q`) instead of mirroring `q` into its own state,
+  // so external navigation is reflected for free on the next render — no
+  // resync effect required, and nothing to fight the debounce write below.
+  const [pendingQuery, setPendingQuery] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
+  const query: string = pendingQuery ?? q ?? "";
+  const pageIndex: number = page - 1;
+  const typeFilter: string = type ?? "all";
   const beEntityType: string | undefined = TYPE_FILTER_TO_ENTITY_TYPE[typeFilter];
 
-  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  // History navigation (Back/Forward) always wins over an edit the user never
+  // committed: discard the pending edit, which both disarms the debounce below
+  // (its cleanup cancels the armed timer) and drops the input back to the URL's
+  // `q`. Without this, a timer armed by the last keystroke survives the Back —
+  // no dependency of the effect below changed — and fires with its stale
+  // closure value, rewriting the URL and undoing the navigation.
+  //
+  // This path may only ever CANCEL, never write `q`. That is the invariant: an
+  // effect that WRITES in response to an external `q` change is what let the
+  // URL resurrect a stale search in the first place. Clearing state in a
+  // subscription callback (rather than synchronously in an effect body) is also
+  // exactly the pattern `react-hooks/set-state-in-effect` prescribes.
   useEffect(() => {
+    return router.history.subscribe(({ action }) => {
+      if (action.type === "PUSH" || action.type === "REPLACE") return;
+      setPendingQuery(null);
+    });
+  }, [router]);
+
+  // Debounce the free-text input into the URL (replace, so Back skips
+  // keystrokes). Only armed while there is a pending edit.
+  useEffect(() => {
+    if (pendingQuery === null) return;
     const handle = window.setTimeout(() => {
-      setDebouncedQuery(query);
+      const trimmed = pendingQuery.trim();
+      void navigate({
+        to: "/audit",
+        search: (prev) => ({ ...prev, q: trimmed === "" ? undefined : trimmed, page: 1 }),
+        replace: true,
+      });
+      setPendingQuery(null);
     }, SEARCH_DEBOUNCE_MS);
     return () => {
       window.clearTimeout(handle);
     };
-  }, [query]);
+  }, [pendingQuery, navigate]);
 
   const realQuery = useAuditEntries({
-    page: page + 1,
+    page,
     limit: pageSize,
     ...(beEntityType ? { entityType: beEntityType } : {}),
-    ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
+    ...(q?.trim() ? { q: q.trim() } : {}),
   });
 
   const allRows: IAuditRow[] = (realQuery.data?.data ?? []).map(apiToRow);
@@ -242,8 +282,8 @@ export function AuditPage(): React.JSX.Element {
   const openEntry: IAuditRow | undefined = allRows.find((entry) => entry.id === openId);
 
   const visibleTotal: number = realTotal;
-  const rangeFrom = visibleTotal === 0 ? 0 : page * pageSize + 1;
-  const rangeTo = Math.min((page + 1) * pageSize, realTotal);
+  const rangeFrom = visibleTotal === 0 ? 0 : pageIndex * pageSize + 1;
+  const rangeTo = Math.min((pageIndex + 1) * pageSize, realTotal);
 
   const anchorMinutesAgo: number = allRows[0]?.minutesAgo ?? 0;
 
@@ -271,18 +311,27 @@ export function AuditPage(): React.JSX.Element {
               placeholder={t("pages.audit.searchPlaceholder")}
               value={query}
               onChange={(ev: React.ChangeEvent<HTMLInputElement>) => {
-                setQuery(ev.target.value);
-                setPage(0);
+                setPendingQuery(ev.target.value);
               }}
+              aria-label={t("pages.audit.searchLabel")}
               className="border-input bg-card focus:ring-ring h-9 w-full rounded-md border pr-3 pl-9 text-[12.5px] outline-none focus:ring-1"
             />
           </div>
           <select
             value={typeFilter}
             onChange={(ev: React.ChangeEvent<HTMLSelectElement>) => {
-              setTypeFilter(ev.target.value);
-              setPage(0);
+              const value = ev.target.value;
+              void navigate({
+                to: "/audit",
+                search: (prev) => ({
+                  ...prev,
+                  type:
+                    value === "all" ? undefined : (value as (typeof AUDIT_ENTITY_TYPES)[number]),
+                  page: 1,
+                }),
+              });
             }}
+            aria-label={t("pages.audit.filters.typeLabel")}
             className={SELECT_CLASS}
           >
             <option value="all">{t("pages.audit.filters.allTypes")}</option>
@@ -296,71 +345,80 @@ export function AuditPage(): React.JSX.Element {
         </div>
       </Card>
 
-      <Card className="overflow-x-auto">
-        <div className="min-w-[920px]">
-          <div
-            className={cn(
-              "border-border bg-secondary/40 text-muted-foreground grid items-center gap-3 border-b px-4 py-2 text-[10.5px] font-medium tracking-wider uppercase",
-              TABLE_COLS,
-            )}
-          >
-            <span>{t("pages.audit.table.time")}</span>
-            <span>{t("pages.audit.table.type")}</span>
-            <span>{t("pages.audit.table.actor")}</span>
-            <span>{t("pages.audit.table.target")}</span>
-            <span>{t("pages.audit.table.ip")}</span>
-            <span>{t("pages.audit.table.result")}</span>
-            <span />
-          </div>
-          {pageRows.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              onClick={() => {
-                setOpenId(entry.id);
-              }}
+      {realQuery.isError ? (
+        <ListQueryError
+          isRetrying={realQuery.isFetching}
+          onRetry={() => {
+            void realQuery.refetch();
+          }}
+        />
+      ) : (
+        <Card className="overflow-x-auto">
+          <div className="min-w-[920px]">
+            <div
               className={cn(
-                "border-border/40 hover:bg-secondary/30 grid w-full items-center gap-3 border-b px-4 py-2 text-left text-[12px] last:border-b-0",
+                "border-border bg-secondary/40 text-muted-foreground grid items-center gap-3 border-b px-4 py-2 text-[10.5px] font-medium tracking-wider uppercase",
                 TABLE_COLS,
               )}
             >
-              <div className="text-muted-foreground font-mono text-[11px] tabular-nums">
-                {fmtMinAgo(entry.minutesAgo)}
-              </div>
-              <div className="inline-flex min-w-0 items-center gap-1.5">
-                <TypeIcon type={entry.type} />
-                <span className="truncate font-mono text-[11.5px]">{entry.type}</span>
-              </div>
-              <div className="text-muted-foreground truncate font-mono text-[11.5px]">
-                {entry.actor}
-              </div>
-              <div className="min-w-0">
-                <div className="truncate font-mono text-[11.5px]">{entry.target}</div>
-                <div className="text-muted-foreground truncate font-mono text-[10.5px]">
-                  {entry.namespace}
-                </div>
-              </div>
-              <div className="text-muted-foreground font-mono text-[10.5px] tabular-nums">
-                {entry.ip}
-              </div>
-              <div>
-                {entry.result === "ok" ? (
-                  <Badge variant="ok">
-                    <span className="bg-ok size-1 rounded-full" />
-                    {t("pages.audit.result.ok")}
-                  </Badge>
-                ) : (
-                  <Badge variant="danger">
-                    <span className="bg-danger size-1 rounded-full" />
-                    {t("pages.audit.result.fail")}
-                  </Badge>
+              <span>{t("pages.audit.table.time")}</span>
+              <span>{t("pages.audit.table.type")}</span>
+              <span>{t("pages.audit.table.actor")}</span>
+              <span>{t("pages.audit.table.target")}</span>
+              <span>{t("pages.audit.table.ip")}</span>
+              <span>{t("pages.audit.table.result")}</span>
+              <span />
+            </div>
+            {pageRows.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                onClick={() => {
+                  setOpenId(entry.id);
+                }}
+                className={cn(
+                  "border-border/40 hover:bg-secondary/30 grid w-full items-center gap-3 border-b px-4 py-2 text-left text-[12px] last:border-b-0",
+                  TABLE_COLS,
                 )}
-              </div>
-              <ChevronRight size={CHEVRON_SIZE} className="text-muted-foreground" />
-            </button>
-          ))}
-        </div>
-      </Card>
+              >
+                <div className="text-muted-foreground font-mono text-[11px] tabular-nums">
+                  {fmtMinAgo(entry.minutesAgo)}
+                </div>
+                <div className="inline-flex min-w-0 items-center gap-1.5">
+                  <TypeIcon type={entry.type} />
+                  <span className="truncate font-mono text-[11.5px]">{entry.type}</span>
+                </div>
+                <div className="text-muted-foreground truncate font-mono text-[11.5px]">
+                  {entry.actor}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate font-mono text-[11.5px]">{entry.target}</div>
+                  <div className="text-muted-foreground truncate font-mono text-[10.5px]">
+                    {entry.namespace}
+                  </div>
+                </div>
+                <div className="text-muted-foreground font-mono text-[10.5px] tabular-nums">
+                  {entry.ip}
+                </div>
+                <div>
+                  {entry.result === "ok" ? (
+                    <Badge variant="ok">
+                      <span className="bg-ok size-1 rounded-full" />
+                      {t("pages.audit.result.ok")}
+                    </Badge>
+                  ) : (
+                    <Badge variant="danger">
+                      <span className="bg-danger size-1 rounded-full" />
+                      {t("pages.audit.result.fail")}
+                    </Badge>
+                  )}
+                </div>
+                <ChevronRight size={CHEVRON_SIZE} className="text-muted-foreground" />
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <div className="text-muted-foreground mt-3 flex flex-wrap items-center justify-between gap-3 text-[11.5px]">
         <div className="flex items-center gap-2">
@@ -369,7 +427,7 @@ export function AuditPage(): React.JSX.Element {
             value={pageSize}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
               setPageSize(Number(e.target.value));
-              setPage(0);
+              void navigate({ to: "/audit", search: (prev) => ({ ...prev, page: 1 }) });
             }}
             className={SELECT_CLASS_SM}
             aria-label={t("paginator.rowsPerPage")}
@@ -394,10 +452,10 @@ export function AuditPage(): React.JSX.Element {
           )}
         </div>
         <Paginator
-          page={page}
+          page={pageIndex}
           totalPages={totalPages}
           onChange={(newPage) => {
-            setPage(newPage);
+            void navigate({ to: "/audit", search: (prev) => ({ ...prev, page: newPage + 1 }) });
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
         />

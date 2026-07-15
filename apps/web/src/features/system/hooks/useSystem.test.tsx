@@ -8,6 +8,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { auditKeys } from "@/features/audit/keys";
 import { systemKeys } from "@/features/system/keys";
 
 import {
@@ -83,6 +84,7 @@ describe("useCreateStorageBinding", () => {
 
     expect(mockSystem.createStorageBinding).toHaveBeenCalledWith(input);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: systemKeys.storageBindings() });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: auditKeys.lists() });
   });
 
   it("surfaces the error and does not invalidate the cache when the client throws", async () => {
@@ -143,6 +145,7 @@ describe("useUpdateStorageBinding", () => {
       queryKey: systemKeys.storageBinding("lafken-prod"),
     });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: systemKeys.storageBindings() });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: auditKeys.lists() });
   });
 });
 
@@ -171,5 +174,6 @@ describe("useDeleteStorageBinding", () => {
 
     expect(mockSystem.deleteStorageBinding).toHaveBeenCalledWith("lafken-prod");
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: systemKeys.storageBindings() });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: auditKeys.lists() });
   });
 });

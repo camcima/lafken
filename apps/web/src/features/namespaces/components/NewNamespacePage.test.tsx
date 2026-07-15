@@ -1,6 +1,15 @@
 import type { NamespaceResponseDTO, StorageBindingResponseDTO } from "@shared/backend-api";
+import {
+  NAMESPACE_DESCRIPTION_MAX_LENGTH,
+  NAMESPACE_DISPLAY_NAME_MAX_LENGTH,
+  NAMESPACE_SLUG_MAX_LENGTH,
+  POLICY_MAX_FILE_SIZE_BYTES,
+  POLICY_MAX_RETENTION_DAYS,
+  POLICY_MAX_SIGNED_URL_BUCKET_SIZE,
+  POLICY_MAX_TTL_SECONDS,
+} from "@shared/backend-api/validation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,6 +22,7 @@ import { NewNamespacePage } from "./NewNamespacePage";
 // ── Shared mock state ──────────────────────────────────────
 const mockNavigate = vi.fn();
 const mockMutateAsync = vi.fn();
+const mockUseUnsavedChangesGuard = vi.fn<(when: boolean) => void>();
 let mockBindings: StorageBindingResponseDTO[] = [];
 let mockBindingsLoading = false;
 
@@ -45,6 +55,17 @@ vi.mock("@/features/namespaces/hooks/useNamespaces", () => ({
 
 vi.mock("@/features/system/hooks/useSystem", () => ({
   useStorageBindings: () => ({ data: mockBindings, isLoading: mockBindingsLoading }),
+}));
+
+// The unsaved-changes guard itself (F-W6) is exercised end-to-end, with a
+// real router, in useUnsavedChangesGuard.test.tsx. Mocking it here — rather
+// than rendering under a real RouterProvider — lets these tests assert the
+// call-site contract (isDirty && !isSubmitting && !isSubmitSuccessful)
+// without duplicating the mechanism's own test suite.
+vi.mock("@/hooks/useUnsavedChangesGuard", () => ({
+  useUnsavedChangesGuard: (when: boolean) => {
+    mockUseUnsavedChangesGuard(when);
+  },
 }));
 
 vi.mock("@tanstack/react-router", async () => {
@@ -96,6 +117,7 @@ describe("NewNamespacePage", () => {
   beforeEach(() => {
     mockMutateAsync.mockReset();
     mockNavigate.mockReset();
+    mockUseUnsavedChangesGuard.mockReset();
     mockBindings = [sampleBinding];
     mockBindingsLoading = false;
   });
@@ -113,6 +135,113 @@ describe("NewNamespacePage", () => {
     expect(screen.getByLabelText(/^slug$/i)).toHaveValue("");
     expect(screen.getByLabelText(/max file size/i)).toHaveValue(52_428_800);
     expect(screen.getByLabelText(/require virus scan/i)).toBeChecked();
+  });
+
+  // Proves the rendered form bounds are wired to the shared validation
+  // constants — the same ones the backend CreateNamespaceRequestDTO enforces
+  // (shared/backend-api/presentation/namespaces/__tests__) — rather than to
+  // local literals that could silently drift from the backend.
+  it("renders numeric field bounds equal to the shared POLICY_* constants", () => {
+    renderPage();
+
+    expect(screen.getByLabelText(/max file size/i)).toHaveAttribute(
+      "max",
+      String(POLICY_MAX_FILE_SIZE_BYTES),
+    );
+    expect(screen.getByLabelText(/retention.*days/i)).toHaveAttribute(
+      "max",
+      String(POLICY_MAX_RETENTION_DAYS),
+    );
+    expect(screen.getByLabelText(/signed url ttl/i)).toHaveAttribute(
+      "max",
+      String(POLICY_MAX_TTL_SECONDS),
+    );
+    expect(screen.getByLabelText(/signed url bucket size/i)).toHaveAttribute(
+      "max",
+      String(POLICY_MAX_SIGNED_URL_BUCKET_SIZE),
+    );
+  });
+
+  // Proves the client-side Zod schema's slug/displayName/description bounds
+  // are derived from the shared NAMESPACE_* constants — the same ones
+  // CreateNamespaceRequestDTO enforces on the backend
+  // (shared/backend-api/presentation/namespaces/__tests__) — rather than
+  // local literals that could silently drift from the backend.
+  it("rejects a slug one character over NAMESPACE_SLUG_MAX_LENGTH while accepting one at the bound", async () => {
+    renderPage();
+
+    const slugInput = screen.getByLabelText(/^slug$/i);
+
+    fireEvent.change(slugInput, { target: { value: "a".repeat(NAMESPACE_SLUG_MAX_LENGTH) } });
+    fireEvent.blur(slugInput);
+    await waitFor(() => {
+      expect(slugInput).not.toHaveAttribute("aria-invalid");
+    });
+
+    fireEvent.change(slugInput, { target: { value: "a".repeat(NAMESPACE_SLUG_MAX_LENGTH + 1) } });
+    fireEvent.blur(slugInput);
+    await waitFor(() => {
+      expect(slugInput).toHaveAttribute("aria-invalid", "true");
+    });
+  });
+
+  // Discriminates the slug *pattern* (NAMESPACE_SLUG_PATTERN) from the slug
+  // *length* (NAMESPACE_SLUG_MAX_LENGTH): a slug well within the length
+  // bound but violating the pattern must still be rejected.
+  it("rejects an uppercase slug that satisfies NAMESPACE_SLUG_MAX_LENGTH but violates NAMESPACE_SLUG_PATTERN", async () => {
+    renderPage();
+
+    const slugInput = screen.getByLabelText(/^slug$/i);
+
+    fireEvent.change(slugInput, { target: { value: "Aircraft-Photos" } });
+    fireEvent.blur(slugInput);
+    await waitFor(() => {
+      expect(slugInput).toHaveAttribute("aria-invalid", "true");
+    });
+  });
+
+  it("rejects a displayName one character over NAMESPACE_DISPLAY_NAME_MAX_LENGTH while accepting one at the bound", async () => {
+    renderPage();
+
+    const displayNameInput = screen.getByLabelText(/^display name$/i);
+
+    fireEvent.change(displayNameInput, {
+      target: { value: "d".repeat(NAMESPACE_DISPLAY_NAME_MAX_LENGTH) },
+    });
+    fireEvent.blur(displayNameInput);
+    await waitFor(() => {
+      expect(displayNameInput).not.toHaveAttribute("aria-invalid");
+    });
+
+    fireEvent.change(displayNameInput, {
+      target: { value: "d".repeat(NAMESPACE_DISPLAY_NAME_MAX_LENGTH + 1) },
+    });
+    fireEvent.blur(displayNameInput);
+    await waitFor(() => {
+      expect(displayNameInput).toHaveAttribute("aria-invalid", "true");
+    });
+  });
+
+  it("rejects a description one character over NAMESPACE_DESCRIPTION_MAX_LENGTH while accepting one at the bound", async () => {
+    renderPage();
+
+    const descriptionInput = screen.getByLabelText(/description/i);
+
+    fireEvent.change(descriptionInput, {
+      target: { value: "d".repeat(NAMESPACE_DESCRIPTION_MAX_LENGTH) },
+    });
+    fireEvent.blur(descriptionInput);
+    await waitFor(() => {
+      expect(descriptionInput).not.toHaveAttribute("aria-invalid");
+    });
+
+    fireEvent.change(descriptionInput, {
+      target: { value: "d".repeat(NAMESPACE_DESCRIPTION_MAX_LENGTH + 1) },
+    });
+    fireEvent.blur(descriptionInput);
+    await waitFor(() => {
+      expect(descriptionInput).toHaveAttribute("aria-invalid", "true");
+    });
   });
 
   it("renders a live YAML preview that reflects the current slug", async () => {
@@ -250,5 +379,47 @@ describe("NewNamespacePage", () => {
         params: { slug: "aircraft-photos" },
       });
     });
+  });
+
+  // ── Unsaved-changes guard call-site contract (F-W6) ────────
+  it("does not arm the unsaved-changes guard on a pristine form", () => {
+    renderPage();
+
+    expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(false);
+  });
+
+  it("arms the unsaved-changes guard once the user edits a field", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText(/^slug$/i), "a");
+
+    await waitFor(() => {
+      expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(true);
+    });
+  });
+
+  // The classic bug: a form that saves successfully and then navigates away
+  // must not prompt the user, even though the form values are still "dirty"
+  // (nothing calls reset() here) — isSubmitSuccessful is what disarms it.
+  it("disarms the unsaved-changes guard after a successful submit", async () => {
+    const user = userEvent.setup();
+    mockMutateAsync.mockResolvedValue(sampleCreated);
+    renderPage();
+
+    await user.type(screen.getByLabelText(/^slug$/i), "aircraft-photos");
+    await user.type(screen.getByLabelText(/^display name$/i), "Aircraft Photos");
+    await user.selectOptions(screen.getByLabelText(/^storage binding$/i), "gcs-prod-main");
+
+    await waitFor(() => {
+      expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(true);
+    });
+
+    await user.click(screen.getByRole("button", { name: /create namespace/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalled();
+    });
+    expect(mockUseUnsavedChangesGuard).toHaveBeenLastCalledWith(false);
   });
 });

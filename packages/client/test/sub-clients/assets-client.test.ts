@@ -193,9 +193,7 @@ describe("client.assets", () => {
 
       expect(result.uploadUrl).toBe("https://gcs/new");
       const [calledUrl] = fetchSpy.mock.calls[0];
-      expect(calledUrl).toBe(
-        "https://api.example.com/v1/assets/upload-intents/pid-1/refresh-url",
-      );
+      expect(calledUrl).toBe("https://api.example.com/v1/assets/upload-intents/pid-1/refresh-url");
     });
 
     it("propagates 422 as LafkenApiError", async () => {
@@ -295,7 +293,10 @@ describe("client.assets", () => {
     it("encodes reserved characters in the publicId and preset query param", async () => {
       fetchSpy.mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ url: "https://imgproxy.example.com/bar", expiresAt: "2026-05-09T13:00:00Z" }),
+          JSON.stringify({
+            url: "https://imgproxy.example.com/bar",
+            expiresAt: "2026-05-09T13:00:00Z",
+          }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),
       );
@@ -372,9 +373,9 @@ describe("client.assets", () => {
       );
 
       const client = new LafkenClient({ baseUrl: "https://api.example.com" });
-      await expect(
-        client.assets.getDownloadUrl({ publicId: "missing" }),
-      ).rejects.toBeInstanceOf(LafkenApiError);
+      await expect(client.assets.getDownloadUrl({ publicId: "missing" })).rejects.toBeInstanceOf(
+        LafkenApiError,
+      );
     });
   });
 
@@ -400,9 +401,7 @@ describe("client.assets", () => {
       const result = await client.assets.listStateTransitions("asset-123");
 
       const [calledUrl, calledInit] = fetchSpy.mock.calls[0];
-      expect(calledUrl).toBe(
-        "https://api.example.com/v1/assets/asset-123/state-transitions",
-      );
+      expect(calledUrl).toBe("https://api.example.com/v1/assets/asset-123/state-transitions");
       expect(calledInit?.method).toBe("GET");
       expect(result).toEqual(transitions);
     });
@@ -505,6 +504,71 @@ describe("client.assets", () => {
       await expect(client.assets.retryProcessing("asset-123")).rejects.toBeInstanceOf(
         LafkenApiError,
       );
+    });
+  });
+
+  // ── delete ───────────────────────────────────────────────────────────────
+
+  describe("delete", () => {
+    it("DELETEs /v1/assets/:id with no body and resolves on 204", async () => {
+      fetchSpy.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+      const client = new LafkenClient({ baseUrl: "https://api.example.com" });
+      await client.assets.delete("01900000-0000-7000-8000-000000000040");
+
+      expect(fetchSpy).toHaveBeenCalledOnce();
+      const [calledUrl, calledInit] = fetchSpy.mock.calls[0];
+      expect(calledUrl).toBe(
+        "https://api.example.com/v1/assets/01900000-0000-7000-8000-000000000040",
+      );
+      expect(calledInit?.method).toBe("DELETE");
+      expect(calledInit?.body).toBeUndefined();
+    });
+
+    it("encodes reserved characters in the id", async () => {
+      fetchSpy.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+      const client = new LafkenClient({ baseUrl: "https://api.example.com" });
+      await client.assets.delete("abc%def");
+
+      const [calledUrl] = fetchSpy.mock.calls[0];
+      expect(calledUrl).toBe("https://api.example.com/v1/assets/abc%25def");
+    });
+
+    it("throws LafkenApiError on 409 (asset under legal hold)", async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ status: 409, title: "Conflict", detail: "under legal hold" }),
+          { status: 409, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      );
+
+      const client = new LafkenClient({ baseUrl: "https://api.example.com" });
+      await expect(client.assets.delete("some-id")).rejects.toBeInstanceOf(LafkenApiError);
+    });
+
+    it("throws LafkenApiError on 404 (asset not found)", async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ status: 404, title: "Not Found", detail: "Asset not found" }),
+          { status: 404, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      );
+
+      const client = new LafkenClient({ baseUrl: "https://api.example.com" });
+      await expect(client.assets.delete("missing")).rejects.toBeInstanceOf(LafkenApiError);
+    });
+
+    it("throws LafkenApiError on 403 (missing ASSET_DELETER role)", async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ status: 403, title: "Forbidden", detail: "insufficient role" }),
+          { status: 403, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      );
+
+      const client = new LafkenClient({ baseUrl: "https://api.example.com" });
+      await expect(client.assets.delete("some-id")).rejects.toBeInstanceOf(LafkenApiError);
     });
   });
 

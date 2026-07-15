@@ -19,6 +19,7 @@ import {
 } from "@/features/namespaces/hooks/useNamespaces";
 import { updatePresetVersionSchema } from "@/features/namespaces/schemas/preset-params.schema";
 import type { IUpdatePresetVersionValues } from "@/features/namespaces/schemas/preset-params.schema";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { ApiError } from "@/lib/api/api-error";
 import { extractProblemTypeSuffix } from "@/lib/api/problem-types";
 
@@ -114,8 +115,10 @@ export function EditPresetPage(): React.JSX.Element {
     handleSubmit,
     register,
     setError,
-    formState: { errors, isSubmitting, isDirty },
+    formState: { errors, isSubmitting, isDirty, isSubmitSuccessful },
   } = form;
+
+  useUnsavedChangesGuard(isDirty && !isSubmitting && !isSubmitSuccessful);
 
   const isPending = updateMutation.isPending;
   const isBusy = isSubmitting || isPending;

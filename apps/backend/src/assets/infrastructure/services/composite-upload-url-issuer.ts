@@ -9,9 +9,13 @@ import {
 
 interface ICompositeOptions {
   gcs: UploadUrlIssuerPort;
-  tusd: UploadUrlIssuerPort | null;
 }
 
+/**
+ * Routes upload-URL issuance by protocol. tus is descoped from v1.0: the
+ * request DTO keeps accepting `protocol: "tus"` for forward compatibility,
+ * but issuance always fails with TusNotConfiguredError (422).
+ */
 @Injectable()
 export class CompositeUploadUrlIssuer extends UploadUrlIssuerPort {
   constructor(private readonly issuers: ICompositeOptions) {
@@ -20,10 +24,7 @@ export class CompositeUploadUrlIssuer extends UploadUrlIssuerPort {
 
   async issue(input: IIssueUploadUrlInput): Promise<IIssueUploadUrlResult> {
     if (input.protocol === "tus") {
-      if (!this.issuers.tusd) {
-        throw new TusNotConfiguredError();
-      }
-      return this.issuers.tusd.issue(input);
+      throw new TusNotConfiguredError();
     }
     return this.issuers.gcs.issue(input);
   }

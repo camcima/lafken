@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Ip,
   NotFoundException,
   Param,
   Post,
@@ -88,12 +89,14 @@ export class QuarantineController {
     @Param("publicId") publicId: string,
     @Body() body: ReleaseQuarantinedAssetRequestDTO,
     @AuthenticatedUser() user: AuthenticatedUserType,
+    @Ip() requestIp: string,
   ): Promise<AssetResponseDTO> {
     try {
       const asset = await this.releaseQuarantinedAssetUseCase.execute({
         publicId,
         reviewerId: user.emailAddress,
         note: body.note,
+        requestIp,
       });
       return await this.toResponseDto(asset);
     } catch (err) {
@@ -118,12 +121,14 @@ export class QuarantineController {
     @Param("publicId") publicId: string,
     @Body() body: RejectQuarantinedAssetRequestDTO,
     @AuthenticatedUser() user: AuthenticatedUserType,
+    @Ip() requestIp: string,
   ): Promise<AssetResponseDTO> {
     try {
       const asset = await this.rejectQuarantinedAssetUseCase.execute({
         publicId,
         reviewerId: user.emailAddress,
         note: body.note,
+        requestIp,
       });
       return await this.toResponseDto(asset);
     } catch (err) {

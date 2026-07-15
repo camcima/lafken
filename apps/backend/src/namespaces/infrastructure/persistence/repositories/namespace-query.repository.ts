@@ -10,6 +10,7 @@ import {
 } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import { ConnectionResolver } from "@/shared/infrastructure/persistence/connection-resolver";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
+import { computeLastPage } from "@/shared/kernel/domain/pagination";
 
 import { NamespacePolicyDbMapper } from "../mappers/namespace-policy.db-mapper";
 import { NamespacePresetDbMapper } from "../mappers/namespace-preset.db-mapper";
@@ -44,7 +45,7 @@ export class NamespaceQueryRepository implements NamespaceQueryRepositoryPort {
       total,
       page: input.page,
       limit: input.limit,
-      lastPage: Math.max(1, Math.ceil(total / input.limit)),
+      lastPage: computeLastPage(total, input.limit),
     };
   }
 
@@ -68,13 +69,23 @@ export class NamespaceQueryRepository implements NamespaceQueryRepositoryPort {
   }
 
   async listPresets(namespaceId: string): Promise<NamespacePreset[]> {
+    // DISTINCT ON (name) ordered by (name, version DESC) picks exactly the
+    // latest version row per preset name — the row that carries the preset's
+    // authoritative `active` flag. Inactive presets are included (flagged);
+    // callers that only serve active presets filter on `props.active`.
     const rows = await this.db.connection
-      .selectFrom("namespace_presets")
+      .selectFrom((eb) =>
+        eb
+          .selectFrom("namespace_presets")
+          .selectAll()
+          .distinctOn("name")
+          .where("namespace_id", "=", namespaceId)
+          .orderBy("name", "asc")
+          .orderBy("version", "desc")
+          .as("latest"),
+      )
       .selectAll()
-      .where("namespace_id", "=", namespaceId)
-      .where("active", "=", true)
       .orderBy("name", "asc")
-      .orderBy("version", "desc")
       .execute();
     return rows.map((row) => NamespacePresetDbMapper.toDomain(row));
   }

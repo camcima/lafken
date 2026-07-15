@@ -1,9 +1,9 @@
 import { Storage, type StorageOptions } from "@google-cloud/storage";
 import { Injectable } from "@nestjs/common";
 
+import type { GcsBindingConfig } from "@/system/domain/entities/storage-binding.entity";
 import { BucketCheckFailedError } from "@/system/domain/errors/bucket-check-failed.error";
 import { BucketNotFoundError } from "@/system/domain/errors/bucket-not-found.error";
-import type { GcsBindingConfig } from "@/system/domain/schemas/gcs-binding-config.schema";
 import { BucketExistsCheckerPort } from "@/system/domain/services/bucket-exists-checker.service.port";
 
 const FAKE_GCS_PROJECT_ID = "fake-gcs";

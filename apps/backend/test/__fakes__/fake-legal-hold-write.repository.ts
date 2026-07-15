@@ -1,6 +1,7 @@
 import { LegalHold } from "@/legal-holds/domain/entities/legal-hold.entity";
 import {
   type ILiftLegalHoldInput,
+  type ILiftLegalHoldResult,
   type IPlaceLegalHoldInput,
   LegalHoldWriteRepositoryPort,
 } from "@/legal-holds/domain/repositories/legal-hold-write.repository.port";
@@ -11,6 +12,8 @@ export class FakeLegalHoldWriteRepository extends LegalHoldWriteRepositoryPort {
   public placeCalls: IPlaceLegalHoldInput[] = [];
   public liftCalls: ILiftLegalHoldInput[] = [];
   public placedHoldId: string = TEST_UUIDS.legalHold1;
+  /** Tests can set this to control the reported recompute rowcount. */
+  public liftAffectedAssetCount = 0;
 
   placeHold(input: IPlaceLegalHoldInput): Promise<LegalHold> {
     this.placeCalls.push(input);
@@ -33,11 +36,11 @@ export class FakeLegalHoldWriteRepository extends LegalHoldWriteRepositoryPort {
     );
   }
 
-  liftHold(input: ILiftLegalHoldInput): Promise<LegalHold> {
+  liftHold(input: ILiftLegalHoldInput): Promise<ILiftLegalHoldResult> {
     this.liftCalls.push(input);
     const now = new Date();
-    return Promise.resolve(
-      LegalHold.fromProps({
+    return Promise.resolve({
+      hold: LegalHold.fromProps({
         id: input.id,
         caseReference: "ignored-by-tests",
         description: "ignored-by-tests",
@@ -51,6 +54,7 @@ export class FakeLegalHoldWriteRepository extends LegalHoldWriteRepositoryPort {
         createdAt: now,
         updatedAt: now,
       }),
-    );
+      affectedAssetCount: this.liftAffectedAssetCount,
+    });
   }
 }

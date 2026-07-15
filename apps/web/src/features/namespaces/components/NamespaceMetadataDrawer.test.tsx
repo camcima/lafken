@@ -1,6 +1,10 @@
 import type { NamespaceResponseDTO } from "@shared/backend-api";
+import {
+  NAMESPACE_DESCRIPTION_MAX_LENGTH,
+  NAMESPACE_DISPLAY_NAME_MAX_LENGTH,
+} from "@shared/backend-api/validation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -139,6 +143,54 @@ describe("NamespaceMetadataDrawer", () => {
       expect(screen.getByRole("alert")).toHaveTextContent(/this namespace was deleted/i);
     });
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  // Proves the form's Zod max() bounds are derived from the shared
+  // NAMESPACE_DISPLAY_NAME_MAX_LENGTH / NAMESPACE_DESCRIPTION_MAX_LENGTH
+  // constants — the same ones UpdateNamespaceMetadataRequestDTO enforces on
+  // the backend (shared/backend-api/presentation/namespaces/__tests__) —
+  // rather than local literals that could silently drift from the backend.
+  it("accepts displayName/description at the shared NAMESPACE_* max length and rejects one character over", async () => {
+    renderDrawer({ open: true, namespace: sampleNamespace });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/display name/i)).toHaveValue("My Namespace");
+    });
+
+    const displayNameInput = screen.getByLabelText(/display name/i);
+    const descriptionInput = screen.getByLabelText(/description/i);
+
+    fireEvent.change(displayNameInput, {
+      target: { value: "d".repeat(NAMESPACE_DISPLAY_NAME_MAX_LENGTH) },
+    });
+    fireEvent.blur(displayNameInput);
+    await waitFor(() => {
+      expect(displayNameInput).not.toHaveAttribute("aria-invalid");
+    });
+
+    fireEvent.change(displayNameInput, {
+      target: { value: "d".repeat(NAMESPACE_DISPLAY_NAME_MAX_LENGTH + 1) },
+    });
+    fireEvent.blur(displayNameInput);
+    await waitFor(() => {
+      expect(displayNameInput).toHaveAttribute("aria-invalid", "true");
+    });
+
+    fireEvent.change(descriptionInput, {
+      target: { value: "d".repeat(NAMESPACE_DESCRIPTION_MAX_LENGTH) },
+    });
+    fireEvent.blur(descriptionInput);
+    await waitFor(() => {
+      expect(descriptionInput).not.toHaveAttribute("aria-invalid");
+    });
+
+    fireEvent.change(descriptionInput, {
+      target: { value: "d".repeat(NAMESPACE_DESCRIPTION_MAX_LENGTH + 1) },
+    });
+    fireEvent.blur(descriptionInput);
+    await waitFor(() => {
+      expect(descriptionInput).toHaveAttribute("aria-invalid", "true");
+    });
   });
 
   it("closes on cancel", async () => {

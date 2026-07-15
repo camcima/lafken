@@ -12,6 +12,10 @@ import {
   type ITransitionAssetInput,
   type IUpdateDerivedMetadataInput,
 } from "@/assets/domain/repositories/asset-processing.repository.port";
+import {
+  type ICancelJobForAssetInput,
+  ProcessingJobRepositoryPort,
+} from "@/assets/domain/repositories/processing-job.repository.port";
 import type { AssetState } from "@/assets/domain/value-objects/asset-state.value-object";
 
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
@@ -84,15 +88,54 @@ class FakeAssetProcessingRepository extends AssetProcessingRepositoryPort {
   }
 }
 
+class FakeProcessingJobRepositoryForDelete extends ProcessingJobRepositoryPort {
+  readonly cancelCalls: ICancelJobForAssetInput[] = [];
+
+  cancelForAsset(input: ICancelJobForAssetInput): Promise<boolean> {
+    this.cancelCalls.push(input);
+    return Promise.resolve(true);
+  }
+
+  claimAvailable(): never {
+    throw new Error("claimAvailable is not used by DeleteAssetUseCase tests");
+  }
+  heartbeat(): never {
+    throw new Error("heartbeat is not used by DeleteAssetUseCase tests");
+  }
+  updateCurrentStep(): never {
+    throw new Error("updateCurrentStep is not used by DeleteAssetUseCase tests");
+  }
+  releaseForRetry(): never {
+    throw new Error("releaseForRetry is not used by DeleteAssetUseCase tests");
+  }
+  markCompleted(): never {
+    throw new Error("markCompleted is not used by DeleteAssetUseCase tests");
+  }
+  markFailed(): never {
+    throw new Error("markFailed is not used by DeleteAssetUseCase tests");
+  }
+  findStaleClaims(): never {
+    throw new Error("findStaleClaims is not used by DeleteAssetUseCase tests");
+  }
+  releaseStaleClaim(): never {
+    throw new Error("releaseStaleClaim is not used by DeleteAssetUseCase tests");
+  }
+  countDueJobs(): never {
+    throw new Error("countDueJobs is not used by DeleteAssetUseCase tests");
+  }
+}
+
 describe("DeleteAssetUseCase", () => {
   let queryRepo: InMemoryAssetQueryRepository;
   let processingRepo: FakeAssetProcessingRepository;
+  let jobRepo: FakeProcessingJobRepositoryForDelete;
   let useCase: DeleteAssetUseCase;
 
   beforeEach(() => {
     queryRepo = new InMemoryAssetQueryRepository();
     processingRepo = new FakeAssetProcessingRepository();
-    useCase = new DeleteAssetUseCase(queryRepo, processingRepo);
+    jobRepo = new FakeProcessingJobRepositoryForDelete();
+    useCase = new DeleteAssetUseCase(queryRepo, processingRepo, jobRepo);
   });
 
   it("transitions an uploaded asset to deleted with the requester recorded", async () => {
@@ -186,5 +229,23 @@ describe("DeleteAssetUseCase", () => {
     await expect(
       useCase.execute({ id: ASSET_ID, requestedByEmail: REQUESTER_EMAIL }),
     ).rejects.toBeInstanceOf(AssetNotFoundError);
+  });
+
+  it("cancels the pending processing job after deleting the asset", async () => {
+    queryRepo.seed([makeAsset({ state: "uploaded" })]);
+
+    await useCase.execute({ id: ASSET_ID, requestedByEmail: REQUESTER_EMAIL });
+
+    expect(jobRepo.cancelCalls).toEqual([
+      expect.objectContaining({ assetId: ASSET_ID, reason: "asset_deleted" }),
+    ]);
+  });
+
+  it("cancels any leftover job when the asset is already deleted", async () => {
+    queryRepo.seed([makeAsset({ state: "deleted" })]);
+
+    await useCase.execute({ id: ASSET_ID, requestedByEmail: REQUESTER_EMAIL });
+
+    expect(jobRepo.cancelCalls).toHaveLength(1);
   });
 });

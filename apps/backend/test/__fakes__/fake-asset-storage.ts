@@ -1,4 +1,5 @@
 import {
+  assertValidMaxBytes,
   AssetStoragePort,
   type IDeleteObjectInput,
   type IIssueSignedUploadUrlInput,
@@ -20,6 +21,7 @@ export class FakeAssetStorage extends AssetStoragePort {
   readonly deleteCalls: IDeleteObjectInput[] = [];
   readonly objects: Map<string, Buffer> = new Map();
   existsResult = true;
+  existsError: Error | null = null;
 
   issueSignedUploadUrl(input: IIssueSignedUploadUrlInput): Promise<IIssueSignedUploadUrlResult> {
     this.issued.push(input);
@@ -35,14 +37,27 @@ export class FakeAssetStorage extends AssetStoragePort {
 
   objectExists(input: IObjectExistsInput): Promise<boolean> {
     this.existsCalls.push(input);
+    if (this.existsError) {
+      return Promise.reject(this.existsError);
+    }
     return Promise.resolve(this.existsResult || this.objects.has(input.storageKey));
   }
 
   readObjectBytes(input: IReadObjectBytesInput): Promise<Buffer> {
     this.readCalls.push(input);
+    try {
+      assertValidMaxBytes(input.maxBytes);
+    } catch (err) {
+      return Promise.reject(err instanceof Error ? err : new Error(String(err)));
+    }
     const bytes: Buffer | undefined = this.objects.get(input.storageKey);
     if (!bytes) {
       return Promise.reject(new Error(`Object "${input.storageKey}" does not exist`));
+    }
+    // Honor the port's maxBytes contract: the real adapter issues a ranged
+    // download and returns at most the first maxBytes.
+    if (input.maxBytes !== undefined && bytes.length > input.maxBytes) {
+      return Promise.resolve(bytes.subarray(0, input.maxBytes));
     }
     return Promise.resolve(bytes);
   }

@@ -1,3 +1,4 @@
+import { LafkenApiError } from "@lafken/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LafkenUploadManager } from "../src/lafken-upload-manager";
@@ -7,6 +8,14 @@ import type {
   IFileQuarantinedEventDetail,
   IFileReadyEventDetail,
 } from "../src/lafken-upload-manager";
+
+/** Shape returned by both `createUploadIntent` and `refreshUploadUrl`. */
+interface IIntentResult {
+  publicId: string;
+  uploadUrl: string;
+  uploadHeaders: Record<string, string>;
+  expiresAt: string;
+}
 
 /** Flush all pending microtasks (promises resolved in the current tick). */
 async function flushMicrotasks(): Promise<void> {
@@ -376,14 +385,27 @@ describe("LafkenUploadManager", () => {
         assets: {
           createUploadIntent: vi.fn(),
           confirmUpload: vi.fn().mockResolvedValue({
+            id: "internal-poll-id",
             publicId: "pub-poll",
             state: "processing",
           }),
           get: vi
             .fn()
-            .mockResolvedValueOnce({ publicId: "pub-poll", state: "processing" })
-            .mockResolvedValueOnce({ publicId: "pub-poll", state: "processing" })
-            .mockResolvedValueOnce({ publicId: "pub-poll", state: "ready" }),
+            .mockResolvedValueOnce({
+              id: "internal-poll-id",
+              publicId: "pub-poll",
+              state: "processing",
+            })
+            .mockResolvedValueOnce({
+              id: "internal-poll-id",
+              publicId: "pub-poll",
+              state: "processing",
+            })
+            .mockResolvedValueOnce({
+              id: "internal-poll-id",
+              publicId: "pub-poll",
+              state: "ready",
+            }),
         },
       };
 
@@ -442,6 +464,7 @@ describe("LafkenUploadManager", () => {
       await vi.advanceTimersByTimeAsync(4_000);
       await flushMicrotasks();
       expect(client.assets.get).toHaveBeenCalledTimes(3);
+      expect(client.assets.get).toHaveBeenCalledWith("internal-poll-id");
       expect(readyEvents).toHaveLength(1);
       expect(readyEvents[0]).toMatchObject({
         fileId: uppyFile.id,
@@ -457,10 +480,15 @@ describe("LafkenUploadManager", () => {
         assets: {
           createUploadIntent: vi.fn(),
           confirmUpload: vi.fn().mockResolvedValue({
+            id: "internal-timeout-id",
             publicId: "pub-timeout",
             state: "processing",
           }),
-          get: vi.fn().mockResolvedValue({ publicId: "pub-timeout", state: "processing" }),
+          get: vi.fn().mockResolvedValue({
+            id: "internal-timeout-id",
+            publicId: "pub-timeout",
+            state: "processing",
+          }),
         },
       };
 
@@ -511,6 +539,7 @@ describe("LafkenUploadManager", () => {
       await vi.advanceTimersByTimeAsync(2_000);
       await flushMicrotasks();
 
+      expect(client.assets.get).toHaveBeenCalledWith("internal-timeout-id");
       expect(failedEvents).toHaveLength(1);
       expect(failedEvents[0].error.message).toBe("polling-timeout");
       expect(readyEvents).toHaveLength(0);
@@ -580,5 +609,659 @@ describe("LafkenUploadManager", () => {
         kind: "virus",
       });
     });
+
+    it("polls using the confirmed asset's internal id, not the publicId, while still emitting publicId on file-ready", async () => {
+      // The backend's GET /v1/assets/:id endpoint resolves the INTERNAL id —
+      // there is no publicId-keyed getter. confirmUpload's response carries
+      // both `id` (internal) and `publicId` (external); polling must key off
+      // `id`, not `publicId`, or every poll 404s.
+      const client = {
+        assets: {
+          createUploadIntent: vi.fn(),
+          confirmUpload: vi.fn().mockResolvedValue({
+            id: "internal-uuidv7-abc",
+            publicId: "pub-int",
+            state: "processing",
+          }),
+          get: vi
+            .fn()
+            .mockResolvedValue({ id: "internal-uuidv7-abc", publicId: "pub-int", state: "ready" }),
+        },
+      };
+
+      const manager = new LafkenUploadManager({
+        client: client as never,
+        namespaceSlug: "ns",
+        pollingIntervalMs: 1_000,
+        pollingMaxIntervalMs: 10_000,
+        pollingTimeoutMs: 600_000,
+      });
+
+      const readyEvents: IFileReadyEventDetail[] = [];
+      manager.addEventListener("file-ready", (evt) => {
+        readyEvents.push((evt as CustomEvent<IFileReadyEventDetail>).detail);
+      });
+
+      const file = new File(["data"], "video.mp4", { type: "video/mp4" });
+      manager.addFiles([file]);
+      const uppy = manager.getUppy();
+      const [uppyFile] = uppy.getFiles();
+      expect(uppyFile).toBeDefined();
+
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+      (manager as any).publicIdByFileId.set(uppyFile.id, "pub-int");
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+
+      uppy.emit("complete", { successful: [uppyFile], failed: [] });
+      await flushMicrotasks();
+
+      await vi.advanceTimersByTimeAsync(1_000);
+      await flushMicrotasks();
+
+      // The poll must look up the INTERNAL id, never the publicId.
+      expect(client.assets.get).toHaveBeenCalledWith("internal-uuidv7-abc");
+
+      // The external contract is unchanged: file-ready still carries publicId.
+      expect(readyEvents).toHaveLength(1);
+      expect(readyEvents[0]).toMatchObject({
+        fileId: uppyFile.id,
+        publicId: "pub-int",
+      });
+    });
+
+    it("stops polling and emits file-failed with the real error on a non-retryable 404, instead of masking it as polling-timeout", async () => {
+      const notFoundError = new LafkenApiError({
+        status: 404,
+        problemDetails: null,
+        message: "Asset not found",
+      });
+      const client = {
+        assets: {
+          createUploadIntent: vi.fn(),
+          confirmUpload: vi.fn().mockResolvedValue({
+            id: "internal-404-id",
+            publicId: "pub-404",
+            state: "processing",
+          }),
+          get: vi.fn().mockRejectedValue(notFoundError),
+        },
+      };
+
+      const manager = new LafkenUploadManager({
+        client: client as never,
+        namespaceSlug: "ns",
+        pollingIntervalMs: 1_000,
+        pollingMaxIntervalMs: 2_000,
+        // Deliberately long so a "polling-timeout" failure could only come
+        // from masking, never from the timeout itself, within this test.
+        pollingTimeoutMs: 600_000,
+      });
+
+      const failedEvents: IFileFailedEventDetail[] = [];
+      manager.addEventListener("file-failed", (evt) => {
+        failedEvents.push((evt as CustomEvent<IFileFailedEventDetail>).detail);
+      });
+
+      const file = new File(["data"], "clip.mp4", { type: "video/mp4" });
+      manager.addFiles([file]);
+      const uppy = manager.getUppy();
+      const [uppyFile] = uppy.getFiles();
+      expect(uppyFile).toBeDefined();
+
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+      (manager as any).publicIdByFileId.set(uppyFile.id, "pub-404");
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+
+      uppy.emit("complete", { successful: [uppyFile], failed: [] });
+      await flushMicrotasks();
+
+      // Only the first poll tick — a non-retryable error must fail fast, not
+      // back off and keep polling toward the (very long) timeout.
+      await vi.advanceTimersByTimeAsync(1_000);
+      await flushMicrotasks();
+
+      expect(client.assets.get).toHaveBeenCalledTimes(1);
+      expect(failedEvents).toHaveLength(1);
+      expect(failedEvents[0].fileId).toBe(uppyFile.id);
+      expect(failedEvents[0].error).toBe(notFoundError);
+      expect(failedEvents[0].error.message).not.toBe("polling-timeout");
+    });
+  });
+
+  describe("cancellableSleep", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("cancellableSleep resolves false when cancelAll runs during the sleep", async () => {
+      const manager = new LafkenUploadManager({
+        client: makeClientMock() as never,
+        namespaceSlug: "ns",
+      });
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+      const sleep: Promise<boolean> = (manager as any).cancellableSleep(5_000);
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+
+      manager.cancelAll();
+
+      await expect(sleep).resolves.toBe(false);
+    });
+
+    it("cancellableSleep resolves true when the timer fires normally", async () => {
+      const manager = new LafkenUploadManager({
+        client: makeClientMock() as never,
+        namespaceSlug: "ns",
+      });
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+      const sleep: Promise<boolean> = (manager as any).cancellableSleep(1_000);
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      await expect(sleep).resolves.toBe(true);
+    });
+  });
+
+  it("runPreProcessing is a safe no-op when createUploadIntent resolves after cancelAll tears down the file (F-U2)", async () => {
+    // Mirrors the React hook's unmount teardown: cancelAll() runs (clearing
+    // Uppy's file list) while createUploadIntent is still in flight. When the
+    // promise settles afterward, runPreProcessing must not touch Uppy.
+    let resolveIntent!: (value: IIntentResult) => void;
+    const intentPromise = new Promise<IIntentResult>((resolve) => {
+      resolveIntent = resolve;
+    });
+    const client = {
+      assets: {
+        createUploadIntent: vi.fn().mockReturnValue(intentPromise),
+        confirmUpload: vi.fn(),
+      },
+    };
+    const manager = new LafkenUploadManager({
+      client: client as never,
+      namespaceSlug: "ns",
+    });
+
+    const file = new File(["data"], "late.png", { type: "image/png" });
+    manager.addFiles([file]);
+    const uppy = manager.getUppy();
+    const [uppyFile] = uppy.getFiles();
+    expect(uppyFile).toBeDefined();
+
+    const setFileStateSpy = vi.spyOn(uppy, "setFileState");
+    const failedEvents: IFileFailedEventDetail[] = [];
+    manager.addEventListener("file-failed", (evt) => {
+      failedEvents.push((evt as CustomEvent<IFileFailedEventDetail>).detail);
+    });
+
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+    const preProcessing: Promise<void> = (manager as any).runPreProcessing([uppyFile.id]);
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+
+    manager.cancelAll();
+
+    resolveIntent({
+      publicId: "pub-late",
+      uploadUrl: "https://storage.example.com/upload/late",
+      uploadHeaders: {},
+      expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+    });
+
+    await preProcessing;
+
+    expect(setFileStateSpy).not.toHaveBeenCalled();
+    expect(failedEvents).toHaveLength(0);
+  });
+
+  // A resettable `cancelled` boolean is not enough: a coroutine suspended in an
+  // `await` across a cancelAll() → start() sequence resumes with the flag back
+  // to `false` and sails past every guard. These tests pin the cancel → restart
+  // → stale-coroutine-resumes interleaving, which only a monotonic epoch survives.
+  describe("cancel → restart does not revive stale coroutines", () => {
+    it("runPreProcessing does not touch Uppy when createUploadIntent settles after cancelAll and a new start()", async () => {
+      let resolveIntent!: (value: IIntentResult) => void;
+      const intentPromise = new Promise<IIntentResult>((resolve) => {
+        resolveIntent = resolve;
+      });
+      const client = {
+        assets: {
+          createUploadIntent: vi.fn().mockReturnValue(intentPromise),
+          confirmUpload: vi.fn(),
+        },
+      };
+      const manager = new LafkenUploadManager({
+        client: client as never,
+        namespaceSlug: "ns",
+      });
+
+      manager.addFiles([new File(["data"], "stale.png", { type: "image/png" })]);
+      const uppy = manager.getUppy();
+      const [uppyFile] = uppy.getFiles();
+      expect(uppyFile).toBeDefined();
+
+      const setFileStateSpy = vi.spyOn(uppy, "setFileState");
+      const failedEvents: IFileFailedEventDetail[] = [];
+      manager.addEventListener("file-failed", (evt) => {
+        failedEvents.push((evt as CustomEvent<IFileFailedEventDetail>).detail);
+      });
+
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+      const preProcessing: Promise<void> = (manager as any).runPreProcessing([uppyFile.id]);
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+
+      // Teardown, then a brand-new batch begins while the intent is still in flight.
+      manager.cancelAll();
+      void manager.start().catch(() => {
+        // Restarting with an empty queue is incidental to what's under test.
+      });
+
+      resolveIntent({
+        publicId: "pub-stale",
+        uploadUrl: "https://storage.example.com/upload/stale",
+        uploadHeaders: {},
+        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+      });
+      await preProcessing;
+
+      // The file was removed by cancelAll(): setFileState would throw, and the
+      // resulting catch would emit a file-failed for a file that no longer exists.
+      expect(setFileStateSpy).not.toHaveBeenCalled();
+      expect(failedEvents).toHaveLength(0);
+    });
+
+    it("runPreProcessing does not touch Uppy when refreshUploadUrl settles after cancelAll and a new start()", async () => {
+      let resolveRefresh!: (value: IIntentResult) => void;
+      const refreshPromise = new Promise<IIntentResult>((resolve) => {
+        resolveRefresh = resolve;
+      });
+      const client = {
+        assets: {
+          // Near-expiry signed URL → the pre-flight refresh path is taken.
+          createUploadIntent: vi.fn().mockResolvedValue({
+            publicId: "pub-refresh",
+            uploadUrl: "https://storage.example.com/upload/stale-url",
+            uploadHeaders: {},
+            expiresAt: new Date(Date.now() + 1_000).toISOString(),
+          }),
+          refreshUploadUrl: vi.fn().mockReturnValue(refreshPromise),
+          confirmUpload: vi.fn(),
+        },
+      };
+      const manager = new LafkenUploadManager({
+        client: client as never,
+        namespaceSlug: "ns",
+        refreshSafetyMarginMs: 30_000,
+      });
+
+      manager.addFiles([new File(["data"], "refresh.png", { type: "image/png" })]);
+      const uppy = manager.getUppy();
+      const [uppyFile] = uppy.getFiles();
+      expect(uppyFile).toBeDefined();
+
+      const setFileStateSpy = vi.spyOn(uppy, "setFileState");
+      const failedEvents: IFileFailedEventDetail[] = [];
+      manager.addEventListener("file-failed", (evt) => {
+        failedEvents.push((evt as CustomEvent<IFileFailedEventDetail>).detail);
+      });
+
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+      const preProcessing: Promise<void> = (manager as any).runPreProcessing([uppyFile.id]);
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+
+      // Let the intent resolve so the coroutine suspends inside refreshUploadUrl.
+      await flushMicrotasks();
+      expect(client.assets.refreshUploadUrl).toHaveBeenCalledWith("pub-refresh");
+
+      manager.cancelAll();
+      void manager.start().catch(() => {
+        // Restarting with an empty queue is incidental to what's under test.
+      });
+
+      resolveRefresh({
+        publicId: "pub-refresh",
+        uploadUrl: "https://storage.example.com/upload/fresh-url",
+        uploadHeaders: {},
+        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+      });
+      await preProcessing;
+
+      expect(setFileStateSpy).not.toHaveBeenCalled();
+      expect(failedEvents).toHaveLength(0);
+    });
+
+    it("confirmCompletedFiles dispatches no lifecycle events when confirmUpload settles after cancelAll and a new start()", async () => {
+      let resolveConfirm!: (value: { id: string; publicId: string; state: string }) => void;
+      const confirmPromise = new Promise<{ id: string; publicId: string; state: string }>(
+        (resolve) => {
+          resolveConfirm = resolve;
+        },
+      );
+      const client = {
+        assets: {
+          createUploadIntent: vi.fn(),
+          confirmUpload: vi.fn().mockReturnValue(confirmPromise),
+          get: vi.fn(),
+        },
+      };
+      const manager = new LafkenUploadManager({
+        client: client as never,
+        namespaceSlug: "ns",
+      });
+
+      // Every lifecycle event this SDK can emit from the confirm path. A consumer
+      // that cancelled (without unsubscribing) must receive none of them.
+      const lifecycleEvents: unknown[] = [];
+      for (const name of [
+        "file-confirmed",
+        "file-processing",
+        "file-ready",
+        "file-quarantined",
+        "file-rejected-terminal",
+        "file-failed",
+      ]) {
+        manager.addEventListener(name, (evt) => {
+          lifecycleEvents.push((evt as CustomEvent).detail);
+        });
+      }
+
+      // A non-image so the dimension probe settles on a microtask, no timers.
+      manager.addFiles([new File(["data"], "doc.pdf", { type: "application/pdf" })]);
+      const uppy = manager.getUppy();
+      const [uppyFile] = uppy.getFiles();
+      expect(uppyFile).toBeDefined();
+
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+      (manager as any).publicIdByFileId.set(uppyFile.id, "pub-late-confirm");
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+
+      uppy.emit("complete", { successful: [uppyFile], failed: [] });
+      await flushMicrotasks();
+      expect(client.assets.confirmUpload).toHaveBeenCalledTimes(1);
+
+      manager.cancelAll();
+      void manager.start().catch(() => {
+        // Restarting with an empty queue is incidental to what's under test.
+      });
+
+      resolveConfirm({ id: "internal-late", publicId: "pub-late-confirm", state: "confirmed" });
+      await flushMicrotasks();
+
+      expect(lifecycleEvents).toEqual([]);
+    });
+
+    it("confirmCompletedFiles dispatches no lifecycle events when confirmUpload settles after a cancelAll with no restart", async () => {
+      // The plain post-cancel case, with no subsequent start(). Cheaply catches a
+      // refactor that reintroduces an unguarded dispatch after teardown.
+      let resolveConfirm!: (value: { id: string; publicId: string; state: string }) => void;
+      const confirmPromise = new Promise<{ id: string; publicId: string; state: string }>(
+        (resolve) => {
+          resolveConfirm = resolve;
+        },
+      );
+      const client = {
+        assets: {
+          createUploadIntent: vi.fn(),
+          confirmUpload: vi.fn().mockReturnValue(confirmPromise),
+          get: vi.fn(),
+        },
+      };
+      const manager = new LafkenUploadManager({
+        client: client as never,
+        namespaceSlug: "ns",
+      });
+
+      const lifecycleEvents: unknown[] = [];
+      for (const name of [
+        "file-confirmed",
+        "file-processing",
+        "file-ready",
+        "file-quarantined",
+        "file-rejected-terminal",
+        "file-failed",
+      ]) {
+        manager.addEventListener(name, (evt) => {
+          lifecycleEvents.push((evt as CustomEvent).detail);
+        });
+      }
+
+      manager.addFiles([new File(["data"], "doc.pdf", { type: "application/pdf" })]);
+      const uppy = manager.getUppy();
+      const [uppyFile] = uppy.getFiles();
+      expect(uppyFile).toBeDefined();
+
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+      (manager as any).publicIdByFileId.set(uppyFile.id, "pub-no-restart");
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+
+      uppy.emit("complete", { successful: [uppyFile], failed: [] });
+      await flushMicrotasks();
+      expect(client.assets.confirmUpload).toHaveBeenCalledTimes(1);
+
+      manager.cancelAll();
+
+      resolveConfirm({ id: "internal-no-restart", publicId: "pub-no-restart", state: "confirmed" });
+      await flushMicrotasks();
+
+      expect(lifecycleEvents).toEqual([]);
+    });
+  });
+
+  describe("cancel → restart does not revive a stale polling loop", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("emits nothing and stops polling when assets.get settles after cancelAll and a new start()", async () => {
+      let resolveGet!: (value: { id: string; publicId: string; state: string }) => void;
+      const getPromise = new Promise<{ id: string; publicId: string; state: string }>((resolve) => {
+        resolveGet = resolve;
+      });
+      const client = {
+        assets: {
+          createUploadIntent: vi.fn(),
+          confirmUpload: vi.fn().mockResolvedValue({
+            id: "internal-stale-poll",
+            publicId: "pub-stale-poll",
+            state: "processing",
+          }),
+          get: vi.fn().mockReturnValue(getPromise),
+        },
+      };
+      const manager = new LafkenUploadManager({
+        client: client as never,
+        namespaceSlug: "ns",
+        pollingIntervalMs: 1_000,
+        pollingMaxIntervalMs: 10_000,
+        pollingTimeoutMs: 600_000,
+      });
+
+      const readyEvents: IFileReadyEventDetail[] = [];
+      const failedEvents: IFileFailedEventDetail[] = [];
+      manager.addEventListener("file-ready", (evt) => {
+        readyEvents.push((evt as CustomEvent<IFileReadyEventDetail>).detail);
+      });
+      manager.addEventListener("file-failed", (evt) => {
+        failedEvents.push((evt as CustomEvent<IFileFailedEventDetail>).detail);
+      });
+
+      manager.addFiles([new File(["data"], "clip.mp4", { type: "video/mp4" })]);
+      const uppy = manager.getUppy();
+      const [uppyFile] = uppy.getFiles();
+      expect(uppyFile).toBeDefined();
+
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+      (manager as any).publicIdByFileId.set(uppyFile.id, "pub-stale-poll");
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+
+      uppy.emit("complete", { successful: [uppyFile], failed: [] });
+      await flushMicrotasks();
+
+      // First poll tick: the loop is now suspended inside assets.get().
+      await vi.advanceTimersByTimeAsync(1_000);
+      await flushMicrotasks();
+      expect(client.assets.get).toHaveBeenCalledTimes(1);
+      expect(client.assets.get).toHaveBeenCalledWith("internal-stale-poll");
+
+      manager.cancelAll();
+      void manager.start().catch(() => {
+        // Restarting with an empty queue is incidental to what's under test.
+      });
+
+      // The dead batch's request finally answers "ready" — for a file the
+      // consumer already cancelled. It must not resurrect the loop.
+      resolveGet({ id: "internal-stale-poll", publicId: "pub-stale-poll", state: "ready" });
+      await flushMicrotasks();
+      await vi.advanceTimersByTimeAsync(30_000);
+      await flushMicrotasks();
+
+      expect(readyEvents).toHaveLength(0);
+      expect(failedEvents).toHaveLength(0);
+      expect(client.assets.get).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not start polling when a file-processing listener cancels re-entrantly", async () => {
+      // `dispatchEvent` runs listeners synchronously, so a consumer cancelling
+      // from inside its own `file-processing` handler bumps the cancellation
+      // epoch *between* confirmCompletedFiles' post-confirm check and the point
+      // where the polling loop begins. The loop must inherit the epoch that was
+      // live when the chain started — not re-read the (already bumped) field —
+      // or it polls a batch the consumer explicitly cancelled.
+      const client = {
+        assets: {
+          createUploadIntent: vi.fn(),
+          confirmUpload: vi.fn().mockResolvedValue({
+            id: "internal-reentrant",
+            publicId: "pub-reentrant",
+            state: "processing",
+          }),
+          get: vi.fn().mockResolvedValue({
+            id: "internal-reentrant",
+            publicId: "pub-reentrant",
+            state: "ready",
+          }),
+        },
+      };
+      const manager = new LafkenUploadManager({
+        client: client as never,
+        namespaceSlug: "ns",
+        pollingIntervalMs: 1_000,
+        pollingMaxIntervalMs: 10_000,
+        pollingTimeoutMs: 600_000,
+      });
+
+      const processingEvents: unknown[] = [];
+      const readyEvents: IFileReadyEventDetail[] = [];
+      const failedEvents: IFileFailedEventDetail[] = [];
+      manager.addEventListener("file-processing", (evt) => {
+        processingEvents.push((evt as CustomEvent).detail);
+        // The consumer tears down the moment it learns the file is processing.
+        manager.cancelAll();
+      });
+      manager.addEventListener("file-ready", (evt) => {
+        readyEvents.push((evt as CustomEvent<IFileReadyEventDetail>).detail);
+      });
+      manager.addEventListener("file-failed", (evt) => {
+        failedEvents.push((evt as CustomEvent<IFileFailedEventDetail>).detail);
+      });
+
+      manager.addFiles([new File(["data"], "clip.mp4", { type: "video/mp4" })]);
+      const uppy = manager.getUppy();
+      const [uppyFile] = uppy.getFiles();
+      expect(uppyFile).toBeDefined();
+
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+      (manager as any).publicIdByFileId.set(uppyFile.id, "pub-reentrant");
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+
+      uppy.emit("complete", { successful: [uppyFile], failed: [] });
+      await flushMicrotasks();
+      expect(processingEvents).toHaveLength(1);
+
+      // Run out the full backoff schedule: a live loop would have polled by now.
+      await vi.advanceTimersByTimeAsync(60_000);
+      await flushMicrotasks();
+
+      // No authenticated request, and no lifecycle event, for a cancelled file.
+      expect(client.assets.get).not.toHaveBeenCalled();
+      expect(readyEvents).toHaveLength(0);
+      expect(failedEvents).toHaveLength(0);
+    });
+
+    it("issues no further assets.get when cancelAll lands between the sleep resolving and the request", async () => {
+      const client = {
+        assets: {
+          createUploadIntent: vi.fn(),
+          confirmUpload: vi.fn().mockResolvedValue({
+            id: "internal-window",
+            publicId: "pub-window",
+            state: "processing",
+          }),
+          get: vi
+            .fn()
+            .mockResolvedValue({ id: "internal-window", publicId: "pub-window", state: "ready" }),
+        },
+      };
+      const manager = new LafkenUploadManager({
+        client: client as never,
+        namespaceSlug: "ns",
+        pollingIntervalMs: 1_000,
+        pollingMaxIntervalMs: 10_000,
+        pollingTimeoutMs: 600_000,
+      });
+
+      manager.addFiles([new File(["data"], "clip.mp4", { type: "video/mp4" })]);
+      const uppy = manager.getUppy();
+      const [uppyFile] = uppy.getFiles();
+      expect(uppyFile).toBeDefined();
+
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+      (manager as any).publicIdByFileId.set(uppyFile.id, "pub-window");
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+
+      uppy.emit("complete", { successful: [uppyFile], failed: [] });
+      await flushMicrotasks();
+
+      // Synchronously fire the sleep timer: `resolve(true)` runs, but the loop's
+      // continuation is only *queued* as a microtask. cancelAll() lands inside
+      // that window — before the request would be issued.
+      vi.advanceTimersByTime(1_000);
+      manager.cancelAll();
+      await flushMicrotasks();
+
+      // No authenticated request may outlive teardown.
+      expect(client.assets.get).not.toHaveBeenCalled();
+    });
+  });
+
+  it("dispatches file-failed when Uppy reports upload-error for a file", async () => {
+    const client = makeClientMock();
+    const manager = new LafkenUploadManager({
+      client: client as never,
+      namespaceSlug: "my-namespace",
+    });
+
+    const failures: IFileFailedEventDetail[] = [];
+    manager.addEventListener("file-failed", (evt) => {
+      failures.push((evt as CustomEvent<IFileFailedEventDetail>).detail);
+    });
+
+    manager.addFiles([new File(["x"], "x.png", { type: "image/png" })]);
+    const uppy = manager.getUppy();
+    const [uppyFile] = uppy.getFiles();
+    expect(uppyFile).toBeDefined();
+
+    uppy.emit("upload-error", uppyFile, { name: "HTTPError", message: "403 Forbidden" });
+    await flushMicrotasks();
+
+    expect(failures).toHaveLength(1);
+    expect(failures[0].fileId).toBe(uppyFile.id);
+    expect(failures[0].error.message).toBe("403 Forbidden");
   });
 });

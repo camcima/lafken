@@ -114,5 +114,5 @@ console.error("Login failed:", error);
 
 // ✅ GOOD
 logger.error("Login failed", error, { userId: user?.id });
-logger.auth("User login attempt", { method: "MSAL" });
+logger.auth("User login attempt", { method: "OIDC" });
 ```

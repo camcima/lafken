@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 
+import type { AssetWithMetadata } from "@/assets/application/use-cases/list-assets.use-case";
 import type { Asset } from "@/assets/domain/entities/asset.entity";
+import { UploadIntentConsumeConflictError } from "@/assets/domain/errors/upload-intent-consume-conflict.error";
 import { UploadIntentExpiredError } from "@/assets/domain/errors/upload-intent-expired.error";
 import { UploadIntentNotFoundError } from "@/assets/domain/errors/upload-intent-not-found.error";
 import { UploadedObjectMissingError } from "@/assets/domain/errors/uploaded-object-missing.error";
@@ -16,12 +18,19 @@ import { StorageBindingQueryRepositoryPort } from "@/system/domain/repositories/
 
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 3600;
 const AUDIT_FALLBACK_PRINCIPAL = "system";
+const UNKNOWN_NAMESPACE_SLUG = "unknown";
+const UNKNOWN_POLICY_VERSION = 0;
 
 export interface IConfirmUploadInput {
   publicId: string;
   uploadedBy: string | null;
   width?: number;
   height?: number;
+  externalRefType?: string;
+  externalRefId?: string;
+  /** Free-text uploader note — persisted under `custom_metadata.note`. */
+  note?: string;
+  tags?: string[];
   requestIp: string | null;
 }
 
@@ -39,7 +48,7 @@ export class ConfirmUploadUseCase {
     private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
-  async execute(input: IConfirmUploadInput): Promise<Asset> {
+  async execute(input: IConfirmUploadInput): Promise<AssetWithMetadata> {
     const intent = await this.intentRepo.findByPublicId(input.publicId);
     if (!intent) {
       throw new UploadIntentNotFoundError({ publicId: input.publicId });
@@ -52,7 +61,7 @@ export class ConfirmUploadUseCase {
           `Intent "${input.publicId}" is consumed but no asset exists — invariant violation.`,
         );
       }
-      return existing;
+      return this.composeMetadata(existing);
     }
 
     const now = new Date();
@@ -94,39 +103,68 @@ export class ConfirmUploadUseCase {
     const namespaceSlug =
       (await this.assetQueryRepo.findNamespaceSlug(intent.props.namespaceId)) ?? null;
 
-    const asset: Asset = await this.unitOfWork.execute(async () => {
-      const created: Asset = await this.assetWriteRepo.createUploadedAsset({
-        publicId: intent.props.publicId,
-        namespaceId: intent.props.namespaceId,
-        policyVersionId: intent.props.policyVersionId,
-        storageBindingId: intent.props.storageBindingId,
-        storageKey: intent.props.storageKey,
-        declaredMimeType: intent.props.declaredMimeType,
-        declaredSizeBytes: intent.props.declaredSizeBytes,
-        uploadedBy: input.uploadedBy,
-        effectiveMaxSizeBytes: policy.props.maxFileSizeBytes,
-        effectiveUrlTtl: policy.props.signedUrlTtlSeconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS,
-        intentId: intent.props.id,
-        width: input.width ?? null,
-        height: input.height ?? null,
-      });
+    let asset: Asset;
+    try {
+      asset = await this.unitOfWork.execute(async () => {
+        const created: Asset = await this.assetWriteRepo.createUploadedAsset({
+          publicId: intent.props.publicId,
+          namespaceId: intent.props.namespaceId,
+          policyVersionId: intent.props.policyVersionId,
+          storageBindingId: intent.props.storageBindingId,
+          storageKey: intent.props.storageKey,
+          declaredMimeType: intent.props.declaredMimeType,
+          declaredSizeBytes: intent.props.declaredSizeBytes,
+          uploadedBy: input.uploadedBy,
+          effectiveMaxSizeBytes: policy.props.maxFileSizeBytes,
+          effectiveUrlTtl: policy.props.signedUrlTtlSeconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS,
+          intentId: intent.props.id,
+          width: input.width ?? null,
+          height: input.height ?? null,
+          externalRefType: input.externalRefType ?? null,
+          externalRefId: input.externalRefId ?? null,
+          tags: input.tags,
+          customMetadata: input.note !== undefined ? { note: input.note } : undefined,
+        });
 
-      await this.auditWriteRepo.record({
-        entityType: "asset",
-        entityId: created.props.publicId,
-        action: "create",
-        occurredBy: input.uploadedBy ?? AUDIT_FALLBACK_PRINCIPAL,
-        requestIp: input.requestIp,
-        afterState: {
-          namespace: namespaceSlug,
-          storageKey: created.props.storageKey,
-          declaredMimeType: created.props.declaredMimeType,
-          sizeBytes: created.props.sizeBytes !== null ? String(created.props.sizeBytes) : null,
-        },
-      });
+        await this.auditWriteRepo.record({
+          entityType: "asset",
+          entityId: created.props.publicId,
+          action: "create",
+          occurredBy: input.uploadedBy ?? AUDIT_FALLBACK_PRINCIPAL,
+          requestIp: input.requestIp,
+          afterState: {
+            namespace: namespaceSlug,
+            storageKey: created.props.storageKey,
+            declaredMimeType: created.props.declaredMimeType,
+            sizeBytes: created.props.sizeBytes !== null ? String(created.props.sizeBytes) : null,
+          },
+        });
 
-      return created;
-    });
+        return created;
+      });
+    } catch (err) {
+      if (err instanceof UploadIntentConsumeConflictError) {
+        // F-P8: a concurrent confirm won the consume race (its transaction
+        // committed the asset), or the sweeper expired the intent. Fall back
+        // to the idempotent already-consumed lookup instead of surfacing a
+        // unique-constraint 500.
+        const existing = await this.assetQueryRepo.findByPublicId(input.publicId);
+        if (existing) {
+          return this.composeMetadata(existing);
+        }
+        const freshIntent = await this.intentRepo.findByPublicId(input.publicId);
+        if (freshIntent?.props.expiredAt) {
+          throw new UploadIntentExpiredError({
+            publicId: input.publicId,
+            expiredAt: freshIntent.props.expiredAt,
+          });
+        }
+        // Winner's transaction not yet visible — rethrow (422); the client's
+        // retry lands on the idempotent already-consumed path.
+        throw err;
+      }
+      throw err;
+    }
 
     if (namespaceSlug !== null) {
       this.metrics.recordUploadConfirmed({
@@ -135,6 +173,26 @@ export class ConfirmUploadUseCase {
       });
     }
 
-    return asset;
+    return {
+      asset,
+      namespaceSlug: namespaceSlug ?? UNKNOWN_NAMESPACE_SLUG,
+      policyVersion: policy.props.version,
+    };
+  }
+
+  /**
+   * Re-resolves display metadata for the idempotent path, where the policy
+   * and slug weren't loaded as part of a fresh confirm.
+   */
+  private async composeMetadata(asset: Asset): Promise<AssetWithMetadata> {
+    const [namespaceSlug, policyVersion] = await Promise.all([
+      this.assetQueryRepo.findNamespaceSlug(asset.props.namespaceId),
+      this.assetQueryRepo.findPolicyVersion(asset.props.policyVersionId),
+    ]);
+    return {
+      asset,
+      namespaceSlug: namespaceSlug ?? UNKNOWN_NAMESPACE_SLUG,
+      policyVersion: policyVersion ?? UNKNOWN_POLICY_VERSION,
+    };
   }
 }

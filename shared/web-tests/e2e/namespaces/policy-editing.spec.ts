@@ -1,6 +1,5 @@
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 
-const REQUIRES_FAKE_GCS = process.env.LAFKEN_E2E_REQUIRES_FAKE_GCS === "true";
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:3000";
 
 /**
@@ -75,14 +74,7 @@ async function deleteStorageBinding(request: APIRequestContext, name: string): P
   await request.delete(`${BACKEND_URL}/system/storage-bindings/${name}`).catch(() => undefined);
 }
 
-test.describe("Namespace policy editing @requires-fake-gcs", () => {
-  test.beforeEach(() => {
-    test.skip(
-      !REQUIRES_FAKE_GCS,
-      "Set LAFKEN_E2E_REQUIRES_FAKE_GCS=true with the backend + fake-gcs running.",
-    );
-  });
-
+test.describe("Namespace policy editing", () => {
   test("operator edits a namespace policy and detail page reflects the new version", async ({
     page,
     request,

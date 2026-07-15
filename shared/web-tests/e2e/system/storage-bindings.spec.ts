@@ -1,7 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
 
-const REQUIRES_FAKE_GCS = process.env.LAFKEN_E2E_REQUIRES_FAKE_GCS === "true";
-
 /**
  * Handles the login flow if the SPA redirected to /auth/login.
  * Clicks "Sign in" on the login page to initiate the OIDC flow.
@@ -32,14 +30,7 @@ async function createBindingViaUi(
   await page.getByRole("button", { name: /^save$/i }).click();
 }
 
-test.describe("Storage bindings @requires-fake-gcs", () => {
-  test.beforeEach(() => {
-    test.skip(
-      !REQUIRES_FAKE_GCS,
-      "Set LAFKEN_E2E_REQUIRES_FAKE_GCS=true with the backend + fake-gcs running.",
-    );
-  });
-
+test.describe("Storage bindings", () => {
   test("operator can add a storage binding pointing at lafken-dev", async ({ page }) => {
     await gotoSystemPage(page);
 

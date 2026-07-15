@@ -1,10 +1,13 @@
 import { sql } from "kysely";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { LegalHoldAlreadyLiftedError } from "@/legal-holds/domain/errors/legal-hold-already-lifted.error";
+import { LegalHoldNotFoundError } from "@/legal-holds/domain/errors/legal-hold-not-found.error";
 import { LegalHoldQueryRepository } from "@/legal-holds/infrastructure/persistence/repositories/legal-hold-query.repository";
 import { LegalHoldWriteRepository } from "@/legal-holds/infrastructure/persistence/repositories/legal-hold-write.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { cleanDatabase } from "../../helpers/clean-database";
 import { createConnectionResolver } from "../../helpers/create-connection-resolver";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
@@ -31,17 +34,7 @@ describe("LegalHoldWriteRepository", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("legal_holds").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await cleanDatabase(db);
 
     const sb = await db.connection
       .insertInto("storage_bindings")
@@ -210,12 +203,12 @@ describe("LegalHoldWriteRepository", () => {
       id: placed.props.id,
       liftedBy: "legal@example.com",
       liftReason: "Investigation closed.",
-      assetInternalIds: [assetA, assetB],
     });
 
-    expect(lifted.props.active).toBe(false);
-    expect(lifted.props.liftedBy).toBe("legal@example.com");
-    expect(lifted.props.liftReason).toBe("Investigation closed.");
+    expect(lifted.hold.props.active).toBe(false);
+    expect(lifted.hold.props.liftedBy).toBe("legal@example.com");
+    expect(lifted.hold.props.liftReason).toBe("Investigation closed.");
+    expect(lifted.affectedAssetCount).toBe(2);
 
     const flagged = await db.connection
       .selectFrom("assets")
@@ -246,7 +239,6 @@ describe("LegalHoldWriteRepository", () => {
       id: holdA.props.id,
       liftedBy: "legal@example.com",
       liftReason: "Closing hold A only.",
-      assetInternalIds: [assetA],
     });
 
     const [row] = await db.connection
@@ -265,5 +257,47 @@ describe("LegalHoldWriteRepository", () => {
     expect(sql).toBeDefined();
     // holdB sanity reference (avoids unused-variable lint warning).
     expect(typeof holdB.props.id).toBe("string");
+  });
+
+  it("liftHold throws LegalHoldAlreadyLiftedError on a second lift and preserves the original lift metadata", async () => {
+    const placed = await writeRepo.placeHold({
+      caseReference: "CHL-AVN-2026-007",
+      description: "Hold for double-lift test, ten chars or more.",
+      scopeSummary: "1 asset(s) across namespace ns-a",
+      placedBy: "ops@example.com",
+      assetInternalIds: [assetA],
+    });
+
+    await writeRepo.liftHold({
+      id: placed.props.id,
+      liftedBy: "first@example.com",
+      liftReason: "First lift wins.",
+    });
+
+    await expect(
+      writeRepo.liftHold({
+        id: placed.props.id,
+        liftedBy: "second@example.com",
+        liftReason: "Second lift must lose.",
+      }),
+    ).rejects.toBeInstanceOf(LegalHoldAlreadyLiftedError);
+
+    const [row] = await db.connection
+      .selectFrom("legal_holds")
+      .select(["lifted_by", "lift_reason"])
+      .where("id", "=", placed.props.id)
+      .execute();
+    expect(row?.lifted_by).toBe("first@example.com");
+    expect(row?.lift_reason).toBe("First lift wins.");
+  });
+
+  it("liftHold throws LegalHoldNotFoundError for an unknown hold id", async () => {
+    await expect(
+      writeRepo.liftHold({
+        id: "00000000-0000-0000-0000-00000000dead",
+        liftedBy: "legal@example.com",
+        liftReason: "There is no such hold.",
+      }),
+    ).rejects.toBeInstanceOf(LegalHoldNotFoundError);
   });
 });

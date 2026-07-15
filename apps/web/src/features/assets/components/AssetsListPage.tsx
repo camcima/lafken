@@ -1,6 +1,6 @@
 import type { AssetState, NamespaceResponseDTO } from "@shared/backend-api";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { Download, Filter, Lock, Plus, Search, Tag, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -8,6 +8,7 @@ import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
 import { Paginator } from "@/components/common/Paginator";
 import { SELECT_CLASS, SELECT_CLASS_SM } from "@/components/common/select-styles";
+import { ListQueryError } from "@/components/feedback/Error/ListQueryError";
 import { assetResponseToRow, type IAssetRow } from "@/features/assets/asset-row";
 import {
   AssetsListView,
@@ -21,21 +22,10 @@ import { cn } from "@/lib/utils";
 
 // Page-size options for the rows-per-page selector
 /* eslint-disable no-magic-numbers */
-const PAGE_SIZE_OPTIONS = [18, 24, 50, 100, 200] as const;
+const PAGE_SIZE_OPTIONS = [18, 24, 50, 100] as const;
 /* eslint-enable no-magic-numbers */
 
 const NAMESPACE_FILTER_LIMIT = 100;
-
-const QUICK_FILTER_KEYS = [
-  "last24h",
-  "hasLegalHold",
-  "quarantined",
-  "failedPipelines",
-  "mine",
-] as const;
-
-// Slice 1: wire to active more-filters count
-const MORE_FILTERS_BADGE_PLACEHOLDER = 2;
 
 interface INamespaceOption {
   slug: string;
@@ -44,29 +34,36 @@ interface INamespaceOption {
 
 export function AssetsListPage(): React.JSX.Element {
   const { t } = useTranslation();
-  const { legalHoldId, namespaceSlug } = useSearch({ from: "/_protected/assets/" });
+  const { page, state, legalHoldId, namespaceSlug } = useSearch({ from: "/_protected/assets/" });
   const navigate = useNavigate();
 
   const [view, setView] = useState<ViewMode>("rows");
-  const [stateFilter, setStateFilter] = useState("all");
+  const stateFilter: string = state ?? "all";
   const namespaceFilter: string = namespaceSlug ?? "all";
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(() => new Set<string>());
-  const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(0); // 0 => use AUTO_PAGE_SIZE
+
+  const pageIndex: number = page - 1; // URL is 1-indexed; Paginator is 0-indexed
 
   const autoPageSize = getAutoPageSize(view);
   const PAGE_SIZE = pageSize || autoPageSize;
 
   // ── Real-API queries ────────────────────────────────────────────────────
   const listQuery = {
-    page: page + 1,
+    page,
     limit: PAGE_SIZE,
     namespaceSlug: namespaceFilter !== "all" ? namespaceFilter : undefined,
     states: stateFilter !== "all" ? [stateFilter as AssetState] : undefined,
     legalHoldId,
   };
-  const { data: realAssetsPage, isLoading: realAssetsLoading } = useAssets(listQuery);
+  const {
+    data: realAssetsPage,
+    isLoading: realAssetsLoading,
+    isError: realAssetsError,
+    isFetching: realAssetsFetching,
+    refetch: refetchAssets,
+  } = useAssets(listQuery);
 
   const { data: realNamespacesPage } = useNamespaces({
     page: 1,
@@ -102,34 +99,43 @@ export function AssetsListPage(): React.JSX.Element {
   const hasActiveFilters = stateFilter !== "all" || namespaceFilter !== "all" || query !== "";
 
   function handleStateFilter(value: string): void {
-    setStateFilter(value);
-    setPage(0);
+    void navigate({
+      to: "/assets",
+      search: (prev) => ({
+        ...prev,
+        state: value === "all" ? undefined : (value as AssetState),
+        page: 1,
+      }),
+    });
     setSelected(new Set());
   }
 
   function handleNamespaceFilter(value: string): void {
     void navigate({
       to: "/assets",
-      search: (prev) => ({ ...prev, namespaceSlug: value === "all" ? undefined : value }),
+      search: (prev) => ({
+        ...prev,
+        namespaceSlug: value === "all" ? undefined : value,
+        page: 1,
+      }),
     });
-    setPage(0);
     setSelected(new Set());
   }
 
   function handleQuery(value: string): void {
     setQuery(value);
-    setPage(0);
     setSelected(new Set());
   }
 
   function handleClearFilters(): void {
-    setStateFilter("all");
+    // Clear the user-toggled filters (state, namespace) and reset to page 1,
+    // but preserve `legalHoldId` — it is navigational scope (set by linking
+    // in from a legal hold), not a filter the user can set from this page.
     void navigate({
       to: "/assets",
-      search: (prev) => ({ ...prev, namespaceSlug: undefined }),
+      search: (prev) => ({ legalHoldId: prev.legalHoldId, page: 1 }),
     });
     setQuery("");
-    setPage(0);
     setSelected(new Set());
   }
 
@@ -161,13 +167,13 @@ export function AssetsListPage(): React.JSX.Element {
   }
 
   function handlePageChange(newPage: number): void {
-    setPage(newPage);
+    void navigate({ to: "/assets", search: (prev) => ({ ...prev, page: newPage + 1 }) });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // Range display values (1-indexed)
-  const rangeFrom: number = totalItems === 0 ? 0 : page * PAGE_SIZE + 1;
-  const rangeTo: number = Math.min((page + 1) * PAGE_SIZE, totalItems);
+  const rangeFrom: number = totalItems === 0 ? 0 : pageIndex * PAGE_SIZE + 1;
+  const rangeTo: number = Math.min((pageIndex + 1) * PAGE_SIZE, totalItems);
 
   // Header subtitle counters
   const headerTotal: number = totalItems;
@@ -189,9 +195,6 @@ export function AssetsListPage(): React.JSX.Element {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <ViewToggle view={view} onChange={handleViewChange} />
-            <Button type="button" variant="outline">
-              <Download /> {t("pages.assets.actions.export")}
-            </Button>
             <Button asChild variant="indigo">
               <Link to="/assets/upload">
                 <Plus /> {t("pages.assets.actions.upload")}
@@ -259,17 +262,6 @@ export function AssetsListPage(): React.JSX.Element {
             ))}
           </select>
 
-          {/* More filters — matches the h-9 filter row, not the action-bar h-8 */}
-          <button
-            type="button"
-            className="border-border bg-card hover:bg-secondary hover:border-latam-indigo/30 inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-[12.5px]"
-          >
-            <Filter size={13} /> {t("pages.assets.filters.moreFilters")}
-            <span className="bg-secondary text-muted-foreground ml-1 rounded-full px-1.5 py-px text-[10.5px]">
-              {MORE_FILTERS_BADGE_PLACEHOLDER}
-            </span>
-          </button>
-
           {/* Clear filters */}
           {hasActiveFilters && (
             <button
@@ -281,22 +273,6 @@ export function AssetsListPage(): React.JSX.Element {
             </button>
           )}
         </div>
-
-        {/* Quick filters strip */}
-        <div className="border-border mt-2 flex flex-wrap items-center gap-1.5 border-t border-dashed pt-2 text-[11px]">
-          <span className="text-muted-foreground self-center text-[10.5px] tracking-wider uppercase">
-            {t("pages.assets.filters.quickFiltersLabel")}
-          </span>
-          {QUICK_FILTER_KEYS.map((key) => (
-            <button
-              key={key}
-              type="button"
-              className="border-border bg-card text-muted-foreground hover:border-latam-indigo/30 hover:text-foreground rounded-full border px-2.5 py-0.5 text-[11.5px]"
-            >
-              {t(`pages.assets.filters.quickFilters.${key}`)}
-            </button>
-          ))}
-        </div>
       </Card>
 
       {/* ── Bulk action bar ─────────────────────────────────── */}
@@ -307,24 +283,6 @@ export function AssetsListPage(): React.JSX.Element {
               {t("pages.assets.bulkBar.selected", { count: selected.size })}
             </span>
             <div className="ml-auto flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-md border border-white/30 bg-white/10 px-3 py-1 text-[12px] text-white hover:bg-white/20"
-              >
-                <Download size={13} /> {t("pages.assets.bulkBar.export")}
-              </button>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-md border border-white/30 bg-white/10 px-3 py-1 text-[12px] text-white hover:bg-white/20"
-              >
-                <Lock size={13} /> {t("pages.assets.bulkBar.placeHold")}
-              </button>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-md border border-white/30 bg-white/10 px-3 py-1 text-[12px] text-white hover:bg-white/20"
-              >
-                <Tag size={13} /> {t("pages.assets.bulkBar.editMetadata")}
-              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -363,7 +321,14 @@ export function AssetsListPage(): React.JSX.Element {
       </div>
 
       {/* ── Content area ──────────────────────────────────────── */}
-      {isLoading ? (
+      {realAssetsError ? (
+        <ListQueryError
+          isRetrying={realAssetsFetching}
+          onRetry={() => {
+            void refetchAssets();
+          }}
+        />
+      ) : isLoading ? (
         <Card className="px-8 py-16 text-center">
           <div className="text-muted-foreground text-[12.5px]">
             {t("pages.namespaceDetail.loading")}
@@ -397,7 +362,7 @@ export function AssetsListPage(): React.JSX.Element {
                 value={PAGE_SIZE}
                 onChange={(e) => {
                   setPageSize(Number(e.target.value));
-                  setPage(0);
+                  void navigate({ to: "/assets", search: (prev) => ({ ...prev, page: 1 }) });
                 }}
                 className={SELECT_CLASS_SM}
                 aria-label={t("paginator.rowsPerPage")}
@@ -417,7 +382,7 @@ export function AssetsListPage(): React.JSX.Element {
                 })}
               </span>
             </div>
-            <Paginator page={page} totalPages={totalPages} onChange={handlePageChange} />
+            <Paginator page={pageIndex} totalPages={totalPages} onChange={handlePageChange} />
           </div>
         </>
       )}

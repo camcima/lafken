@@ -42,9 +42,9 @@ describe("LiftLegalHoldUseCase", () => {
     useCase = new LiftLegalHoldUseCase(queryRepo, writeRepo, auditRepo, new FakeUnitOfWork());
   });
 
-  it("lifts a hold and forwards the covered internal ids to the write repo", async () => {
+  it("lifts a hold and records the recomputed asset count in the audit entry", async () => {
     queryRepo.holds.set(TEST_UUIDS.legalHold1, makeActiveHold(TEST_UUIDS.legalHold1));
-    queryRepo.coveredAssetIdsByHold.set(TEST_UUIDS.legalHold1, ["i-1", "i-2"]);
+    writeRepo.liftAffectedAssetCount = 2;
 
     const result = await useCase.execute({
       holdId: TEST_UUIDS.legalHold1,
@@ -57,13 +57,13 @@ describe("LiftLegalHoldUseCase", () => {
     expect(result.props.liftedBy).toBe("legal@example.com");
     expect(writeRepo.liftCalls).toHaveLength(1);
     expect(writeRepo.liftCalls[0]?.id).toBe(TEST_UUIDS.legalHold1);
-    expect(writeRepo.liftCalls[0]?.assetInternalIds.sort()).toEqual(["i-1", "i-2"].sort());
     expect(auditRepo.records).toHaveLength(1);
     expect(auditRepo.records[0]).toMatchObject({
       entityType: "legal_hold",
       action: "lift",
       occurredBy: "legal@example.com",
       reason: "Investigation closed.",
+      afterState: { active: false, assetCount: 2 },
     });
   });
 
@@ -98,9 +98,9 @@ describe("LiftLegalHoldUseCase", () => {
     ).rejects.toBeInstanceOf(LegalHoldAlreadyLiftedError);
   });
 
-  it("forwards an empty internal-ids array when the hold covers no assets (defensive)", async () => {
+  it("reports assetCount 0 in the audit entry when the hold covers no assets", async () => {
     queryRepo.holds.set(TEST_UUIDS.legalHold1, makeActiveHold(TEST_UUIDS.legalHold1));
-    queryRepo.coveredAssetIdsByHold.set(TEST_UUIDS.legalHold1, []);
+    writeRepo.liftAffectedAssetCount = 0;
 
     await useCase.execute({
       holdId: TEST_UUIDS.legalHold1,
@@ -109,6 +109,6 @@ describe("LiftLegalHoldUseCase", () => {
       requestIp: null,
     });
 
-    expect(writeRepo.liftCalls[0]?.assetInternalIds).toEqual([]);
+    expect(auditRepo.records[0]).toMatchObject({ afterState: { active: false, assetCount: 0 } });
   });
 });

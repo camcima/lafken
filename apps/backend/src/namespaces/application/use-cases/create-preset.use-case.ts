@@ -9,6 +9,7 @@ import { ReservedPresetNameError } from "@/namespaces/domain/errors/reserved-pre
 import { NamespacePresetWriteRepositoryPort } from "@/namespaces/domain/repositories/namespace-preset-write.repository.port";
 import { NamespaceQueryRepositoryPort } from "@/namespaces/domain/repositories/namespace-query.repository.port";
 import type { PresetParams } from "@/namespaces/domain/value-objects/preset-params.value-object";
+import { UnitOfWorkPort } from "@/shared/application/unit-of-work.port";
 import { SYSTEM_PRESET_NAME_PREFIX } from "@/shared/kernel/domain/preset-naming";
 
 const AUDIT_FALLBACK_PRINCIPAL = "system";
@@ -27,6 +28,7 @@ export class CreatePresetUseCase {
     private readonly queryRepository: NamespaceQueryRepositoryPort,
     private readonly writeRepository: NamespacePresetWriteRepositoryPort,
     private readonly auditWriteRepo: AuditWriteRepositoryPort,
+    private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
   async execute(input: ICreatePresetInput): Promise<NamespacePreset> {
@@ -51,25 +53,27 @@ export class CreatePresetUseCase {
     }
 
     try {
-      const preset = await this.writeRepository.createPreset({
-        namespaceId: namespace.props.id,
-        name: input.name,
-        params: input.params,
-        createdBy: input.createdBy,
+      return await this.unitOfWork.execute(async () => {
+        const preset = await this.writeRepository.createPreset({
+          namespaceId: namespace.props.id,
+          name: input.name,
+          params: input.params,
+          createdBy: input.createdBy,
+        });
+        await this.auditWriteRepo.record({
+          entityType: "namespace_preset",
+          entityId: `${namespace.props.slug.value}/${preset.props.name}`,
+          action: "create",
+          occurredBy: input.createdBy ?? AUDIT_FALLBACK_PRINCIPAL,
+          requestIp: input.requestIp,
+          afterState: {
+            namespace: namespace.props.slug.value,
+            name: preset.props.name,
+            version: preset.props.version,
+          },
+        });
+        return preset;
       });
-      await this.auditWriteRepo.record({
-        entityType: "namespace_preset",
-        entityId: `${namespace.props.slug.value}/${preset.props.name}`,
-        action: "create",
-        occurredBy: input.createdBy ?? AUDIT_FALLBACK_PRINCIPAL,
-        requestIp: input.requestIp,
-        afterState: {
-          namespace: namespace.props.slug.value,
-          name: preset.props.name,
-          version: preset.props.version,
-        },
-      });
-      return preset;
     } catch (err) {
       if (err instanceof PresetNameAlreadyExistsError) {
         throw new PresetNameAlreadyExistsError({ slug: input.slug, name: input.name });

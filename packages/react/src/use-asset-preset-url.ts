@@ -1,7 +1,7 @@
 import type { LafkenClient } from "@lafken/client";
 import { useContext, useEffect, useState } from "react";
 
-import { _getCachedPresetUrl } from "./_url-cache";
+import { _getCachedPresetUrl, cacheUpdateBus, type ICacheUpdatedDetail } from "./_url-cache";
 import { _LafkenClientContext } from "./lafken-provider";
 
 export interface IUseAssetPresetUrlResult {
@@ -60,7 +60,16 @@ export function useAssetPresetUrl(
     const promise: Promise<string> = _getCachedPresetUrl(client, publicId, preset);
     promise.then(
       (resolved: string) => {
-        if (!cancelled) setState({ key, url: resolved, isLoading: false, error: null });
+        if (cancelled) return;
+        // This read can resolve with a stale-but-valid URL *after* a refresh it
+        // itself triggered has already been delivered over the bus. Any URL
+        // already present for this key came from a later cache write, so never
+        // move backwards.
+        setState((prev) =>
+          prev.key === key && prev.url !== null
+            ? prev
+            : { key, url: resolved, isLoading: false, error: null },
+        );
       },
       (err: unknown) => {
         if (!cancelled) {
@@ -73,6 +82,31 @@ export function useAssetPresetUrl(
       cancelled = true;
     };
   }, [client, publicId, preset, key]);
+
+  // Subscribe to refresh completions so the returned URL stays valid past its
+  // TTL — the same pattern <AssetImage> uses (F-K5).
+  //
+  // The event carries the resolved URL, so this listener never reads the cache
+  // back. Re-entering _getCachedPresetUrl() here would close a feedback loop
+  // (fetch -> dispatch -> re-read -> fetch -> ...) that never terminates for an
+  // unparseable expiresAt or a sub-minute TTL. It also keeps the listener free
+  // of promises, so there is no rejection to leak.
+  //
+  // `key` is the only dependency: publicId/preset are its components, and no
+  // client is needed now that we don't call into the cache.
+  useEffect(() => {
+    const onCacheUpdated = (ev: Event): void => {
+      const detail: ICacheUpdatedDetail = (ev as CustomEvent<ICacheUpdatedDetail>).detail;
+      if (detail.key !== key) return;
+      setState((prev) =>
+        prev.key === key ? { key, url: detail.url, isLoading: false, error: null } : prev,
+      );
+    };
+    cacheUpdateBus.addEventListener("cache-updated", onCacheUpdated);
+    return () => {
+      cacheUpdateBus.removeEventListener("cache-updated", onCacheUpdated);
+    };
+  }, [key]);
 
   return { url: visibleState.url, isLoading: visibleState.isLoading, error: visibleState.error };
 }

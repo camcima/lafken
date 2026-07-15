@@ -1,4 +1,5 @@
 import { Asset } from "@/assets/domain/entities/asset.entity";
+import { UploadIntentConsumeConflictError } from "@/assets/domain/errors/upload-intent-consume-conflict.error";
 import {
   AssetWriteRepositoryPort,
   ICreateUploadedAssetInput,
@@ -10,9 +11,14 @@ export class FakeAssetWriteRepository extends AssetWriteRepositoryPort {
   readonly transitions: ITransitionStateInput[] = [];
   /** Tests can seed this map to control what `transitionState` returns. */
   readonly transitionResponses = new Map<string, Asset | null>();
+  /** When true, `createUploadedAsset` simulates a lost consume race (F-P8). */
+  consumeConflict = false;
   private nextId = 1;
 
   createUploadedAsset(input: ICreateUploadedAssetInput): Promise<Asset> {
+    if (this.consumeConflict) {
+      return Promise.reject(new UploadIntentConsumeConflictError({ publicId: input.publicId }));
+    }
     this.createdAssets.push(input);
     const now = new Date();
     const asset = Asset.fromProps({

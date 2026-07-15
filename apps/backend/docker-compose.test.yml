@@ -53,36 +53,6 @@ services:
       timeout: 2s
       retries: 10
 
-  tusd:
-    image: tusproject/tusd:v2
-    restart: unless-stopped
-    command:
-      - "-host=0.0.0.0"
-      - "-port=1080"
-      - "-base-path=/files/"
-      - "-gcs-bucket=lafken-dev"
-      - "-gcs-object-prefix="
-      - "-cors-allow-origin=*"
-      - "-cors-allow-credentials=true"
-      - "-cors-allow-headers=Authorization,Content-Type,Location,Tus-Extension,Tus-Max-Size,Tus-Resumable,Tus-Version,Upload-Concat,Upload-Defer-Length,Upload-Length,Upload-Metadata,Upload-Offset,X-HTTP-Method-Override,X-Requested-With"
-      - "-cors-expose-headers=Location,Tus-Extension,Tus-Max-Size,Tus-Resumable,Tus-Version,Upload-Concat,Upload-Defer-Length,Upload-Length,Upload-Metadata,Upload-Offset"
-    environment:
-      STORAGE_EMULATOR_HOST: "http://fake-gcs:4443"
-      GCS_PROJECT_ID: "fake-project-1"
-    ports:
-      # Different host port from dev compose so both stacks can run in parallel.
-      - "1081:1080"
-    depends_on:
-      fake-gcs:
-        condition: service_healthy
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - "wget -q -O- http://127.0.0.1:1080/ > /dev/null || exit 1"
-      interval: 5s
-      timeout: 2s
-      retries: 10
-
   clamav:
     image: clamav/clamav:1.4
     restart: unless-stopped

@@ -5,6 +5,7 @@ import type {
 } from "@shared/backend-api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { auditKeys } from "@/features/audit/keys";
 import { systemKeys } from "@/features/system/keys";
 
 export function useStorageBindings() {
@@ -48,6 +49,7 @@ export function useCreateStorageBinding() {
       client.system.createStorageBinding(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: systemKeys.storageBindings() });
+      void queryClient.invalidateQueries({ queryKey: auditKeys.lists() });
     },
   });
 }
@@ -63,6 +65,7 @@ export function useUpdateStorageBinding() {
         queryKey: systemKeys.storageBinding(variables.name),
       });
       void queryClient.invalidateQueries({ queryKey: systemKeys.storageBindings() });
+      void queryClient.invalidateQueries({ queryKey: auditKeys.lists() });
     },
   });
 }
@@ -74,6 +77,7 @@ export function useDeleteStorageBinding() {
     mutationFn: (name: string) => client.system.deleteStorageBinding(name),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: systemKeys.storageBindings() });
+      void queryClient.invalidateQueries({ queryKey: auditKeys.lists() });
     },
   });
 }

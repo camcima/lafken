@@ -31,9 +31,7 @@ interface ISeededAsset {
   assetId: string;
 }
 
-// TODO: BE controller endpoint not yet wired (DeleteAssetUseCase exists but no @Delete handler).
-// Restored from stash; un-skip once the controller registers the route.
-describe.skip("[E2E] DELETE /v1/assets/:id", () => {
+describe("[E2E] DELETE /v1/assets/:id", () => {
   let app: INestApplication;
   let db: DatabaseClient;
   let storageBindingId: string;
@@ -155,8 +153,8 @@ describe.skip("[E2E] DELETE /v1/assets/:id", () => {
     expect(transitions[0]?.from_state).toBe("uploaded");
     expect(transitions[0]?.to_state).toBe("deleted");
     expect(transitions[0]?.reason).toBe("asset_deleted");
-    expect(transitions[0]?.occurred_by).toBe("test@test.com");
-    expect(transitions[0]?.metadata).toEqual({ requested_by: "test@test.com" });
+    expect(transitions[0]?.occurred_by).toBe("asset-deleter@test.local");
+    expect(transitions[0]?.metadata).toEqual({ requested_by: "asset-deleter@test.local" });
   });
 
   it("is idempotent — returns 204 without recording a new transition for an already-deleted asset", async () => {

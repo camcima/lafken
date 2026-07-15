@@ -22,5 +22,25 @@ export default [
       parserOptions: commonParserOptions,
     },
   })),
+  {
+    files: ["src/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@shared/backend-api",
+              message:
+                "@shared/backend-api is a types-only devDependency of @lafken/client. " +
+                "Use `import type` — a runtime import would drag NestJS/class-validator " +
+                "into browser bundles.",
+              allowTypeImports: true,
+            },
+          ],
+        },
+      ],
+    },
+  },
   eslintPluginPrettierRecommended,
 ];

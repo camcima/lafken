@@ -1,15 +1,27 @@
+import { sql } from "kysely";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { UploadIntentConsumeConflictError } from "@/assets/domain/errors/upload-intent-consume-conflict.error";
 import { AssetWriteRepository } from "@/assets/infrastructure/persistence/repositories/asset-write.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { cleanDatabase } from "../../helpers/clean-database";
 import { createConnectionResolver } from "../../helpers/create-connection-resolver";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolveFn: () => void = () => undefined;
+  const promise = new Promise<void>((resolve) => {
+    resolveFn = resolve;
+  });
+  return { promise, resolve: resolveFn };
+}
+
 describe("AssetWriteRepository", () => {
-  let db: DatabaseClient;
+  let db: DatabaseClient; // connection A: repository under test
+  let dbConcurrent: DatabaseClient; // connection B: the racing writer
   let repository: AssetWriteRepository;
 
   let bindingId: string;
@@ -19,27 +31,17 @@ describe("AssetWriteRepository", () => {
 
   beforeAll(async () => {
     db = await createTestDatabaseClient();
+    dbConcurrent = await createTestDatabaseClient();
     repository = new AssetWriteRepository(db, createConnectionResolver(db));
   });
 
   afterAll(async () => {
     await db.closeConnection();
+    await dbConcurrent.closeConnection();
   });
 
   beforeEach(async () => {
-    // Clean in FK order (most dependent first)
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("assets").execute();
-      await tx.deleteFrom("upload_intents").execute();
-      await tx.deleteFrom("namespace_presets").execute();
-      await tx.deleteFrom("namespace_policies").execute();
-      await tx.deleteFrom("namespaces").execute();
-      await tx.deleteFrom("storage_bindings").execute();
-    });
+    await cleanDatabase(db);
 
     // Seed storage binding
     const sb = await db.connection
@@ -249,5 +251,227 @@ describe("AssetWriteRepository", () => {
       .where("public_id", "=", intentPublicId)
       .execute();
     expect(assetRows).toHaveLength(0);
+  });
+
+  function baseCreateInput() {
+    return {
+      publicId: intentPublicId,
+      namespaceId,
+      policyVersionId,
+      storageBindingId: bindingId,
+      storageKey: "uploads/test-asset.jpg",
+      declaredMimeType: "image/jpeg",
+      declaredSizeBytes: 4096n,
+      uploadedBy: null,
+      effectiveMaxSizeBytes: 52_428_800n,
+      effectiveUrlTtl: 3600,
+      intentId: intentPublicId,
+    };
+  }
+
+  it("createUploadedAsset throws UploadIntentConsumeConflictError when the intent is already consumed", async () => {
+    await db.connection
+      .updateTable("upload_intents")
+      .set({ consumed_at: new Date() })
+      .where("public_id", "=", intentPublicId)
+      .execute();
+
+    await expect(repository.createUploadedAsset(baseCreateInput())).rejects.toBeInstanceOf(
+      UploadIntentConsumeConflictError,
+    );
+  });
+
+  it("createUploadedAsset rolls back the asset insert when the intent was expired by the sweeper", async () => {
+    await db.connection
+      .updateTable("upload_intents")
+      .set({ expired_at: new Date() })
+      .where("public_id", "=", intentPublicId)
+      .execute();
+
+    await expect(repository.createUploadedAsset(baseCreateInput())).rejects.toBeInstanceOf(
+      UploadIntentConsumeConflictError,
+    );
+    const assets = await db.connection.selectFrom("assets").selectAll().execute();
+    expect(assets).toHaveLength(0);
+  });
+
+  async function seedAssetInState(state: string): Promise<{ id: string; publicId: string }> {
+    const row = await db.connection
+      .insertInto("assets")
+      .values({
+        namespace_id: namespaceId,
+        policy_version_id: policyVersionId,
+        storage_binding_id: bindingId,
+        storage_key: "uploads/cas-test.jpg",
+        state,
+        declared_mime_type: "image/jpeg",
+        size_bytes: 4096n,
+        effective_max_size_bytes: 52_428_800n,
+        effective_url_ttl: 3600,
+      })
+      .returning(["id", "public_id"])
+      .executeTakeFirstOrThrow();
+    return { id: (row as { id: string }).id, publicId: (row as { public_id: string }).public_id };
+  }
+
+  it("transitionState applies the transition when expectedFromState matches", async () => {
+    const seeded = await seedAssetInState("quarantined_virus");
+
+    const updated = await repository.transitionState({
+      publicId: seeded.publicId,
+      toState: "ready",
+      reason: "released_from_quarantine",
+      by: "reviewer@latam.com",
+      expectedFromState: "quarantined_virus",
+    });
+
+    expect(updated).not.toBeNull();
+    expect(updated?.props.state).toBe("ready");
+
+    const dbRow = await db.connection
+      .selectFrom("assets")
+      .select(["state"])
+      .where("id", "=", seeded.id)
+      .executeTakeFirstOrThrow();
+    expect((dbRow as { state: string }).state).toBe("ready");
+
+    const transitions = await db.connection
+      .selectFrom("asset_state_transitions")
+      .select(["from_state", "to_state"])
+      .where("asset_id", "=", seeded.id)
+      .execute();
+    expect(transitions).toHaveLength(1);
+    expect(transitions[0]).toMatchObject({ from_state: "quarantined_virus", to_state: "ready" });
+  });
+
+  it("transitionState returns null and writes nothing when expectedFromState does not match", async () => {
+    const seeded = await seedAssetInState("ready");
+
+    const updated = await repository.transitionState({
+      publicId: seeded.publicId,
+      toState: "rejected",
+      reason: "rejected_from_quarantine: stale reviewer tab",
+      by: "reviewer@latam.com",
+      expectedFromState: "quarantined_virus",
+    });
+
+    expect(updated).toBeNull();
+
+    const dbRow = await db.connection
+      .selectFrom("assets")
+      .select(["state"])
+      .where("id", "=", seeded.id)
+      .executeTakeFirstOrThrow();
+    expect((dbRow as { state: string }).state).toBe("ready");
+
+    const transitions = await db.connection
+      .selectFrom("asset_state_transitions")
+      .selectAll()
+      .where("asset_id", "=", seeded.id)
+      .execute();
+    expect(transitions).toHaveLength(0);
+  });
+
+  /**
+   * Polls pg_stat_activity until the repository's UPDATE on `assets` is
+   * blocked waiting on the concurrent writer's row lock. Deterministic: the
+   * UPDATE cannot proceed until the writer's transaction commits (or rolls
+   * back), so once observed blocked, ordering across the two connections is
+   * guaranteed — the repo's UPDATE is proven to run its predicate check
+   * against the row version left by the writer, not the pre-race version.
+   */
+  async function waitForBlockedAssetUpdate(): Promise<void> {
+    for (let i = 0; i < 200; i += 1) {
+      const result = await sql<{ pid: number }>`
+        SELECT pid FROM pg_stat_activity
+        WHERE state = 'active'
+          AND wait_event_type = 'Lock'
+          AND query ILIKE 'update "assets"%'
+      `.execute(db.connection);
+      if (result.rows.length > 0) return;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    throw new Error("assets UPDATE never blocked on the concurrent writer's lock");
+  }
+
+  /**
+   * Starts a transaction on connection B that updates the given asset row to
+   * `state` and holds the transaction open (row lock held) until `release()`
+   * is called. `applied` resolves once the UPDATE has been sent and the row
+   * lock acquired — callers must await it before starting the repo call
+   * under test, otherwise the two connections race and the (previously
+   * unused, "cold") connection B transaction can lose to connection A's
+   * already-warm pool, letting the repo call finish before B's UPDATE ever
+   * lands. Committing only happens on `release()`, so a plain (lock-free)
+   * SELECT from another session still sees the pre-race committed state
+   * until then — exactly the TOCTOU window this test needs.
+   */
+  function startConcurrentStateWriter(
+    assetId: string,
+    state: string,
+  ): { applied: Promise<void>; done: Promise<void>; release: () => void } {
+    const gate = deferred();
+    const applied = deferred();
+    const done = dbConcurrent.connection.transaction().execute(async (tx) => {
+      await tx
+        .updateTable("assets")
+        .set({ state, state_changed_at: new Date() })
+        .where("id", "=", assetId)
+        .execute();
+      applied.resolve();
+      await gate.promise;
+    });
+    return { applied: applied.promise, done, release: gate.resolve };
+  }
+
+  it("transitionState re-checks the CAS predicate against the row version left by a concurrent writer (true TOCTOU race)", async () => {
+    // Seed the asset in the state both racers believe is current. The repo's
+    // SELECT will read this committed value before the writer's UPDATE lands.
+    const seeded = await seedAssetInState("quarantined_virus");
+
+    // Connection B "wins" the race: it commits a transition to `ready` in the
+    // window between the repo's SELECT and its UPDATE.
+    const writer = startConcurrentStateWriter(seeded.id, "ready");
+    await writer.applied; // writer's UPDATE has landed and holds the row lock (uncommitted)
+
+    // Connection A: the repo call under test. Its internal SELECT still reads
+    // the committed "quarantined_virus" (writer's UPDATE is uncommitted, so
+    // MVCC hides it from a plain read), so it passes the pre-check — the
+    // only thing that can now reject it is the UPDATE's own
+    // `WHERE state = expectedFromState` re-evaluating against the writer's
+    // row version once the writer commits.
+    const attempt = repository.transitionState({
+      publicId: seeded.publicId,
+      toState: "rejected",
+      reason: "rejected_from_quarantine: stale reviewer tab",
+      by: "reviewer@latam.com",
+      expectedFromState: "quarantined_virus",
+    });
+
+    await waitForBlockedAssetUpdate();
+    writer.release();
+    await writer.done;
+
+    const updated = await attempt;
+
+    // The repo must lose the race: its UPDATE's WHERE re-evaluates against
+    // the writer's committed "ready" state and matches zero rows.
+    expect(updated).toBeNull();
+
+    // The writer's state must stand — the repo must not have overwritten it.
+    const dbRow = await db.connection
+      .selectFrom("assets")
+      .select(["state"])
+      .where("id", "=", seeded.id)
+      .executeTakeFirstOrThrow();
+    expect((dbRow as { state: string }).state).toBe("ready");
+
+    // The repo must not have written a transition row for the race it lost.
+    const transitions = await db.connection
+      .selectFrom("asset_state_transitions")
+      .selectAll()
+      .where("asset_id", "=", seeded.id)
+      .execute();
+    expect(transitions).toHaveLength(0);
   });
 });

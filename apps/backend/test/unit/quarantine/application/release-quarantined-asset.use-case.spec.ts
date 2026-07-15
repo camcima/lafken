@@ -10,8 +10,10 @@ import { StorageBinding } from "@/system/domain/entities/storage-binding.entity"
 
 import { FakeAssetStorage } from "../../../__fakes__/fake-asset-storage";
 import { FakeAssetWriteRepository } from "../../../__fakes__/fake-asset-write.repository";
+import { FakeUnitOfWork } from "../../../__fakes__/fake-unit-of-work";
 import { TEST_UUIDS } from "../../../__fixtures__/test-uuids";
 import { InMemoryAssetQueryRepository } from "../../assets/__fakes__/in-memory-asset-query.repository";
+import { InMemoryAuditWriteRepository } from "../../audit/__fakes__/in-memory-audit-write.repository";
 import { InMemoryStorageBindingQueryRepository } from "../../system/__fakes__/in-memory-storage-binding-query.repository";
 
 const ORIGINAL_KEY = `aircraft-photos/assets/${TEST_UUIDS.asset1}/source`;
@@ -70,6 +72,7 @@ describe("ReleaseQuarantinedAssetUseCase", () => {
   let writeRepo: FakeAssetWriteRepository;
   let storage: FakeAssetStorage;
   let bindingRepo: InMemoryStorageBindingQueryRepository;
+  let auditRepo: InMemoryAuditWriteRepository;
   let useCase: ReleaseQuarantinedAssetUseCase;
 
   beforeEach(() => {
@@ -78,7 +81,15 @@ describe("ReleaseQuarantinedAssetUseCase", () => {
     storage = new FakeAssetStorage();
     bindingRepo = new InMemoryStorageBindingQueryRepository();
     bindingRepo.seed([makeBinding()]);
-    useCase = new ReleaseQuarantinedAssetUseCase(queryRepo, writeRepo, storage, bindingRepo);
+    auditRepo = new InMemoryAuditWriteRepository();
+    useCase = new ReleaseQuarantinedAssetUseCase(
+      queryRepo,
+      writeRepo,
+      storage,
+      bindingRepo,
+      auditRepo,
+      new FakeUnitOfWork(),
+    );
   });
 
   it("transitions a quarantined asset to ready and returns the updated asset", async () => {
@@ -93,6 +104,7 @@ describe("ReleaseQuarantinedAssetUseCase", () => {
       publicId: TEST_UUIDS.asset1,
       reviewerId: "reviewer@example.com",
       note: "manual override after sniff false-positive",
+      requestIp: null,
     });
 
     expect(result.props.state).toBe("ready");
@@ -102,6 +114,7 @@ describe("ReleaseQuarantinedAssetUseCase", () => {
       toState: "ready",
       by: "reviewer@example.com",
       newStorageKey: ORIGINAL_KEY,
+      expectedFromState: "quarantined_invalid_format",
     });
     expect(writeRepo.transitions[0]?.reason).toContain("released_from_quarantine");
     expect(writeRepo.transitions[0]?.reason).toContain("manual override");
@@ -130,6 +143,7 @@ describe("ReleaseQuarantinedAssetUseCase", () => {
       publicId: TEST_UUIDS.asset1,
       reviewerId: null,
       note: "legacy release",
+      requestIp: null,
     });
 
     expect(storage.moveCalls).toHaveLength(0);
@@ -138,21 +152,73 @@ describe("ReleaseQuarantinedAssetUseCase", () => {
 
   it("throws AssetNotFoundError when no asset exists for the publicId", async () => {
     await expect(
-      useCase.execute({ publicId: "missing-id", reviewerId: null }),
+      useCase.execute({ publicId: "missing-id", reviewerId: null, requestIp: null }),
     ).rejects.toBeInstanceOf(AssetNotFoundError);
   });
 
   it("throws AssetNotInQuarantineError when asset state is not a quarantine state", async () => {
     queryRepo.seed([makeAsset("uploaded")]);
     await expect(
-      useCase.execute({ publicId: TEST_UUIDS.asset1, reviewerId: null }),
+      useCase.execute({ publicId: TEST_UUIDS.asset1, reviewerId: null, requestIp: null }),
     ).rejects.toBeInstanceOf(AssetNotInQuarantineError);
   });
 
   it("throws AssetUnderLegalHoldError when the asset is on legal hold", async () => {
     queryRepo.seed([makeAsset("quarantined_virus", { legalHold: true })]);
     await expect(
-      useCase.execute({ publicId: TEST_UUIDS.asset1, reviewerId: null }),
+      useCase.execute({ publicId: TEST_UUIDS.asset1, reviewerId: null, requestIp: null }),
     ).rejects.toBeInstanceOf(AssetUnderLegalHoldError);
+  });
+
+  it("maps a lost CAS race to AssetNotInQuarantineError instead of a silent overwrite, and writes no audit entry", async () => {
+    // Asset is quarantined at read time, but the fake returns null from
+    // transitionState — the shape of a concurrent reviewer winning the race.
+    queryRepo.seed([makeAsset("quarantined_virus")]);
+
+    await expect(
+      useCase.execute({
+        publicId: TEST_UUIDS.asset1,
+        reviewerId: "reviewer@example.com",
+        requestIp: null,
+      }),
+    ).rejects.toBeInstanceOf(AssetNotInQuarantineError);
+    expect(writeRepo.transitions).toHaveLength(1);
+    // The transition attempt lost the CAS inside the unit of work, so the
+    // audit write inside the same block must never have run either.
+    expect(auditRepo.records).toHaveLength(0);
+  });
+
+  it("records a configuration audit entry for the release decision", async () => {
+    queryRepo.seed([makeAsset("quarantined_virus")]);
+    writeRepo.transitionResponses.set(TEST_UUIDS.asset1, makeAsset("ready"));
+
+    await useCase.execute({
+      publicId: TEST_UUIDS.asset1,
+      reviewerId: "reviewer@example.com",
+      note: "manual override after sniff false-positive",
+      requestIp: "10.0.0.9",
+    });
+
+    expect(auditRepo.records).toHaveLength(1);
+    expect(auditRepo.records[0]).toMatchObject({
+      entityType: "asset",
+      entityId: TEST_UUIDS.asset1,
+      action: "release",
+      occurredBy: "reviewer@example.com",
+      requestIp: "10.0.0.9",
+      beforeState: { state: "quarantined_virus" },
+      afterState: { state: "ready" },
+    });
+    expect(auditRepo.records[0]?.reason).toContain("released_from_quarantine");
+  });
+
+  it("writes no audit entry when the transition finds no asset at all (true 404, not a lost CAS)", async () => {
+    // Nothing seeded in queryRepo → the use case throws AssetNotFoundError
+    // before ever reaching the unit of work / transitionState / audit write.
+    await expect(
+      useCase.execute({ publicId: "missing-id", reviewerId: null, requestIp: null }),
+    ).rejects.toBeInstanceOf(AssetNotFoundError);
+
+    expect(auditRepo.records).toHaveLength(0);
   });
 });

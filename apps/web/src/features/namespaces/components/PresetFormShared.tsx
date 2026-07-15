@@ -1,3 +1,11 @@
+import {
+  PRESET_DIMENSION_MAX,
+  PRESET_DIMENSION_MIN,
+  PRESET_DPR_MAX,
+  PRESET_DPR_MIN,
+  PRESET_QUALITY_MAX,
+  PRESET_QUALITY_MIN,
+} from "@shared/backend-api/validation";
 import React, { useMemo } from "react";
 import type { Control, FieldErrors, FieldValues, Path, UseFormRegister } from "react-hook-form";
 import { useWatch } from "react-hook-form";
@@ -11,12 +19,6 @@ import {
 } from "@/features/namespaces/schemas/preset-params.schema";
 import { cn } from "@/lib/utils";
 
-const MIN_DIMENSION = 1;
-const MAX_DIMENSION = 10000;
-const MIN_QUALITY = 1;
-const MAX_QUALITY = 100;
-const MIN_DPR = 0.5;
-const MAX_DPR = 4;
 const DPR_STEP = 0.5;
 const RADIO_CARD_COLUMNS_2 = 2;
 const RADIO_CARD_COLUMNS_3 = 3;
@@ -293,8 +295,8 @@ export function PresetParamsFields<T extends FieldValues>(
             <input
               id={`${idPrefix}-width`}
               type="number"
-              min={MIN_DIMENSION}
-              max={MAX_DIMENSION}
+              min={PRESET_DIMENSION_MIN}
+              max={PRESET_DIMENSION_MAX}
               placeholder="—"
               className={cn(inputClasses, "font-mono")}
               aria-invalid={paramsErrors?.width ? true : undefined}
@@ -321,8 +323,8 @@ export function PresetParamsFields<T extends FieldValues>(
             <input
               id={`${idPrefix}-height`}
               type="number"
-              min={MIN_DIMENSION}
-              max={MAX_DIMENSION}
+              min={PRESET_DIMENSION_MIN}
+              max={PRESET_DIMENSION_MAX}
               placeholder="—"
               className={cn(inputClasses, "font-mono")}
               aria-invalid={paramsErrors?.height ? true : undefined}
@@ -371,8 +373,8 @@ export function PresetParamsFields<T extends FieldValues>(
             <input
               id={`${idPrefix}-dpr`}
               type="number"
-              min={MIN_DPR}
-              max={MAX_DPR}
+              min={PRESET_DPR_MIN}
+              max={PRESET_DPR_MAX}
               step={DPR_STEP}
               placeholder="—"
               className={cn(inputClasses, "font-mono")}
@@ -440,8 +442,8 @@ export function PresetParamsFields<T extends FieldValues>(
               register={register}
               name={qualityPath}
               inputId={`${idPrefix}-quality`}
-              min={MIN_QUALITY}
-              max={MAX_QUALITY}
+              min={PRESET_QUALITY_MIN}
+              max={PRESET_QUALITY_MAX}
               ariaInvalid={paramsErrors?.quality ? true : undefined}
               ariaLabelledBy={`${idPrefix}-quality-label`}
               ariaDescribedBy={

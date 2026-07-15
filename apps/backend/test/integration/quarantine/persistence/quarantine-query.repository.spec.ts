@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { QuarantineQueryRepository } from "@/quarantine/infrastructure/persistence/repositories/quarantine-query.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { cleanDatabase } from "../../helpers/clean-database";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 describe("QuarantineQueryRepository", () => {
@@ -15,13 +16,7 @@ describe("QuarantineQueryRepository", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("legal_hold_assets").execute();
-      await tx.deleteFrom("asset_analyses").execute();
-      await tx.deleteFrom("asset_state_transitions").execute();
-      await tx.deleteFrom("processing_jobs").execute();
-      await tx.deleteFrom("assets").execute();
-    });
+    await cleanDatabase(db);
   });
 
   afterAll(async () => {

@@ -25,36 +25,36 @@ export class LiftLegalHoldUseCase {
   ) {}
 
   async execute(input: ILiftLegalHoldUseCaseInput): Promise<LegalHold> {
-    const hold = await this.queryRepo.findById(input.holdId);
-    if (hold === null) {
-      throw new LegalHoldNotFoundError({ id: input.holdId });
-    }
-    if (!hold.props.active) {
-      throw new LegalHoldAlreadyLiftedError({ id: input.holdId });
-    }
-
-    const assetInternalIds = await this.queryRepo.listAssetInternalIds(input.holdId);
-
     return this.unitOfWork.execute(async () => {
-      const lifted: LegalHold = await this.writeRepo.liftHold({
+      const hold = await this.queryRepo.findById(input.holdId);
+      if (hold === null) {
+        throw new LegalHoldNotFoundError({ id: input.holdId });
+      }
+      if (!hold.props.active) {
+        throw new LegalHoldAlreadyLiftedError({ id: input.holdId });
+      }
+
+      // The authoritative race guard is the repository's WHERE active = true
+      // (rowcount check) — a concurrent lift that slips past this pre-check
+      // gets LegalHoldAlreadyLiftedError and rolls back its audit row.
+      const result = await this.writeRepo.liftHold({
         id: input.holdId,
         liftedBy: input.liftedBy,
         liftReason: input.liftReason,
-        assetInternalIds,
       });
 
       await this.auditWriteRepo.record({
         entityType: "legal_hold",
-        entityId: lifted.props.id,
+        entityId: result.hold.props.id,
         action: "lift",
         occurredBy: input.liftedBy,
         requestIp: input.requestIp,
         reason: input.liftReason,
         beforeState: { active: true },
-        afterState: { active: false, assetCount: assetInternalIds.length },
+        afterState: { active: false, assetCount: result.affectedAssetCount },
       });
 
-      return lifted;
+      return result.hold;
     });
   }
 }

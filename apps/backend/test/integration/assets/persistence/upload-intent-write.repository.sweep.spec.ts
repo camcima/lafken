@@ -34,13 +34,38 @@ describe("[Integration] UploadIntentWriteRepository sweep & refresh", () => {
 
   it("markExpired transitions an unconsumed/unexpired intent and is idempotent", async () => {
     const now = new Date("2026-05-09T12:00:00.000Z");
+    const cutoff = new Date(now.getTime() - 300_000);
     const intent = await ctx.insertIntentRaw({
       uploadUrlExpiresAt: new Date(now.getTime() - 6 * 60_000),
     });
-    expect(await repo.markExpired(intent.publicId, now)).toBe(true);
-    expect(await repo.markExpired(intent.publicId, now)).toBe(false);
+    expect(await repo.markExpired({ publicId: intent.publicId, now, expiresBefore: cutoff })).toBe(
+      true,
+    );
+    expect(await repo.markExpired({ publicId: intent.publicId, now, expiresBefore: cutoff })).toBe(
+      false,
+    );
     const row = await ctx.fetchIntentRow(intent.publicId);
     expect(row.expired_at).not.toBeNull();
+  });
+
+  it("markExpired refuses when the upload URL was refreshed past the cutoff", async () => {
+    const now = new Date("2026-05-09T12:00:00.000Z");
+    const cutoff = new Date(now.getTime() - 300_000);
+    // Simulates refreshUploadUrl winning between the sweeper's batch read and
+    // its markExpired write: the row's expiry is now in the future.
+    const intent = await ctx.insertIntentRaw({
+      uploadUrlExpiresAt: new Date(now.getTime() + 15 * 60_000),
+    });
+
+    const expired = await repo.markExpired({
+      publicId: intent.publicId,
+      now,
+      expiresBefore: cutoff,
+    });
+
+    expect(expired).toBe(false);
+    const row = await ctx.fetchIntentRow(intent.publicId);
+    expect(row.expired_at).toBeNull();
   });
 
   it("refreshUploadUrl rotates the URL only when intent is unconsumed and unexpired", async () => {
@@ -57,7 +82,14 @@ describe("[Integration] UploadIntentWriteRepository sweep & refresh", () => {
     });
     expect(ok).toBe(true);
 
-    await repo.markExpired(intent.publicId, now);
+    // Cutoff must be past the refreshed uploadUrlExpiresAt (now + 15min) so the
+    // fence actually lets this expire — this test isn't exercising the fence
+    // edge case itself (covered above), just that expiry blocks further refresh.
+    await repo.markExpired({
+      publicId: intent.publicId,
+      now,
+      expiresBefore: new Date(newExpiresAt.getTime() + 60_000),
+    });
     const okAfterExpire = await repo.refreshUploadUrl({
       publicId: intent.publicId,
       uploadUrl: "https://example.test/newer",

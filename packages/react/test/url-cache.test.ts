@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { _evictPresetUrl, _getCachedPresetUrl, _resetPresetUrlCache } from "../src/_url-cache";
+import {
+  _evictPresetUrl,
+  _getCachedPresetUrl,
+  _presetUrlCacheSize,
+  _resetPresetUrlCache,
+} from "../src/_url-cache";
 
 function makeClient(impl: {
   getPreviewUrl: (i: {
@@ -141,6 +146,96 @@ describe("_getCachedPresetUrl TTL cache", () => {
     // After eviction, a new fetch is triggered
     const url2 = await _getCachedPresetUrl(client, "abc", "thumb");
     expect(url2).toBe("https://cdn/v2.webp");
+    expect(getPreviewUrl).toHaveBeenCalledTimes(2);
+  });
+
+  it("treats an unparseable expiresAt as already expired instead of permanently fresh", async () => {
+    const getPreviewUrl = vi
+      .fn()
+      .mockResolvedValueOnce({ url: "https://cdn/bad.webp", expiresAt: "not-a-date" })
+      .mockResolvedValueOnce({
+        url: "https://cdn/good.webp",
+        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+      });
+    const client = makeClient({ getPreviewUrl });
+
+    // First fetch returns the URL but must not cache it as fresh forever.
+    expect(await _getCachedPresetUrl(client, "abc", "thumb")).toBe("https://cdn/bad.webp");
+    // Next access refetches instead of serving the poisoned entry.
+    expect(await _getCachedPresetUrl(client, "abc", "thumb")).toBe("https://cdn/good.webp");
+    expect(getPreviewUrl).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not evict an expired entry whose refresh is still in flight", async () => {
+    vi.useFakeTimers();
+    const now = Date.now();
+    let resolveRefresh: (dto: { url: string; expiresAt: string }) => void = () => {};
+
+    const getPreviewUrl = vi
+      .fn()
+      // "a|thumb" — inside the 60s refresh threshold, so the next access
+      // kicks off a background refresh.
+      .mockResolvedValueOnce({
+        url: "https://cdn/a1.webp",
+        expiresAt: new Date(now + 30_000).toISOString(),
+      })
+      // The background refresh — deliberately never settles on its own.
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ url: string; expiresAt: string }>((resolve) => {
+            resolveRefresh = resolve;
+          }),
+      )
+      .mockResolvedValue({
+        url: "https://cdn/b.webp",
+        expiresAt: new Date(now + 3_600_000).toISOString(),
+      });
+
+    const client = makeClient({ getPreviewUrl });
+
+    await _getCachedPresetUrl(client, "a", "thumb");
+    // Second access: within threshold -> background refresh starts, stale URL returned.
+    expect(await _getCachedPresetUrl(client, "a", "thumb")).toBe("https://cdn/a1.webp");
+    expect(getPreviewUrl).toHaveBeenCalledTimes(2);
+
+    // "a|thumb" is now past its expiry, but its refresh is still in flight.
+    vi.setSystemTime(now + 60_000);
+
+    // Any access runs the sweep. The in-flight refresh must protect the entry —
+    // dropping it would orphan the pending request and let a duplicate fetch fire.
+    await _getCachedPresetUrl(client, "b", "thumb");
+    expect(_presetUrlCacheSize()).toBe(2);
+
+    // The protected entry still shares its in-flight promise instead of
+    // issuing a fourth request.
+    const shared = _getCachedPresetUrl(client, "a", "thumb");
+    expect(getPreviewUrl).toHaveBeenCalledTimes(3);
+
+    resolveRefresh({
+      url: "https://cdn/a2.webp",
+      expiresAt: new Date(now + 3_600_000).toISOString(),
+    });
+    await expect(shared).resolves.toBe("https://cdn/a2.webp");
+  });
+
+  it("evicts expired entries on access", async () => {
+    vi.useFakeTimers();
+    const getPreviewUrl = vi.fn().mockImplementation(({ publicId }: { publicId: string }) =>
+      Promise.resolve({
+        url: `https://cdn/${publicId}.webp`,
+        expiresAt: new Date(Date.now() + 1_000).toISOString(),
+      }),
+    );
+    const client = makeClient({ getPreviewUrl });
+
+    await _getCachedPresetUrl(client, "a", "thumb");
+    expect(_presetUrlCacheSize()).toBe(1);
+
+    vi.advanceTimersByTime(5_000); // "a|thumb" is now expired
+
+    await _getCachedPresetUrl(client, "b", "thumb");
+    // Accessing "b" swept the expired "a|thumb" entry; only "b|thumb" remains.
+    expect(_presetUrlCacheSize()).toBe(1);
     expect(getPreviewUrl).toHaveBeenCalledTimes(2);
   });
 });

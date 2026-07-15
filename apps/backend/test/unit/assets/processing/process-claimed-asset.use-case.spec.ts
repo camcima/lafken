@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { ProcessClaimedAssetUseCase } from "@/assets/application/processing/process-claimed-asset.use-case";
+import { ProcessingAbortedError } from "@/assets/application/processing/processing-aborted.error";
 import type { Asset } from "@/assets/domain/entities/asset.entity";
 import {
   AssetProcessingRepositoryPort,
@@ -270,11 +271,274 @@ describe("ProcessClaimedAssetUseCase", () => {
       }),
     ]);
   });
+
+  it("completes the job without processing when the asset is already deleted", async () => {
+    assetRepo.asset = makeAsset({ state: "deleted" });
+
+    const result = await useCase.execute({
+      assetId: TEST_UUIDS.asset1,
+      workerId: "worker-a",
+      attemptNumber: 1,
+    });
+
+    expect(result.kind).toBe("completed");
+    expect(assetRepo.transitions).toEqual([]);
+    expect(storage.readCalls).toEqual([]);
+    expect(jobRepo.completed).toBe(true);
+  });
+
+  it("completes the job without reprocessing when the asset is already ready", async () => {
+    assetRepo.asset = makeAsset({ state: "ready" });
+
+    const result = await useCase.execute({
+      assetId: TEST_UUIDS.asset1,
+      workerId: "worker-a",
+      attemptNumber: 1,
+    });
+
+    expect(result.kind).toBe("completed");
+    expect(assetRepo.transitions).toEqual([]);
+    expect(jobRepo.completed).toBe(true);
+  });
+
+  it("resumes a retry attempt when the asset is already in processing", async () => {
+    assetRepo.asset = makeAsset({ state: "processing" });
+
+    const result = await useCase.execute({
+      assetId: TEST_UUIDS.asset1,
+      workerId: "worker-a",
+      attemptNumber: 2,
+    });
+
+    expect(result.kind).toBe("completed");
+    expect(assetRepo.transitions.map((item) => item.toState)).toEqual(["ready"]);
+  });
+
+  it("completes the job without processing when the uploaded->processing transition loses its race", async () => {
+    assetRepo.transitionResult = false;
+
+    const result = await useCase.execute({
+      assetId: TEST_UUIDS.asset1,
+      workerId: "worker-a",
+      attemptNumber: 1,
+    });
+
+    expect(result.kind).toBe("completed");
+    expect(assetRepo.transitions).toHaveLength(1);
+    expect(storage.readCalls).toEqual([]);
+    expect(jobRepo.completed).toBe(true);
+  });
+
+  it("skips markCompleted when the terminal transition loses its race", async () => {
+    assetRepo.asset = makeAsset({ state: "processing" });
+    assetRepo.transitionResult = false; // the only transition attempted is the terminal one
+
+    const result = await useCase.execute({
+      assetId: TEST_UUIDS.asset1,
+      workerId: "worker-a",
+      attemptNumber: 1,
+    });
+
+    expect(result.kind).toBe("completed");
+    expect(jobRepo.completed).toBe(false);
+  });
+
+  it("caps read_object at the policy's max file size", async () => {
+    await useCase.execute({ assetId: TEST_UUIDS.asset1, workerId: "worker-a", attemptNumber: 1 });
+
+    expect(storage.readCalls[0]?.maxBytes).toBe(52_428_800);
+  });
+
+  it("classifies a recordAnalysis DB failure as a transient error tagged record_analysis", async () => {
+    assetRepo.recordAnalysisError = new Error("connection terminated unexpectedly");
+
+    await expect(
+      useCase.execute({ assetId: TEST_UUIDS.asset1, workerId: "worker-a", attemptNumber: 1 }),
+    ).rejects.toMatchObject({ name: "TransientProcessingError", step: "record_analysis" });
+  });
+
+  it("classifies a transition DB failure as a transient error tagged transition_state", async () => {
+    assetRepo.transitionError = new Error("connection terminated unexpectedly");
+
+    await expect(
+      useCase.execute({ assetId: TEST_UUIDS.asset1, workerId: "worker-a", attemptNumber: 1 }),
+    ).rejects.toMatchObject({ name: "TransientProcessingError", step: "transition_state" });
+  });
+
+  it("throws ProcessingAbortedError before any work when the signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      useCase.execute({
+        assetId: TEST_UUIDS.asset1,
+        workerId: "worker-a",
+        attemptNumber: 1,
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(ProcessingAbortedError);
+    expect(assetRepo.transitions).toEqual([]);
+  });
+
+  it("stops before recording analysis when the signal aborts mid-pipeline", async () => {
+    const controller = new AbortController();
+    virusScan.onScan = () => controller.abort();
+
+    await expect(
+      useCase.execute({
+        assetId: TEST_UUIDS.asset1,
+        workerId: "worker-a",
+        attemptNumber: 1,
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(ProcessingAbortedError);
+    expect(assetRepo.analyses).toEqual([]);
+  });
+
+  it("does not move bytes to quarantine when the signal aborts after record_analysis but before the move", async () => {
+    // The crux of the abort behavior: aborting after record_analysis (so the
+    // quarantine decision has already been persisted) must still stop the
+    // pipeline before it moves bytes to _quarantined/. Hooking
+    // recordAnalysis lets the abort land exactly between those two steps.
+    const controller = new AbortController();
+    assetRepo.onRecordAnalysis = () => controller.abort();
+    virusScan.result = {
+      decision: "quarantine",
+      reason: "virus_detected",
+      analyzer: "virus_scan",
+      analyzerVersion: "test",
+      findings: { duration_ms: 4 },
+    };
+
+    await expect(
+      useCase.execute({
+        assetId: TEST_UUIDS.asset1,
+        workerId: "worker-a",
+        attemptNumber: 1,
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(ProcessingAbortedError);
+
+    expect(assetRepo.analyses).toHaveLength(1); // record_analysis did commit
+    expect(storage.moveCalls).toEqual([]); // but the byte-move never ran
+    expect(assetRepo.transitions.some((item) => item.toState === "quarantined_virus")).toBe(false);
+  });
+
+  it("falls back to the quarantined storage key when the primary object is missing on retry", async () => {
+    // Simulates a previous attempt that moved the bytes but crashed before the
+    // DB transition committed: DB key unchanged, bytes at _quarantined/<key>.
+    storage.objects.delete("uploads/test.png");
+    storage.objects.set("_quarantined/uploads/test.png", Buffer.from("image-bytes"));
+    // The primary object is genuinely gone — objectExists must confirm that
+    // before the fallback is allowed to trigger (Fix 1: not-found only).
+    storage.existsResult = false;
+    virusScan.result = {
+      decision: "quarantine",
+      reason: "virus_detected",
+      analyzer: "virus_scan",
+      analyzerVersion: "test",
+      findings: { duration_ms: 4 },
+    };
+
+    const result = await useCase.execute({
+      assetId: TEST_UUIDS.asset1,
+      workerId: "worker-a",
+      attemptNumber: 2,
+    });
+
+    expect(result.kind).toBe("completed");
+    expect(assetRepo.transitions.at(-1)?.toState).toBe("quarantined_virus");
+    expect(assetRepo.transitions.at(-1)?.newStorageKey).toBe("_quarantined/uploads/test.png");
+    expect(storage.existsCalls).toEqual([
+      expect.objectContaining({ storageKey: "uploads/test.png" }),
+    ]);
+    expect(storage.readCalls.map((call) => call.storageKey)).toEqual([
+      "uploads/test.png",
+      "_quarantined/uploads/test.png",
+    ]);
+  });
+
+  it("rethrows the original read_object error unchanged when the primary object still exists", async () => {
+    // Primary bytes are absent from the fake's store (so readObjectBytes
+    // rejects), but existsResult simulates a real object that IS present in
+    // storage and failed to read for another reason (auth/quota/network).
+    // The fallback must NOT trigger — masking a non-404 failure by reading
+    // unrelated bytes from the quarantined key would be worse than surfacing
+    // the original error.
+    storage.objects.delete("uploads/test.png");
+    storage.objects.set("_quarantined/uploads/test.png", Buffer.from("unrelated-bytes"));
+    storage.existsResult = true;
+
+    await expect(
+      useCase.execute({ assetId: TEST_UUIDS.asset1, workerId: "worker-a", attemptNumber: 1 }),
+    ).rejects.toMatchObject({
+      name: "TransientProcessingError",
+      step: "read_object",
+      cause: expect.objectContaining({
+        message: expect.stringContaining('"uploads/test.png"'),
+      }),
+    });
+
+    // Only the primary key was ever read — no fallback attempt.
+    expect(storage.readCalls.map((call) => call.storageKey)).toEqual(["uploads/test.png"]);
+    // Only the uploaded->processing transition happened; nothing terminal.
+    expect(assetRepo.transitions.map((item) => item.toState)).toEqual(["processing"]);
+  });
+
+  it("rethrows the original read_object error unchanged when objectExists itself throws", async () => {
+    // Primary read fails, and the objectExists absence-check (used to decide
+    // whether the quarantine fallback is safe) also throws — e.g. a network
+    // blip on the existence check. Absence was never confirmed, so the
+    // fallback must not be attempted and the ORIGINAL read failure must be
+    // what surfaces — not the objectExists error, which would otherwise mask
+    // the real cause.
+    storage.objects.delete("uploads/test.png");
+    storage.objects.set("_quarantined/uploads/test.png", Buffer.from("unrelated-bytes"));
+    storage.existsError = new Error("existence check timed out");
+
+    await expect(
+      useCase.execute({ assetId: TEST_UUIDS.asset1, workerId: "worker-a", attemptNumber: 1 }),
+    ).rejects.toMatchObject({
+      name: "TransientProcessingError",
+      step: "read_object",
+      cause: expect.objectContaining({
+        message: expect.stringContaining('"uploads/test.png"'),
+      }),
+    });
+
+    // Only the primary key was ever read — objectExists throwing must not
+    // trigger the quarantined-key fallback read.
+    expect(storage.readCalls.map((call) => call.storageKey)).toEqual(["uploads/test.png"]);
+    // Only the uploaded->processing transition happened; nothing terminal.
+    expect(assetRepo.transitions.map((item) => item.toState)).toEqual(["processing"]);
+  });
+
+  it("transitions the asset to processing_failed when the storage binding is missing", async () => {
+    // FakeStorageBindingRepository.findById matches on id — give it a binding
+    // whose id differs from the asset's storageBindingId.
+    storageBindings.binding = makeStorageBinding({ id: "99999999-9999-9999-9999-999999999999" });
+
+    const result = await useCase.execute({
+      assetId: TEST_UUIDS.asset1,
+      workerId: "worker-a",
+      attemptNumber: 1,
+    });
+
+    expect(result.kind).toBe("failed");
+    const terminal = assetRepo.transitions.at(-1);
+    expect(terminal?.toState).toBe("processing_failed");
+    expect(terminal?.reason).toBe("storage_binding_not_found");
+    expect(jobRepo.failed).toBe(true);
+  });
 });
 
 class InMemoryAssetProcessingRepository extends AssetProcessingRepositoryPort {
   asset: Asset = makeAsset();
   policy: NamespacePolicy = makePolicy();
+  transitionResult = true;
+  recordAnalysisError: Error | null = null;
+  transitionError: Error | null = null;
+  onRecordAnalysis: (() => void) | null = null;
   readonly transitions: ITransitionAssetInput[] = [];
   readonly analyses: IRecordAnalysisInput[] = [];
   readonly derivedMetadata: IUpdateDerivedMetadataInput[] = [];
@@ -287,7 +551,13 @@ class InMemoryAssetProcessingRepository extends AssetProcessingRepositoryPort {
   }
 
   transitionAsset(input: ITransitionAssetInput): Promise<boolean> {
+    if (this.transitionError) {
+      return Promise.reject(this.transitionError);
+    }
     this.transitions.push(input);
+    if (!this.transitionResult) {
+      return Promise.resolve(false);
+    }
     this.asset = makeAsset({
       state: input.toState,
       stateReason: input.reason,
@@ -302,7 +572,11 @@ class InMemoryAssetProcessingRepository extends AssetProcessingRepositoryPort {
   }
 
   recordAnalysis(input: IRecordAnalysisInput): Promise<void> {
+    if (this.recordAnalysisError) {
+      return Promise.reject(this.recordAnalysisError);
+    }
     this.analyses.push(input);
+    this.onRecordAnalysis?.();
     return Promise.resolve();
   }
 
@@ -365,6 +639,10 @@ class InMemoryProcessingJobRepository extends ProcessingJobRepositoryPort {
   countDueJobs(): never {
     throw new Error("countDueJobs is not used by ProcessClaimedAssetUseCase tests");
   }
+
+  cancelForAsset(): never {
+    throw new Error("cancelForAsset is not used by ProcessClaimedAssetUseCase tests");
+  }
 }
 
 class FakeImageInspection extends ImageInspectionPort {
@@ -397,9 +675,11 @@ class FakeVirusScan extends VirusScanPort {
     analyzerVersion: "test",
     findings: { duration_ms: 4 },
   };
+  onScan: (() => void) | null = null;
 
   scan(input: IVirusScanInput): Promise<IVirusScanResult> {
     void input;
+    this.onScan?.();
     return Promise.resolve(this.result);
   }
 }

@@ -212,7 +212,11 @@ export class NamespaceWriteRepository implements NamespaceWriteRepositoryPort {
       return await this.db.connection.transaction().execute(work);
     } catch (err) {
       if (this.isPolicyVersionUniqueViolation(err)) {
-        if (attempt < 1) {
+        // Inside an ambient UoW the surrounding transaction is already
+        // aborted (any further statement fails with 25P02) — retrying here
+        // would run on the aborted connection. Translate immediately and let
+        // the use-case retry loop re-run in a fresh transaction.
+        if (!isAlreadyInTx && attempt < 1) {
           return this.attemptCreatePolicyVersion(input, attempt + 1);
         }
         throw new PolicyVersionConflictError({ slug: "<unknown>", attemptedVersion: nextVersion });

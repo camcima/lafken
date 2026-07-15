@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { AuditQueryRepository } from "@/audit/infrastructure/persistence/repositories/audit-query.repository";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
 
+import { cleanDatabase } from "../../helpers/clean-database";
 import { createTestDatabaseClient } from "../../helpers/create-test-database-client";
 
 describe("AuditQueryRepository", () => {
@@ -15,9 +16,7 @@ describe("AuditQueryRepository", () => {
   });
 
   beforeEach(async () => {
-    await db.connection.transaction().execute(async (tx) => {
-      await tx.deleteFrom("configuration_audit_log").execute();
-    });
+    await cleanDatabase(db);
   });
 
   afterAll(async () => {

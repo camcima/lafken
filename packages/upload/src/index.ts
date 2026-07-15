@@ -12,5 +12,4 @@ export {
   type ISharedUploadMetadata,
   type IUploadRestrictions,
   type QuarantineKind,
-  type UploadProtocol,
 } from "./lafken-upload-manager";

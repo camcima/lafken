@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
+import { QUARANTINED_ASSET_STATES } from "@/assets/domain/value-objects/asset-state.value-object";
 import { DashboardCountsRepositoryPort } from "@/dashboard/domain/repositories/dashboard-counts.repository.port";
 import type { IDashboardCounts } from "@/dashboard/domain/types/dashboard-counts.types";
 import { DatabaseClient } from "@/shared/infrastructure/persistence/database-client";
@@ -15,6 +16,7 @@ export class DashboardCountsRepository implements DashboardCountsRepositoryPort 
       queueDepthRow,
       quarantineRow,
       legalHoldsRow,
+      assetsUnderLegalHoldRow,
       failedProcessingRow,
       namespacesRow,
     ] = await Promise.all([
@@ -38,13 +40,19 @@ export class DashboardCountsRepository implements DashboardCountsRepositoryPort 
       this.db.connection
         .selectFrom("assets")
         .select((eb) => eb.fn.countAll<string>().as("count"))
-        .where("state", "in", ["quarantined_virus", "quarantined_moderation"])
+        .where("state", "in", [...QUARANTINED_ASSET_STATES])
         .executeTakeFirstOrThrow(),
 
       this.db.connection
         .selectFrom("legal_holds")
         .select((eb) => eb.fn.countAll<string>().as("count"))
         .where("active", "=", true)
+        .executeTakeFirstOrThrow(),
+
+      this.db.connection
+        .selectFrom("assets")
+        .select((eb) => eb.fn.countAll<string>().as("count"))
+        .where("legal_hold", "=", true)
         .executeTakeFirstOrThrow(),
 
       this.db.connection
@@ -66,6 +74,7 @@ export class DashboardCountsRepository implements DashboardCountsRepositoryPort 
       queueDepth: Number(queueDepthRow.count),
       quarantine: Number(quarantineRow.count),
       legalHolds: Number(legalHoldsRow.count),
+      assetsUnderLegalHold: Number(assetsUnderLegalHoldRow.count),
       failedProcessing: Number(failedProcessingRow.count),
       namespaces: Number(namespacesRow.count),
     };

@@ -27,6 +27,7 @@ describe("GetDashboardOverviewUseCase", () => {
       queueDepth: 0,
       quarantine: 0,
       legalHolds: 0,
+      assetsUnderLegalHold: 0,
       failedProcessing: 0,
       namespaces: 0,
     });
@@ -40,6 +41,7 @@ describe("GetDashboardOverviewUseCase", () => {
       queueDepth: 3,
       quarantine: 2,
       legalHolds: 1,
+      assetsUnderLegalHold: 0,
       failedProcessing: 4,
       namespaces: 7,
     };
