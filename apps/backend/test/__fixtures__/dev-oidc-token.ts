@@ -38,10 +38,29 @@ export interface IDevOidcTokenInput {
   profileId: string;
 }
 
-const tokenCache = new Map<string, string>();
+interface ICachedToken {
+  accessToken: string;
+  /** Absolute epoch-ms after which this cached token must be re-minted. */
+  expiresAtMs: number;
+}
+
+const tokenCache = new Map<string, ICachedToken>();
 
 const CODE_VERIFIER_BYTE_LENGTH = 32;
 const STATE_BYTE_LENGTH = 8;
+
+/**
+ * dev-oidc access tokens have a 15-minute TTL (`tokenTtlSeconds: 900`). A full
+ * E2E run can exceed that, so a token minted early and cached for the whole
+ * process would expire mid-suite and make late specs 401. Re-mint whenever the
+ * cached token has less than this much life left — the margin must exceed the
+ * longest single test file (~2 min here) so a token handed out at the start of
+ * a file survives every request in it.
+ */
+const TOKEN_REMINT_MARGIN_MS = 180_000;
+const MS_PER_SECOND = 1000;
+/** Fallback TTL if dev-oidc ever omits `expires_in` (it currently returns 900). */
+const DEFAULT_TOKEN_TTL_SECONDS = 900;
 
 function generateCodeVerifier(): string {
   return randomBytes(CODE_VERIFIER_BYTE_LENGTH).toString("base64url");
@@ -53,13 +72,14 @@ function computeCodeChallenge(verifier: string): string {
 
 /**
  * Performs a headless PKCE authorization_code flow against the local dev-oidc
- * container and returns the access token for the given profile. Results are
- * cached for the lifetime of the test process.
+ * container and returns the access token for the given profile. Tokens are
+ * cached per profile and re-minted before they expire, so a long-running suite
+ * never sends a token that has aged past its TTL.
  */
 export async function mintDevOidcToken(input: IDevOidcTokenInput): Promise<string> {
   const cacheKey = input.profileId;
   const cached = tokenCache.get(cacheKey);
-  if (cached) return cached;
+  if (cached && cached.expiresAtMs > Date.now()) return cached.accessToken;
 
   // Step 1: GET /authorize → capture pendingAuthId from HTML
   const codeVerifier = generateCodeVerifier();
@@ -134,11 +154,16 @@ export async function mintDevOidcToken(input: IDevOidcTokenInput): Promise<strin
     );
   }
 
-  const tokenBody2 = (await tokenResponse.json()) as { access_token?: string };
+  const tokenBody2 = (await tokenResponse.json()) as {
+    access_token?: string;
+    expires_in?: number;
+  };
   if (!tokenBody2.access_token) {
     throw new Error("dev-oidc /token response did not include an access_token");
   }
 
-  tokenCache.set(cacheKey, tokenBody2.access_token);
+  const ttlSeconds = tokenBody2.expires_in ?? DEFAULT_TOKEN_TTL_SECONDS;
+  const expiresAtMs = Date.now() + ttlSeconds * MS_PER_SECOND - TOKEN_REMINT_MARGIN_MS;
+  tokenCache.set(cacheKey, { accessToken: tokenBody2.access_token, expiresAtMs });
   return tokenBody2.access_token;
 }
